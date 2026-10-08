@@ -23,6 +23,7 @@ Scope added by the human on 2026-10-08 with the approved mockup ([docs/design/mo
 | **2 — UI-first preview** (approved mockup on preview data, decided 2026-10-08) | S-12, S-13, S-05, S-06-FE, S-07-FE, S-14-FE, S-15-FE, S-16-FE | [plans/phase-2-ui-first-preview.md](plans/phase-2-ui-first-preview.md) | **review: all stories approved by the tech-lead and committed on `phase/2-ui-first-preview` (2026-10-08), awaiting the human click-through to mark `done`** |
 | 3 — Real backend (replaces preview data) | S-04, S-14-BE, S-16-BE, S-15-BE, S-06-BE, S-07-BE, S-17 | written by the tech-lead before Phase 3 | todo |
 | 4 — E2E + demo data | S-08 | written by the tech-lead before Phase 4 | todo |
+| 3P / 3R — Performance, SPA data loading, reference data (+ amendments to Phase 3 and 4) | S-18 … S-27 | [plans/phase-3-performance-spa-data.md](plans/phase-3-performance-spa-data.md) | **Proposed** (2026-10-08, awaiting the human's decisions Q1–Q10) |
 
 ```
 Phase 1  Wave 1: S-00 (BE ∥ FE ∥ TL)
@@ -196,6 +197,63 @@ writes to preview data validate for real, persist nothing and say so in an `info
 
 ---
 
+## Phase 3P / 3R — Performance, SPA data loading, reference data (all `Proposed`, 2026-10-08)
+Plan with the measurements, the ER diagram and full acceptance criteria: [plans/phase-3-performance-spa-data.md](plans/phase-3-performance-spa-data.md).
+ADR drafts (Proposed): [0007 dev runtime](adr/0007-dev-runtime-native-serving.md) · [0008 reference data](adr/0008-reference-data-in-database.md) ·
+[0009 SPA data loading](adr/0009-spa-data-loading-on-inertia.md) · [0010 database architecture](adr/0010-database-architecture.md).
+Order: S-18 ∥ S-19 ∥ S-20 (now) → S-21a → S-21b ∥ S-22 → S-04 → S-14-BE ∥ S-16-BE ∥ S-15-BE ∥ S-25 → S-23 → S-06-BE ∥ S-07-BE → S-24 → S-17 → S-27 ∥ S-08 → S-26.
+The plan's §F.3 lists the amendments to S-04, S-14-BE, S-15-BE, S-16-BE, S-06-BE and S-07-BE. They are proposals; the stories above keep their status until the human approves.
+
+## S-18 · Dev runtime performance — `Proposed` · size S
+**Owners:** TL (docs, ADR-0007), human (machine config) · **Depends on:** decision Q1
+- [ ] Serve natively (Laragon web server + OPcache) against Docker PostgreSQL/Mailpit, or the option the human picks; SETUP.md section; Xdebug off by default
+- **Acceptance:** with 3 s between requests, `/login` and authenticated pages p95 ≤ 150 ms (today 2.1 s); the parity suite still runs in the container
+
+## S-19 · SPA navigation quick wins — frontend — `Proposed` · size S
+**Owner:** FE · **Depends on:** — (parallel with S-18, S-20)
+- [ ] Exclude `*.test.tsx` from the pages glob (F-13); `prefetch` + `cacheTags` on CTAs, row links, breadcrumbs, KPI links; `invalidateCacheTags` on every write; `only` partial reloads for list filters and the dashboard period; `showProgress: false` on prefetch
+- **Acceptance:** no test chunks in `public/build/manifest.json`; Vitest asserts the router options
+
+## S-20 · Lazy props, query budgets, explicit `auth.user` — backend — `Proposed` · size S
+**Owner:** BE · **Depends on:** — (parallel with S-18, S-19)
+- [ ] Closures for non-trivial props (no contract change); F-03 explicit `auth.user`; `expectQueryBudget()` Pest helper + one test per page; partial-reload tests
+- **Acceptance:** a filter-only partial reload of `/materials` doesn't run the inventory summary; every page ≤ 10 queries
+
+## S-21 · Reference data in the database — backend — `Proposed` · size L
+**Owner:** BE · **Depends on:** decisions Q2, Q3, Q7 · **Blocks:** S-04 (products are created with `category_id`)
+- [ ] S-21a contract wave: `ReferenceData` types, `reference` shared once-prop, settings routes, page stubs, FE type-compat edits
+- [ ] S-21b: `units` / `material_categories` / `product_categories` with defaults in migrations; `UnitDimension`; materials backfilled to FKs (reversible); Actions with in-use guard and version bump; policies; unit locked while used; `App\Mock` + `DemoCatalogSeeder` on codes; old enums deleted; PG `pg_trgm` + CHECKs
+- **Acceptance:** existing materials keep their unit and category; archive/delete rules; the once-prop is resent only after a version bump; PG parity green
+
+## S-22 · Reference data — UI — `Proposed` · size M
+**Owner:** FE · **Depends on:** S-21a (parallel with S-21b)
+- [ ] Settings "Catalogue": Units, Material categories, Product categories (table, create/edit dialog, archive/restore, delete confirm with reason); forms and filters read `reference`, submit ids, hide archived options
+- **Acceptance:** add "Elastic" and "inch" without a deploy and use them on a material; 375 px, dark mode, keyboard
+
+## S-23 · `product_metrics` read model — `Proposed` · size M
+**Owner:** BE · **Depends on:** S-04, S-16-BE · **Blocks:** S-06-BE, S-07-BE
+- [ ] Table + `RefreshProductMetrics` in every costing-relevant write transaction + `invory:metrics:rebuild`; the products index filters, sorts and paginates in SQL; versioned cache for the inventory summary and period sales totals
+- **Acceptance:** metrics equal the calculator (golden example) after every write path; dashboard and products index within the query budget
+
+## S-24 · Deferred and on-demand data — `Proposed` · size M
+**Owners:** BE + FE (one vertical commit) · **Depends on:** S-06-BE, S-07-BE
+- [ ] Dashboard secondary panels deferred; material history deferred with "Load more"; product recent sales deferred / `WhenVisible`; optimistic delete for sales and archive for reference items
+
+## S-25 · Material picker server-side search — `Proposed` · size M
+**Owners:** BE + FE · **Depends on:** S-04
+- [ ] `GET /materials/options?search=&limit=20` (policy, Resource); the BOM picker uses `useHttp` (debounced); the `materials` prop is removed from product create/edit
+- **Acceptance:** product create JSON ≤ 5 KB at any catalogue size; render test with 50 rows / 2 000 materials
+
+## S-26 · Production runtime — `Proposed` · size M (Phase 4)
+**Owners:** TL (ADR) + BE
+- [ ] Production image (FrankenPHP or php-fpm + nginx), OPcache without timestamp checks, `artisan optimize`, classmap-authoritative autoload, immutable + Brotli static assets, sessions/cache store decision, health check
+
+## S-27 · Performance dataset and budgets — `Proposed` · size S (Phase 4)
+**Owners:** BE + TL · **Depends on:** S-06-BE, S-23
+- [ ] Dev-only `PerformanceDatasetSeeder` (2 000 materials, 500 products, 50 000 sales, 20 000 movements); probe p50/p95 per page; record the results against the budgets in the plan §B.4
+
+---
+
 ## Stretch (after MVP sign-off)
 - **S-09 Live cost preview** in the BOM editor: `POST /products/cost-preview` (debounced) returns a `CostBreakdown`; the UI shows it while editing (keeps the server as the single source of truth).
 - **S-10 Production planner:** "Plan N units" on the product page shows per-material requirement vs stock and the shortage to buy.
@@ -237,3 +295,6 @@ From the Phase 2 review (2026-10-08, all MINOR/NIT, none blocking):
 - **F-19 (NIT, contract)**: Laravel's `meta.links` entries carry a `page` key that `PaginationLink` doesn't declare. Add `page?: number | null`.
 - **F-20 (decide before S-16-BE)**: `StoreRestockRequest` requires `update_unit_cost`; the skill says "boolean (default true)". Decide whether an omitted value means true. The UI always sends it.
 - **F-21 (NIT, copy)**: when the next limit equals the current capacity (a tie at the bottleneck), the suggestion still reads "the next limit is X at N units". Consider a tie-specific sentence.
+
+From the Phase 3 performance planning (2026-10-08):
+- F-03 is proposed in S-20 and F-13 in S-19 (both `Proposed`).
