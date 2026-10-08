@@ -4,12 +4,18 @@ on:
   push:
     branches:
       - main
+      - 'phase/**'
   pull_request:
 
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  # Fast lane: lint, types, Vitest, production build and the Pest suite on SQLite in-memory (PHP 8.3, the lowest we support).
   ci:
     runs-on: ubuntu-latest
 
@@ -29,10 +35,86 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: '22'
+          node-version: '24'
 
+      # composer install, .env, key, migrate (SQLite), npm install and `npm run build` (also regenerates Wayfinder).
       - name: Setup Application
         run: composer setup
 
+      - name: Frontend tests (Vitest)
+        run: npx vp test
+
+      # npm run check · npm run types:check · composer test (pint --test, larastan, pest incl. arch)
       - name: Run CI Checks
         run: composer ci:check
+
+  # PostgreSQL parity: the Pest suite against a real PostgreSQL, on every PHP version we run (Laragon 8.3, Sail 8.5).
+  pgsql:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.3', '8.5']
+
+    name: pgsql (PHP ${{ matrix.php }})
+
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: sail
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: testing
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U sail -d testing"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DB_CONNECTION: pgsql
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_DATABASE: testing
+      DB_USERNAME: sail
+      DB_PASSWORD: password
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: pdo_pgsql, pgsql
+          tools: composer:v2
+          coverage: none
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Prepare environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate --ansi
+
+      # Inertia's page-existence check and the Vite manifest need the built frontend.
+      - name: Build frontend
+        run: |
+          npm ci
+          npm run build
+
+      # Job-level DB_* env vars take precedence over phpunit.xml's SQLite defaults.
+      - name: Pest on PostgreSQL
+        run: php artisan test --compact

@@ -39,6 +39,11 @@ export default defineConfig({
             ],
         },
     },
+    test: {
+        environment: 'jsdom',
+        setupFiles: ['resources/js/test/setup.ts'],
+        include: ['resources/js/**/*.test.{ts,tsx}'],
+    },
     lint: {
         ignorePatterns: [
             'vendor/**',
@@ -70,6 +75,7 @@ export default defineConfig({
             'CLAUDE.md',
             'README.md',
             'composer.json',
+            'skills-lock.json',
             'resources/js/components/ui/*',
             'resources/views/mail/*',
         ],

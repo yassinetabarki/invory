@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
@@ -36,6 +38,12 @@ class AppServiceProvider extends ServiceProvider
         DB::prohibitDestructiveCommands(
             app()->isProduction(),
         );
+
+        // Lazy loading (N+1), silently discarded and missing attributes throw outside production.
+        Model::shouldBeStrict(! app()->isProduction());
+
+        // Single resources are passed flat (`material: {...}`), see the Phase 1 contract.
+        JsonResource::withoutWrapping();
 
         Password::defaults(fn (): ?Password => app()->isProduction()
             ? Password::min(12)
