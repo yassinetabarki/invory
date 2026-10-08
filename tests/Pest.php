@@ -16,6 +16,8 @@ use Tests\TestCase;
 
 pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)
+    // Feature tests assert Inertia props, not assets: a stale local Vite manifest (public/build) must not fail them.
+    ->beforeEach(fn () => $this->withoutVite())
     ->in('Feature');
 
 /*
@@ -47,4 +49,43 @@ expect()->extend('toBeOne', function () {
 function something()
 {
     // ..
+}
+
+/**
+ * A valid Store/UpdateMaterialRequest payload (decimals as strings), with optional overrides.
+ *
+ * @param  array<string, mixed>  $overrides
+ * @return array<string, mixed>
+ */
+function validMaterialPayload(array $overrides = []): array
+{
+    return [
+        'sku' => 'FAB-DEN-001',
+        'name' => 'Denim 12oz Indigo',
+        'category' => 'fabric',
+        'unit' => 'm',
+        'unit_cost' => '8.5',
+        'quantity_on_hand' => '250',
+        'reorder_level' => '50',
+        'supplier_name' => 'Candiani',
+        'supplier_reference' => 'CD-1200',
+        'color' => 'Indigo',
+        'composition' => '98% cotton, 2% elastane',
+        'notes' => 'Pre-washed',
+        ...$overrides,
+    ];
+}
+
+/**
+ * The exact keys of the `Material` type in resources/js/types/domain.ts.
+ *
+ * @return list<string>
+ */
+function materialContractKeys(): array
+{
+    return [
+        'id', 'sku', 'name', 'category', 'category_label', 'unit', 'unit_label', 'unit_cost',
+        'quantity_on_hand', 'reorder_level', 'stock_value', 'stock_status', 'supplier_name',
+        'supplier_reference', 'color', 'composition', 'notes', 'created_at', 'updated_at',
+    ];
 }
