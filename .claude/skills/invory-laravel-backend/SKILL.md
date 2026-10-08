@@ -136,7 +136,7 @@ final class MaterialController extends Controller
 
         return Inertia::render('materials/index', [
             'materials' => MaterialResource::collection($materials),   // → { data, links, meta }
-            'filters' => $request->only(['search', 'category', 'low_stock']),
+            'filters' => $request->filters(),   // IndexMaterialRequest normalises to the MaterialFilters shape in domain.ts
             'categories' => MaterialCategory::options(),
         ]);
     }
@@ -145,7 +145,10 @@ final class MaterialController extends Controller
     {
         $material = $createMaterial->handle($request->validated());
 
-        return to_route('materials.show', $material)->with('success', __('Material created.'));
+        // Starter-kit native flash → <Toaster> via useFlashToast(). Types: success | info | warning | error.
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Material created.')]);
+
+        return to_route('materials.show', $material);
     }
 
     public function destroy(Material $material, DeleteMaterial $deleteMaterial): RedirectResponse
@@ -155,10 +158,14 @@ final class MaterialController extends Controller
         try {
             $deleteMaterial->handle($material);
         } catch (MaterialInUseException $e) {
-            return back()->with('error', $e->getMessage());
+            Inertia::flash('toast', ['type' => 'error', 'message' => $e->getMessage()]);
+
+            return back();
         }
 
-        return to_route('materials.index')->with('success', __('Material deleted.'));
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Material deleted.')]);
+
+        return to_route('materials.index');
     }
 }
 ```
@@ -213,8 +220,8 @@ final class MaterialResource extends JsonResource
             'quantity_on_hand' => $this->quantity_on_hand,   // "250.0000"
             'reorder_level' => $this->reorder_level,
             'stock_value' => (string) BigDecimal::of($this->quantity_on_hand)
-                ->multipliedBy($this->unit_cost)->toScale(4, RoundingMode::HALF_UP),
-            'is_low_stock' => $this->isLowStock(),
+                ->multipliedBy($this->unit_cost)->toScale(4, RoundingMode::HalfUp),
+            'stock_status' => $this->stockStatus()->value,   // in_stock | low | out (rule in invory-costing-domain)
             // nullable descriptive fields…
         ];
     }
@@ -249,7 +256,7 @@ it('lists materials with the agreed contract', function () {
             ->component('materials/index')
             ->has('materials.data', 3)
             ->has('materials.data.0', fn (Assert $m) => $m
-                ->hasAll(['id', 'sku', 'name', 'category', 'unit', 'unit_cost', 'quantity_on_hand', 'stock_value', 'is_low_stock'])
+                ->hasAll(['id', 'sku', 'name', 'category', 'unit', 'unit_cost', 'quantity_on_hand', 'stock_value', 'stock_status'])
                 ->etc())
             ->has('categories'));
 });
@@ -272,7 +279,7 @@ it('refuses to delete a material used in a product', function () { /* … assert
 ```php
 arch()->preset()->php();
 arch()->preset()->security();
-arch()->preset()->laravel()->ignoring('App\Actions\Fortify');
+arch()->preset()->laravel();
 
 arch('costing domain is framework-free')
     ->expect('App\Domain')->not->toUse(['Illuminate', 'App\Models', 'App\Http']);
@@ -280,10 +287,13 @@ arch('costing domain is framework-free')
 arch('controllers never touch the DB facade')
     ->expect('App\Http\Controllers')->not->toUse('Illuminate\Support\Facades\DB');
 
-arch('actions are final with a handle method')
-    ->expect('App\Actions')->classes()->ignoring('App\Actions\Fortify')
-    ->toBeFinal()->toHaveMethod('handle');
+// `->ignoring()` only applies to the expectation it follows, so use one arch test per expectation.
+arch('actions are final')
+    ->expect('App\Actions')->classes()->toBeFinal()->ignoring('App\Actions\Fortify');
+arch('actions expose a handle method')
+    ->expect('App\Actions')->classes()->toHaveMethod('handle')->ignoring('App\Actions\Fortify');
 ```
+(This is what `tests/Arch/ArchTest.php` contains since S-00.)
 
 ## Factories and seeders
 - Factories produce **realistic fashion data** (e.g. "Denim 12oz Indigo", unit `m`) with states such as `lowStock()`, `outOfStock()`, and `withComponents(int $n)` on `ProductFactory`.

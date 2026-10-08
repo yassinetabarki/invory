@@ -45,7 +45,7 @@ The script:
 - creates the **Laravel 13 React starter kit** (`laravel new --react --pest`, no teams) in a temp folder and merges it in **without overwriting** existing files
 - runs `git init`, installs Laravel Boost, runs `npm install` and `npm run build`
 - runs `php artisan sail:install --with=pgsql,mailpit` → `compose.yaml`, `.env` pointing at the containers
-- sets `APP_NAME=Invory`, `APP_URL=http://localhost`, `APP_CURRENCY=EUR`
+- sets `APP_NAME=Invory`, `APP_URL=http://localhost`, `APP_CURRENCY=TND` (default changed from EUR to TND on 2026-10-08; existing local `.env` files must be updated by hand)
 - keeps `phpunit.xml` on SQLite in-memory and runs the tests natively
 
 ## 3. Commit, then install Boost

@@ -1,15 +1,18 @@
 # Invory — Team, skills and workflow
 
-Three Claude Code subagents (in `.claude/agents/`) build Invory. The **main Claude session acts as the orchestrator / product owner**:
-it picks stories, delegates, relays reports, and asks you (the human) for product decisions and git approvals.
+Three Claude Code subagents (in `.claude/agents/`) build Invory. The **tech-lead orchestrates**: it plans, dispatches the two developers,
+reviews and loops fixes. The **main Claude session is the liaison**: it hands work to the tech-lead, relays reports, asks you (the human) for
+product decisions, and commits only with your approval.
 
 ## Roles
 
-| Agent | Model | Owns | Never does |
-|---|---|---|---|
-| **tech-lead** | opus | Architecture, ADRs, backlog, story plans and contracts, reviews, CI | Write application code |
-| **backend-developer** | sonnet | `app/`, `routes/`, `database/`, `config/`, `tests/` (PHP), `resources/js/types/domain.ts` | Build UI (page *stubs* only) |
-| **frontend-developer** | sonnet | `resources/js/**` (except `types/domain.ts` and generated code), `resources/css`, Vitest and browser tests | Touch PHP or the contract file |
+| Agent | Model | Owns | Can spawn | Never does |
+|---|---|---|---|---|
+| **tech-lead** | opus | Planning, contracts, dispatching, reviews, architecture, ADRs, backlog, plans (`docs/plans/`), CI (`.github/`) | `backend-developer`, `frontend-developer` | Write application code, commit |
+| **backend-developer** | sonnet | `app/`, `routes/`, `database/`, `config/`, `tests/` (PHP), `resources/js/types/domain.ts`, `sharedPageProps` | nothing (`disallowedTools: Agent`) | Build UI (page *stubs* only), commit |
+| **frontend-developer** | sonnet | `resources/js/**` (except contract files and generated code), `resources/css`, Vitest and browser tests | nothing (`disallowedTools: Agent`) | Touch PHP or the contract files, commit |
+
+Subagents can't ask you questions directly. The tech-lead collects product questions in its report, and the main session asks you.
 
 ## Skills matrix: what each role must master
 
@@ -25,36 +28,35 @@ what the agent loads to apply it in this codebase.
 Boost skills and MCP tools appear after `php artisan boost:install` (see [SETUP.md](SETUP.md)).
 Project skills live in `.claude/skills/invory-*` and are committed. `invory-costing-domain` is the single source of truth for business maths.
 
-## Workflow per story
+## Workflow
 
 ```
-          ┌──────────────── main session (orchestrator) ────────────────┐
-          │ 1. pick next story from docs/BACKLOG.md                     │
-          ▼                                                             │
-   tech-lead: PLAN ── tasks + contract (routes, props, domain.ts types) │
-          │                                                             │
-          ├──────────────► backend-developer: implement + Pest tests    │
-          │                     │ handoff report                        │
-          │                     ▼                                       │
-          │              frontend-developer: implement + Vitest tests   │  (BE and FE in parallel when the
-          │                     │ handoff report                        │   contract is fixed and the stories
-          ▼                     ▼                                       │   touch disjoint files)
-   tech-lead: REVIEW ── runs all gates ── APPROVED / CHANGES REQUESTED  │
-          │                                                             │
-          ├── CHANGES REQUESTED → findings routed to the owning dev ────┘ (loop, max 3 rounds, then escalate)
+ human ⇄ main session (liaison)
+              │ hands over a story / phase (+ human decisions)
+              ▼
+ tech-lead ── 1. PLAN: plan in docs/plans/, subtasks with disjoint file lists, frozen contract, waves
+          │
+          ├── 2. DISPATCH (Agent tool, briefs) ──► backend-developer  ┐ same message = parallel
+          │                                  ──► frontend-developer ┘ (also 2× backend on disjoint stories)
+          │                                       │ handoff reports
+          ├── 3. REVIEW: runs all gates + parity ◄┘
+          ├── 4. FIX LOOP: findings → same developer (SendMessage), max 3 rounds
           ▼
-   APPROVED → main session asks the human to commit (Conventional Commits), updates the backlog
+ 5. DELIVERY REPORT ──► main session ──► human: verdicts, questions, "commit S-xx?" ──► scoped commit per story
 ```
 
 ### Rules of engagement
-1. **Contract first.** No frontend work starts on a feature until its routes and `domain.ts` types exist (stubs are fine).
-2. **One story, one branch:** `feature/S-04-products-backend`. Commits follow Conventional Commits (`feat(products): …`, `test(costing): …`).
-3. **Handoff reports are mandatory** and use the exact template in each agent file. The tech-lead re-runs every gate. Pasted output is not proof.
-4. **Disagreements** go to the tech-lead. Product questions (scope, wording, business rules) go to the human through the main session.
-5. **Domain changes** (a formula, rounding, a new edge case) require the tech-lead to update `invory-costing-domain` first. Code follows the skill, never the other way round.
-6. The human approves every commit, push and PR. Agents never commit.
+1. **Contract first.** The contract (routes, props, `domain.ts`, PHP APIs) is frozen in the plan, and the backend writes the types first, so the
+   frontend can build components in parallel. Pages that need routes wait for the backend story.
+2. **One shared working tree, so disjoint files per wave.** Agents touch only the files in their brief and run focused checks while others work.
+   The tech-lead runs the full gates once the wave is complete.
+3. **Git:** one branch per phase (`phase/1-materials`), **one commit per approved story**, staged from the story's file list.
+   Conventional Commits (`feat(materials): …`, `test(costing): …`). The human approves every commit, push and merge. Agents never commit.
+4. **Handoff reports are mandatory** and use the exact template in each agent file. The tech-lead re-runs every gate. Pasted output is not proof.
+5. **Disagreements** are settled by the tech-lead. Product questions (scope, wording, business rules) go up to the human through the main session.
+6. **Domain changes** (a formula, rounding, a new edge case) require the tech-lead to update `invory-costing-domain` first. Code follows the skill, never the other way round.
 
 ## Example prompts for the main session
-- "Start S-01: ask the tech-lead for the plan, then have the backend-developer implement it, then get a tech-lead review."
-- "Run S-02 and S-03 in parallel: frontend-developer on S-02, backend-developer on S-03, then review both."
-- "The tech-lead requested changes on S-04. Send the findings to the backend-developer and re-review."
+- "Start Phase 1." → the main session hands `docs/plans/phase-1-foundation-materials.md` to the tech-lead, who runs waves 1–3.
+- "Do only Wave 1 of Phase 1, then stop for review."
+- "Start S-04 and S-05." → the tech-lead writes the Phase 2 plan first, then dispatches.

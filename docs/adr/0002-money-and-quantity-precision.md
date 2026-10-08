@@ -12,7 +12,7 @@ sub-cent unit costs.
 - Eloquent `decimal:N` casts return **strings**. All arithmetic uses `Brick\Math\BigDecimal` (already a Laravel dependency).
 - Intermediate results are exact. Outputs are rounded once, `HALF_UP`, to scale 4. Capacity is floored.
 - Over the wire, decimals are **strings**. The frontend only formats them (`Intl.NumberFormat` accepts numeric strings) and never computes.
-- Single currency per installation (`APP_CURRENCY`, default EUR).
+- Single currency per installation (`APP_CURRENCY`, default TND; *amended 2026-10-08: the default was EUR. Display still uses 2 decimals for every currency, pending a product decision on TND's 3-decimal minor unit; storage and serialization scales are unaffected*).
 
 ## Consequences
 - ✅ Deterministic, testable numbers (golden tests use exact strings).

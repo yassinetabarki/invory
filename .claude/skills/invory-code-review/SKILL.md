@@ -32,7 +32,7 @@ A red gate is an automatic **BLOCKER**. Record each gate's result in the report.
 **Domain correctness (highest priority)**
 - [ ] Formulas, rounding and edge cases match `invory-costing-domain` exactly. The worked example is a test with exact string assertions.
 - [ ] No float anywhere in money or quantity paths (PHP: `float`, `(float)`, `round()`, arithmetic on numeric strings; TS: `Number()`, `parseFloat`, `*`/`+` on decimals).
-- [ ] Capacity floors (`RoundingMode::DOWN`), empty BOM → `null`, requirements aggregated per material.
+- [ ] Capacity floors (`RoundingMode::Down`), empty BOM → `null`, requirements aggregated per material.
 
 **Architecture**
 - [ ] Layer rules from `docs/ARCHITECTURE.md` §3: thin controllers, Actions for writes, pure `App\Domain\Costing`, Resources without queries.
@@ -90,7 +90,7 @@ Verdict: **APPROVED** only if there are zero BLOCKER and zero MAJOR findings.
 | PostgreSQL parity (if DB touched) | … / not run (Docker down) |
 
 ### Findings
-1. **[BLOCKER]** `app/Domain/Costing/CostingCalculator.php:42` — capacity uses HALF_UP so 126.9 → 127. **Fix:** `dividedBy($req, 0, RoundingMode::DOWN)`. **Owner:** backend-developer
+1. **[BLOCKER]** `app/Domain/Costing/CostingCalculator.php:42` — capacity uses HALF_UP so 126.9 → 127. **Fix:** `dividedBy($req, 0, RoundingMode::Down)`. **Owner:** backend-developer
 2. **[MAJOR]** …
 
 ### Contract check

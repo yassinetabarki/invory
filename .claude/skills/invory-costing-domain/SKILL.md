@@ -21,7 +21,7 @@ If a rule here is wrong or incomplete, stop and ask the tech-lead to update it (
 | Unit cost | Total cost to make one unit of a product | `unit_cost` |
 | Capacity / can produce | Max whole units we can make **now** from stock on hand | `max_producible` |
 | Bottleneck | The material that limits capacity | `bottleneck` |
-| Low stock | `quantity_on_hand <= reorder_level` (only if `reorder_level` is set) | `is_low_stock` |
+| Stock status | `out` if `quantity_on_hand = 0`; else `low` if `reorder_level` is set and `quantity_on_hand <= reorder_level`; else `in_stock`. Computed server-side. "Needs restock" = `low` or `out` | `stock_status` / `StockStatus` enum |
 
 ## Units and categories
 
@@ -46,7 +46,7 @@ required(m)           = Σ effective_qty(L) for every line L whose material is m
 units_possible(m)     = ⌊ m.quantity_on_hand / required(m) ⌋
 max_producible(P)     = min over materials m of units_possible(m)
 bottleneck(P)         = the material m with the smallest units_possible(m)
-                        (tie → lowest material name, then lowest id)
+                        (tie → lowest material name in byte order (`strcmp`), then lowest id)
 
 stock_value(m)        = m.quantity_on_hand × m.unit_cost
 inventory_value       = Σ stock_value(m) over non-deleted materials
@@ -59,9 +59,9 @@ inventory_value       = Σ stock_value(m) over non-deleted materials
 3. **Storage scales**: `unit_cost`, `labor_cost`, `overhead_cost` → `decimal(12,4)`; quantities → `decimal(14,4)`; `waste_percent` → `decimal(5,2)`.
    Eloquent casts: `'decimal:4'` / `'decimal:2'`. These return **strings**.
 4. **Intermediate maths is exact** (BigDecimal multiply/add keep full scale). Do not round mid-calculation.
-5. **Serialization**: every money/quantity output is a **string with scale 4**, rounded `RoundingMode::HALF_UP`, for example `"35.7540"`.
+5. **Serialization**: every money/quantity output is a **string with scale 4**, rounded half-up (`RoundingMode::HalfUp`; brick/math 1.x enum cases are PascalCase), for example `"35.7540"`.
    Percentages use scale 2. `max_producible` is an **integer** (or `null`).
-6. **Capacity** uses `dividedBy($required, 0, RoundingMode::DOWN)`, which floors positive values. Never round capacity up.
+6. **Capacity** uses `dividedBy($required, 0, RoundingMode::Down)`, which floors positive values. Never round capacity up.
 7. **Display only** (frontend): format with `Intl.NumberFormat(locale, { style: 'currency', currency })` from shared props.
    Money is shown with 2 decimals. Per-unit material costs below 0.01 may show up to 4 decimals.
 
@@ -99,7 +99,8 @@ inventory_value       = Σ stock_value(m) over non-deleted materials
 | Woven brand label | pc | 0.1200 | 1.0000 | 0.00 | 1.0000 | 0.1200 | 400.0000 | **400** |
 
 - `material_cost = 16.8300 + 2.8000 + 0.5040 + 0.1200 = "20.2540"`
-- `unit_cost = 20.2540 + 12.0000 + 3.5000 = "35.7540"` → displayed as **€35.75**
+- `unit_cost = 20.2540 + 12.0000 + 3.5000 = "35.7540"` → displayed as **€35.75** with EUR, or **TND 35.75** with the installation default TND
+  (locale `en`, 2 display decimals per rule 7; whether TND shows 3 decimals is a pending product decision)
 - `max_producible = min(126, 112, 158, 400) = 112`
 - `bottleneck = Metal shank button 17mm`
 

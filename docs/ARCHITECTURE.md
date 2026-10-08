@@ -165,7 +165,7 @@ app/
 ├── Policies/       MaterialPolicy · ProductPolicy          (MVP: any authenticated user; roles in phase 2)
 └── Services/
     └── Costing/    ProductCostingService                   (Eloquent → BomLine adapter; calls the calculator)
-config/invory.php   currency (APP_CURRENCY, default EUR), pagination size, decimal scales
+config/invory.php   currency (APP_CURRENCY, default TND), pagination size, decimal scales
 database/
 ├── factories/      MaterialFactory · ProductFactory · ProductComponentFactory
 ├── migrations/
@@ -200,7 +200,8 @@ The index pages accept the query parameters `search`, `category`, `status` (prod
 Pagination: 25 per page, `->withQueryString()`.
 
 ### Shared Inertia props (HandleInertiaRequests)
-`auth.user`, `flash.success` / `flash.error`, and `app.currency` / `app.locale`.
+`name`, `auth.user`, `sidebarOpen` (starter kit) and `app.currency` / `app.locale` (typed in `resources/js/types/global.d.ts`).
+Toasts use Inertia 3's native flash: `Inertia::flash('toast', ['type' => 'success', 'message' => …])`, shown by the starter kit's `<Toaster>`.
 
 ## 6. Frontend structure
 
@@ -215,7 +216,7 @@ resources/js/
 │   ├── materials/          material-form · materials-table · stock-badge
 │   ├── products/           product-form · bom-editor · bom-table · cost-breakdown-card · capacity-badge
 │   └── shared/             money · quantity · page-header · empty-state · confirm-delete-dialog · pagination · filters-bar
-├── hooks/                  use-flash-toasts · use-debounced-value
+├── hooks/                  use-flash-toast (starter kit) · use-app-settings · use-debounced-value
 ├── layouts/                # starter kit (sidebar layout; add Materials/Products nav items)
 ├── lib/                    format.ts (Intl money/quantity/percent) · utils.ts
 ├── types/
@@ -236,7 +237,7 @@ Principles:
 | Screen | Shows | Purpose |
 |---|---|---|
 | Dashboard | KPI cards: # materials, inventory value, # low-stock, # products, # products that can't be produced. Top products by capacity. Low-stock list. | At-a-glance status |
-| Materials list | SKU, name, category, stock + unit, unit cost, stock value, low-stock badge; search and filters | Manage inventory |
+| Materials list | SKU, name, category, stock + unit, unit cost, stock value, stock status badge (in stock / low / out); search, category and "needs restock" filters, sort | Manage inventory |
 | Material form | All material fields with unit-aware inputs | Create/edit |
 | Material detail | Fields + **"Used in"** products with quantity per unit | Impact view |
 | Products list | SKU, name, category, status, **unit cost**, **can produce**, **bottleneck** | **Objective #4** |

@@ -42,23 +42,16 @@ types/domain.ts                      → contract (owned by backend-developer, r
 File names are kebab-case and components are PascalCase. Tests sit next to the file as `*.test.tsx`.
 
 ## Formatting decimals without floats
+`lib/format.ts` exists (S-00). Use it, don't re-implement it. Intl formats numeric **strings** exactly, with no float conversion.
 ```ts
-// lib/format.ts
-import type { Decimal } from '@/types/domain';
-
-export function formatMoney(value: Decimal, currency: string, locale: string, maxFractionDigits = 2): string {
-    return new Intl.NumberFormat(locale, {
-        style: 'currency',
-        currency,
-        minimumFractionDigits: 2,
-        maximumFractionDigits: maxFractionDigits,
-    }).format(value as `${number}`); // Intl formats numeric *strings* exactly — no float conversion
-}
-
-export function formatQuantity(value: Decimal, locale: string): string {
-    return new Intl.NumberFormat(locale, { maximumFractionDigits: 4 }).format(value as `${number}`);
-}
+formatMoney(value, { currency, locale, precise? })   // "35.7540" → "€35.75" / "TND 35.75" (NBSP); precise + 0 < |v| < 0.01 → 4 digits ("€0.0040")
+// Default currency is TND (server `app.currency`, fallback in useAppSettings). Always 2 display decimals for now (pending product decision on TND's 3).
+formatQuantity(value, { locale, unit? })              // "1.9800", unit 'm' → "1.98 m" (≤ 4 digits, trailing zeros dropped)
+formatPercent(value, locale)                          // "10.00" → "10%" (already percent points, never divided)
+// All accept Decimal | null | undefined and return EMPTY_VALUE ('—') for null/empty/malformed input.
 ```
+In components, use `<Money value precise? />` and `<Quantity value unit />` (`components/shared`). They read `currency`/`locale` via `useAppSettings()`.
+Page-level tests mock Inertia with `resources/js/test/inertia.tsx` (`createInertiaModule`, `setPageProps`, `resetInertiaMock`, `inertiaMock.router`). Its header shows how to use it.
 
 ## Forms
 - **Simple forms** (material): Inertia `<Form {...MaterialController.store.form()}>` with a render-prop `{({ errors, processing }) => …}`.
@@ -68,7 +61,8 @@ export function formatQuantity(value: Decimal, locale: string): string {
 - Decimal inputs: `<Input type="text" inputMode="decimal">` holding **string** state. Don't use `type="number"`, because it coerces and breaks locales.
   Show the material's unit as an input suffix (`m`, `pc`…).
 - The material picker in the BOM editor is a searchable combobox (shadcn `Command` + `Popover`). It disables materials already used on another row.
-- Disable submit while `processing`. Success and error feedback comes from **flash props → sonner toast** (`use-flash-toasts` hook in the layout).
+- Disable submit while `processing`. Success and error feedback is **automatic**: the backend calls `Inertia::flash('toast', …)`, and the
+  starter kit's `<Toaster>` (`components/ui/sonner.tsx` + `hooks/use-flash-toast.ts`) shows it. Don't add flash props or your own toast plumbing.
 - Destructive actions use the shared `<ConfirmDeleteDialog>` (shadcn `AlertDialog`) and `router.delete(...)`.
 
 ## Lists

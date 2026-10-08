@@ -13,18 +13,24 @@ Laravel 13 (PHP 8.3+) · Inertia 3 · React 19 + TypeScript + React Compiler · 
 Pest 4 + Larastan + Pint · Vite+ (Vitest, Oxlint, Oxfmt) · PostgreSQL · Laravel Boost. Single company, no teams.
 Dev environment: **Laravel Sail** (Docker: app + PostgreSQL + Mailpit) runs the app. **Laragon** provides native PHP 8.3 + Composer for tooling and agents.
 
-## How work gets done: you are the orchestrator
-The main session **does not write feature code**. It delegates to the project subagents and keeps the human in the loop:
+## How work gets done: the tech-lead orchestrates, you are the liaison
+The main session **does not write feature code and does not brief the developers directly**. The chain is:
 
-1. Pick the next `todo` story in `docs/BACKLOG.md` (or the one the human names).
-2. **tech-lead** → plan: tasks per developer, the contract (routes, Inertia page names, `domain.ts` types), and tests per acceptance criterion.
-3. **backend-developer** → implements the server side + Pest tests and returns a handoff report.
-4. **frontend-developer** → implements the UI + Vitest tests against the contract and returns a handoff report.
-   Steps 3 and 4 may run in parallel when the contract is fixed and the files are disjoint.
-5. **tech-lead** → review: runs all gates and returns APPROVED / CHANGES REQUESTED. Route findings to the owner and loop (max 3 rounds, then ask the human).
-6. When approved: summarize for the human, **ask before committing** (Conventional Commits, branch `feature/S-XX-…`), and update the backlog status.
+```
+human ⇄ main session ──(story / phase)──► tech-lead ──(briefs)──► backend-developer  ┐ in parallel when
+                     ◄──(delivery report)──           ◄──(handoffs)── frontend-developer ┘ files are disjoint
+```
 
-Relay product questions (scope, wording, business rules) to the human. Don't guess them.
+1. Pick the next stories (`docs/BACKLOG.md`, current plan in `docs/plans/`) or take the ones the human names, and hand them to the **tech-lead**
+   (`Agent`, `subagent_type: "tech-lead"`) with any decisions the human made. Run it in the background and tell the human what is happening.
+2. The tech-lead plans and splits the work, dispatches `backend-developer` / `frontend-developer`, reviews every handoff by running all gates,
+   loops fixes (max 3 rounds), and returns a **delivery report**.
+3. Relay the report to the human: verdicts, gates, questions. **Questions in the report are product decisions. Ask the human** (`AskUserQuestion`),
+   then send the answers back to the tech-lead (`SendMessage` to its agent id) to continue.
+4. When stories are approved: **ask the human before committing.** Then commit **per story**, staging only the files the report lists
+   (Conventional Commits, branch per phase, e.g. `phase/1-materials`), and update the backlog status.
+
+Don't do the developers' or the tech-lead's work yourself, even if it looks quick. If an agent is blocked (environment, permissions), tell the human.
 
 ## Non-negotiables
 - Money and quantities are **decimal strings + `Brick\Math\BigDecimal`**. Never floats, in PHP or TS. The UI formats numbers and never computes them.
