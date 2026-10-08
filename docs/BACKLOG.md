@@ -27,7 +27,7 @@ The subtask-level breakdown (file lists, contract, checks) lives in the phase pl
 
 ---
 
-## S-00 · Foundation — `review` (approved by TL, awaiting commit) (Phase 1, Wave 1)
+## S-00 · Foundation — `done` (Phase 1, Wave 1)
 **Owners:** BE, FE, TL · **Depends on:** project scaffolded ✅ · Subtasks: [plan §S-00](plans/phase-1-foundation-materials.md#s-00--foundation--wave-1)
 
 - [ ] BE: `config/invory.php`; `Model::shouldBeStrict`, `JsonResource::withoutWrapping()`; share `app.currency` / `app.locale`; **full Phase 1 contract in `domain.ts`**; arch tests
@@ -39,7 +39,7 @@ The subtask-level breakdown (file lists, contract, checks) lives in the phase pl
 
 ---
 
-## S-01 · Materials — backend — `review` (approved by TL, awaiting commit) (Phase 1, Wave 2)
+## S-01 · Materials — backend — `done` (Phase 1, Wave 2)
 **Owner:** BE · **Depends on:** S-00 · Subtasks: [plan §S-01](plans/phase-1-foundation-materials.md#s-01--materials--backend--wave-2-be-1--size-m)
 
 - [ ] Enums `MaterialCategory`, `UnitOfMeasure`, `StockStatus`; migration with a partial unique SKU index; model, factory, policy
@@ -49,7 +49,7 @@ The subtask-level breakdown (file lists, contract, checks) lives in the phase pl
 
 **Acceptance:** all CRUD routes work behind auth; decimals round-trip as scale-4 strings; contract asserted; PostgreSQL parity green.
 
-## S-02 · Materials — UI — `review` (approved by TL, awaiting commit) (Phase 1, Waves 2–3)
+## S-02 · Materials — UI — `done` (Phase 1, Waves 2–3)
 **Owner:** FE · **Depends on:** S-00 (S-02a), S-01 (S-02b) · Subtasks: [plan §S-02](plans/phase-1-foundation-materials.md#s-02--materials--ui)
 
 - [ ] S-02a (components, contract-first): `StockBadge`, `MaterialsTable` (responsive), `FiltersBar` + `useDebouncedValue`, `Pagination`, `EmptyState`, `PageHeader`, `MaterialForm`, `ConfirmDeleteDialog`
@@ -57,7 +57,7 @@ The subtask-level breakdown (file lists, contract, checks) lives in the phase pl
 
 **Acceptance:** a user can add, find, edit and delete materials without touching the URL bar; usable at 375 px and in dark mode; keyboard-only flow works.
 
-## S-03 · Costing engine (pure domain) — `review` (approved by TL, awaiting commit) (Phase 1, Wave 2)
+## S-03 · Costing engine (pure domain) — `done` (Phase 1, Wave 2)
 **Owner:** BE · **Depends on:** S-00 (independent of S-01) · Subtasks: [plan §S-03](plans/phase-1-foundation-materials.md#s-03--costing-engine--wave-2-be-2--size-m)
 
 - [ ] `App\Domain\Costing`: `BomLine`, `LineCost`, `CostBreakdown`, `ProductionCapacity`, `CostingResult`, `CostingCalculator` (BigDecimal, no Illuminate)
