@@ -20,7 +20,7 @@ Scope added by the human on 2026-10-08 with the approved mockup ([docs/design/mo
 | Phase | Stories | Plan | Status |
 |---|---|---|---|
 | **1 — Foundation + Materials** | S-00, S-01, S-02, S-03 | [plans/phase-1-foundation-materials.md](plans/phase-1-foundation-materials.md) | **done** (committed on `phase/1-materials`) |
-| **2 — UI-first preview** (approved mockup on preview data, decided 2026-10-08) | S-12, S-13, S-05, S-06-FE, S-07-FE, S-14-FE, S-15-FE, S-16-FE | [plans/phase-2-ui-first-preview.md](plans/phase-2-ui-first-preview.md) | **review: all stories approved by the tech-lead (2026-10-08), awaiting the human click-through and commit approval** |
+| **2 — UI-first preview** (approved mockup on preview data, decided 2026-10-08) | S-12, S-13, S-05, S-06-FE, S-07-FE, S-14-FE, S-15-FE, S-16-FE | [plans/phase-2-ui-first-preview.md](plans/phase-2-ui-first-preview.md) | **review: all stories approved by the tech-lead and committed on `phase/2-ui-first-preview` (2026-10-08), awaiting the human click-through to mark `done`** |
 | 3 — Real backend (replaces preview data) | S-04, S-14-BE, S-16-BE, S-15-BE, S-06-BE, S-07-BE, S-17 | written by the tech-lead before Phase 3 | todo |
 | 4 — E2E + demo data | S-08 | written by the tech-lead before Phase 4 | todo |
 
