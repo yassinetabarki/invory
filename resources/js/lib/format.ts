@@ -21,12 +21,30 @@ function isNumericString(value: string): value is NumericString {
     return DECIMAL_PATTERN.test(value);
 }
 
+/** Fraction digits shown for sub-minor-unit amounts when `precise` is set. */
+const PRECISE_FRACTION_DIGITS = 4;
+
 /**
- * True when 0 < |value| < 0.01, decided by inspecting the digits (no maths):
- * the integer part and the first two fractional digits are zero, and a later
- * digit is non-zero. Zero itself is not "tiny", and 0.0100 is not below 0.01.
+ * The currency's own display digits, from Intl (ISO 4217 minor unit):
+ * TND 3, EUR 2, JPY 0. Min and max agree for every currency, so one number
+ * drives both.
  */
-function isBelowOneCent(value: string): boolean {
+function currencyFractionDigits(currency: string, locale: string): number {
+    return (
+        new Intl.NumberFormat(locale, {
+            style: 'currency',
+            currency,
+        }).resolvedOptions().maximumFractionDigits ?? 2
+    );
+}
+
+/**
+ * True when 0 < |value| < one minor unit (10^-digits), decided by inspecting
+ * the digits (no maths): the integer part and the first `digits` fractional
+ * digits are zero, and a later digit is non-zero. Zero itself is not "tiny",
+ * and exactly one minor unit (EUR 0.0100, TND 0.0010) is not below it.
+ */
+function isBelowMinorUnit(value: string, digits: number): boolean {
     const match = DECIMAL_PATTERN.exec(value);
 
     if (!match) {
@@ -36,10 +54,10 @@ function isBelowOneCent(value: string): boolean {
     const integerPart = match[2];
     const fraction = match[3] ?? '';
 
-    // 0.00xxxx: integer part and the first two fractional digits are zero.
+    // 0.00xxxx: integer part and the first `digits` fractional digits are zero.
     if (
         !/^0+$/.test(integerPart) ||
-        !fraction.padEnd(2, '0').startsWith('00')
+        !fraction.padEnd(digits, '0').startsWith('0'.repeat(digits))
     ) {
         return false;
     }
@@ -54,20 +72,19 @@ export type FormatMoneyOptions = {
     locale: string;
     /**
      * For per-unit costs (e.g. thread at 0.0040 per m). Non-zero amounts below
-     * 0.01 are shown with 4 fraction digits instead of rounding to €0.00.
-     * Everything else keeps 2 fraction digits.
-     *
-     * Note: the fraction digits are forced regardless of the currency's own
-     * minor unit. TND's ISO minor unit is 3 decimals, so `TND 35.75` is shown
-     * rather than `TND 35.754`; whether to follow the currency instead is a
-     * pending product decision.
+     * one minor unit of the currency (TND 0.001, EUR 0.01, JPY 1) are shown
+     * with 4 fraction digits instead of rounding to nothing. Everything else
+     * uses the currency's own digits.
      */
     precise?: boolean;
 };
 
 /**
- * `"35.7540"` → `€35.75` (en, EUR) or `TND 35.75` (en, TND; the separator is
- * a no-break space). With `precise`, `"0.0040"` → `€0.0040` / `TND 0.0040`.
+ * Money is shown with the currency's own ISO minor-unit digits (decided
+ * 2026-10-08, backlog F-10): `"35.7540"` → `TND 35.754` (en, TND; the
+ * separator is a no-break space), `€35.75` (EUR) or `¥36` (JPY). With
+ * `precise`, amounts below one minor unit keep 4 digits: EUR `"0.0040"` →
+ * `€0.0040`, TND `"0.0004"` → `TND 0.0004`, while TND `"0.0040"` → `TND 0.004`.
  * Null, undefined, empty or malformed input renders as an em dash.
  */
 export function formatMoney(
@@ -78,14 +95,18 @@ export function formatMoney(
         return EMPTY_VALUE;
     }
 
-    const fractionDigits = precise && isBelowOneCent(value) ? 4 : 2;
+    const currencyDigits = currencyFractionDigits(currency, locale);
+    const fractionDigits =
+        precise && isBelowMinorUnit(value, currencyDigits)
+            ? PRECISE_FRACTION_DIGITS
+            : currencyDigits;
 
     return new Intl.NumberFormat(locale, {
         style: 'currency',
         currency,
         minimumFractionDigits: fractionDigits,
         maximumFractionDigits: fractionDigits,
-        // Hides the minus sign of values that round to zero ("-€0.00").
+        // Hides the minus sign of values that round to zero ("-TND 0.000").
         signDisplay: 'negative',
     }).format(value);
 }

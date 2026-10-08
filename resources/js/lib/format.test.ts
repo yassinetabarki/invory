@@ -113,50 +113,90 @@ describe('formatMoney', () => {
 });
 
 /**
- * TND (Tunisian dinar, the company currency) pins TODAY's behaviour.
- *
- * TND's ISO minor unit is 3 decimals (millimes), but formatMoney forces 2
- * fraction digits for every currency (costing-domain rule 7). Whether to switch
- * to the currency's own minor units is a pending product decision; these tests
- * make any later change to the precision explicit and deliberate.
- * Intl separates "TND" and the number with a no-break space (U+00A0).
+ * TND (Tunisian dinar, the company currency) is shown with its ISO minor unit:
+ * 3 decimals (millimes). Rule: money uses each currency's own minor-unit digits
+ * (decided 2026-10-08, backlog F-10); `precise` shows 4 digits only below one
+ * minor unit (TND 0.001). Intl separates "TND" and the number with a no-break
+ * space (U+00A0).
  */
 describe('formatMoney (TND, en)', () => {
     const tnd = { currency: 'TND', locale: 'en' };
     const nbsp = ' ';
 
-    it('formats the worked-example unit cost with 2 decimals (not 35.754)', () => {
-        expect(formatMoney('35.7540', tnd)).toBe(`TND${nbsp}35.75`);
-    });
-
-    it('keeps 4 digits for precise values below 0.01', () => {
-        expect(formatMoney('0.0040', { ...tnd, precise: true })).toBe(
-            `TND${nbsp}0.0040`,
-        );
-    });
-
-    it('rounds tiny costs to 2 decimals when not precise', () => {
-        expect(formatMoney('0.0040', tnd)).toBe(`TND${nbsp}0.00`);
-    });
-
-    it('keeps 2 decimals from 0.01 upwards, even when precise', () => {
-        expect(formatMoney('0.0100', { ...tnd, precise: true })).toBe(
-            `TND${nbsp}0.01`,
-        );
+    it('formats the worked-example unit cost with 3 decimals', () => {
+        expect(formatMoney('35.7540', tnd)).toBe(`TND${nbsp}35.754`);
     });
 
     it('formats zero', () => {
-        expect(formatMoney('0.0000', tnd)).toBe(`TND${nbsp}0.00`);
+        expect(formatMoney('0.0000', tnd)).toBe(`TND${nbsp}0.000`);
     });
 
     it('formats negative amounts (the minus sign precedes the code)', () => {
-        expect(formatMoney('-12.5000', tnd)).toBe(`-TND${nbsp}12.50`);
+        expect(formatMoney('-12.5000', tnd)).toBe(`-TND${nbsp}12.500`);
+    });
+
+    it('does not show a minus sign for negative values that round to zero', () => {
+        expect(formatMoney('-0.0004', tnd)).toBe(`TND${nbsp}0.000`);
     });
 
     it('formats large values without losing precision', () => {
         expect(formatMoney('12345678901234.5678', tnd)).toBe(
-            `TND${nbsp}12,345,678,901,234.57`,
+            `TND${nbsp}12,345,678,901,234.568`,
         );
+    });
+
+    it('rounds half up at the 3rd decimal', () => {
+        expect(formatMoney('0.0005', tnd)).toBe(`TND${nbsp}0.001`);
+        expect(formatMoney('1.2345', tnd)).toBe(`TND${nbsp}1.235`);
+        expect(formatMoney('1.2344', tnd)).toBe(`TND${nbsp}1.234`);
+    });
+
+    it('rounds sub-millime amounts to 3 decimals when not precise', () => {
+        expect(formatMoney('0.0004', tnd)).toBe(`TND${nbsp}0.000`);
+    });
+
+    describe('precise', () => {
+        const precise = { ...tnd, precise: true };
+
+        it('shows 4 fraction digits below one millime (0.001)', () => {
+            expect(formatMoney('0.0004', precise)).toBe(`TND${nbsp}0.0004`);
+            expect(formatMoney('0.0009', precise)).toBe(`TND${nbsp}0.0009`);
+            expect(formatMoney('-0.0004', precise)).toBe(`-TND${nbsp}0.0004`);
+        });
+
+        it('uses 3 decimals from one millime upwards', () => {
+            expect(formatMoney('0.0040', precise)).toBe(`TND${nbsp}0.004`);
+            expect(formatMoney('0.0010', precise)).toBe(`TND${nbsp}0.001`);
+            expect(formatMoney('35.7540', precise)).toBe(`TND${nbsp}35.754`);
+        });
+
+        it('keeps zero at 3 decimals', () => {
+            expect(formatMoney('0.0000', precise)).toBe(`TND${nbsp}0.000`);
+        });
+    });
+});
+
+describe('formatMoney (JPY, en: zero-decimal currency)', () => {
+    const jpy = { currency: 'JPY', locale: 'en' };
+
+    it('formats with no decimals, rounding half up', () => {
+        expect(formatMoney('35.7540', jpy)).toBe('¥36');
+        expect(formatMoney('35.4999', jpy)).toBe('¥35');
+        expect(formatMoney('0.5000', jpy)).toBe('¥1');
+    });
+
+    it('shows 4 fraction digits below one yen when precise', () => {
+        expect(formatMoney('0.5000', { ...jpy, precise: true })).toBe(
+            '¥0.5000',
+        );
+        expect(formatMoney('0.0040', { ...jpy, precise: true })).toBe(
+            '¥0.0040',
+        );
+    });
+
+    it('uses no decimals from one yen upwards, even when precise', () => {
+        expect(formatMoney('1.0000', { ...jpy, precise: true })).toBe('¥1');
+        expect(formatMoney('0.0000', { ...jpy, precise: true })).toBe('¥0');
     });
 });
 

@@ -86,7 +86,7 @@ The subtask-level breakdown (file lists, contract, checks) lives in the phase pl
 - [ ] `products/create` and `products/edit`: `ProductForm` + `BomEditor` (searchable material combobox, unit suffix, waste %, placement notes, add/remove/reorder rows, duplicate prevention, nested errors) — **objective #3**
 - [ ] Tests: `CapacityBadge` states, `CostBreakdownCard` (worked example), `BomEditor` interactions, `ProductForm` error mapping
 
-**Acceptance:** a user can define the Denim Jacket in under 2 minutes and immediately see €35.75 / 112 units / bottleneck "Metal shank button 17mm".
+**Acceptance:** a user can define the Denim Jacket in under 2 minutes and immediately see TND 35.754 (default currency; €35.75 with EUR) / 112 units / bottleneck "Metal shank button 17mm".
 
 ## S-06 · Dashboard — `todo`
 **Owners:** BE → FE · **Depends on:** S-04
@@ -126,7 +126,7 @@ From the Phase 1 review (2026-10-08):
 - **F-03 (MINOR, BE, security)**: `HandleInertiaRequests` shares the full `User` model as `auth.user` (starter-kit default). Share an explicit array or resource (id, name, email, avatar, email_verified_at) so no future column leaks into props.
 - **F-04 (MINOR, FE tooling)**: the shadcn CLI/registry currently emits `import { cn } from "cn"` and umbrella `radix-ui` imports, and tries `pnpm`. S-02a hand-fixed the imports in `ui/{table,textarea,alert-dialog}.tsx`. Find a working setup before S-05 needs `command` and `popover`.
 - ~~**F-05 (NIT, BE)**: `SharedPropsTest` default-currency test depended on the local env.~~ **Done 2026-10-08**, with the TND default change: the test now evaluates `config/invory.php` against an isolated env repository.
-- **F-10 (pending product decision)**: TND's ISO minor unit is 3 decimals, but `formatMoney` always shows 2 (skill rule 7). If the human chooses 3, change: `lib/format.ts` (use the currency's own fraction digits; `precise` threshold = below one minor unit), costing-domain skill rule 7 + worked-example text, the pinned "TND, en" tests in `format.test.ts`, and ADR-0002's amendment note. Storage and serialization (scale 4) are unaffected.
+- ~~**F-10**: money display precision for TND.~~ **Done 2026-10-08**: the human chose each currency's own minor-unit digits (TND 3, EUR 2). `formatMoney` reads them from Intl, and `precise` shows 4 decimals below one minor unit. Skill rule 7, ADR-0002 and the worked example are updated.
 - **F-06 (NIT, BE)**: `%` and `_` in the materials search act as LIKE wildcards (values are bound, so this is safe). Escape them if users complain.
 - **F-07 (NIT, BE)**: `UpdateMaterial::handle()` returns the model without `refresh()`, so decimals on the returned instance are the raw input strings. The redirect makes this harmless today; use `refresh()` if a caller ever reads the return value.
 - **F-08 (NIT, repo)**: a coverage run from Git Bash once wrote a `C`+U+F03A directory at the repo root. Add a `.gitignore` guard and document the coverage command in `docs/SETUP.md`: `docker compose exec -u sail -e XDEBUG_MODE=coverage laravel.test php -d pcov.enabled=0 vendor/bin/pest tests/Unit/Domain/Costing --coverage --path-coverage`.

@@ -44,8 +44,9 @@ File names are kebab-case and components are PascalCase. Tests sit next to the f
 ## Formatting decimals without floats
 `lib/format.ts` exists (S-00). Use it, don't re-implement it. Intl formats numeric **strings** exactly, with no float conversion.
 ```ts
-formatMoney(value, { currency, locale, precise? })   // "35.7540" → "€35.75" / "TND 35.75" (NBSP); precise + 0 < |v| < 0.01 → 4 digits ("€0.0040")
-// Default currency is TND (server `app.currency`, fallback in useAppSettings). Always 2 display decimals for now (pending product decision on TND's 3).
+formatMoney(value, { currency, locale, precise? })   // currency's own digits: "35.7540" → "TND 35.754" (NBSP) / "€35.75" / "¥36"
+                                                     // precise + 0 < |v| < one minor unit → 4 digits: TND "0.0004" → "TND 0.0004", EUR "0.0040" → "€0.0040"
+// Default currency is TND (server `app.currency`, fallback in useAppSettings). Never hard-code fraction digits for money.
 formatQuantity(value, { locale, unit? })              // "1.9800", unit 'm' → "1.98 m" (≤ 4 digits, trailing zeros dropped)
 formatPercent(value, locale)                          // "10.00" → "10%" (already percent points, never divided)
 // All accept Decimal | null | undefined and return EMPTY_VALUE ('—') for null/empty/malformed input.
@@ -85,7 +86,7 @@ Page-level tests mock Inertia with `resources/js/test/inertia.tsx` (`createInert
   Interact with `userEvent.setup()`. Assert what the user sees.
 - Mock Inertia only at the boundary, in a shared helper `resources/js/test/inertia.tsx`
   (`vi.mock('@inertiajs/react', …)` keeping real exports, stubbing `router`, `usePage`, `Head`, `Link`).
-- Minimum coverage per story: formatters (including the worked example → `€35.75`), every component with branching
+- Minimum coverage per story: formatters (including the worked example → `TND 35.754` with the default currency and `€35.75` with EUR), every component with branching
   (`CapacityBadge` states, `StockBadge`), and the **BomEditor** (add row, remove row, prevent duplicate material, show nested error, unit suffix).
 
 ```tsx

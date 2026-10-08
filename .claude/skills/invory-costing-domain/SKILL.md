@@ -63,7 +63,9 @@ inventory_value       = Σ stock_value(m) over non-deleted materials
    Percentages use scale 2. `max_producible` is an **integer** (or `null`).
 6. **Capacity** uses `dividedBy($required, 0, RoundingMode::Down)`, which floors positive values. Never round capacity up.
 7. **Display only** (frontend): format with `Intl.NumberFormat(locale, { style: 'currency', currency })` from shared props.
-   Money is shown with 2 decimals. Per-unit material costs below 0.01 may show up to 4 decimals.
+   Money is shown with the **currency's own ISO minor-unit digits** (TND 3, EUR 2, JPY 0; decided 2026-10-08, F-10).
+   Per-unit material costs below one minor unit (TND 0.001, EUR 0.01) show 4 decimals (`<Money precise>`).
+   Display rounding never feeds back into calculations: the server values stay scale-4 strings.
 
 ## Edge cases (each one needs a test)
 
@@ -99,8 +101,8 @@ inventory_value       = Σ stock_value(m) over non-deleted materials
 | Woven brand label | pc | 0.1200 | 1.0000 | 0.00 | 1.0000 | 0.1200 | 400.0000 | **400** |
 
 - `material_cost = 16.8300 + 2.8000 + 0.5040 + 0.1200 = "20.2540"`
-- `unit_cost = 20.2540 + 12.0000 + 3.5000 = "35.7540"` → displayed as **€35.75** with EUR, or **TND 35.75** with the installation default TND
-  (locale `en`, 2 display decimals per rule 7; whether TND shows 3 decimals is a pending product decision)
+- `unit_cost = 20.2540 + 12.0000 + 3.5000 = "35.7540"` → displayed as **TND 35.754** with the installation default TND (locale `en`, 3 decimals per rule 7),
+  or **€35.75** with EUR
 - `max_producible = min(126, 112, 158, 400) = 112`
 - `bottleneck = Metal shank button 17mm`
 
