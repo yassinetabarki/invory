@@ -1,6 +1,7 @@
 import { Form, Head } from '@inertiajs/react';
 import MaterialController from '@/actions/App/Http/Controllers/MaterialController';
 import { MaterialForm } from '@/components/materials/material-form';
+import { MaterialFormActions } from '@/components/materials/material-form-actions';
 import { PageHeader } from '@/components/shared/page-header';
 import type { MaterialCreateProps, MaterialFormData } from '@/types/domain';
 
@@ -17,39 +18,52 @@ const EMPTY_MATERIAL: MaterialFormData = {
     color: '',
     composition: '',
     notes: '',
+    photo: null,
+    remove_photo: false,
 };
+
+const SUBMIT_LABEL = 'Save material';
 
 export default function MaterialsCreate({
     categories,
     units,
 }: MaterialCreateProps) {
+    const cancelHref = MaterialController.index.url();
+
     return (
         <>
-            <Head title="New material" />
+            <Head title="Add material" />
 
-            <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-                <PageHeader
-                    title="New material"
-                    description="Add a primary material to your inventory."
-                />
-
-                <Form
-                    {...MaterialController.store.form()}
-                    className="max-w-3xl"
-                >
-                    {({ errors, processing }) => (
+            {/* The header is inside the form so its Save button submits it. */}
+            <Form
+                {...MaterialController.store.form()}
+                className="flex flex-1 flex-col gap-6 p-4 md:p-6"
+            >
+                {({ errors, processing }) => (
+                    <>
+                        <PageHeader
+                            title="Add material"
+                            description="A primary item you buy and keep in stock: fabric, trims, thread, leather, soles…"
+                            actions={
+                                <MaterialFormActions
+                                    processing={processing}
+                                    submitLabel={SUBMIT_LABEL}
+                                    cancelHref={cancelHref}
+                                />
+                            }
+                        />
                         <MaterialForm
                             initial={EMPTY_MATERIAL}
                             categories={categories}
                             units={units}
                             errors={errors}
                             processing={processing}
-                            submitLabel="Create material"
-                            cancelHref={MaterialController.index.url()}
+                            submitLabel={SUBMIT_LABEL}
+                            cancelHref={cancelHref}
                         />
-                    )}
-                </Form>
-            </div>
+                    </>
+                )}
+            </Form>
         </>
     );
 }
@@ -61,7 +75,7 @@ MaterialsCreate.layout = {
             href: MaterialController.index(),
         },
         {
-            title: 'New material',
+            title: 'Add material',
             href: MaterialController.create(),
         },
     ],

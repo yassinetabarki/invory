@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Dotenv\Repository\Adapter\ArrayAdapter;
 use Dotenv\Repository\RepositoryBuilder;
 use Illuminate\Support\Env;
@@ -39,14 +40,47 @@ function invoryConfigWithEnv(array $variables): array
     }
 }
 
-it('shares the configured currency and the app locale on authenticated pages', function () {
+it('shares the configured currency, the app locale and today on authenticated pages', function () {
     actingAs($this->user)->get(route('dashboard'))
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('dashboard')
             ->where('app.currency', config('invory.currency'))
             ->where('app.locale', app()->getLocale())
-            ->has('app', 2));
+            ->where('app.today', now()->toDateString())
+            ->has('app', 3));
+});
+
+it('shares today as a YYYY-MM-DD date', function () {
+    $this->travelTo(CarbonImmutable::parse('2026-10-08 15:42:10'));
+
+    actingAs($this->user)->get(route('dashboard'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('app.today', '2026-10-08')
+            ->where('app.today', fn (string $today) => preg_match('/^\d{4}-\d{2}-\d{2}$/', $today) === 1));
+});
+
+it('shares today in the app timezone, not in UTC', function () {
+    $original = date_default_timezone_get();
+
+    try {
+        // 20:00 UTC on 8 October is already 9 October in Auckland (UTC+13).
+        date_default_timezone_set('Pacific/Auckland');
+        $this->travelTo(CarbonImmutable::parse('2026-10-08 20:00:00', 'UTC'));
+
+        actingAs($this->user)->get(route('dashboard'))
+            ->assertInertia(fn (Assert $page) => $page->where('app.today', '2026-10-09'));
+    } finally {
+        $this->travelBack();
+        date_default_timezone_set($original);
+    }
+});
+
+it('shares today on every authenticated page, not only the dashboard', function () {
+    $this->travelTo(CarbonImmutable::parse('2026-10-08 09:00:00'));
+
+    actingAs($this->user)->get(route('materials.index'))
+        ->assertInertia(fn (Assert $page) => $page->where('app.today', '2026-10-08'));
 });
 
 it('defaults the currency to TND when APP_CURRENCY is not set', function () {

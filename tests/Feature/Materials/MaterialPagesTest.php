@@ -63,7 +63,21 @@ it('exposes the flat material on the show page', function () {
                 ->where('reorder_level', null)
                 ->where('stock_value', '2125.0000')
                 ->where('stock_status', 'in_stock')
+                ->where('photo_url', null)
+                ->where('used_in_count', 0)
                 ->where('created_at', $material->created_at->toIso8601String())
                 ->where('updated_at', $material->updated_at->toIso8601String()))
             ->missing('material.data'));
+});
+
+it('sends empty usage and history on the show page until S-13c fills them', function () {
+    $material = Material::factory()->create();
+
+    actingAs($this->user)->get(route('materials.show', $material))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('usage', [])
+            ->where('history', [])
+            ->has('usage', 0)
+            ->has('history', 0));
 });

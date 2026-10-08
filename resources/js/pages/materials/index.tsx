@@ -1,14 +1,15 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { Boxes, Plus, SearchX } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import MaterialController from '@/actions/App/Http/Controllers/MaterialController';
 import { MaterialsTable } from '@/components/materials/materials-table';
-import { ConfirmDeleteDialog } from '@/components/shared/confirm-delete-dialog';
 import { EmptyState } from '@/components/shared/empty-state';
 import { FiltersBar } from '@/components/shared/filters-bar';
 import { PageHeader } from '@/components/shared/page-header';
 import { Pagination } from '@/components/shared/pagination';
 import { Button } from '@/components/ui/button';
+import { useAppSettings } from '@/hooks/use-app-settings';
+import { formatCount, formatMoney } from '@/lib/format';
 import type {
     Material,
     MaterialFilters,
@@ -66,20 +67,32 @@ const hrefs = {
     edit: (material: Material) => MaterialController.edit.url(material),
 };
 
+/** "12 materials · inventory value €10,544.30", over every material, not just this page. */
+function describeSummary(
+    summary: MaterialsIndexProps['summary'],
+    currency: string,
+    locale: string,
+): string {
+    const count = formatCount(summary.materials_count, locale);
+    const noun = summary.materials_count === 1 ? 'material' : 'materials';
+    const value = formatMoney(summary.inventory_value, { currency, locale });
+
+    return `${count} ${noun} · inventory value ${value}`;
+}
+
 export default function MaterialsIndex({
     materials,
     filters: serverFilters,
     categories,
+    summary,
+    recent_history,
 }: MaterialsIndexProps) {
+    const { currency, locale } = useAppSettings();
     // The filter controls own their state (seeded from the server) so a slow
     // response can never overwrite what the user typed or picked meanwhile.
     const [filters, setFilters] = useState(serverFilters);
     const [sentKey, setSentKey] = useState(filtersKey(serverFilters));
     const [seenKey, setSeenKey] = useState(filtersKey(serverFilters));
-    const [deleting, setDeleting] = useState<Material | null>(null);
-    const [deleteProcessing, setDeleteProcessing] = useState(false);
-    // The control that opened the dialog, so focus can return to it.
-    const deleteTriggerRef = useRef<HTMLElement | null>(null);
 
     // Server filters we did not ask for (back / forward button) are adopted;
     // the echo of our own request is not.
@@ -105,21 +118,6 @@ export default function MaterialsIndex({
         });
     }
 
-    function confirmDelete() {
-        if (!deleting) {
-            return;
-        }
-
-        router.delete(MaterialController.destroy.url(deleting), {
-            preserveScroll: true,
-            onStart: () => setDeleteProcessing(true),
-            onFinish: () => {
-                setDeleteProcessing(false);
-                setDeleting(null);
-            },
-        });
-    }
-
     const filtered = hasActiveFilters(serverFilters);
     const isEmpty = materials.data.length === 0;
 
@@ -130,7 +128,7 @@ export default function MaterialsIndex({
             <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
                 <PageHeader
                     title="Materials"
-                    description="Primary materials in stock, with cost and stock status."
+                    description={describeSummary(summary, currency, locale)}
                     actions={
                         <Button asChild>
                             <Link href={MaterialController.create()}>
@@ -190,42 +188,12 @@ export default function MaterialsIndex({
                         <MaterialsTable
                             materials={materials.data}
                             hrefs={hrefs}
-                            onDelete={(material) => {
-                                deleteTriggerRef.current =
-                                    document.activeElement instanceof
-                                    HTMLElement
-                                        ? document.activeElement
-                                        : null;
-                                setDeleting(material);
-                            }}
+                            recentHistory={recent_history}
                         />
                         <Pagination meta={materials.meta} />
                     </>
                 )}
             </div>
-
-            <ConfirmDeleteDialog
-                open={deleting !== null}
-                onOpenChange={(open) => {
-                    if (!open && !deleteProcessing) {
-                        setDeleting(null);
-                    }
-                }}
-                title="Delete material?"
-                description={
-                    deleting && (
-                        <p>
-                            <strong>{deleting.name}</strong> (SKU {deleting.sku}
-                            ) will be removed from your inventory. This cannot
-                            be undone.
-                        </p>
-                    )
-                }
-                confirmLabel="Delete material"
-                processing={deleteProcessing}
-                returnFocusTo={deleteTriggerRef}
-                onConfirm={confirmDelete}
-            />
         </>
     );
 }

@@ -1,26 +1,95 @@
-import { Head } from '@inertiajs/react';
-import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
+import { Head, Link, router } from '@inertiajs/react';
+import { Plus } from 'lucide-react';
+import { useState } from 'react';
+import SaleController from '@/actions/App/Http/Controllers/SaleController';
+import { KeyFigures } from '@/components/dashboard/key-figures';
+import { NeedsRestockCard } from '@/components/dashboard/needs-restock-card';
+import { RecentSalesCard } from '@/components/dashboard/recent-sales-card';
+import { TopProductsCard } from '@/components/dashboard/top-products-card';
+import { UnproducibleAlerts } from '@/components/dashboard/unproducible-alerts';
+import { PageHeader } from '@/components/shared/page-header';
+import { DEFAULT_PERIOD, PeriodSelect } from '@/components/sales/period-select';
+import { Button } from '@/components/ui/button';
 import { dashboard } from '@/routes';
+import type { DashboardProps, SalesPeriod } from '@/types/domain';
 
-export default function Dashboard() {
+export default function Dashboard({
+    period,
+    periods,
+    stats,
+    top_products: topProducts,
+    needs_restock: needsRestock,
+    recent_sales: recentSales,
+    alerts,
+}: DashboardProps) {
+    // The select owns its value so it answers at once; a period the server
+    // sends (the response, or the back button) is adopted.
+    const [selected, setSelected] = useState(period);
+    const [seenPeriod, setSeenPeriod] = useState(period);
+
+    if (period !== seenPeriod) {
+        setSeenPeriod(period);
+        setSelected(period);
+    }
+
+    function changePeriod(next: SalesPeriod) {
+        setSelected(next);
+
+        router.get(
+            dashboard.url(),
+            next === DEFAULT_PERIOD ? {} : { period: next },
+            { preserveState: true, preserveScroll: true, replace: true },
+        );
+    }
+
+    const periodLabel =
+        periods.find((option) => option.value === period)?.label ?? '';
+
     return (
         <>
             <Head title="Dashboard" />
-            <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
-                <div className="grid auto-rows-min gap-4 md:grid-cols-3">
-                    <div className="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border">
-                        <PlaceholderPattern className="absolute inset-0 size-full stroke-neutral-900/20 dark:stroke-neutral-100/20" />
-                    </div>
-                    <div className="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border">
-                        <PlaceholderPattern className="absolute inset-0 size-full stroke-neutral-900/20 dark:stroke-neutral-100/20" />
-                    </div>
-                    <div className="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border">
-                        <PlaceholderPattern className="absolute inset-0 size-full stroke-neutral-900/20 dark:stroke-neutral-100/20" />
-                    </div>
+
+            <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
+                <PageHeader
+                    title="Dashboard"
+                    description="Sales and stock at a glance."
+                    actions={
+                        <>
+                            <PeriodSelect
+                                id="dashboard-period"
+                                value={selected}
+                                periods={periods}
+                                onChange={changePeriod}
+                                className="w-44"
+                            />
+                            <Button asChild>
+                                <Link
+                                    href={SaleController.index({
+                                        query: { record: 1 },
+                                    })}
+                                >
+                                    <Plus aria-hidden="true" />
+                                    Record sale
+                                </Link>
+                            </Button>
+                        </>
+                    }
+                />
+
+                <UnproducibleAlerts alerts={alerts} />
+
+                <KeyFigures stats={stats} periodLabel={periodLabel} />
+
+                <div className="grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] xl:items-start">
+                    <TopProductsCard
+                        byUnits={topProducts.by_units}
+                        byRevenue={topProducts.by_revenue}
+                        periodLabel={periodLabel}
+                    />
+                    <NeedsRestockCard materials={needsRestock} />
                 </div>
-                <div className="relative min-h-[100vh] flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 md:min-h-min dark:border-sidebar-border">
-                    <PlaceholderPattern className="absolute inset-0 size-full stroke-neutral-900/20 dark:stroke-neutral-100/20" />
-                </div>
+
+                <RecentSalesCard sales={recentSales} />
             </div>
         </>
     );

@@ -23,3 +23,15 @@ arch('actions expose a handle method')
     ->classes()
     ->toHaveMethod('handle')
     ->ignoring('App\Actions\Fortify');
+
+// ADR-0006: the preview fixture seam. Domain, Actions, Models, Resources and Services never depend on it, so removing it
+// (S-17) only touches controller bodies, the temporary FormRequest rules and the seeders. `App\Mock` itself is listed
+// because its classes use each other.
+arch('the preview data layer is only used by controllers, form requests and seeders')
+    ->expect('App\Mock')
+    ->toOnlyBeUsedIn([
+        'App\Mock',
+        'App\Http\Controllers',
+        'App\Http\Requests',
+        'Database\Seeders',
+    ]);

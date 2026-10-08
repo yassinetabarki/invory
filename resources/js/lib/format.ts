@@ -157,3 +157,75 @@ export function formatPercent(value: Maybe<Decimal>, locale: string): string {
         signDisplay: 'negative',
     }).format(value);
 }
+
+/** `YYYY-MM-DD`, optionally followed by an ISO-8601 time (and offset). */
+const DATE_PATTERN =
+    /^(\d{4})-(\d{2})-(\d{2})(?:[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}(?::?\d{2})?)?)?$/;
+
+const SHORT_DATE: Intl.DateTimeFormatOptions = {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    // The date is already a calendar date: never move it across midnight.
+    timeZone: 'UTC',
+};
+
+/**
+ * A calendar date for display: `"2026-10-07"` and `"2026-10-07T09:30:00Z"`
+ * (any ISO-8601 timestamp) → `7 Oct 2026`.
+ *
+ * The date is the one *written* in the value, formatted as UTC, so it never
+ * shifts with the browser's or the server's timezone. Plain `en` reads day
+ * first (`7 Oct 2026`, as in the approved mockup); every other locale uses
+ * its own order (`en-US` → `Oct 7, 2026`, `fr` → `7 oct. 2026`). Null,
+ * undefined, malformed values and dates that do not exist (`2026-02-30`)
+ * render as an em dash.
+ */
+export function formatDate(value: Maybe<string>, locale: string): string {
+    const match = value == null ? null : DATE_PATTERN.exec(value);
+
+    if (!match) {
+        return EMPTY_VALUE;
+    }
+
+    const year = Number(match[1]);
+    const month = Number(match[2]);
+    const day = Number(match[3]);
+    const date = new Date(Date.UTC(year, month - 1, day));
+
+    if (
+        date.getUTCFullYear() !== year ||
+        date.getUTCMonth() !== month - 1 ||
+        date.getUTCDate() !== day
+    ) {
+        return EMPTY_VALUE;
+    }
+
+    const formatter = new Intl.DateTimeFormat(locale, SHORT_DATE);
+
+    if (formatter.resolvedOptions().locale !== 'en') {
+        return formatter.format(date);
+    }
+
+    const parts = formatter.formatToParts(date);
+    const part = (type: Intl.DateTimeFormatPartTypes) =>
+        parts.find((p) => p.type === type)?.value ?? '';
+
+    return `${part('day')} ${part('month')} ${part('year')}`;
+}
+
+/**
+ * A whole-number count with the locale's grouping: `1250` → `1,250`
+ * (en), `1.250` (de). Null, undefined, NaN, infinite and non-integer values
+ * render as an em dash: counts are whole numbers, and a fraction means the
+ * wrong field was passed.
+ */
+export function formatCount(value: Maybe<number>, locale: string): string {
+    if (value == null || !Number.isSafeInteger(value)) {
+        return EMPTY_VALUE;
+    }
+
+    return new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(
+        value,
+    );
+}

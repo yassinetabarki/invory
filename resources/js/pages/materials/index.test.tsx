@@ -1,11 +1,4 @@
-import {
-    act,
-    fireEvent,
-    render,
-    screen,
-    waitFor,
-    within,
-} from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {
     afterEach,
@@ -18,13 +11,19 @@ import {
 import MaterialsIndex from '@/pages/materials/index';
 import { inertiaMock, resetInertiaMock, setPageProps } from '@/test/inertia';
 import {
+    button,
+    buttonHistory,
     categories,
     defaultFilters,
     denim,
     paginate,
     thread,
 } from '@/test/fixtures';
-import type { MaterialFilters, MaterialsIndexProps } from '@/types/domain';
+import type {
+    MaterialFilters,
+    MaterialsIndexProps,
+    StockMovement,
+} from '@/types/domain';
 
 vi.mock('@inertiajs/react', async (importOriginal) => {
     const { createInertiaModule } = await import('@/test/inertia');
@@ -45,6 +44,7 @@ function props(overrides: Partial<MaterialsIndexProps> = {}) {
         materials: paginate([denim, thread]),
         filters: defaultFilters,
         categories,
+        summary: { materials_count: 2, inventory_value: '2125.0000' },
         ...overrides,
     } satisfies MaterialsIndexProps;
 }
@@ -84,6 +84,54 @@ describe('materials/index page', () => {
                 within(table).getByRole('row', { name: /Polyester thread/ }),
             ).toBeInTheDocument();
             expect(within(table).getByText('Out of stock')).toBeInTheDocument();
+        });
+
+        it('describes the catalogue from the summary, not from this page', () => {
+            render(
+                <MaterialsIndex
+                    {...props({
+                        materials: paginate([denim]),
+                        summary: {
+                            materials_count: 12,
+                            inventory_value: '10544.3000',
+                        },
+                    })}
+                />,
+            );
+
+            expect(
+                screen.getByText('12 materials · inventory value €10,544.30'),
+            ).toBeInTheDocument();
+        });
+
+        it('uses the singular for a single material', () => {
+            render(
+                <MaterialsIndex
+                    {...props({
+                        materials: paginate([denim]),
+                        summary: {
+                            materials_count: 1,
+                            inventory_value: '2125.0000',
+                        },
+                    })}
+                />,
+            );
+
+            expect(
+                screen.getByText('1 material · inventory value €2,125.00'),
+            ).toBeInTheDocument();
+        });
+
+        it('formats the inventory value in the installation currency', () => {
+            setPageProps({
+                app: { currency: 'TND', locale: 'en', today: '2026-10-08' },
+            });
+            render(<MaterialsIndex {...props()} />);
+
+            // Intl separates "TND" and the number with a no-break space.
+            expect(
+                screen.getByText('2 materials · inventory value TND 2,125.000'),
+            ).toBeInTheDocument();
         });
 
         it('links Add material, and each row, through Wayfinder', () => {
@@ -473,95 +521,181 @@ describe('materials/index page', () => {
         });
     });
 
-    describe('delete', () => {
-        async function openDialog() {
-            const user = userEvent.setup();
+    describe('restock and history', () => {
+        const buttonRestock = 'Restock Metal shank button 17mm';
+        const buttonHistoryName = 'History of Metal shank button 17mm';
 
-            render(<MaterialsIndex {...props()} />);
-
-            // The table (>= md) and the cards (< md) are both in the DOM.
-            await user.click(
-                screen.getAllByRole('button', {
-                    name: 'Delete Denim 12oz Indigo',
-                })[0],
-            );
-
-            return user;
+        function tableView() {
+            return within(screen.getByRole('table', { name: 'Materials' }));
         }
 
-        it('asks for confirmation naming the material and its SKU', async () => {
-            await openDialog();
+        it('has no delete action: it moved to the detail page', () => {
+            render(<MaterialsIndex {...props()} />);
 
-            const dialog = screen.getByRole('alertdialog', {
-                name: 'Delete material?',
-            });
-
-            expect(within(dialog).getByText(/Denim 12oz Indigo/)).toBeVisible();
-            expect(within(dialog).getByText(/SKU FAB-001/)).toBeVisible();
-            expect(inertiaMock.router.delete).not.toHaveBeenCalled();
-        });
-
-        it('does nothing when cancelled', async () => {
-            const user = await openDialog();
-
-            await user.click(screen.getByRole('button', { name: 'Cancel' }));
-
+            expect(
+                screen.queryByRole('button', { name: /delete/i }),
+            ).not.toBeInTheDocument();
             expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
-            expect(inertiaMock.router.delete).not.toHaveBeenCalled();
         });
 
-        it('gives focus back to the clicked Delete button when dismissed', async () => {
-            const user = await openDialog();
+        it('opens the restock form of a row, posting to that material', async () => {
+            const user = userEvent.setup();
 
-            await user.click(screen.getByRole('button', { name: 'Cancel' }));
-
-            await waitFor(() =>
-                expect(
-                    screen.getAllByRole('button', {
-                        name: 'Delete Denim 12oz Indigo',
-                    })[0],
-                ).toHaveFocus(),
+            render(
+                <MaterialsIndex
+                    {...props({ materials: paginate([button]) })}
+                />,
             );
-        });
-
-        it('closes with Escape (keyboard only)', async () => {
-            const user = await openDialog();
-
-            await user.keyboard('{Escape}');
-
-            expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
-        });
-
-        it('deletes through the destroy URL, shows progress, then closes', async () => {
-            const user = await openDialog();
 
             await user.click(
-                screen.getByRole('button', { name: 'Delete material' }),
+                tableView().getByRole('button', { name: buttonRestock }),
             );
 
-            expect(inertiaMock.router.delete).toHaveBeenCalledOnce();
-            expect(inertiaMock.router.delete).toHaveBeenCalledWith(
-                '/materials/1',
-                expect.objectContaining({ preserveScroll: true }),
+            const panel = tableView().getByRole('group', {
+                name: 'Restock Metal shank button 17mm',
+            });
+
+            expect(panel.querySelector('form')).toHaveAttribute(
+                'action',
+                '/materials/3/restocks',
+            );
+            expect(panel).toHaveTextContent('In stock now: 900 pc');
+            expect(
+                within(panel).getByLabelText('Quantity received'),
+            ).toHaveFocus();
+        });
+
+        it('submits the restock fields typed in the panel', async () => {
+            const user = userEvent.setup();
+
+            render(
+                <MaterialsIndex
+                    {...props({ materials: paginate([button]) })}
+                />,
             );
 
-            const [, options] = inertiaMock.router.delete.mock.calls[0] as [
-                string,
-                { onStart: () => void; onFinish: () => void },
-            ];
+            await user.click(
+                tableView().getByRole('button', { name: buttonRestock }),
+            );
+            await user.type(screen.getByLabelText('Quantity received'), '500');
+            await user.type(screen.getByLabelText('Unit price paid'), '0.3600');
+            await user.click(
+                screen.getByRole('button', { name: 'Add to stock' }),
+            );
 
-            act(() => options.onStart());
+            expect(inertiaMock.submissions).toEqual([
+                {
+                    action: '/materials/3/restocks',
+                    method: 'post',
+                    data: {
+                        quantity: '500',
+                        unit_price: '0.3600',
+                        received_on: '2026-10-08',
+                        reference: '',
+                        update_unit_cost: '1',
+                    },
+                },
+            ]);
+        });
 
+        it('shows the history skeleton until the deferred recent_history lands, then only that material', async () => {
+            const user = userEvent.setup();
+            const denimEntry: StockMovement = {
+                ...buttonHistory[1],
+                id: 99,
+                material_id: denim.id,
+                reference: 'PO-DENIM',
+            };
+            const loaded = {
+                ...props({ materials: paginate([button, denim]) }),
+                recent_history: [denimEntry, ...buttonHistory],
+            };
+
+            // The deferred prop is not in the page yet.
+            const { rerender } = render(
+                <MaterialsIndex
+                    {...props({ materials: paginate([button, denim]) })}
+                />,
+            );
+
+            await user.click(
+                tableView().getByRole('button', { name: buttonHistoryName }),
+            );
+
+            expect(screen.getByRole('status')).toHaveTextContent(
+                'Loading history…',
+            );
+
+            setPageProps({ recent_history: loaded.recent_history });
+            rerender(<MaterialsIndex {...loaded} />);
+
+            const panel = tableView().getByRole('group', {
+                name: 'History · Metal shank button 17mm',
+            });
+
+            expect(screen.queryByRole('status')).not.toBeInTheDocument();
+            expect(within(panel).getAllByRole('listitem')).toHaveLength(4);
             expect(
-                screen.getByRole('button', { name: /delete material/i }),
-            ).toBeDisabled();
+                within(panel).getByText('+500 pc at €0.35 · PO-2291'),
+            ).toBeInTheDocument();
+            expect(within(panel).queryByText(/PO-DENIM/)).toBeNull();
             expect(
-                screen.getByRole('button', { name: 'Cancel' }),
-            ).toBeDisabled();
+                within(panel).getByRole('link', { name: 'Open material page' }),
+            ).toHaveAttribute('href', '/materials/3');
+        });
 
-            act(() => options.onFinish());
+        it('returns focus to the row button when a panel is closed with Escape', async () => {
+            const user = userEvent.setup();
 
-            expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+            render(
+                <MaterialsIndex
+                    {...props({ materials: paginate([button]) })}
+                />,
+            );
+
+            const trigger = tableView().getByRole('button', {
+                name: buttonRestock,
+            });
+
+            await user.click(trigger);
+            await user.keyboard('{Escape}');
+
+            expect(screen.queryByRole('group')).not.toBeInTheDocument();
+            expect(trigger).toHaveFocus();
+        });
+    });
+
+    describe('what a row tells about the material', () => {
+        it('shows how many products use each material', () => {
+            render(
+                <MaterialsIndex
+                    {...props({ materials: paginate([button, denim]) })}
+                />,
+            );
+
+            const table = screen.getByRole('table', { name: 'Materials' });
+
+            expect(within(table).getByText('3 products')).toBeInTheDocument();
+            expect(
+                within(table).getByRole('columnheader', { name: 'Used in' }),
+            ).toBeInTheDocument();
+        });
+
+        it('shows the photo thumbnail of a material that has one', () => {
+            render(
+                <MaterialsIndex
+                    {...props({ materials: paginate([button]) })}
+                />,
+            );
+
+            const row = within(
+                screen.getByRole('table', { name: 'Materials' }),
+            ).getByRole('row', { name: /Metal shank button 17mm/ });
+
+            expect(row.querySelector('img')).toHaveAttribute(
+                'src',
+                '/mock/photos/mat-btn-017.svg',
+            );
         });
     });
 });

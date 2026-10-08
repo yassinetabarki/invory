@@ -21,5 +21,8 @@ class DatabaseSeeder extends Seeder
             'name' => 'Test User',
             'email' => 'test@example.com',
         ]);
+
+        // The mockup's 12 materials: stock for the UI-first preview to cost its fixture products against.
+        $this->call(DemoCatalogSeeder::class);
     }
 }

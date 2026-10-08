@@ -25,6 +25,44 @@ if (typeof Element !== 'undefined') {
     }
 }
 
+/**
+ * Browser APIs jsdom does not implement, as inert stand-ins so that modules
+ * which touch them at import or render time (the sidebar's `useIsMobile`,
+ * Radix Popover, cmdk's list, the photo field's previews) load in tests.
+ * Tests that care can replace them (`vi.spyOn(URL, 'createObjectURL')`).
+ */
+if (typeof window !== 'undefined') {
+    if (!window.matchMedia) {
+        // Desktop-sized, light, no reduced motion: nothing matches.
+        window.matchMedia = (query: string): MediaQueryList => ({
+            matches: false,
+            media: query,
+            onchange: null,
+            addEventListener: () => undefined,
+            removeEventListener: () => undefined,
+            addListener: () => undefined,
+            removeListener: () => undefined,
+            dispatchEvent: () => false,
+        });
+    }
+
+    if (typeof window.ResizeObserver === 'undefined') {
+        class ResizeObserverStub implements ResizeObserver {
+            observe = () => undefined;
+            unobserve = () => undefined;
+            disconnect = () => undefined;
+        }
+
+        window.ResizeObserver = ResizeObserverStub;
+    }
+
+    // Vitest's own jsdom shim throws for jsdom Files, so these are always replaced.
+    let objectUrlCount = 0;
+
+    URL.createObjectURL = () => `blob:invory-test/${++objectUrlCount}`;
+    URL.revokeObjectURL = () => undefined;
+}
+
 afterEach(() => {
     cleanup();
 });

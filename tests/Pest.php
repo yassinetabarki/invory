@@ -1,6 +1,13 @@
 <?php
 
+use App\Models\Material;
+use App\Models\User;
+use Carbon\CarbonImmutable;
+use Database\Seeders\DemoCatalogSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Response;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 /*
@@ -86,6 +93,122 @@ function materialContractKeys(): array
     return [
         'id', 'sku', 'name', 'category', 'category_label', 'unit', 'unit_label', 'unit_cost',
         'quantity_on_hand', 'reorder_level', 'stock_value', 'stock_status', 'supplier_name',
-        'supplier_reference', 'color', 'composition', 'notes', 'created_at', 'updated_at',
+        'supplier_reference', 'color', 'composition', 'notes', 'photo_url', 'used_in_count', 'created_at', 'updated_at',
     ];
+}
+
+/*
+|--------------------------------------------------------------------------
+| UI-first preview helpers (ADR-0006)
+|--------------------------------------------------------------------------
+|
+| The preview tests run with the clock frozen at 2026-10-08 12:00 and the 12 DemoCatalogSeeder materials in the
+| database, so every "Expected" value of docs/plans/phase-2-ui-first-preview.md can be asserted exactly.
+|
+*/
+
+/** The instant the preview fixture's `days_ago` values and the plan's "Expected" tables are relative to. */
+const PREVIEW_NOW = '2026-10-08 12:00:00';
+
+/**
+ * Freeze the clock at PREVIEW_NOW, seed the 12 demo materials and return a verified user.
+ * Call it from a `beforeEach` of a preview test file: `beforeEach(fn () => $this->user = preparePreview($this));`.
+ */
+function preparePreview(TestCase $test): User
+{
+    $test->travelTo(CarbonImmutable::parse(PREVIEW_NOW));
+    $test->seed(DemoCatalogSeeder::class);
+
+    return User::factory()->create();
+}
+
+/** The seeded (or factory-made) material with this SKU. */
+function previewMaterial(string $sku): Material
+{
+    return Material::query()->where('sku', $sku)->firstOrFail();
+}
+
+/**
+ * One Inertia prop of a page response by dot path, with `*` wildcards (`products.data.*.name` is the list of names).
+ * AssertableInertia's own `where()` has no wildcards, so use this to compare whole columns of a list.
+ *
+ * @param  TestResponse<Response>  $response
+ */
+function pageProp(TestResponse $response, string $path): mixed
+{
+    return data_get($response->inertiaProps(), $path);
+}
+
+/**
+ * A valid Store/UpdateProductRequest payload: the Denim Jacket composition on the seeded materials, with overrides.
+ * Needs the seeded materials (`preparePreview()`); the SKU is new, so it also passes the create rules.
+ *
+ * @param  array<string, mixed>  $overrides
+ * @return array<string, mixed>
+ */
+function validProductPayload(array $overrides = []): array
+{
+    return [
+        'sku' => 'PRD-NEW-100',
+        'name' => 'Indigo Work Shirt',
+        'category' => 'apparel',
+        'status' => 'draft',
+        'description' => 'A new shirt.',
+        'labor_cost' => '8.5',
+        'overhead_cost' => '2',
+        'selling_price' => '59.9',
+        'components' => [
+            ['material_id' => previewMaterial('MAT-DEN-012')->id, 'quantity' => '1.6', 'waste_percent' => '8', 'notes' => 'Body'],
+            ['material_id' => previewMaterial('MAT-THR-PES')->id, 'quantity' => '90', 'waste_percent' => '5', 'notes' => 'Seams'],
+        ],
+        ...$overrides,
+    ];
+}
+
+/**
+ * A valid Store/UpdateSaleRequest payload (sells the active Denim Jacket today), with overrides.
+ *
+ * @param  array<string, mixed>  $overrides
+ * @return array<string, mixed>
+ */
+function validSalePayload(array $overrides = []): array
+{
+    return [
+        'product_id' => 1,
+        'quantity' => '3',
+        'unit_price' => '89',
+        'sold_on' => '2026-10-08',
+        'note' => 'Web shop',
+        ...$overrides,
+    ];
+}
+
+/**
+ * A valid StoreRestockRequest payload, with overrides.
+ *
+ * @param  array<string, mixed>  $overrides
+ * @return array<string, mixed>
+ */
+function validRestockPayload(array $overrides = []): array
+{
+    return [
+        'quantity' => '500',
+        'unit_price' => '0.36',
+        'received_on' => '2026-10-08',
+        'reference' => 'PO-2300',
+        'update_unit_cost' => '1',
+        ...$overrides,
+    ];
+}
+
+/**
+ * A real file on disk, sent under the given name and client MIME type. UploadedFile::fake() derives the type from the file
+ * name, so only a real file proves that a photo rule looks at the content.
+ */
+function realUpload(string $name, string $content, string $clientMimeType): UploadedFile
+{
+    $path = tempnam(sys_get_temp_dir(), 'invory-photo-');
+    file_put_contents($path, $content);
+
+    return new UploadedFile($path, $name, $clientMimeType, null, true);
 }

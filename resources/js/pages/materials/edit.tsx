@@ -1,6 +1,7 @@
 import { Form, Head } from '@inertiajs/react';
 import MaterialController from '@/actions/App/Http/Controllers/MaterialController';
 import { MaterialForm } from '@/components/materials/material-form';
+import { MaterialFormActions } from '@/components/materials/material-form-actions';
 import { PageHeader } from '@/components/shared/page-header';
 import type {
     Material,
@@ -23,43 +24,57 @@ function toFormData(material: Material): MaterialFormData {
         color: material.color ?? '',
         composition: material.composition ?? '',
         notes: material.notes ?? '',
+        photo: null,
+        remove_photo: false,
     };
 }
+
+const SUBMIT_LABEL = 'Save material';
 
 export default function MaterialsEdit({
     categories,
     units,
     material,
 }: MaterialEditProps) {
+    const cancelHref = MaterialController.show.url(material);
+
     return (
         <>
             <Head title={`Edit ${material.name}`} />
 
-            <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-                <PageHeader
-                    title={`Edit ${material.name}`}
-                    description={`${material.sku} · ${material.category_label}`}
-                />
-
-                {/* Keyed by id: the form's `initial` only seeds the inputs. */}
-                <Form
-                    key={material.id}
-                    {...MaterialController.update.form(material)}
-                    className="max-w-3xl"
-                >
-                    {({ errors, processing }) => (
+            {/* Keyed by id: the form's `initial` only seeds the inputs. The
+                header is inside the form so its Save button submits it. */}
+            <Form
+                key={material.id}
+                {...MaterialController.update.form(material)}
+                className="flex flex-1 flex-col gap-6 p-4 md:p-6"
+            >
+                {({ errors, processing }) => (
+                    <>
+                        <PageHeader
+                            title={`Edit ${material.name}`}
+                            description={`${material.sku} · ${material.category_label}`}
+                            actions={
+                                <MaterialFormActions
+                                    processing={processing}
+                                    submitLabel={SUBMIT_LABEL}
+                                    cancelHref={cancelHref}
+                                />
+                            }
+                        />
                         <MaterialForm
                             initial={toFormData(material)}
                             categories={categories}
                             units={units}
                             errors={errors}
                             processing={processing}
-                            submitLabel="Save changes"
-                            cancelHref={MaterialController.show.url(material)}
+                            submitLabel={SUBMIT_LABEL}
+                            cancelHref={cancelHref}
+                            photoUrl={material.photo_url}
                         />
-                    )}
-                </Form>
-            </div>
+                    </>
+                )}
+            </Form>
         </>
     );
 }

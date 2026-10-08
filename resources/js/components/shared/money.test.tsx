@@ -54,6 +54,15 @@ describe('<Money>', () => {
         expect(screen.getByText(/TND/).textContent).toBe('TND 0.004');
     });
 
+    it('uses tabular figures so amounts line up in columns', () => {
+        render(<Money value="35.7540" className="font-bold" />);
+
+        expect(screen.getByText('€35.75')).toHaveClass(
+            'tabular-nums',
+            'font-bold',
+        );
+    });
+
     it('renders an em dash when there is no value', () => {
         render(<Money value={null} />);
 

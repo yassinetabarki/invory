@@ -37,6 +37,45 @@ it('lists materials with the agreed contract shape', function () {
             ->where('categories.0', ['value' => 'fabric', 'label' => 'Fabric']));
 });
 
+it('sends the inventory summary over all materials, not just the current page', function () {
+    Material::factory()->count(26)->create(['quantity_on_hand' => '2', 'unit_cost' => '0.5', 'reorder_level' => null]);
+    Material::factory()->create(['quantity_on_hand' => '100', 'unit_cost' => '10'])->delete();
+
+    foreach ([1, 2] as $page) {
+        actingAs($this->user)->get(route('materials.index', ['page' => $page]))
+            ->assertInertia(fn (Assert $props) => $props
+                ->where('summary', ['materials_count' => 26, 'inventory_value' => '26.0000'])
+                ->has('summary', fn (Assert $summary) => $summary->hasAll(['materials_count', 'inventory_value'])));
+    }
+});
+
+it('keeps the summary independent of the filters', function () {
+    Material::factory()->create(['name' => 'Denim', 'category' => 'fabric', 'quantity_on_hand' => '10', 'unit_cost' => '8.5']);
+    Material::factory()->create(['name' => 'Thread', 'category' => 'thread', 'quantity_on_hand' => '1000', 'unit_cost' => '0.004']);
+
+    actingAs($this->user)->get(route('materials.index', ['category' => 'thread', 'search' => 'zzz']))
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('materials.data', 0)
+            ->where('summary', ['materials_count' => 2, 'inventory_value' => '89.0000']));
+});
+
+it('reports an empty inventory as zero with a scale-4 value', function () {
+    actingAs($this->user)->get(route('materials.index'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('summary', ['materials_count' => 0, 'inventory_value' => '0.0000']));
+});
+
+it('serialises the photo and usage placeholders on every row until S-13c wires them', function () {
+    Material::factory()->count(2)->create();
+
+    actingAs($this->user)->get(route('materials.index'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('materials.data.0.photo_url', null)
+            ->where('materials.data.0.used_in_count', 0)
+            ->where('materials.data.1.photo_url', null)
+            ->where('materials.data.1.used_in_count', 0));
+});
+
 it('exposes all four filter keys with defaults', function () {
     actingAs($this->user)->get(route('materials.index'))
         ->assertInertia(fn (Assert $page) => $page

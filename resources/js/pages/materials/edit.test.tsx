@@ -2,13 +2,14 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import MaterialsEdit from '@/pages/materials/edit';
-import { categories, denim, thread, units } from '@/test/fixtures';
+import { button, categories, denim, thread, units } from '@/test/fixtures';
 import {
     inertiaMock,
     resetInertiaMock,
     setFormState,
     setPageProps,
 } from '@/test/inertia';
+import type { Material } from '@/types/domain';
 
 // `<Form>` is replaced by a plain <form> whose render prop receives the
 // `errors` / `processing` set with setFormState(); see resources/js/test/inertia.tsx.
@@ -20,6 +21,21 @@ vi.mock('@inertiajs/react', async (importOriginal) => {
     );
 });
 
+function renderEdit(material: Material) {
+    return render(
+        <MaterialsEdit
+            categories={categories}
+            units={units}
+            material={material}
+        />,
+    );
+}
+
+/** The header and the bottom of the form both carry Cancel and Save. */
+function saveButtons() {
+    return screen.getAllByRole('button', { name: /Save material/ });
+}
+
 describe('materials/edit page', () => {
     beforeEach(() => {
         resetInertiaMock();
@@ -27,13 +43,7 @@ describe('materials/edit page', () => {
     });
 
     it('pre-fills the form with the material, decimals kept as strings', () => {
-        const { container } = render(
-            <MaterialsEdit
-                categories={categories}
-                units={units}
-                material={denim}
-            />,
-        );
+        const { container } = renderEdit(denim);
 
         expect(
             screen.getByRole('heading', {
@@ -41,14 +51,15 @@ describe('materials/edit page', () => {
                 name: 'Edit Denim 12oz Indigo',
             }),
         ).toBeInTheDocument();
+        expect(screen.getByText('FAB-001 · Fabric')).toBeInTheDocument();
         expect(screen.getByLabelText(/^SKU/)).toHaveValue('FAB-001');
         expect(screen.getByLabelText(/^Name/)).toHaveValue('Denim 12oz Indigo');
         expect(screen.getByLabelText(/^Unit cost/)).toHaveValue('8.5000');
-        expect(screen.getByLabelText(/^Quantity on hand/)).toHaveValue(
+        expect(screen.getByLabelText(/^Quantity in stock/)).toHaveValue(
             '250.0000',
         );
-        expect(screen.getByLabelText(/^Reorder level/)).toHaveValue('50.0000');
-        expect(screen.getByLabelText(/^Supplier$/)).toHaveValue(
+        expect(screen.getByLabelText(/^Reorder at/)).toHaveValue('50.0000');
+        expect(screen.getByLabelText('Supplier (optional)')).toHaveValue(
             'Tessuti Rossi',
         );
         expect(screen.getByLabelText(/^Notes/)).toHaveValue(
@@ -61,31 +72,24 @@ describe('materials/edit page', () => {
             screen.getByRole('combobox', { name: /Unit of measure/ }),
         ).toHaveTextContent('Metre (m)');
 
-        // Spoofed PUT through Wayfinder's form helper.
+        // Spoofed PUT through Wayfinder's form helper (multipart-safe).
         const form = container.querySelector('form');
 
         expect(form).toHaveAttribute('action', '/materials/1?_method=PUT');
         expect(form).toHaveAttribute('method', 'post');
-        expect(
-            screen.getByRole('button', { name: 'Save changes' }),
-        ).toBeInTheDocument();
-        expect(screen.getByRole('link', { name: 'Cancel' })).toHaveAttribute(
-            'href',
-            '/materials/1',
-        );
+
+        expect(saveButtons()).toHaveLength(2);
+
+        for (const cancel of screen.getAllByRole('link', { name: 'Cancel' })) {
+            expect(cancel).toHaveAttribute('href', '/materials/1');
+        }
     });
 
     it('renders null fields as empty inputs', () => {
-        render(
-            <MaterialsEdit
-                categories={categories}
-                units={units}
-                material={thread}
-            />,
-        );
+        renderEdit(thread);
 
-        expect(screen.getByLabelText(/^Reorder level/)).toHaveValue('');
-        expect(screen.getByLabelText(/^Supplier$/)).toHaveValue('');
+        expect(screen.getByLabelText(/^Reorder at/)).toHaveValue('');
+        expect(screen.getByLabelText('Supplier (optional)')).toHaveValue('');
         expect(screen.getByLabelText(/^Colour/)).toHaveValue('');
         expect(screen.getByLabelText(/^Notes/)).toHaveValue('');
     });
@@ -95,13 +99,7 @@ describe('materials/edit page', () => {
             errors: { sku: 'The sku has already been taken.' },
         });
 
-        render(
-            <MaterialsEdit
-                categories={categories}
-                units={units}
-                material={denim}
-            />,
-        );
+        renderEdit(denim);
 
         expect(screen.getByLabelText(/^SKU/)).toBeInvalid();
         expect(screen.getByLabelText(/^SKU/)).toHaveAccessibleDescription(
@@ -110,22 +108,26 @@ describe('materials/edit page', () => {
         expect(screen.getByLabelText(/^Name/)).toBeValid();
     });
 
+    it('disables Save while the request is in flight', () => {
+        setFormState({ processing: true });
+
+        renderEdit(denim);
+
+        for (const save of saveButtons()) {
+            expect(save).toBeDisabled();
+        }
+    });
+
     it('submits the edited quantity to the update route', async () => {
         const user = userEvent.setup();
 
-        render(
-            <MaterialsEdit
-                categories={categories}
-                units={units}
-                material={denim}
-            />,
-        );
+        renderEdit(denim);
 
-        const quantity = screen.getByLabelText(/^Quantity on hand/);
+        const quantity = screen.getByLabelText(/^Quantity in stock/);
 
         await user.clear(quantity);
         await user.type(quantity, '300');
-        await user.click(screen.getByRole('button', { name: 'Save changes' }));
+        await user.click(saveButtons()[0]);
 
         expect(inertiaMock.submissions).toHaveLength(1);
         expect(inertiaMock.submissions[0]).toMatchObject({
@@ -140,14 +142,97 @@ describe('materials/edit page', () => {
         });
     });
 
+    describe('photo', () => {
+        it('shows a drop zone when the material has no photo', () => {
+            renderEdit(denim);
+
+            expect(
+                screen.getByText(/drop a photo here or/i),
+            ).toBeInTheDocument();
+            expect(
+                screen.queryByAltText('Current photo'),
+            ).not.toBeInTheDocument();
+        });
+
+        it('shows the current photo with Replace photo and Remove', () => {
+            renderEdit(button);
+
+            expect(screen.getByAltText('Current photo')).toHaveAttribute(
+                'src',
+                '/mock/photos/mat-btn-017.svg',
+            );
+            expect(screen.getByText('Replace photo')).toBeInTheDocument();
+            expect(
+                screen.getByRole('button', { name: 'Remove photo' }),
+            ).toBeInTheDocument();
+        });
+
+        it('keeps the photo and sends no file by default', async () => {
+            const user = userEvent.setup();
+
+            renderEdit(button);
+            await user.click(saveButtons()[1]);
+
+            expect(inertiaMock.submissions[0].data).toMatchObject({
+                photo: '',
+                remove_photo: '0',
+            });
+        });
+
+        it('sends the replacement file', async () => {
+            const user = userEvent.setup();
+            const replacement = new File(['webp'], 'button-new.webp', {
+                type: 'image/webp',
+            });
+
+            renderEdit(button);
+            await user.upload(screen.getByLabelText('Photo'), replacement);
+
+            expect(
+                screen.getByAltText('New photo preview'),
+            ).toBeInTheDocument();
+
+            await user.click(saveButtons()[0]);
+
+            expect(inertiaMock.submissions[0].data).toMatchObject({
+                photo: replacement,
+                remove_photo: '0',
+            });
+        });
+
+        it('sends remove_photo as 1 after Remove, and 0 again after changing the mind', async () => {
+            const user = userEvent.setup();
+
+            renderEdit(button);
+            await user.click(
+                screen.getByRole('button', { name: 'Remove photo' }),
+            );
+
+            expect(
+                screen.getByText(
+                    'The current photo will be removed when you save.',
+                ),
+            ).toBeInTheDocument();
+
+            await user.click(saveButtons()[0]);
+
+            expect(inertiaMock.submissions[0].data).toMatchObject({
+                remove_photo: '1',
+            });
+
+            await user.click(
+                screen.getByRole('button', { name: 'Keep current photo' }),
+            );
+            await user.click(saveButtons()[0]);
+
+            expect(inertiaMock.submissions[1].data).toMatchObject({
+                remove_photo: '0',
+            });
+        });
+    });
+
     it('shows another material when navigated to (keyed by id)', () => {
-        const { rerender } = render(
-            <MaterialsEdit
-                categories={categories}
-                units={units}
-                material={denim}
-            />,
-        );
+        const { rerender } = renderEdit(denim);
 
         rerender(
             <MaterialsEdit

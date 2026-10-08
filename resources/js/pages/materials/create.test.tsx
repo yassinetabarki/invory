@@ -20,6 +20,11 @@ vi.mock('@inertiajs/react', async (importOriginal) => {
     );
 });
 
+/** The header and the bottom of the form both carry Cancel and Save. */
+function saveButtons() {
+    return screen.getAllByRole('button', { name: /Save material/ });
+}
+
 describe('materials/create page', () => {
     beforeEach(() => {
         resetInertiaMock();
@@ -32,7 +37,10 @@ describe('materials/create page', () => {
         );
 
         expect(
-            screen.getByRole('heading', { level: 1, name: 'New material' }),
+            screen.getByRole('heading', { level: 1, name: 'Add material' }),
+        ).toBeInTheDocument();
+        expect(
+            screen.getByText(/A primary item you buy and keep in stock/),
         ).toBeInTheDocument();
 
         const form = container.querySelector('form');
@@ -42,13 +50,38 @@ describe('materials/create page', () => {
         expect(screen.getByLabelText(/^SKU/)).toHaveValue('');
         expect(screen.getByLabelText(/^Name/)).toHaveValue('');
         expect(screen.getByLabelText(/^Unit cost/)).toHaveValue('');
+        expect(screen.getByLabelText(/^Quantity in stock/)).toHaveValue('');
+
+        const saves = saveButtons();
+
+        expect(saves).toHaveLength(2);
+
+        for (const save of saves) {
+            expect(save).toBeEnabled();
+        }
+
+        for (const cancel of screen.getAllByRole('link', { name: 'Cancel' })) {
+            expect(cancel).toHaveAttribute('href', '/materials');
+        }
+    });
+
+    it('has the mockup sections, including the optional photo', () => {
+        render(<MaterialsCreate categories={categories} units={units} />);
+
+        for (const name of [
+            'Identity',
+            'Stock and cost',
+            'Supplier and notes',
+            'Photo (optional)',
+        ]) {
+            expect(screen.getByRole('region', { name })).toBeInTheDocument();
+        }
+
+        // A new material has no photo yet.
+        expect(screen.getByText(/drop a photo here or/i)).toBeInTheDocument();
         expect(
-            screen.getByRole('button', { name: 'Create material' }),
-        ).toBeEnabled();
-        expect(screen.getByRole('link', { name: 'Cancel' })).toHaveAttribute(
-            'href',
-            '/materials',
-        );
+            screen.queryByRole('button', { name: 'Remove photo' }),
+        ).not.toBeInTheDocument();
     });
 
     it('shows each server error on its own field', () => {
@@ -57,6 +90,7 @@ describe('materials/create page', () => {
                 sku: 'The sku has already been taken.',
                 unit_cost: 'The unit cost must be at least 0.',
                 category: 'The category field is required.',
+                photo: 'The photo must be a file of type: jpg, png, webp.',
             },
         });
 
@@ -74,20 +108,39 @@ describe('materials/create page', () => {
         expect(
             screen.getByText('The category field is required.'),
         ).toBeInTheDocument();
+        expect(screen.getByLabelText('Photo')).toHaveAccessibleDescription(
+            expect.stringContaining('jpg, png, webp'),
+        );
         // Fields without an error stay valid.
         expect(screen.getByLabelText(/^Name/)).toBeValid();
         // Focus moves to the first invalid field.
         expect(sku).toHaveFocus();
     });
 
-    it('disables submit while the request is in flight', () => {
+    it('disables both Save buttons while the request is in flight', () => {
         setFormState({ processing: true });
 
         render(<MaterialsCreate categories={categories} units={units} />);
 
-        expect(
-            screen.getByRole('button', { name: /create material/i }),
-        ).toBeDisabled();
+        for (const save of saveButtons()) {
+            expect(save).toBeDisabled();
+        }
+    });
+
+    it('submits from the Save button in the header', async () => {
+        const user = userEvent.setup();
+
+        render(<MaterialsCreate categories={categories} units={units} />);
+
+        await user.type(screen.getByLabelText(/^SKU/), 'FAB-009');
+        await user.click(saveButtons()[0]);
+
+        expect(inertiaMock.submissions).toHaveLength(1);
+        expect(inertiaMock.submissions[0]).toMatchObject({
+            action: '/materials',
+            method: 'post',
+            data: { sku: 'FAB-009' },
+        });
     });
 
     it('submits the typed values with keyboard and mouse', async () => {
@@ -104,12 +157,13 @@ describe('materials/create page', () => {
         );
         await user.click(screen.getByRole('option', { name: 'Metre (m)' }));
         await user.type(screen.getByLabelText(/^Unit cost/), '8.5000');
-        await user.type(screen.getByLabelText(/^Quantity on hand/), '250');
-        // Submit with the keyboard from the last field.
+        await user.type(screen.getByLabelText(/^Reorder at/), '50');
         await user.type(screen.getByLabelText(/^Notes/), 'Soft hand');
-        await user.tab();
-        await user.tab();
-        await user.keyboard('{Enter}');
+        // Enter in the last field submits (implicit submission, keyboard only).
+        await user.type(
+            screen.getByLabelText(/^Quantity in stock/),
+            '250{Enter}',
+        );
 
         expect(inertiaMock.submissions).toHaveLength(1);
         expect(inertiaMock.submissions[0]).toMatchObject({
@@ -122,15 +176,50 @@ describe('materials/create page', () => {
                 unit: 'm',
                 unit_cost: '8.5000',
                 quantity_on_hand: '250',
+                reorder_level: '50',
                 notes: 'Soft hand',
             },
         });
     });
 
-    it('defines the Materials > New material breadcrumbs', () => {
+    it('sends the chosen photo with the form, and remove_photo as 0', async () => {
+        const user = userEvent.setup();
+        const photo = new File(['png'], 'button.png', { type: 'image/png' });
+
+        render(<MaterialsCreate categories={categories} units={units} />);
+
+        await user.type(screen.getByLabelText(/^SKU/), 'TRM-100');
+        await user.upload(screen.getByLabelText('Photo'), photo);
+
+        expect(screen.getByAltText('New photo preview')).toBeInTheDocument();
+
+        await user.click(saveButtons()[1]);
+
+        expect(inertiaMock.submissions).toHaveLength(1);
+        expect(inertiaMock.submissions[0].data).toMatchObject({
+            sku: 'TRM-100',
+            photo,
+            remove_photo: '0',
+        });
+    });
+
+    it('sends no file when no photo was chosen', async () => {
+        const user = userEvent.setup();
+
+        render(<MaterialsCreate categories={categories} units={units} />);
+
+        await user.click(saveButtons()[0]);
+
+        expect(inertiaMock.submissions[0].data).toMatchObject({
+            photo: '',
+            remove_photo: '0',
+        });
+    });
+
+    it('defines the Materials > Add material breadcrumbs', () => {
         expect(MaterialsCreate.layout.breadcrumbs.map((c) => c.title)).toEqual([
             'Materials',
-            'New material',
+            'Add material',
         ]);
     });
 });

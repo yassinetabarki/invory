@@ -1,4 +1,4 @@
-import { CircleCheck, CircleX, TriangleAlert } from 'lucide-react';
+import { CircleAlert, CircleCheck, CircleX } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -10,8 +10,9 @@ type StockBadgeProps = {
 };
 
 /**
- * Status is always conveyed by text and icon as well as colour.
- * Colours are semantic (green / amber / red) with dark-mode variants.
+ * Status is always conveyed by text and icon as well as colour (check,
+ * exclamation, x). Colours come from the semantic status tokens, which have
+ * light and dark values.
  */
 const STATUS: Record<
     StockStatus,
@@ -20,20 +21,17 @@ const STATUS: Record<
     in_stock: {
         label: 'In stock',
         icon: CircleCheck,
-        className:
-            'border-green-600/30 bg-green-50 text-green-800 dark:border-green-400/30 dark:bg-green-950/50 dark:text-green-300',
+        className: 'bg-success text-success-foreground',
     },
     low: {
         label: 'Low stock',
-        icon: TriangleAlert,
-        className:
-            'border-amber-600/40 bg-amber-50 text-amber-900 dark:border-amber-400/30 dark:bg-amber-950/50 dark:text-amber-300',
+        icon: CircleAlert,
+        className: 'bg-warning text-warning-foreground',
     },
     out: {
         label: 'Out of stock',
         icon: CircleX,
-        className:
-            'border-red-600/30 bg-red-50 text-red-800 dark:border-red-400/30 dark:bg-red-950/50 dark:text-red-300',
+        className: 'bg-danger text-danger-foreground',
     },
 };
 
@@ -44,7 +42,11 @@ export function StockBadge({ status, className }: StockBadgeProps) {
         <Badge
             variant="outline"
             data-status={status}
-            className={cn(tone, className)}
+            className={cn(
+                'rounded-full border-transparent font-semibold',
+                tone,
+                className,
+            )}
         >
             <Icon aria-hidden="true" />
             {label}

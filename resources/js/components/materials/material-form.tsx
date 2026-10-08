@@ -1,16 +1,12 @@
-import { Link } from '@inertiajs/react';
 import type { ReactNode } from 'react';
-import {
-    createContext,
-    useContext,
-    useEffect,
-    useId,
-    useRef,
-    useState,
-} from 'react';
-import { Button } from '@/components/ui/button';
+import { createContext, useContext, useId, useRef, useState } from 'react';
+import { currencySymbol } from '@/components/materials/currency-symbol';
+import { AffixInput, FormField } from '@/components/materials/form-field';
+import type { ControlProps } from '@/components/materials/form-field';
+import { MaterialFormActions } from '@/components/materials/material-form-actions';
+import { useFocusFirstInvalid } from '@/components/materials/use-focus-first-invalid';
+import { PhotoField } from '@/components/shared/photo-field';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
     Select,
     SelectContent,
@@ -18,7 +14,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 import { useAppSettings } from '@/hooks/use-app-settings';
 import { cn } from '@/lib/utils';
@@ -30,6 +25,8 @@ import type {
 } from '@/types/domain';
 
 type FieldName = keyof MaterialFormData;
+/** The fields rendered as text inputs (everything but the photo pair). */
+type TextFieldName = Exclude<FieldName, 'photo' | 'remove_photo'>;
 type FieldErrors = Partial<Record<FieldName, string>>;
 
 type MaterialFormProps = {
@@ -41,6 +38,8 @@ type MaterialFormProps = {
     processing: boolean;
     submitLabel: string;
     cancelHref?: string;
+    /** The photo the material has now (edit), or null. */
+    photoUrl?: string | null;
 };
 
 /** Shared by every field of one form instance. */
@@ -64,156 +63,135 @@ function useFormContext(): FormContextValue {
     return context;
 }
 
-/** Attributes every control receives so label, hint and error are wired up. */
-type ControlProps = {
-    id: string;
-    'aria-invalid': true | undefined;
-    'aria-required': true | undefined;
-    'aria-describedby': string | undefined;
-};
-
 type FieldProps = {
     name: FieldName;
     label: string;
     required?: boolean;
+    optional?: boolean;
     hint?: string;
-    /** Id of a visible suffix (unit) that should also be announced. */
-    suffixId?: string;
     className?: string;
     children: (control: ControlProps) => ReactNode;
 };
 
-function Field({
-    name,
-    label,
-    required = false,
-    hint,
-    suffixId,
-    className,
-    children,
-}: FieldProps) {
+/** A `FormField` whose id and error come from the form's context. */
+function Field({ name, ...props }: FieldProps) {
     const { uid, errors } = useFormContext();
-    const id = `${uid}-${name}`;
-    const error = errors[name];
-    const describedBy =
-        [
-            hint ? `${id}-hint` : null,
-            suffixId ?? null,
-            error ? `${id}-error` : null,
-        ]
-            .filter(Boolean)
-            .join(' ') || undefined;
 
-    return (
-        <div className={cn('space-y-2', className)}>
-            <Label htmlFor={id}>
-                {label}
-                {required && (
-                    <span
-                        aria-hidden="true"
-                        className="text-destructive-foreground"
-                    >
-                        {' '}
-                        *
-                    </span>
-                )}
-            </Label>
-            {children({
-                id,
-                'aria-invalid': error ? true : undefined,
-                'aria-required': required ? true : undefined,
-                'aria-describedby': describedBy,
-            })}
-            {hint && (
-                <p id={`${id}-hint`} className="text-xs text-muted-foreground">
-                    {hint}
-                </p>
-            )}
-            {error && (
-                <p
-                    id={`${id}-error`}
-                    className="text-sm text-destructive-foreground"
-                >
-                    {error}
-                </p>
-            )}
-        </div>
-    );
+    return <FormField id={`${uid}-${name}`} error={errors[name]} {...props} />;
 }
 
 type SimpleFieldProps = {
-    name: FieldName;
+    name: TextFieldName;
     label: string;
     required?: boolean;
+    optional?: boolean;
     hint?: string;
+    placeholder?: string;
+    /** Classes of the whole field (grid placement). */
+    className?: string;
+    /** Classes of the input itself. */
+    inputClassName?: string;
 };
 
-function TextField({ name, label, required, hint }: SimpleFieldProps) {
+function TextField({
+    name,
+    placeholder,
+    inputClassName,
+    ...field
+}: SimpleFieldProps) {
     const { initial } = useFormContext();
 
     return (
-        <Field name={name} label={label} required={required} hint={hint}>
+        <Field name={name} {...field}>
             {(control) => (
                 <Input
                     {...control}
                     name={name}
                     type="text"
                     defaultValue={initial[name]}
+                    placeholder={placeholder}
                     autoComplete="off"
+                    className={inputClassName}
                 />
             )}
         </Field>
     );
 }
 
-/** Decimal text input (never `type="number"`) with a visible suffix. */
+/** Decimal text input (never `type="number"`) with a visible prefix / suffix. */
 function DecimalField({
     name,
-    label,
-    required,
-    hint,
-    suffix,
-}: SimpleFieldProps & { suffix: string }) {
-    const { uid, initial } = useFormContext();
-    const suffixId = `${uid}-${name}-suffix`;
+    placeholder,
+    startAffix,
+    endAffix,
+    ...field
+}: SimpleFieldProps & { startAffix?: string; endAffix?: string }) {
+    const { initial } = useFormContext();
 
     return (
-        <Field
-            name={name}
-            label={label}
-            required={required}
-            hint={hint}
-            suffixId={suffixId}
-        >
+        <Field name={name} {...field}>
             {(control) => (
-                <div className="relative">
-                    <Input
-                        {...control}
-                        name={name}
-                        type="text"
-                        inputMode="decimal"
-                        defaultValue={initial[name]}
-                        autoComplete="off"
-                        className="pr-24"
-                    />
-                    <span
-                        id={suffixId}
-                        className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-muted-foreground"
-                    >
-                        {suffix}
-                    </span>
-                </div>
+                <AffixInput
+                    {...control}
+                    name={name}
+                    type="text"
+                    inputMode="decimal"
+                    defaultValue={initial[name]}
+                    placeholder={placeholder}
+                    autoComplete="off"
+                    startAffix={startAffix}
+                    endAffix={endAffix}
+                />
             )}
         </Field>
     );
 }
 
+/** A titled card, named for assistive technology by its heading. */
+function Section({
+    title,
+    description,
+    className,
+    children,
+}: {
+    title: ReactNode;
+    description?: string;
+    className?: string;
+    children: ReactNode;
+}) {
+    const titleId = useId();
+
+    return (
+        <section
+            aria-labelledby={titleId}
+            className={cn(
+                'min-w-0 space-y-4 rounded-xl border bg-card p-5 text-card-foreground shadow-sm',
+                className,
+            )}
+        >
+            <div className="space-y-0.5">
+                <h2 id={titleId} className="text-base font-semibold">
+                    {title}
+                </h2>
+                {description && (
+                    <p className="text-sm text-muted-foreground">
+                        {description}
+                    </p>
+                )}
+            </div>
+            {children}
+        </section>
+    );
+}
+
 /**
  * The fields of a material, as UNCONTROLLED named inputs so the browser form
- * submits them. It renders no `<form>` of its own: place it inside Inertia's
+ * submits them (a chosen photo makes the request multipart). It renders no
+ * `<form>` of its own: place it inside Inertia's
  * `<Form {...MaterialController.store.form()}>`. Key the form by material id
  * when the same page can show different materials, because `initial` only
- * seeds the inputs (`defaultValue`).
+ * seeds the inputs (`defaultValue`). The page renders the header actions with
+ * `<MaterialFormActions>`; the ones at the bottom belong to this component.
  */
 export function MaterialForm({
     initial,
@@ -223,164 +201,213 @@ export function MaterialForm({
     processing,
     submitLabel,
     cancelHref,
+    photoUrl = null,
 }: MaterialFormProps) {
     const uid = useId();
-    const { currency } = useAppSettings();
+    const { currency, locale } = useAppSettings();
     const containerRef = useRef<HTMLDivElement>(null);
     // Local state only so the suffixes can follow the selected unit; the
     // Radix Select also renders a hidden native <select name="unit">.
     const [unit, setUnit] = useState<UnitOfMeasure | ''>(initial.unit);
 
-    const errorSignature = Object.entries(errors)
-        .filter(([, message]) => Boolean(message))
-        .map(([name, message]) => `${name}:${message}`)
-        .join('|');
+    useFocusFirstInvalid(containerRef, errors, processing);
 
-    // Move focus to the first invalid field once a submission has failed.
-    useEffect(() => {
-        if (processing || errorSignature === '') {
-            return;
-        }
-
-        containerRef.current
-            ?.querySelector<HTMLElement>('[aria-invalid="true"]')
-            ?.focus();
-    }, [errorSignature, processing]);
-
-    const unitCostSuffix = unit === '' ? currency : `${currency} / ${unit}`;
-    const quantitySuffix = unit === '' ? 'unit' : unit;
+    const unitSuffix = unit === '' ? undefined : unit;
 
     return (
         <FormContext value={{ uid, initial, errors }}>
-            <div ref={containerRef} className="space-y-8">
-                <fieldset className="min-w-0">
-                    <legend className="mb-3 text-base font-semibold">
-                        Identification
-                    </legend>
-                    <div className="grid gap-4 sm:grid-cols-2">
-                        <TextField name="sku" label="SKU" required />
-                        <TextField name="name" label="Name" required />
-                        <Field name="category" label="Category" required>
-                            {(control) => (
-                                <Select
-                                    name="category"
-                                    defaultValue={initial.category}
-                                >
-                                    <SelectTrigger
-                                        {...control}
-                                        className="w-full"
-                                    >
-                                        <SelectValue placeholder="Select a category" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {categories.map((category) => (
-                                            <SelectItem
-                                                key={category.value}
-                                                value={category.value}
-                                            >
-                                                {category.label}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            )}
-                        </Field>
-                        <Field name="unit" label="Unit of measure" required>
-                            {(control) => (
-                                <Select
-                                    name="unit"
-                                    value={unit}
-                                    onValueChange={(value) =>
-                                        setUnit(value as UnitOfMeasure)
-                                    }
-                                >
-                                    <SelectTrigger
-                                        {...control}
-                                        className="w-full"
-                                    >
-                                        <SelectValue placeholder="Select a unit" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {units.map((option) => (
-                                            <SelectItem
-                                                key={option.value}
-                                                value={option.value}
-                                            >
-                                                {option.label}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            )}
-                        </Field>
-                    </div>
-                </fieldset>
-
-                <fieldset className="min-w-0">
-                    <legend className="mb-3 text-base font-semibold">
-                        Stock &amp; cost
-                    </legend>
-                    <div className="grid gap-4 sm:grid-cols-2">
-                        <DecimalField
-                            name="unit_cost"
-                            label="Unit cost"
-                            required
-                            suffix={unitCostSuffix}
-                        />
-                        <DecimalField
-                            name="quantity_on_hand"
-                            label="Quantity on hand"
-                            required
-                            suffix={quantitySuffix}
-                        />
-                        <DecimalField
-                            name="reorder_level"
-                            label="Reorder level"
-                            hint="Shows as Low stock at or below this level"
-                            suffix={quantitySuffix}
-                        />
-                    </div>
-                </fieldset>
-
-                <fieldset className="min-w-0">
-                    <legend className="mb-3 text-base font-semibold">
-                        Supplier &amp; details
-                    </legend>
-                    <div className="grid gap-4 sm:grid-cols-2">
-                        <TextField name="supplier_name" label="Supplier" />
-                        <TextField
-                            name="supplier_reference"
-                            label="Supplier reference"
-                        />
-                        <TextField name="color" label="Colour" />
-                        <TextField name="composition" label="Composition" />
-                        <Field
-                            name="notes"
-                            label="Notes"
-                            className="sm:col-span-2"
-                        >
-                            {(control) => (
-                                <Textarea
-                                    {...control}
-                                    name="notes"
-                                    rows={3}
-                                    defaultValue={initial.notes}
+            <div ref={containerRef} className="flex flex-col gap-6">
+                <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
+                    <div className="flex min-w-0 flex-col gap-5">
+                        <Section title="Identity">
+                            <div className="grid gap-4 sm:grid-cols-2">
+                                <TextField
+                                    name="sku"
+                                    label="SKU"
+                                    required
+                                    inputClassName="font-mono"
                                 />
-                            )}
-                        </Field>
+                                <TextField
+                                    name="name"
+                                    label="Name"
+                                    required
+                                    placeholder="e.g. Denim 12oz Indigo"
+                                />
+                                <Field
+                                    name="category"
+                                    label="Category"
+                                    required
+                                >
+                                    {(control) => (
+                                        <Select
+                                            name="category"
+                                            defaultValue={initial.category}
+                                        >
+                                            <SelectTrigger
+                                                {...control}
+                                                className="w-full"
+                                            >
+                                                <SelectValue placeholder="Choose a category…" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {categories.map((category) => (
+                                                    <SelectItem
+                                                        key={category.value}
+                                                        value={category.value}
+                                                    >
+                                                        {category.label}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    )}
+                                </Field>
+                                <TextField
+                                    name="color"
+                                    label="Colour"
+                                    optional
+                                    placeholder="e.g. Indigo, Antique brass"
+                                />
+                                <TextField
+                                    name="composition"
+                                    label="Composition"
+                                    optional
+                                    placeholder="e.g. 100% cotton, Zinc alloy"
+                                    className="sm:col-span-2"
+                                />
+                            </div>
+                        </Section>
+
+                        <Section
+                            title="Stock and cost"
+                            description="Quantities in compositions always use this unit."
+                        >
+                            <div className="grid gap-4 sm:grid-cols-2">
+                                <Field
+                                    name="unit"
+                                    label="Unit of measure"
+                                    required
+                                >
+                                    {(control) => (
+                                        <Select
+                                            name="unit"
+                                            value={unit}
+                                            onValueChange={(value) =>
+                                                setUnit(value as UnitOfMeasure)
+                                            }
+                                        >
+                                            <SelectTrigger
+                                                {...control}
+                                                className="w-full"
+                                            >
+                                                <SelectValue placeholder="Choose a unit…" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {units.map((option) => (
+                                                    <SelectItem
+                                                        key={option.value}
+                                                        value={option.value}
+                                                    >
+                                                        {option.label}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    )}
+                                </Field>
+                                <DecimalField
+                                    name="unit_cost"
+                                    label="Unit cost"
+                                    required
+                                    hint="Up to 4 decimals, e.g. 0.0040 for thread."
+                                    placeholder="0.00"
+                                    startAffix={currencySymbol(
+                                        currency,
+                                        locale,
+                                    )}
+                                    endAffix={unitSuffix && `/ ${unitSuffix}`}
+                                />
+                                <DecimalField
+                                    name="quantity_on_hand"
+                                    label="Quantity in stock"
+                                    required
+                                    placeholder="0"
+                                    endAffix={unitSuffix}
+                                />
+                                <DecimalField
+                                    name="reorder_level"
+                                    label="Reorder at"
+                                    optional
+                                    hint="Shown as Low stock at or below this level."
+                                    placeholder="—"
+                                    endAffix={unitSuffix}
+                                />
+                            </div>
+                        </Section>
+
+                        <Section title="Supplier and notes">
+                            <div className="grid gap-4 sm:grid-cols-2">
+                                <TextField
+                                    name="supplier_name"
+                                    label="Supplier"
+                                    optional
+                                    placeholder="Supplier name"
+                                />
+                                <TextField
+                                    name="supplier_reference"
+                                    label="Supplier reference"
+                                    optional
+                                    placeholder="Their article code"
+                                />
+                                <Field
+                                    name="notes"
+                                    label="Notes"
+                                    optional
+                                    className="sm:col-span-2"
+                                >
+                                    {(control) => (
+                                        <Textarea
+                                            {...control}
+                                            name="notes"
+                                            rows={3}
+                                            defaultValue={initial.notes}
+                                            placeholder="Handling, lead time, minimum order…"
+                                        />
+                                    )}
+                                </Field>
+                            </div>
+                        </Section>
                     </div>
-                </fieldset>
+
+                    <Section
+                        title={
+                            <>
+                                Photo{' '}
+                                <span className="text-sm font-normal text-muted-foreground">
+                                    (optional)
+                                </span>
+                            </>
+                        }
+                        description="Shown in the materials table and on the detail page."
+                    >
+                        {/* The section heading names the card: keep the field's own label for screen readers only. */}
+                        <div className="[&_[data-slot=photo-field]>[data-slot=label]]:sr-only">
+                            <PhotoField
+                                label="Photo"
+                                currentUrl={photoUrl}
+                                aspect="square"
+                                error={errors.photo}
+                            />
+                        </div>
+                    </Section>
+                </div>
 
                 <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-                    {cancelHref && (
-                        <Button asChild variant="outline">
-                            <Link href={cancelHref}>Cancel</Link>
-                        </Button>
-                    )}
-                    <Button type="submit" disabled={processing}>
-                        {processing && <Spinner />}
-                        {submitLabel}
-                    </Button>
+                    <MaterialFormActions
+                        processing={processing}
+                        submitLabel={submitLabel}
+                        cancelHref={cancelHref}
+                    />
                 </div>
             </div>
         </FormContext>

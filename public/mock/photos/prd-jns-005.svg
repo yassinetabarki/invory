@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 120" width="96" height="120">
+  <rect width="96" height="120" rx="14" fill="#2F3B66"/>
+  <rect x="7" y="7" width="82" height="106" rx="10" fill="none" stroke="#FFFFFF" stroke-opacity="0.22" stroke-width="1.5"/>
+  <text x="48" y="60" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="32" font-weight="600" fill="#FFFFFF" fill-opacity="0.92">JN</text>
+</svg>

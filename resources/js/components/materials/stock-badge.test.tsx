@@ -26,7 +26,19 @@ describe('<StockBadge>', () => {
         },
     );
 
-    it('uses a distinct style per status (not text alone)', () => {
+    it.each<[StockStatus, string]>([
+        ['in_stock', 'success'],
+        ['low', 'warning'],
+        ['out', 'danger'],
+    ])('uses the %s status tokens (%s) for its colours', (status, tone) => {
+        render(<StockBadge status={status} />);
+
+        const badge = screen.getByText(/stock/i);
+
+        expect(badge).toHaveClass(`bg-${tone}`, `text-${tone}-foreground`);
+    });
+
+    it('uses a distinct style and icon per status (not text alone)', () => {
         const { container } = render(
             <>
                 <StockBadge status="in_stock" />
@@ -35,10 +47,18 @@ describe('<StockBadge>', () => {
             </>,
         );
 
-        const classes = Array.from(
-            container.querySelectorAll('[data-status]'),
-        ).map((el) => el.className);
+        const badges = Array.from(container.querySelectorAll('[data-status]'));
 
-        expect(new Set(classes).size).toBe(3);
+        expect(new Set(badges.map((el) => el.className)).size).toBe(3);
+        expect(
+            new Set(badges.map((el) => el.querySelector('svg')?.outerHTML))
+                .size,
+        ).toBe(3);
+    });
+
+    it('accepts an extra class name', () => {
+        render(<StockBadge status="low" className="ml-2" />);
+
+        expect(screen.getByText('Low stock')).toHaveClass('ml-2');
     });
 });

@@ -9,6 +9,7 @@ use App\Enums\UnitOfMeasure;
 use App\Models\Material;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\File;
 use Illuminate\Validation\Rules\Unique;
 
 class StoreMaterialRequest extends FormRequest
@@ -44,6 +45,10 @@ class StoreMaterialRequest extends FormRequest
             'color' => ['nullable', 'string', 'max:64'],
             'composition' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string', 'max:5000'],
+            // MOCK (ADR-0006): photos are validated for real but not stored until S-15-BE. The controllers drop both keys
+            // before the material is saved (strict models throw on attributes that are not columns).
+            'photo' => ['nullable', File::image()->types(['jpg', 'jpeg', 'png', 'webp'])->max(4096)],
+            'remove_photo' => ['nullable', 'boolean'],
         ];
     }
 }

@@ -1,5 +1,6 @@
 import { useAppSettings } from '@/hooks/use-app-settings';
 import { formatMoney } from '@/lib/format';
+import { cn } from '@/lib/utils';
 import type { Decimal } from '@/types/domain';
 
 type MoneyProps = {
@@ -13,7 +14,7 @@ export function Money({ value, precise = false, className }: MoneyProps) {
     const { currency, locale } = useAppSettings();
 
     return (
-        <span className={className}>
+        <span className={cn('tabular-nums', className)}>
             {formatMoney(value, { currency, locale, precise })}
         </span>
     );

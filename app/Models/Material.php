@@ -33,6 +33,8 @@ use InvalidArgumentException;
  * @property string|null $color
  * @property string|null $composition
  * @property string|null $notes
+ * @property int $used_in_count Products whose composition uses this material. Not a column: the controllers set it as an attribute (the real `withCount()` later).
+ * @property string|null $photo_url Public URL of the photo. Not a column: the controllers set it as an attribute (a photo accessor later).
  * @property CarbonInterface $created_at
  * @property CarbonInterface $updated_at
  * @property CarbonInterface|null $deleted_at

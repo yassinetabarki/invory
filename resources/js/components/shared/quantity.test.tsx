@@ -47,6 +47,15 @@ describe('<Quantity>', () => {
         expect(screen.getByText('1.234,5 m')).toBeInTheDocument();
     });
 
+    it('uses tabular figures so quantities line up in columns', () => {
+        render(<Quantity value="1.9800" unit="m" className="font-bold" />);
+
+        expect(screen.getByText('1.98 m')).toHaveClass(
+            'tabular-nums',
+            'font-bold',
+        );
+    });
+
     it('renders an em dash when there is no value', () => {
         render(<Quantity value={undefined} unit="m" />);
 

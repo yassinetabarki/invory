@@ -1,6 +1,8 @@
-import { describe, expect, it } from 'vite-plus/test';
+import { describe, expect, it, vi } from 'vite-plus/test';
 import {
     EMPTY_VALUE,
+    formatCount,
+    formatDate,
     formatMoney,
     formatPercent,
     formatQuantity,
@@ -267,5 +269,104 @@ describe('formatPercent', () => {
 
     it.each([null, undefined, '', 'x'])('renders %j as an em dash', (value) => {
         expect(formatPercent(value, 'en')).toBe(EMPTY_VALUE);
+    });
+});
+
+describe('formatDate', () => {
+    it('formats a calendar date day first for plain en', () => {
+        expect(formatDate('2026-10-07', 'en')).toBe('7 Oct 2026');
+        expect(formatDate('2026-01-05', 'en')).toBe('5 Jan 2026');
+        expect(formatDate('2026-12-31', 'en')).toBe('31 Dec 2026');
+    });
+
+    it('uses the short English month name for September, not en-GB "Sept"', () => {
+        expect(formatDate('2026-09-07', 'en')).toBe('7 Sep 2026');
+    });
+
+    it('accepts ISO-8601 timestamps and shows the written calendar date', () => {
+        expect(formatDate('2026-10-07T09:30:00Z', 'en')).toBe('7 Oct 2026');
+        expect(formatDate('2026-10-07T09:30:00.000000Z', 'en')).toBe(
+            '7 Oct 2026',
+        );
+        expect(formatDate('2026-10-07 09:30:00', 'en')).toBe('7 Oct 2026');
+        expect(formatDate('2026-10-07T09:30', 'en')).toBe('7 Oct 2026');
+    });
+
+    it('never shifts the date across midnight, whatever the offset', () => {
+        expect(formatDate('2026-10-07T00:00:00Z', 'en')).toBe('7 Oct 2026');
+        expect(formatDate('2026-10-07T23:59:59Z', 'en')).toBe('7 Oct 2026');
+        expect(formatDate('2026-10-07T23:30:00-05:00', 'en')).toBe(
+            '7 Oct 2026',
+        );
+        expect(formatDate('2026-10-07T00:30:00+02:00', 'en')).toBe(
+            '7 Oct 2026',
+        );
+    });
+
+    it.each(['Pacific/Auckland', 'America/Los_Angeles'])(
+        'is not affected by the process timezone (%s)',
+        (timeZone) => {
+            vi.stubEnv('TZ', timeZone);
+
+            expect(formatDate('2026-10-07', 'en')).toBe('7 Oct 2026');
+            expect(formatDate('2026-10-07T23:30:00Z', 'en')).toBe('7 Oct 2026');
+
+            vi.unstubAllEnvs();
+        },
+    );
+
+    it('uses the locale order for regional and other locales', () => {
+        expect(formatDate('2026-10-07', 'en-US')).toBe('Oct 7, 2026');
+        expect(formatDate('2026-10-07', 'fr')).toBe('7 oct. 2026');
+        expect(formatDate('2026-10-07', 'de')).toBe('7. Okt. 2026');
+    });
+
+    it.each([
+        null,
+        undefined,
+        '',
+        'abc',
+        '2026-13-01',
+        '2026-02-30',
+        '2026-10-7',
+        '07/10/2026',
+        '2026-10-07T',
+        '2026-10-07T25',
+        ' 2026-10-07',
+    ])('renders %j as an em dash', (value) => {
+        expect(formatDate(value, 'en')).toBe(EMPTY_VALUE);
+    });
+
+    it('accepts a leap day only in a leap year', () => {
+        expect(formatDate('2028-02-29', 'en')).toBe('29 Feb 2028');
+        expect(formatDate('2026-02-29', 'en')).toBe(EMPTY_VALUE);
+    });
+});
+
+describe('formatCount', () => {
+    it('groups thousands with the locale separator', () => {
+        expect(formatCount(1250, 'en')).toBe('1,250');
+        expect(formatCount(1250, 'de')).toBe('1.250');
+        expect(formatCount(1000000, 'en')).toBe('1,000,000');
+    });
+
+    it('shows small numbers and zero as they are', () => {
+        expect(formatCount(0, 'en')).toBe('0');
+        expect(formatCount(112, 'en')).toBe('112');
+    });
+
+    it('formats negative whole numbers', () => {
+        expect(formatCount(-5, 'en')).toBe('-5');
+    });
+
+    it.each([
+        null,
+        undefined,
+        Number.NaN,
+        Number.POSITIVE_INFINITY,
+        Number.NEGATIVE_INFINITY,
+        2.5,
+    ])('renders %j as an em dash', (value) => {
+        expect(formatCount(value, 'en')).toBe(EMPTY_VALUE);
     });
 });

@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class DashboardTest extends TestCase
@@ -23,5 +24,17 @@ class DashboardTest extends TestCase
 
         $response = $this->get(route('dashboard'));
         $response->assertOk();
+    }
+
+    public function test_the_dashboard_route_renders_the_dashboard_page_at_its_url()
+    {
+        $this->withoutVite();
+        $this->actingAs(User::factory()->create());
+
+        $this->assertSame('/dashboard', route('dashboard', absolute: false));
+
+        $this->get('/dashboard')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->component('dashboard'));
     }
 }

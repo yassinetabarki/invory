@@ -45,6 +45,8 @@ class HandleInertiaRequests extends Middleware
             'app' => [
                 'currency' => config('invory.currency'),
                 'locale' => app()->getLocale(),
+                // 'YYYY-MM-DD' in the app timezone: default and max for date inputs.
+                'today' => now()->toDateString(),
             ],
         ];
     }

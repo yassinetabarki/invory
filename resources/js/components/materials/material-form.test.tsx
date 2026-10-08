@@ -48,6 +48,8 @@ const emptyForm: MaterialFormData = {
     color: '',
     composition: '',
     notes: '',
+    photo: null,
+    remove_photo: false,
 };
 
 const denimForm: MaterialFormData = {
@@ -63,6 +65,8 @@ const denimForm: MaterialFormData = {
     color: 'Indigo',
     composition: '100% cotton',
     notes: 'Pre-washed',
+    photo: null,
+    remove_photo: false,
 };
 
 // jsdom lacks the pointer-capture / scroll APIs Radix Select relies on.
@@ -92,12 +96,23 @@ function renderForm(props: FormProps = {}, onSubmit = vi.fn()) {
                     units={units}
                     errors={{}}
                     processing={false}
-                    submitLabel="Create material"
+                    submitLabel="Save material"
                     {...props}
                 />
             </form>,
         ),
     };
+}
+
+/** The native file input of the Photo card. */
+function photoInput(): HTMLInputElement {
+    const input = screen.getByLabelText('Photo');
+
+    if (!(input instanceof HTMLInputElement)) {
+        throw new Error('Expected the Photo label to name the file input.');
+    }
+
+    return input;
 }
 
 describe('<MaterialForm>', () => {
@@ -115,27 +130,29 @@ describe('<MaterialForm>', () => {
             /^Category/,
             /^Unit of measure/,
             /^Unit cost/,
-            /^Quantity on hand/,
-            /^Reorder level/,
-            /^Supplier$/,
+            /^Quantity in stock/,
+            /^Reorder at/,
+            'Supplier (optional)',
             /^Supplier reference/,
             /^Colour/,
             /^Composition/,
             /^Notes/,
+            'Photo',
         ]) {
             expect(screen.getByLabelText(label)).toBeInTheDocument();
         }
     });
 
-    it('groups the fields into sections', () => {
+    it('groups the fields into the mockup sections', () => {
         renderForm();
 
         for (const name of [
-            'Identification',
-            'Stock & cost',
-            'Supplier & details',
+            'Identity',
+            'Stock and cost',
+            'Supplier and notes',
+            'Photo (optional)',
         ]) {
-            expect(screen.getByRole('group', { name })).toBeInTheDocument();
+            expect(screen.getByRole('region', { name })).toBeInTheDocument();
         }
     });
 
@@ -148,7 +165,7 @@ describe('<MaterialForm>', () => {
             /^Category/,
             /^Unit of measure/,
             /^Unit cost/,
-            /^Quantity on hand/,
+            /^Quantity in stock/,
         ]) {
             expect(screen.getByLabelText(label)).toHaveAttribute(
                 'aria-required',
@@ -156,10 +173,25 @@ describe('<MaterialForm>', () => {
             );
         }
 
-        for (const label of [/^Reorder level/, /^Supplier$/, /^Notes/]) {
+        for (const label of [/^Reorder at/, 'Supplier (optional)', /^Notes/]) {
             expect(screen.getByLabelText(label)).not.toHaveAttribute(
                 'aria-required',
             );
+        }
+    });
+
+    it('says "(optional)" in the label of every optional field', () => {
+        renderForm();
+
+        for (const label of [
+            'Colour (optional)',
+            'Composition (optional)',
+            'Reorder at (optional)',
+            'Supplier (optional)',
+            'Supplier reference (optional)',
+            'Notes (optional)',
+        ]) {
+            expect(screen.getByLabelText(label)).toBeInTheDocument();
         }
     });
 
@@ -173,11 +205,13 @@ describe('<MaterialForm>', () => {
             'Metre (m)',
         );
         expect(screen.getByLabelText(/^Unit cost/)).toHaveValue('8.5000');
-        expect(screen.getByLabelText(/^Quantity on hand/)).toHaveValue(
+        expect(screen.getByLabelText(/^Quantity in stock/)).toHaveValue(
             '250.0000',
         );
-        expect(screen.getByLabelText(/^Reorder level/)).toHaveValue('50.0000');
-        expect(screen.getByLabelText(/^Supplier$/)).toHaveValue('Textiles SA');
+        expect(screen.getByLabelText(/^Reorder at/)).toHaveValue('50.0000');
+        expect(screen.getByLabelText('Supplier (optional)')).toHaveValue(
+            'Textiles SA',
+        );
         expect(screen.getByLabelText(/^Supplier reference/)).toHaveValue(
             'TX-12',
         );
@@ -188,13 +222,19 @@ describe('<MaterialForm>', () => {
         expect(screen.getByLabelText(/^Notes/)).toHaveValue('Pre-washed');
     });
 
+    it('shows the SKU in a monospace font', () => {
+        renderForm();
+
+        expect(screen.getByLabelText(/^SKU/)).toHaveClass('font-mono');
+    });
+
     it('uses text inputs with a decimal keypad for money and quantities', () => {
         renderForm();
 
         for (const label of [
             /^Unit cost/,
-            /^Quantity on hand/,
-            /^Reorder level/,
+            /^Quantity in stock/,
+            /^Reorder at/,
         ]) {
             const input = screen.getByLabelText(label);
 
@@ -213,17 +253,20 @@ describe('<MaterialForm>', () => {
         expect(screen.getByLabelText(/^Unit cost/)).toHaveValue('0.0040');
     });
 
-    describe('unit suffix', () => {
+    describe('unit and currency affixes', () => {
         it('shows the currency only until a unit is chosen', () => {
             renderForm();
 
-            expect(screen.getByText('EUR')).toBeInTheDocument();
+            expect(screen.getByText('€')).toBeInTheDocument();
+            expect(screen.queryByText(/^\/ /)).not.toBeInTheDocument();
         });
 
         it('shows the initial unit next to cost, quantity and reorder level', () => {
             renderForm({ initial: denimForm });
 
-            expect(screen.getByText('EUR / m')).toBeInTheDocument();
+            expect(screen.getByText('€')).toBeInTheDocument();
+            expect(screen.getByText('/ m')).toBeInTheDocument();
+            // Quantity in stock and Reorder at.
             expect(screen.getAllByText('m')).toHaveLength(2);
         });
 
@@ -239,44 +282,46 @@ describe('<MaterialForm>', () => {
                 screen.getByRole('option', { name: 'Piece (pc)' }),
             );
 
-            expect(screen.getByText('EUR / pc')).toBeInTheDocument();
+            expect(screen.getByText('/ pc')).toBeInTheDocument();
             expect(screen.getAllByText('pc')).toHaveLength(2);
-            expect(screen.queryByText('EUR / m')).not.toBeInTheDocument();
+            expect(screen.queryByText('/ m')).not.toBeInTheDocument();
         });
 
-        it('uses the currency from the shared app settings', () => {
-            setPageProps({ app: { currency: 'USD', locale: 'en' } });
+        it("uses the installation currency's own symbol or code", () => {
+            setPageProps({ app: { currency: 'TND', locale: 'en' } });
             renderForm({ initial: denimForm });
 
-            expect(screen.getByText('USD / m')).toBeInTheDocument();
+            expect(screen.getByText('TND')).toBeInTheDocument();
+            expect(screen.queryByText('€')).not.toBeInTheDocument();
         });
 
         it('is announced with the field (aria-describedby)', () => {
             renderForm({ initial: denimForm });
 
             const input = screen.getByLabelText(/^Unit cost/);
-            const describedBy = input.getAttribute('aria-describedby') ?? '';
+            const described = (input.getAttribute('aria-describedby') ?? '')
+                .split(' ')
+                .map((id) => document.getElementById(id)?.textContent);
 
-            expect(describedBy).not.toBe('');
-            expect(
-                describedBy
-                    .split(' ')
-                    .map((id) => document.getElementById(id)?.textContent),
-            ).toContain('EUR / m');
+            expect(described).toContain('€');
+            expect(described).toContain('/ m');
         });
     });
 
-    it('explains the reorder level', () => {
+    it('explains the unit cost and the reorder level', () => {
         renderForm();
 
-        const input = screen.getByLabelText(/^Reorder level/);
-        const hintId = (input.getAttribute('aria-describedby') ?? '')
-            .split(' ')
-            .find((id) => id.endsWith('-hint'));
-
-        expect(hintId).toBeDefined();
-        expect(document.getElementById(hintId ?? '')).toHaveTextContent(
-            'Shows as Low stock at or below this level',
+        expect(screen.getByLabelText(/^Unit cost/)).toHaveAccessibleDescription(
+            expect.stringContaining(
+                'Up to 4 decimals, e.g. 0.0040 for thread.',
+            ),
+        );
+        expect(
+            screen.getByLabelText(/^Reorder at/),
+        ).toHaveAccessibleDescription(
+            expect.stringContaining(
+                'Shown as Low stock at or below this level.',
+            ),
         );
     });
 
@@ -325,12 +370,23 @@ describe('<MaterialForm>', () => {
 
             const ids = (
                 screen
-                    .getByLabelText(/^Reorder level/)
+                    .getByLabelText(/^Reorder at/)
                     .getAttribute('aria-describedby') ?? ''
             ).split(' ');
 
             expect(ids.some((id) => id.endsWith('-hint'))).toBe(true);
             expect(ids.some((id) => id.endsWith('-error'))).toBe(true);
+        });
+
+        it('shows a photo error on the photo field', () => {
+            renderForm({
+                errors: { photo: 'The photo must be 4 MB or smaller.' },
+            });
+
+            expect(photoInput()).toBeInvalid();
+            expect(photoInput()).toHaveAccessibleDescription(
+                expect.stringContaining('The photo must be 4 MB or smaller.'),
+            );
         });
 
         it('focuses the first invalid field when errors arrive', () => {
@@ -347,7 +403,7 @@ describe('<MaterialForm>', () => {
                             name: 'Required.',
                         }}
                         processing={false}
-                        submitLabel="Create material"
+                        submitLabel="Save material"
                     />
                 </form>,
             );
@@ -376,7 +432,7 @@ describe('<MaterialForm>', () => {
             renderForm({ processing: true });
 
             const button = screen.getByRole('button', {
-                name: /create material/i,
+                name: /save material/i,
             });
 
             expect(button).toBeDisabled();
@@ -402,20 +458,140 @@ describe('<MaterialForm>', () => {
         });
     });
 
+    describe('photo', () => {
+        it('is a native file input named photo for JPG, PNG and WebP, in the side card', () => {
+            renderForm();
+
+            const input = photoInput();
+
+            expect(input).toHaveAttribute('type', 'file');
+            expect(input).toHaveAttribute('name', 'photo');
+            expect(input).toHaveAttribute(
+                'accept',
+                'image/jpeg,image/png,image/webp',
+            );
+            expect(
+                within(
+                    screen.getByRole('region', { name: 'Photo (optional)' }),
+                ).getByText(
+                    'Shown in the materials table and on the detail page.',
+                ),
+            ).toBeInTheDocument();
+        });
+
+        it('offers a drop zone and no Remove button while there is no photo', () => {
+            renderForm();
+
+            expect(
+                screen.getByText(/drop a photo here or/i),
+            ).toBeInTheDocument();
+            expect(
+                screen.queryByRole('button', { name: 'Remove photo' }),
+            ).not.toBeInTheDocument();
+        });
+
+        it('shows the current photo with Replace photo and Remove', () => {
+            renderForm({ photoUrl: '/mock/photos/mat-btn-017.svg' });
+
+            expect(screen.getByAltText('Current photo')).toHaveAttribute(
+                'src',
+                '/mock/photos/mat-btn-017.svg',
+            );
+            expect(screen.getByText('Replace photo')).toBeInTheDocument();
+            expect(
+                screen.getByRole('button', { name: 'Remove photo' }),
+            ).toBeInTheDocument();
+        });
+
+        it('previews a picked photo', async () => {
+            const user = userEvent.setup();
+
+            renderForm();
+
+            await user.upload(
+                photoInput(),
+                new File(['png'], 'button.png', { type: 'image/png' }),
+            );
+
+            expect(
+                screen.getByAltText('New photo preview'),
+            ).toBeInTheDocument();
+            expect(screen.getByText('button.png')).toBeInTheDocument();
+        });
+
+        it('rejects a file that is not a JPG, PNG or WebP before it is sent', async () => {
+            // `applyAccept: false`: the browser's own filter is not what is tested.
+            const user = userEvent.setup({ applyAccept: false });
+
+            renderForm();
+
+            await user.upload(
+                photoInput(),
+                new File(['<svg/>'], 'logo.svg', { type: 'image/svg+xml' }),
+            );
+
+            expect(
+                screen.getByText('Choose a JPG, PNG or WebP image.'),
+            ).toBeInTheDocument();
+            expect(
+                screen.queryByAltText('New photo preview'),
+            ).not.toBeInTheDocument();
+        });
+    });
+
     describe('native form submission', () => {
-        it('submits every field by name, including the selects', async () => {
+        it('submits every field by name, including the selects and the photo pair', async () => {
             const user = userEvent.setup();
             const { onSubmit } = renderForm({ initial: denimForm });
 
             await user.click(
-                screen.getByRole('button', { name: 'Create material' }),
+                screen.getByRole('button', { name: 'Save material' }),
             );
 
             expect(onSubmit).toHaveBeenCalledOnce();
 
             const data: FormData = onSubmit.mock.calls[0][0];
+            const {
+                photo,
+                remove_photo: removePhoto,
+                ...fields
+            } = Object.fromEntries(data.entries());
 
-            expect(Object.fromEntries(data.entries())).toEqual(denimForm);
+            expect(fields).toEqual(
+                Object.fromEntries(
+                    Object.entries(denimForm).filter(
+                        ([key]) => key !== 'photo' && key !== 'remove_photo',
+                    ),
+                ),
+            );
+            // No file chosen: an empty file entry, and "do not remove" as 0.
+            expect(photo).toBeInstanceOf(File);
+            expect((photo as File).size).toBe(0);
+            expect(removePhoto).toBe('0');
+        });
+
+        it('sends remove_photo as 1 once Remove is pressed', async () => {
+            const user = userEvent.setup();
+            const { onSubmit } = renderForm({
+                initial: denimForm,
+                photoUrl: '/mock/photos/mat-btn-017.svg',
+            });
+
+            await user.click(
+                screen.getByRole('button', { name: 'Remove photo' }),
+            );
+            await user.click(
+                screen.getByRole('button', { name: 'Save material' }),
+            );
+
+            const data: FormData = onSubmit.mock.calls[0][0];
+
+            expect(data.get('remove_photo')).toBe('1');
+            expect(
+                screen.getByText(
+                    'The current photo will be removed when you save.',
+                ),
+            ).toBeInTheDocument();
         });
 
         it('submits the newly picked category and unit', async () => {
@@ -433,7 +609,7 @@ describe('<MaterialForm>', () => {
                 screen.getByRole('option', { name: 'Piece (pc)' }),
             );
             await user.click(
-                screen.getByRole('button', { name: 'Create material' }),
+                screen.getByRole('button', { name: 'Save material' }),
             );
 
             const data: FormData = onSubmit.mock.calls[0][0];
@@ -447,7 +623,7 @@ describe('<MaterialForm>', () => {
             const { onSubmit } = renderForm();
 
             await user.click(
-                screen.getByRole('button', { name: 'Create material' }),
+                screen.getByRole('button', { name: 'Save material' }),
             );
 
             const data: FormData = onSubmit.mock.calls[0][0];
