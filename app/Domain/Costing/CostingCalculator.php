@@ -109,6 +109,29 @@ final class CostingCalculator
     }
 
     /**
+     * The "next limit": the capacity and bottleneck of the BOM once every line of $materialId is removed,
+     * i.e. what limits production if that material were unlimited. Same rules and tie-break as calculate().
+     *
+     * Lines are aggregated per material before dividing, so every line of the removed material goes at once.
+     * A material that is not in the BOM changes nothing. `maxProducible` is null when nothing is left.
+     *
+     * @param  list<BomLine>  $lines
+     *
+     * @throws InvalidArgumentException If a line is not a BomLine.
+     */
+    public function capacityWithout(array $lines, int $materialId): ProductionCapacity
+    {
+        $this->assertBomLines($lines);
+
+        $remaining = array_values(array_filter(
+            $lines,
+            static fn (BomLine $line): bool => $line->materialId !== $materialId,
+        ));
+
+        return $this->calculate($remaining)->capacity;
+    }
+
+    /**
      * Runtime guard for callers that break the `list<BomLine>` contract (it is typed loosely on purpose).
      *
      * @param  array<mixed>  $lines
