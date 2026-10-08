@@ -1,0 +1,124 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "Main.dc.html": {
+      "expand": "fill",
+      "h": 1200,
+      "is_interactive": true,
+      "title": "Dashboard",
+      "w": 1440,
+      "x": 0,
+      "y": 0
+    },
+    "MaterialDetail.dc.html": {
+      "expand": "fill",
+      "h": 1300,
+      "is_interactive": true,
+      "title": "Materials · detail",
+      "w": 1440,
+      "x": 1520,
+      "y": 1620
+    },
+    "MaterialForm.dc.html": {
+      "expand": "fill",
+      "h": 1300,
+      "is_interactive": true,
+      "title": "Materials · add / edit",
+      "w": 1440,
+      "x": 3040,
+      "y": 1620
+    },
+    "Materials.dc.html": {
+      "expand": "fill",
+      "h": 1640,
+      "is_interactive": true,
+      "title": "Materials · list",
+      "w": 1440,
+      "x": 0,
+      "y": 1620
+    },
+    "ProductDetail.dc.html": {
+      "expand": "fill",
+      "h": 1420,
+      "is_interactive": true,
+      "title": "Products · detail",
+      "w": 1440,
+      "x": 1520,
+      "y": 3680
+    },
+    "ProductForm.dc.html": {
+      "expand": "fill",
+      "h": 1480,
+      "is_interactive": true,
+      "title": "Products · add / edit",
+      "w": 1440,
+      "x": 3040,
+      "y": 3680
+    },
+    "Products.dc.html": {
+      "expand": "fill",
+      "h": 1000,
+      "is_interactive": true,
+      "title": "Products · list",
+      "w": 1440,
+      "x": 0,
+      "y": 3680
+    },
+    "Sales.dc.html": {
+      "expand": "fill",
+      "h": 1120,
+      "is_interactive": true,
+      "title": "Sales log",
+      "w": 1440,
+      "x": 1520,
+      "y": 0
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-10-08T10:00:00Z",
+    "v": 1
+  },
+  "designSystems": [],
+  "launch": {
+    "view": "canvas"
+  },
+  "notes": {
+    "row1": {
+      "kind": "title1",
+      "maxW": 2960,
+      "text": "Dashboard & sales",
+      "w": 240,
+      "x": 0,
+      "y": -300
+    },
+    "row2": {
+      "kind": "title1",
+      "maxW": 4480,
+      "text": "Materials (primary items)",
+      "w": 240,
+      "x": 0,
+      "y": 1320
+    },
+    "row3": {
+      "kind": "title1",
+      "maxW": 4480,
+      "text": "Products (final items)",
+      "w": 240,
+      "x": 0,
+      "y": 3380
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "Sales.dc.html",
+    "Materials.dc.html",
+    "MaterialDetail.dc.html",
+    "MaterialForm.dc.html",
+    "Products.dc.html",
+    "ProductDetail.dc.html",
+    "ProductForm.dc.html"
+  ],
+  "pages": [],
+  "title": "Invory UI mockup"
+}

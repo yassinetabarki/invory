@@ -8,22 +8,34 @@
 A logged-in user can maintain a materials inventory, define products and their composition, and see for every product
 its **unit cost**, **how many units can be produced** from current stock, and **which material is the bottleneck**.
 
+Scope added by the human on 2026-10-08 with the approved mockup ([docs/design/mockup](design/mockup/README.md)):
+1. **Sales log**: record sales (product, quantity, unit price, date, note; stock unchanged) and a sales dashboard (totals, top 5, recent sales, alerts).
+2. **Photos**: one optional photo per material and per product (JPG/PNG/WebP, max 4 MB). Pulled forward from Phase 2 ("product images").
+3. **Material "What you can make with it"**: per product, need per unit, units this stock covers, can make now, limited by, and a next-limit suggestion (extends S-07).
+4. **Restock quick action + History**: restock form (unit cost = latest price paid) and a history of restocks, corrections and price changes. Pulled forward from Phase 2 ("stock movement ledger").
+5. **Selling price** on products: pre-fills "Record a sale", and product pages show the margin (server-side).
+
 ## Delivery plan (phases → waves; the tech-lead dispatches, see [TEAM.md](TEAM.md))
 
 | Phase | Stories | Plan | Status |
 |---|---|---|---|
-| **1 — Foundation + Materials** | S-00, S-01, S-02, S-03 | [plans/phase-1-foundation-materials.md](plans/phase-1-foundation-materials.md) | **review: all 4 stories approved by the tech-lead (2026-10-08), awaiting human commit approval** |
-| 2 — Products + composition | S-04, S-05 | written by the tech-lead before Phase 2 | todo |
-| 3 — Dashboard, "used in", E2E | S-06, S-07, S-08 | written by the tech-lead before Phase 3 | todo |
+| **1 — Foundation + Materials** | S-00, S-01, S-02, S-03 | [plans/phase-1-foundation-materials.md](plans/phase-1-foundation-materials.md) | **done** (committed on `phase/1-materials`) |
+| **2 — UI-first preview** (approved mockup on preview data, decided 2026-10-08) | S-12, S-13, S-05, S-06-FE, S-07-FE, S-14-FE, S-15-FE, S-16-FE | [plans/phase-2-ui-first-preview.md](plans/phase-2-ui-first-preview.md) | **review: all stories approved by the tech-lead (2026-10-08), awaiting the human click-through and commit approval** |
+| 3 — Real backend (replaces preview data) | S-04, S-14-BE, S-16-BE, S-15-BE, S-06-BE, S-07-BE, S-17 | written by the tech-lead before Phase 3 | todo |
+| 4 — E2E + demo data | S-08 | written by the tech-lead before Phase 4 | todo |
 
 ```
 Phase 1  Wave 1: S-00 (BE ∥ FE ∥ TL)
          Wave 2: S-01 (BE #1) ∥ S-03 (BE #2) ∥ S-02a components (FE)
          Wave 3: S-02b pages (FE, needs S-01)
-Phase 2  S-04 Products + BOM backend (BE, needs S-01 + S-03) → S-05 Products UI + BOM editor (FE; components can start contract-first)
-Phase 3  S-06 Dashboard (BE → FE) · S-07 Material "used in" (BE → FE) · S-08 E2E smoke + demo seed
+Phase 2  Wave 1: S-13a contract + routes (BE-1) ∥ S-13b domain maths (BE-2) ∥ S-12 theme + shared UI (FE-1)
+         Wave 2: S-13c preview data layer (BE-3) ∥ S-05 products UI (FE-2) ∥ S-06-FE + S-14-FE (FE-3) ∥ S-07-FE + S-15-FE + S-16-FE (FE-4)
+Phase 3  S-04 products → S-14-BE sales ∥ S-16-BE stock ledger ∥ S-15-BE photos → S-06-BE dashboard ∥ S-07-BE usage → S-17 remove preview layer
+Phase 4  S-08 E2E smoke + full demo seed
 ```
 The subtask-level breakdown (file lists, contract, checks) lives in the phase plan. This backlog keeps the story-level view.
+Phase 2 pages are final: Phase 3 stories replace controller bodies (preview fixtures → Eloquent + Resources) **without changing pages, routes or props**
+([ADR-0006](adr/0006-ui-first-preview-data.md)).
 
 ---
 
@@ -65,46 +77,122 @@ The subtask-level breakdown (file lists, contract, checks) lives in the phase pl
 
 **Acceptance:** 100 % branch coverage of the domain; worked example passes exactly (`unit_cost = "35.7540"`, `max_producible = 112`, bottleneck = button).
 
+## Phase 2 — UI-first preview (plan: [phase-2-ui-first-preview.md](plans/phase-2-ui-first-preview.md))
+Every Phase 2 page is final and typed by `domain.ts`. Data without a table yet comes from `App\Mock` ([ADR-0006](adr/0006-ui-first-preview-data.md));
+writes to preview data validate for real, persist nothing and say so in an `info` toast.
+
+## S-12 · Theme, shell, shared UI — `review` (Phase 2, Wave 1; approved 2026-10-08)
+**Owner:** FE · **Depends on:** S-00 · Subtasks: [plan §S-12](plans/phase-2-ui-first-preview.md#s-12--theme-shell-shared-ui--wave-1-fe-1--size-m)
+
+- [ ] Denim theme tokens (primary `#2B3A86`, neutral surfaces, status tokens) with derived dark tokens (AA); Instrument Sans + IBM Plex Mono; tabular numbers
+- [ ] Nav parent matching (F-01), delete `nav-footer.tsx` (F-02), logo tile, `StockBadge` on tokens
+- [ ] Shared `PhotoThumb`, `PhotoField`, `StatCard`, `Callout`, `CapacityBadge`, `ProductStatusBadge`; shadcn `popover` + `command`; `formatDate`, `formatCount`; test helper for `<Deferred>` and `useForm`
+
+**Acceptance:** FE gates green; light and dark AA; usable at 375 px.
+
+## S-13 · Preview data layer — backend — `review` (Phase 2, Waves 1–2; approved 2026-10-08)
+**Owner:** BE · **Depends on:** S-01, S-03 · Subtasks: [plan §S-13](plans/phase-2-ui-first-preview.md#s-13--preview-data-layer--backend)
+
+- [ ] S-13a: full UI-first contract in `domain.ts`, `app.today` shared prop, enums `ProductCategory`/`ProductStatus`/`SalesPeriod`/`StockMovementType`, final routes, skeleton controllers, page stubs, `access-preview` ability
+- [ ] S-13b: `MarginCalculator`, `CostingCalculator::capacityWithout()` (next limit), `SalesCalculator` (pure, 100 % branches)
+- [ ] S-13c: `App\Mock` fixture (7 products, 60 sales, stock history, photos) computed through the domain; real `InventorySummary`; FormRequests for every write; `DemoCatalogSeeder` (12 materials); arch rule; feature tests for every "Expected" value
+
+**Acceptance:** every preview page receives exactly the plan's expected props (Denim Jacket `35.7540` / 112 / button; 48 sales / `16850.0000`); PostgreSQL parity green.
+
+## S-05 · Products — UI + composition editor — `review` (Phase 2, Wave 2, on preview data; approved 2026-10-08)
+**Owner:** FE · **Depends on:** S-12, S-13a (S-13c for real props) · Subtasks: [plan §S-05](plans/phase-2-ui-first-preview.md#s-05--products-ui--wave-2-fe-2--size-l)
+
+- [ ] `products/index`: thumb, unit cost, price · margin, `CapacityBadge`, bottleneck link, status badge, sold (30 d), filters incl. "Can't produce", pagination, empty states — **objective #4**
+- [ ] `products/show`: photo, **can-produce hero**, unit cost, sold (30 d), bottleneck callout, cost breakdown with selling price + margin, composition table (bottleneck row with text + icon), recent sales — **objective #2**
+- [ ] `products/create|edit`: `ProductForm` (costs and price, photo) + `BomEditor` (searchable material combobox, unit suffix, waste %, notes, add/remove/move, duplicate prevention, nested errors) — **objective #3**
+- [ ] Tests: `BomEditor` interactions, `ProductForm` payload and errors, composition table (worked example), cost breakdown variants, page tests
+
+**Acceptance:** with the demo seed, the Denim Jacket shows TND 35.754 (default currency; €35.75 with EUR) / 112 units / bottleneck "Metal shank button 17mm" / margin 59.83 %, and the edit form shows its 4 lines.
+
+## S-06-FE · Dashboard — UI — `review` (Phase 2, Wave 2, on preview data; approved 2026-10-08)
+**Owner:** FE · Subtasks: [plan §S-06-FE + S-14-FE](plans/phase-2-ui-first-preview.md#s-06-fe--s-14-fe--dashboard-sales-navigation--wave-2-fe-3--size-l)
+
+- [ ] Period select (Last 30 days default), can't-produce alerts, 5 KPI cards with links, top 5 sellers with Units / Revenue toggle, needs restock list, recent sales; empty states
+
+## S-14-FE · Sales log — UI — `review` (Phase 2, Wave 2, on preview data; approved 2026-10-08) · decision 1
+**Owner:** FE · Subtasks: as S-06-FE
+
+- [ ] Sidebar Products + Sales; totals; filters (search, period, product); table + cards; record / edit sale panel (active products only, price pre-filled from the selling price, date ≤ today); delete with confirm
+
+## S-07-FE · Material "What you can make with it" — UI — `review` (Phase 2, Wave 2, on preview data; approved 2026-10-08) · decision 3
+**Owner:** FE · Subtasks: [plan §S-07-FE + S-15-FE + S-16-FE](plans/phase-2-ui-first-preview.md#s-07-fe--s-15-fe--s-16-fe--materials-ui-additions--wave-2-fe-4--size-l)
+
+- [ ] Usage table (needs per unit, this stock covers, can make now, limited by), next-limit suggestions, delete disabled with the reason when used
+
+## S-15-FE · Photos — UI — `review` (Phase 2, Wave 2; approved 2026-10-08) · decision 2
+**Owner:** FE (materials: FE-4, products: FE-2)
+
+- [ ] Thumbnails in tables and lists, large photo on detail pages, upload / replace / remove in the material and product forms (JPG/PNG/WebP, max 4 MB)
+
+## S-16-FE · Restock + History — UI — `review` (Phase 2, Wave 2, on preview data; approved 2026-10-08) · decision 4
+**Owner:** FE (FE-4)
+
+- [ ] Materials list: per-row Restock quick form and History panel (deferred); material detail: Restock action + full History; used-in column
+
+---
+
+## Phase 3 — Real backend (replaces the preview data; pages, routes and props do not change)
+
 ## S-04 · Products + composition — backend — `todo`
-**Owner:** BE · **Depends on:** S-01, S-03
+**Owner:** BE · **Depends on:** S-01, S-03, S-13
 
-- [ ] Enums `ProductCategory`, `ProductStatus`; migrations `products`, `product_components` (FKs, unique pair); models + factories (`withComponents()`)
+- [ ] Migrations `products` (incl. `selling_price decimal(12,4) null`, `photo_path`), `product_components` (FKs, unique pair); models + factories (`withComponents()`); `ProductPolicy`
 - [ ] Actions `CreateProduct`, `UpdateProduct`, `DeleteProduct`, `SyncProductComponents` (transactional)
-- [ ] `ProductCostingService` (Eloquent → `BomLine[]` → calculator)
-- [ ] `ProductController`: index (paginated, filters `search`/`category`/`status`, each row with `unit_cost`, `max_producible`, `bottleneck`, `components_count`); show (composition lines with per-line effective qty, line cost, units possible, `is_bottleneck`; `cost` breakdown; `capacity`); create/edit (with `materials` options: id, sku, name, unit, unit_cost); store/update/destroy
-- [ ] `DeleteMaterial` now blocks materials used by non-deleted products (+ test)
-- [ ] `ProductListResource`, `ProductResource`, `ProductComponentResource`, `CostBreakdownResource`; `domain.ts` updated; page stubs
-- [ ] Feature tests: N+1-safe index (strict mode on), worked example end-to-end through HTTP props, BOM validation (distinct material, qty > 0, waste < 100, trashed material rejected), sync removes and reorders lines, transaction rollback on failure
+- [ ] `ProductCostingService` (Eloquent → `BomLine[]` → calculator, margin, next limit)
+- [ ] `ProductController` bodies switch from `App\Mock` to Eloquent + `ProductListResource`, `ProductResource`, `ProductComponentResource`, `CostBreakdownResource`, matching the Phase 2 contract exactly; FormRequest `// MOCK:` rules become `unique` / `exists`
+- [ ] `DeleteMaterial` blocks materials used by non-deleted products (`MaterialInUseException` + error toast); `used_in_count` via `withCount`
+- [ ] Feature tests: N+1-safe index, worked example end-to-end through HTTP props, BOM validation, sync removes and reorders lines, transaction rollback
 
-**Acceptance:** creating the Denim Jacket from the domain skill via HTTP yields exactly the expected props.
+**Acceptance:** creating the Denim Jacket via HTTP yields exactly the Phase 2 expected props; the products fixture is deleted from `App\Mock`.
 
-## S-05 · Products — UI + composition editor — `todo`
-**Owner:** FE · **Depends on:** S-04
+## S-14-BE · Sales — backend — `todo` · decision 1
+**Owner:** BE · **Depends on:** S-04
 
-- [ ] `products/index`: table/cards with unit cost, `CapacityBadge`, bottleneck link, status badge, filters, pagination, empty state — **objective #4**
-- [ ] `products/show`: header (name, SKU, status, category) + **can-produce hero number** + bottleneck callout; `BomTable` (material, qty + unit, waste %, effective qty, unit cost, line cost, stock, units possible, bottleneck row highlighted with text + icon); `CostBreakdownCard` (materials, labor, overhead, total) — **objective #2**
-- [ ] `products/create` and `products/edit`: `ProductForm` + `BomEditor` (searchable material combobox, unit suffix, waste %, placement notes, add/remove/reorder rows, duplicate prevention, nested errors) — **objective #3**
-- [ ] Tests: `CapacityBadge` states, `CostBreakdownCard` (worked example), `BomEditor` interactions, `ProductForm` error mapping
+- [ ] Migration `sales` (product FK `restrictOnDelete`, `quantity` unsigned int, `unit_price decimal(12,4)`, `sold_on date`, `note`, `user_id`), model, factory, `SalePolicy`
+- [ ] Actions `RecordSale`, `UpdateSale`, `DeleteSale`; `SaleController` bodies on Eloquent; totals and top products through `SalesCalculator` (exact on SQLite and PostgreSQL)
+- [ ] Tests: filters, periods (frozen time), totals, active-product rule, stock unchanged by sales
 
-**Acceptance:** a user can define the Denim Jacket in under 2 minutes and immediately see TND 35.754 (default currency; €35.75 with EUR) / 112 units / bottleneck "Metal shank button 17mm".
+## S-16-BE · Stock movement ledger + restock — backend — `todo` · decision 4
+**Owner:** BE · **Depends on:** S-01
 
-## S-06 · Dashboard — `todo`
-**Owners:** BE → FE · **Depends on:** S-04
+- [ ] Migration `stock_movements` (material FK, type, occurred_on, quantity, quantity_before/after, unit_price, unit_cost_before/after, reference, note, user_id)
+- [ ] Action `RestockMaterial` (transaction: stock + optional unit cost = latest price paid, restock + price_change movements); `UpdateMaterial` logs corrections and price changes; `CreateMaterial` logs `created`
+- [ ] `MaterialRestockController` and material `history` / `recent_history` on Eloquent; tests incl. PostgreSQL parity
 
-- [ ] BE: `DashboardController` props: `stats` (materials_count, inventory_value, low_stock_count, products_count, unproducible_count), `top_products` (by capacity, max 5), `low_stock_materials` (max 5); tests
-- [ ] FE: KPI cards, top-products list, low-stock list, links to filtered list pages; tests
+## S-15-BE · Photo storage — backend — `todo` · decision 2
+**Owner:** BE · **Depends on:** S-04 (products part)
 
-## S-07 · Material "used in" — `todo`
-**Owners:** BE → FE · **Depends on:** S-04
+- [ ] `photo_path` on materials and products; public disk + `storage:link`; upload, replace (delete the old file), remove; delete files with the item; `photo_url` accessor; tests with `Storage::fake()`
 
-- [ ] BE: `materials.show` adds `used_in` (product id, sku, name, quantity per unit, effective qty); test
-- [ ] FE: "Used in" table on the material page; delete button explains why it's disabled when the material is in use
+## S-06-BE · Dashboard — backend — `todo`
+**Owner:** BE · **Depends on:** S-04, S-14-BE
+
+- [ ] `DashboardController` on real data (stats, top products, needs restock, recent sales, alerts) with the same props as Phase 2; tests
+
+## S-07-BE · Material usage — backend — `todo` · decision 3
+**Owner:** BE · **Depends on:** S-04
+
+- [ ] `materials.show` `usage` (effective qty, units covered, capacity, bottleneck, next limit) from real compositions in one eager-loaded query; tests
+
+## S-17 · Remove the preview layer — `todo` · **release blocker**
+**Owner:** BE + TL · **Depends on:** all Phase 3 stories
+
+- [ ] Delete `app/Mock`, `public/mock/`, the `access-preview` ability and preview-only tests; move the demo fixture into `DemoCatalogSeeder`; arch test that nothing references `App\Mock`
+
+---
+
+## Phase 4
 
 ## S-08 · E2E smoke + demo data — `todo`
-**Owners:** FE (browser test), BE (seeder) · **Depends on:** S-05
+**Owners:** FE (browser test), BE (seeder) · **Depends on:** Phase 3
 
-- [ ] BE: `DemoCatalogSeeder` (worked example + t-shirt, sneaker, leather tote, ~25 materials)
-- [ ] FE: Pest 4 browser test (golden path: login → create 2 materials → create a product with BOM → product page shows the expected cost and capacity)
+- [ ] BE: `DemoCatalogSeeder` grows to the full Phase 2 fixture (12 materials, 7 products, 60 sales, history) on real tables
+- [ ] FE: Pest 4 browser test (golden path: login → create 2 materials → create a product with BOM → product page shows the expected cost and capacity → record a sale → dashboard totals)
 
 ---
 
@@ -113,9 +201,10 @@ The subtask-level breakdown (file lists, contract, checks) lives in the phase pl
 - **S-10 Production planner:** "Plan N units" on the product page shows per-material requirement vs stock and the shortage to buy.
 - **S-11 CSV import/export** for materials.
 
-## Phase 2 (see ARCHITECTURE.md §10)
-Stock movement ledger · suppliers and purchase orders · unit conversions · sizes and variants · multi-level BOM · product images ·
-roles and permissions · cost history snapshots · denormalized product metrics for large catalogs · REST API · multi-company (teams).
+## Later (see ARCHITECTURE.md §10)
+Suppliers and purchase orders · unit conversions · sizes and variants · multi-level BOM · roles and permissions · cost history snapshots ·
+denormalized product metrics for large catalogs · REST API · multi-company (teams). (The stock movement ledger and product images were
+pulled forward on 2026-10-08 as S-16 and S-15.)
 
 ## Follow-ups from reviews
 _(tech-lead appends MINOR/NIT items here)_
@@ -132,3 +221,19 @@ From the Phase 1 review (2026-10-08):
 - **F-08 (NIT, repo)**: a coverage run from Git Bash once wrote a `C`+U+F03A directory at the repo root. Add a `.gitignore` guard and document the coverage command in `docs/SETUP.md`: `docker compose exec -u sail -e XDEBUG_MODE=coverage laravel.test php -d pcov.enabled=0 vendor/bin/pest tests/Unit/Domain/Costing --coverage --path-coverage`.
 - **F-09 (NIT, FE tooling)**: `npm ls` flags vitest's nested `vite@8.3.3` as "invalid" because of the `vite` → `@voidzero-dev/vite-plus-core@0.3.3` alias and `$vite` override that `vite-plus@0.3.3` requires. Cosmetic; revisit when upgrading vite-plus.
 - **S-04 reminder**: add the `MaterialInUseException` guard to `DeleteMaterial` plus the error-toast `back()` branch in `MaterialController::destroy`. The S-02 delete dialog already closes on `onFinish`, so the flash error will show.
+
+From the Phase 2 planning (2026-10-08):
+- F-01 and F-02 are scheduled in S-12.
+- **F-11 (scope, FE + BE)**: the mockup's sales period select has "Custom range…". Phase 2 ships the four presets only. Add `period=custom` with `from` / `to` dates (validated, `from ≤ to ≤ today`) when the human asks for it.
+- **F-12 (docs)**: `invory-react-frontend` skill still says `CapacityBadge` 0 → "Out of stock" and places it in `components/products/`. The approved mockup uses "Can't produce" and S-12 puts it in `components/shared/`. Update the skill text.
+
+From the Phase 2 review (2026-10-08, all MINOR/NIT, none blocking):
+- **F-13 (MINOR, FE tooling)**: the `@inertiajs/vite` pages glob bundles `pages/**/*.test.tsx` into `public/build` (lazy chunks, never loaded, but shipped). Exclude test files from the glob or move page tests out of `pages/`.
+- **F-14 (MINOR, FE)**: the "Record a sale" panel sits beside the table from `lg`; at 1024 px with the sidebar open the 7-column table scrolls inside its card. Revisit the breakpoint (`components/sales/use-wide-screen.ts`) after the human's click-through.
+- **F-15 (MINOR, FE)**: `components/materials/form-field.tsx` and `components/products/form-field.tsx` (and the decimal input / currency affix helpers) duplicate each other: extract to `components/shared`. Move `components/ui/popover-command.test.tsx` out of the generated `ui/` folder.
+- **F-16 (MINOR, FE a11y)**: the sales filter's visually hidden "Product" label has the same accessible name as the sale form's "Product" field. Rename it "Filter by product".
+- **F-17 (NIT, FE)**: the sale form shows the server's unit price as `89.0000`, while the product form trims to `89` with the string-only `trimDecimal`. Reuse it for consistency.
+- **F-18 (NIT, FE)**: primary buttons hover lighter (shadcn `bg-primary/90`) instead of the mockup's darker `#1E2A66`. Add a `--primary-hover` token if the human wants the mockup's hover.
+- **F-19 (NIT, contract)**: Laravel's `meta.links` entries carry a `page` key that `PaginationLink` doesn't declare. Add `page?: number | null`.
+- **F-20 (decide before S-16-BE)**: `StoreRestockRequest` requires `update_unit_cost`; the skill says "boolean (default true)". Decide whether an omitted value means true. The UI always sends it.
+- **F-21 (NIT, copy)**: when the next limit equals the current capacity (a tie at the bottleneck), the suggestion still reads "the next limit is X at N units". Consider a tie-specific sentence.

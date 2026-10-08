@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Invory · Add material</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&amp;family=Instrument+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#FAFAF9;color:#18181B;font-family:'Instrument Sans',system-ui,sans-serif;font-size:14px;line-height:1.45}
+*{box-sizing:border-box}
+a{color:#2B3A86}a:hover{color:#1E2A66}
+h1,h2,h3,p{margin:0}
+.muted{color:#5F5F66}
+.nav a{display:flex;align-items:center;gap:10px;padding:0 10px;min-height:40px;border-radius:8px;color:#3F3F46;text-decoration:none;font-weight:500}
+.nav a:hover{background:#E9E9E5;color:#18181B}
+.nav a.on{background:#FFFFFF;color:#18181B;box-shadow:0 0 0 1px #E4E4E0}
+.card{background:#FFFFFF;border:1px solid #E4E4E0;border-radius:12px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;padding:0 16px;border-radius:8px;font:inherit;font-weight:600;text-decoration:none;cursor:pointer;border:1px solid transparent;white-space:nowrap;background:none}
+.btn-primary{background:#2B3A86;color:#FFFFFF}.btn-primary:hover{background:#1E2A66;color:#FFFFFF}
+.btn-outline{background:#FFFFFF;color:#18181B;border-color:#D6D6D0}.btn-outline:hover{background:#F3F3F1;color:#18181B}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+label{font-weight:600;font-size:13px}
+.opt{font-weight:400;color:#5F5F66}
+input,select,textarea{font:inherit;min-height:40px;border:1px solid #D6D6D0;border-radius:8px;padding:0 12px;background:#FFFFFF;color:#18181B;width:100%}
+textarea{padding:10px 12px;min-height:88px;resize:vertical}
+input::placeholder,textarea::placeholder{color:#8A8A90}
+input.err{border-color:#B42318;box-shadow:0 0 0 3px #FDE8E6}
+.error{font-size:12px;color:#A3221A;font-weight:600;display:flex;gap:5px;align-items:center}
+.hint{font-size:12px;color:#5F5F66}
+.affix{position:relative}
+.affix .pre{position:absolute;left:12px;top:10px;color:#5F5F66}
+.affix .suf{position:absolute;right:12px;top:10px;color:#5F5F66;font-weight:600}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
+.sec{padding:20px;display:flex;flex-direction:column;gap:16px}
+.sec h2{font-size:15px;font-weight:700}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+@media (max-width:860px){.side{max-width:none !important;border-right:0 !important;border-bottom:1px solid #E4E4E0}.nav{flex-direction:row !important;flex-wrap:wrap}.side-foot{display:none !important}}
+</style>
+</helmet>
+<div style="display: flex; flex-wrap: wrap; min-height: 100vh">
+
+<aside class="side" style="flex: 1 1 240px; max-width: 264px; background: #F3F3F1; border-right: 1px solid #E4E4E0; padding: 20px 14px; display: flex; flex-direction: column; gap: 24px">
+<a href="Main.dc.html" style="display: flex; align-items: center; gap: 10px; text-decoration: none; color: #18181B; padding: 4px 6px">
+<span style="width: 32px; height: 32px; border-radius: 8px; background: #2B3A86; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px">I</span>
+<span style="font-weight: 700; font-size: 18px; letter-spacing: -0.01em">Invory</span>
+</a>
+<nav aria-label="Main" class="nav" style="display: flex; flex-direction: column; gap: 2px">
+<a href="Main.dc.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="7" height="9" x="3" y="3" rx="1"></rect><rect width="7" height="5" x="14" y="3" rx="1"></rect><rect width="7" height="9" x="14" y="12" rx="1"></rect><rect width="7" height="5" x="3" y="16" rx="1"></rect></svg>Dashboard</a>
+<a class="on" href="Materials.dc.html" aria-current="page"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.3 7 12 12 20.7 7"></polyline><line x1="12" x2="12" y1="22" y2="12"></line></svg>Materials</a>
+<a href="Products.dc.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"></path></svg>Products</a>
+<a href="Sales.dc.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"></path><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"></path><path d="M12 17.5v-11"></path></svg>Sales</a>
+</nav>
+<div class="side-foot" style="margin-top: auto; display: flex; align-items: center; gap: 10px; padding: 10px 6px; border-top: 1px solid #E4E4E0">
+<span style="width: 32px; height: 32px; border-radius: 999px; background: #DADCEB; color: #2B3A86; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px">AD</span>
+<span style="display: flex; flex-direction: column; min-width: 0"><span style="font-weight: 600">Admin</span><span class="muted" style="font-size: 12px">admin@invory.test</span></span>
+</div>
+</aside>
+
+<main style="flex: 999 1 560px; min-width: 0; padding: 28px 32px 56px">
+<form style="max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px" aria-labelledby="page-title">
+
+<nav aria-label="Breadcrumb" style="font-size: 13px"><a href="Materials.dc.html" style="text-decoration: none; font-weight: 600">Materials</a><span class="muted" aria-hidden="true"> / </span><span class="muted" aria-current="page">Add material</span></nav>
+
+<header style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 4px">
+<h1 id="page-title" style="font-size: 26px; font-weight: 700; letter-spacing: -0.02em">Add material</h1>
+<p class="muted">A primary item you buy and keep in stock: fabric, trims, thread, leather, soles…</p>
+</div>
+<div style="display: flex; gap: 8px">
+<a class="btn btn-outline" href="Materials.dc.html">Cancel</a>
+<a class="btn btn-primary" href="MaterialDetail.dc.html">Save material</a>
+</div>
+</header>
+
+<div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start">
+
+<div style="flex: 999 1 520px; min-width: 0; display: flex; flex-direction: column; gap: 20px">
+
+<section class="card sec" aria-labelledby="s-identity">
+<h2 id="s-identity">Identity</h2>
+<div class="grid2">
+<div class="field"><label for="sku">SKU</label>
+<input id="sku" class="err" value="MAT-DEN-012" aria-invalid="true" aria-describedby="sku-err" style="font-family: 'IBM Plex Mono', monospace">
+<span id="sku-err" class="error"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v4"></path><path d="M12 16h.01"></path></svg>This SKU is already used by Denim 12oz Indigo.</span></div>
+<div class="field"><label for="name">Name</label><input id="name" placeholder="e.g. Denim 12oz Indigo"></div>
+<div class="field"><label for="category">Category</label>
+<select id="category"><option>Choose a category…</option><option>Fabric</option><option>Lining</option><option>Interlining</option><option>Leather</option><option>Thread</option><option>Trim</option><option>Fastener</option><option>Label</option><option>Sole</option><option>Hardware</option><option>Packaging</option><option>Other</option></select></div>
+<div class="field"><label for="color">Color <span class="opt">(optional)</span></label><input id="color" placeholder="e.g. Indigo, Antique brass"></div>
+<div class="field" style="grid-column: 1 / -1"><label for="composition">Composition <span class="opt">(optional)</span></label><input id="composition" placeholder="e.g. 100% cotton, Zinc alloy"></div>
+</div>
+</section>
+
+<section class="card sec" aria-labelledby="s-stock">
+<div style="display: flex; flex-direction: column; gap: 2px">
+<h2 id="s-stock">Stock and cost</h2>
+<p class="hint">Quantities in compositions always use this unit.</p>
+</div>
+<div class="grid2">
+<div class="field"><label for="unit">Unit of measure</label>
+<select id="unit" onChange="{{pickUnit}}"><option value="m">Metre (m)</option><option value="cm">Centimetre (cm)</option><option value="yd">Yard (yd)</option><option value="sqm">Square metre (sqm)</option><option value="sqft">Square foot (sqft)</option><option value="kg">Kilogram (kg)</option><option value="g">Gram (g)</option><option value="l">Litre (l)</option><option value="ml">Millilitre (ml)</option><option value="pc">Piece (pc)</option><option value="pair">Pair</option><option value="roll">Roll</option><option value="cone">Cone</option></select></div>
+<div class="field"><label for="cost">Unit cost</label>
+<div class="affix"><span class="pre" aria-hidden="true">€</span><input id="cost" inputmode="decimal" placeholder="0.00" style="padding-left: 28px; padding-right: 64px" aria-describedby="cost-hint"><span class="suf" aria-hidden="true">/ {{unit}}</span></div>
+<span id="cost-hint" class="hint">Up to 4 decimals, e.g. 0.0040 for thread.</span></div>
+<div class="field"><label for="qty">Quantity in stock</label>
+<div class="affix"><input id="qty" inputmode="decimal" placeholder="0" style="padding-right: 56px"><span class="suf" aria-hidden="true">{{unit}}</span></div></div>
+<div class="field"><label for="reorder">Reorder at <span class="opt">(optional)</span></label>
+<div class="affix"><input id="reorder" inputmode="decimal" placeholder="—" style="padding-right: 56px" aria-describedby="reorder-hint"><span class="suf" aria-hidden="true">{{unit}}</span></div>
+<span id="reorder-hint" class="hint">Shown as Low stock at or below this level.</span></div>
+</div>
+</section>
+
+<section class="card sec" aria-labelledby="s-supplier">
+<h2 id="s-supplier">Supplier and notes</h2>
+<div class="grid2">
+<div class="field"><label for="supplier">Supplier <span class="opt">(optional)</span></label><input id="supplier" placeholder="Supplier name"></div>
+<div class="field"><label for="supref">Supplier reference <span class="opt">(optional)</span></label><input id="supref" placeholder="Their article code"></div>
+<div class="field" style="grid-column: 1 / -1"><label for="notes">Notes <span class="opt">(optional)</span></label><textarea id="notes" placeholder="Handling, lead time, minimum order…"></textarea></div>
+</div>
+</section>
+
+</div>
+
+<section class="card sec" aria-labelledby="s-photo" style="flex: 1 1 300px; min-width: 0">
+<div style="display: flex; flex-direction: column; gap: 2px">
+<h2 id="s-photo">Photo <span class="opt" style="font-size: 13px">(optional)</span></h2>
+<p class="hint">Shown in the materials table and on the detail page.</p>
+</div>
+<label for="photo" style="aspect-ratio: 1 / 1; border: 2px dashed #C9C9C2; border-radius: 10px; background: #FAFAF9; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; padding: 20px; cursor: pointer; font-weight: 400">
+<span style="width: 48px; height: 48px; border-radius: 12px; background: #EEF0FA; color: #2B3A86; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" x2="12" y1="3" y2="15"></line></svg></span>
+<span style="font-weight: 600">Drop a photo here or <span style="color: #2B3A86; text-decoration: underline">browse</span></span>
+<span class="hint">JPG, PNG or WebP · max 4 MB · square works best</span>
+</label>
+<input id="photo" type="file" accept="image/jpeg,image/png,image/webp" class="sr">
+</section>
+
+</div>
+
+<div style="display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; padding-top: 4px">
+<a class="btn btn-outline" href="Materials.dc.html">Cancel</a>
+<a class="btn btn-primary" href="MaterialDetail.dc.html">Save material</a>
+</div>
+
+</form>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1300}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { unit: 'm' };
+  }
+  renderVals() {
+    return {
+      unit: this.state.unit,
+      pickUnit: (e) => this.setState({ unit: e.target.value })
+    };
+  }
+}
+</script>
+</body>
+</html>

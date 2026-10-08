@@ -1,7 +1,7 @@
 # Invory — Architecture
 
 > Owner: **tech-lead** agent. Any change to this document goes through an ADR in [`docs/adr/`](adr/).
-> Last updated: 2026-10-07
+> Last updated: 2026-10-08 (UI-first track: sales, photos, stock history, selling price, material usage; [ADR-0006](adr/0006-ui-first-preview-data.md))
 
 ## 1. Product in one paragraph
 
@@ -75,11 +75,19 @@ code testable and ready to scale.
 ## 4. Domain model
 
 ```
- ┌──────────────┐ 1      * ┌────────────────────┐ *      1 ┌──────────────┐
- │   Product    │──────────│  ProductComponent  │──────────│   Material   │
- │ (final item) │          │     (BOM line)     │          │(primary item)│
- └──────────────┘          └────────────────────┘          └──────────────┘
+ ┌──────────────┐ 1      * ┌────────────────────┐ *      1 ┌──────────────┐ 1      * ┌────────────────┐
+ │   Product    │──────────│  ProductComponent  │──────────│   Material   │──────────│ StockMovement  │
+ │ (final item) │          │     (BOM line)     │          │(primary item)│          │   (history)    │
+ └──────────────┘          └────────────────────┘          └──────────────┘          └────────────────┘
+        │ 1
+        │ *
+ ┌──────────────┐
+ │     Sale     │  (does not change material stock)
+ └──────────────┘
 ```
+Status (2026-10-08): `materials` is real. `products`, `product_components`, `sales`, `stock_movements` and the `photo_path` columns are
+**designed here and served from preview fixtures** (`App\Mock`, [ADR-0006](adr/0006-ui-first-preview-data.md)) until their Phase 3 stories
+(S-04, S-14-BE, S-16-BE, S-15-BE) create them.
 
 ### `materials` (primary items)
 | Column | Type | Rules |
@@ -97,6 +105,7 @@ code testable and ready to scale.
 | color | string(64) nullable | |
 | composition | string(255) nullable | e.g. "98% cotton, 2% elastane" |
 | notes | text nullable | |
+| photo_path | string(255) nullable | S-15-BE: public-disk path of the one photo (JPG/PNG/WebP, ≤ 4 MB); `photo_url` derived |
 | timestamps, deleted_at | | soft deletes |
 
 Indexes: `unique(sku)` (PostgreSQL: partial unique `WHERE deleted_at IS NULL`; elsewhere enforce in validation), `index(category)`, `index(name)`.
@@ -112,6 +121,8 @@ Indexes: `unique(sku)` (PostgreSQL: partial unique `WHERE deleted_at IS NULL`; e
 | description | text nullable | |
 | labor_cost | decimal(12,4) | ≥ 0, cost per unit, default 0 (cut-make-trim) |
 | overhead_cost | decimal(12,4) | ≥ 0, cost per unit, default 0 |
+| selling_price | decimal(12,4) nullable | ≥ 0; pre-fills "Record a sale"; margin = selling_price − unit_cost (server-side) |
+| photo_path | string(255) nullable | as on materials |
 | timestamps, deleted_at | | soft deletes |
 
 ### `product_components` (BOM lines)
@@ -129,6 +140,39 @@ Indexes: `unique(sku)` (PostgreSQL: partial unique `WHERE deleted_at IS NULL`; e
 Constraint: `unique(product_id, material_id)`. One line per material per product. The calculator still
 aggregates by material defensively.
 
+### `sales` (S-14-BE)
+| Column | Type | Rules |
+|---|---|---|
+| id | bigint PK | |
+| product_id | FK → products | `restrictOnDelete`; only `active` products can be sold |
+| quantity | unsigned integer | whole units, 1 … 1 000 000 |
+| unit_price | decimal(12,4) | ≥ 0; pre-filled from `products.selling_price`, editable |
+| sold_on | date | ≤ today |
+| note | string(255) nullable | channel, customer or order number |
+| user_id | FK → users nullable | who recorded it (`nullOnDelete`) |
+| timestamps | | |
+
+Indexes: `index(sold_on)`, `index(product_id, sold_on)`. `total = quantity × unit_price` is computed, never stored. Recording a sale never changes stock.
+
+### `stock_movements` (S-16-BE, material history)
+| Column | Type | Rules |
+|---|---|---|
+| id | bigint PK | |
+| material_id | FK → materials | `cascadeOnDelete` |
+| type | string(16) | `StockMovementType`: created, restock, correction, price_change |
+| occurred_on | date | receipt / count date |
+| quantity | decimal(14,4) nullable | created: opening stock · restock: quantity received |
+| quantity_before, quantity_after | decimal(14,4) nullable | correction: before / after · others: after |
+| unit_price | decimal(12,4) nullable | created: opening cost · restock: price paid |
+| unit_cost_before, unit_cost_after | decimal(12,4) nullable | price_change |
+| reference | string(64) nullable | PO or delivery note |
+| note | string(255) nullable | correction reason |
+| user_id | FK → users nullable | who did it |
+| timestamps | | |
+
+Index: `index(material_id, occurred_on, id)`. A restock updates `materials.quantity_on_hand` and (by default) `materials.unit_cost` = latest price
+paid inside one transaction, and writes a `restock` + (if the cost changed) a `price_change` row. The ledger is append-only.
+
 ### Business rules (the costing engine)
 All formulas, rounding rules, edge cases and a worked example live in the skill
 [`.claude/skills/invory-costing-domain/SKILL.md`](../.claude/skills/invory-costing-domain/SKILL.md), which is the single source of truth. Summary:
@@ -138,6 +182,9 @@ All formulas, rounding rules, edge cases and a worked example live in the skill
 - `unit_cost = Σ line_cost + labor_cost + overhead_cost`
 - `max_producible = min over materials ⌊ quantity_on_hand / effective_qty ⌋`. `null` if the BOM is empty.
 - `bottleneck` = the material that gives the minimum.
+- `next_limit` = capacity and bottleneck of the BOM without the current bottleneck (material page suggestion).
+- `margin = selling_price − unit_cost`, `margin % = margin ÷ selling_price × 100`.
+- Sales: `total = quantity × unit_price`; period totals, average sale and top 5 (by units or revenue) via `SalesCalculator`.
 - All arithmetic uses `Brick\Math\BigDecimal` on decimal **strings**, never floats ([ADR-0002](adr/0002-money-and-quantity-precision.md)).
 
 ### Deletion rules
@@ -195,12 +242,22 @@ tests/
 | GET | /products/{product}/edit | products.edit | @edit | `products/edit` |
 | PUT | /products/{product} | products.update | @update | redirect → show |
 | DELETE | /products/{product} | products.destroy | @destroy | redirect → index |
+| POST | /materials/{material}/restocks | materials.restocks.store | MaterialRestockController@store | redirect back |
+| GET | /sales | sales.index | SaleController@index | `sales/index` (log, totals, record / edit panel) |
+| POST | /sales | sales.store | @store | redirect back |
+| PUT | /sales/{sale} | sales.update | @update | redirect back |
+| DELETE | /sales/{sale} | sales.destroy | @destroy | redirect back |
 
-The index pages accept the query parameters `search`, `category`, `status` (products), `low_stock` (materials), `sort` and `page`.
-Pagination: 25 per page, `->withQueryString()`.
+The index pages accept the query parameters `search`, `category`, `status` and `cant_produce` (products), `low_stock` (materials),
+`product_id`, `period`, `record`, `record_product_id` (sales), `sort` and `page`. The dashboard accepts `period`.
+Pagination: 25 per page, `->withQueryString()`. Until Phase 3, product, sale, restock and photo writes are previews (validated, not persisted; ADR-0006).
+
+### Preview layer (temporary, ADR-0006)
+`app/Mock/` holds the fixture inputs for products, sales, stock history and photos and shapes them into the final props through the real domain
+classes. Only controllers, FormRequests and seeders may use it (arch test). `public/mock/photos/` holds placeholder images. Removed by S-17 (release blocker).
 
 ### Shared Inertia props (HandleInertiaRequests)
-`name`, `auth.user`, `sidebarOpen` (starter kit) and `app.currency` / `app.locale` (typed in `resources/js/types/global.d.ts`).
+`name`, `auth.user`, `sidebarOpen` (starter kit) and `app.currency` / `app.locale` / `app.today` (typed in `resources/js/types/global.d.ts`).
 Toasts use Inertia 3's native flash: `Inertia::flash('toast', ['type' => 'success', 'message' => …])`, shown by the starter kit's `<Toaster>`.
 
 ## 6. Frontend structure
@@ -210,12 +267,16 @@ resources/js/
 ├── pages/
 │   ├── dashboard.tsx
 │   ├── materials/  index.tsx · create.tsx · edit.tsx · show.tsx
-│   └── products/   index.tsx · create.tsx · edit.tsx · show.tsx
+│   ├── products/   index.tsx · create.tsx · edit.tsx · show.tsx
+│   └── sales/      index.tsx
 ├── components/
 │   ├── ui/                 # shadcn — generated via `npx shadcn@latest add …`, never hand-edited
-│   ├── materials/          material-form · materials-table · stock-badge
-│   ├── products/           product-form · bom-editor · bom-table · cost-breakdown-card · capacity-badge
-│   └── shared/             money · quantity · page-header · empty-state · confirm-delete-dialog · pagination · filters-bar
+│   ├── dashboard/          KPI cards, top sellers, needs restock, alerts
+│   ├── materials/          material-form · materials-table · stock-badge · restock form · history list · usage table
+│   ├── products/           product-form · bom-editor · bom-table · cost-breakdown-card
+│   ├── sales/              sales table · sale form
+│   └── shared/             money · quantity · page-header · empty-state · confirm-delete-dialog · pagination · filters-bar ·
+│                           photo-thumb · photo-field · stat-card · callout · capacity-badge · product-status-badge
 ├── hooks/                  use-flash-toast (starter kit) · use-app-settings · use-debounced-value
 ├── layouts/                # starter kit (sidebar layout; add Materials/Products nav items)
 ├── lib/                    format.ts (Intl money/quantity/percent) · utils.ts
@@ -234,15 +295,20 @@ Principles:
 
 ## 7. Key screens (MVP)
 
+Approved mockup (2026-10-08): [docs/design/mockup/](design/mockup/README.md). Sidebar: Dashboard, Materials, Products, Sales.
+Look: shadcn starter-kit layout, neutral surfaces, indigo "denim" primary `#2B3A86`, Instrument Sans + IBM Plex Mono for SKUs and codes,
+tabular numbers, status badges with text + icon. Light and dark mode, usable at 375 px.
+
 | Screen | Shows | Purpose |
 |---|---|---|
-| Dashboard | KPI cards: # materials, inventory value, # low-stock, # products, # products that can't be produced. Top products by capacity. Low-stock list. | At-a-glance status |
-| Materials list | SKU, name, category, stock + unit, unit cost, stock value, stock status badge (in stock / low / out); search, category and "needs restock" filters, sort | Manage inventory |
-| Material form | All material fields with unit-aware inputs | Create/edit |
-| Material detail | Fields + **"Used in"** products with quantity per unit | Impact view |
-| Products list | SKU, name, category, status, **unit cost**, **can produce**, **bottleneck** | **Objective #4** |
-| Product detail | **Composition table** (material, qty, waste, effective qty, unit cost, line cost, stock, units possible from this line, bottleneck highlight) + cost breakdown card + capacity card | **Objective #2** |
-| Product form | Product fields + **BOM editor** (add/remove rows, searchable material picker, qty with unit suffix, waste %, placement notes) | **Objective #3** |
+| Dashboard | Period select (Last 30 days default). Alert per product that can't be produced. KPI cards: total sales, units sold, inventory value, needs restock (low · out), can't produce (of N products). **Top 5 products sold** with a Units / Revenue toggle. Needs-restock list. Recent sales. | At-a-glance status |
+| Sales | Totals (total sales, units, count, average sale); search, period and product filters; sales table with edit / delete; **Record a sale** panel (active products only, unit price pre-filled from the selling price, date, note; stock unchanged) | Sales log (decision 1) |
+| Materials list | Thumbnail, name + SKU, category, stock + unit, reorder at, unit cost, stock value, status badge, **used in** (# products); search, category, "needs restock", sort; per-row **Restock** quick form and **History** panel | Manage inventory (decision 4) |
+| Material form | All material fields with unit-aware inputs + **photo** upload / replace / remove | Create/edit (decision 2) |
+| Material detail | Photo, KPIs, below-reorder callout, details; **What you can make with it**: per product need per unit, units this stock covers, can make now, limited by (bottleneck flag) + **next-limit suggestion**; Restock; full History; delete disabled with the reason when used | Impact view (decision 3) |
+| Products list | Thumbnail, name + SKU + # materials, category, status, **unit cost**, price · margin, **can produce**, **bottleneck**, sold (30 d); "can't produce" filter | **Objective #4** |
+| Product detail | Photo, **can produce now** hero, unit cost, sold (30 d), bottleneck callout, cost breakdown with **selling price and margin**, **composition table** (material, qty, waste, effective qty, unit cost, line cost, stock, units possible, bottleneck highlight), recent sales | **Objective #2** (decision 5) |
+| Product form | Details, costs and **selling price**, photo, **BOM editor** (searchable material picker, qty with unit suffix, waste %, placement notes, add / remove / move rows) | **Objective #3** |
 
 ## 8. Quality, testing and definition of done
 

@@ -22,6 +22,12 @@ If a rule here is wrong or incomplete, stop and ask the tech-lead to update it (
 | Capacity / can produce | Max whole units we can make **now** from stock on hand | `max_producible` |
 | Bottleneck | The material that limits capacity | `bottleneck` |
 | Stock status | `out` if `quantity_on_hand = 0`; else `low` if `reorder_level` is set and `quantity_on_hand <= reorder_level`; else `in_stock`. Computed server-side. "Needs restock" = `low` or `out` | `stock_status` / `StockStatus` enum |
+| Selling price | Optional price of one unit of a product; pre-fills "Record a sale" | `selling_price` |
+| Margin | Selling price minus unit cost, as an amount and a % of the selling price | `margin` (`amount`, `percent`) |
+| Sale | A recorded sale: product, whole-unit quantity, unit price, date, optional note. **Does not change material stock** | `Sale` / `sales` |
+| Units covered | Units of a product that one material's stock covers on its own | `units_covered` |
+| Next limit | The bottleneck and capacity a product would have if its current bottleneck were unlimited | `next_limit` |
+| Stock movement | A history entry of a material: `created`, `restock`, `correction`, `price_change` | `StockMovement` / `StockMovementType` enum |
 
 ## Units and categories
 
@@ -29,7 +35,9 @@ If a rule here is wrong or incomplete, stop and ask the tech-lead to update it (
   A BOM quantity is **always expressed in the material's own unit**. There are no conversions in the MVP.
 - `MaterialCategory`: `fabric, lining, interlining, leather, thread, trim, fastener, label, sole, hardware, packaging, other`.
 - `ProductCategory`: `apparel, footwear, bag, accessory, jewelry, other`.
-- `ProductStatus`: `draft, active, archived`.
+- `ProductStatus`: `draft, active, archived`. Only `active` products can be sold (mockup copy "Only active products can be sold").
+- `SalesPeriod`: `last_7_days, last_30_days, this_month, this_year` (default `last_30_days`).
+- `StockMovementType`: `created, restock, correction, price_change`.
 - Each PHP enum exposes `label(): string` and `static options(): array<array{value:string,label:string}>`. The frontend gets options as props and never hard-codes labels.
 
 ## Formulas
@@ -51,6 +59,64 @@ bottleneck(P)         = the material m with the smallest units_possible(m)
 stock_value(m)        = m.quantity_on_hand × m.unit_cost
 inventory_value       = Σ stock_value(m) over non-deleted materials
 ```
+
+### Material usage and next limit (added 2026-10-08, decision 3)
+
+For a material m and every non-deleted product P whose BOM uses m:
+
+```
+needed_per_unit(m, P) = required_P(m)                 (effective quantity, waste included, summed over P's lines of m)
+units_covered(m, P)   = units_possible_P(m) = ⌊ m.quantity_on_hand / required_P(m) ⌋      (m alone, other materials ignored)
+can_make_now(P)       = max_producible(P)             (the whole BOM)
+limited_by(P)         = bottleneck(P);  is_bottleneck = (bottleneck(P) = m)
+next_limit(P, m)      = only when bottleneck(P) = m: max_producible and bottleneck of P's BOM with every line of m removed
+                        (same tie-break as bottleneck). null when m is P's only material.
+```
+`next_limit` reads "if you restock m, the next limit is X at N units". It can equal the current capacity (a tie at the bottleneck).
+Worked example: the button limits the Denim Jacket to 112; without it the next limit is Denim 12oz Indigo at **126**.
+
+### Selling price and margin (added 2026-10-08, decision 5)
+
+```
+margin(P)             = P.selling_price − unit_cost(P)                       scale 4, may be negative
+margin_percent(P)     = margin(P) ÷ P.selling_price × 100                    scale 2, HalfUp   (gross margin: % of the selling price, not markup on cost)
+```
+`selling_price` is optional (`decimal(12,4)`, ≥ 0). `selling_price = null` → `margin = null`. `selling_price = 0` → `margin.amount = −unit_cost`, `margin.percent = null`.
+Worked example: Denim Jacket at selling price `89.0000` → `margin.amount = "53.2460"`, `margin.percent = "59.83"`.
+
+### Sales (added 2026-10-08, decision 1)
+
+```
+sale_total(S)         = S.quantity × S.unit_price                            scale 4 (quantity is a whole number ≥ 1)
+revenue               = Σ sale_total(S) over the period
+units_sold            = Σ S.quantity over the period
+sales_count           = number of sales in the period
+average_sale          = revenue ÷ sales_count                                scale 4, HalfUp; null when sales_count = 0
+products_sold_count   = number of distinct products sold in the period
+top products          = per product: units_sold and revenue over the period; ranked by the chosen metric descending
+                        (tie → the other metric descending, then lowest product id); first 5
+percent_of_top(p)     = metric(p) ÷ metric(first ranked) × 100              scale 2, HalfUp (drives the bar length; 100.00 for the first)
+                        if metric(first ranked) = 0 (e.g. only zero-price sales ranked by revenue) → "0.00" for every product
+```
+Worked example (sales fixture of the UI-first plan, last 30 days): 48 sales, 296 units, revenue `"16850.0000"`, average sale `"351.0417"`;
+top by units T-shirt 142 (`100.00`), Jeans 64 (`45.07`), Denim Jacket 38 (`26.76`), Belt 31 (`21.83`), Tote 12 (`8.45`).
+Periods are inclusive calendar-day ranges ending today (app timezone): `last_7_days` = today − 6 … today, `last_30_days` = today − 29 … today,
+`this_month` = 1st of this month … today, `this_year` = 1 January … today. A sale's date can't be in the future.
+"Sold (30 d)" on products always uses `last_30_days`. Recording, editing or deleting a sale **never** changes material stock.
+"Can't produce" counts products (any status) whose `max_producible = 0`; products with an empty BOM (`null`) are not counted.
+
+### Restock and price history (added 2026-10-08, decision 4)
+
+```
+restock(m, q, price, update_unit_cost):
+    m.quantity_on_hand' = m.quantity_on_hand + q                             q > 0 (max 4 decimals), price ≥ 0 (max 4 decimals)
+    m.unit_cost'        = price  if update_unit_cost (default on)            latest price paid, NOT a weighted average
+                        = m.unit_cost otherwise
+    history: one `restock` movement (quantity q, unit price paid, reference); plus one `price_change` movement
+             (unit_cost before → after) when the unit cost actually changed. Both are dated with the receipt date.
+```
+A manual edit of `quantity_on_hand` is logged as a `correction` (before → after, optional reason); a manual edit of `unit_cost` as a `price_change`.
+History is listed newest first (date, then entry order) with who did it.
 
 ## Precision and rounding (non-negotiable, see ADR-0002)
 
@@ -86,8 +152,13 @@ inventory_value       = Σ stock_value(m) over non-deleted materials
 
 - Material: `unit_cost` ≥ 0 (max 4 decimals), `quantity_on_hand` ≥ 0 (max 4 decimals), `reorder_level` nullable ≥ 0.
 - BOM line: `quantity` > 0 (max 4 decimals); `waste_percent` 0 ≤ x < 100 (max 2 decimals); `material_id` exists, not soft-deleted, `distinct` within the product.
-- Product: `labor_cost`, `overhead_cost` ≥ 0 (max 4 decimals). An empty BOM is allowed (e.g. a draft).
+- Product: `labor_cost`, `overhead_cost` ≥ 0 (max 4 decimals). An empty BOM is allowed (e.g. a draft). `selling_price` nullable ≥ 0 (max 4 decimals).
 - A material referenced by any non-deleted product **cannot be deleted** (`MaterialInUseException`).
+- Sale: `product_id` exists, not soft-deleted, status `active`; `quantity` integer 1 … 1 000 000; `unit_price` ≥ 0 (max 4 decimals);
+  `sold_on` a date ≤ today; `note` nullable, ≤ 255 chars.
+- Restock: `quantity` > 0 (max 4 decimals); `unit_price` ≥ 0 (max 4 decimals); `received_on` a date ≤ today; `reference` nullable, ≤ 64 chars;
+  `update_unit_cost` boolean (default true).
+- Photo (material or product): optional file, JPG / PNG / WebP only (no SVG), max 4 MB (4096 KB); `remove_photo` boolean. One photo per item.
 
 ## Worked example — use as a golden test (backend unit test + frontend display test)
 
@@ -116,4 +187,7 @@ Variant checks:
 - Eloquent adapter: `app/Services/Costing/ProductCostingService` maps a `Product` with `components.material` eager-loaded into `BomLine[]`.
 - Serialization: `CostBreakdownResource` and the `cost` and `capacity` keys of `ProductResource` / `ProductListResource`.
 - TS contract: `resources/js/types/domain.ts` (`CostBreakdown`, `Capacity`, `Decimal = string`).
-- Display: `resources/js/lib/format.ts`, `components/shared/money.tsx`, `components/products/capacity-badge.tsx`.
+- Display: `resources/js/lib/format.ts`, `components/shared/money.tsx`, `components/shared/capacity-badge.tsx`.
+- Added 2026-10-08 (UI-first track): `App\Domain\Costing\MarginCalculator` (margin), `CostingCalculator::capacityWithout()` (next limit),
+  `App\Domain\Sales\SalesCalculator` (sale total, period summary, top products, percent of top), `App\Enums\SalesPeriod::range()` (period dates).
+  Until the real tables exist, the preview layer `App\Mock` feeds these classes with fixture data ([ADR-0006](../../../docs/adr/0006-ui-first-preview-data.md)).

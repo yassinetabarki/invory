@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Invory · Dashboard</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&amp;family=Instrument+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#FAFAF9;color:#18181B;font-family:'Instrument Sans',system-ui,sans-serif;font-size:14px;line-height:1.45}
+*{box-sizing:border-box}
+a{color:#2B3A86}a:hover{color:#1E2A66}
+h1,h2,h3,p{margin:0}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px}
+.muted{color:#5F5F66}
+.num{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.nav a{display:flex;align-items:center;gap:10px;padding:0 10px;min-height:40px;border-radius:8px;color:#3F3F46;text-decoration:none;font-weight:500}
+.nav a:hover{background:#E9E9E5;color:#18181B}
+.nav a.on{background:#FFFFFF;color:#18181B;box-shadow:0 0 0 1px #E4E4E0}
+.card{background:#FFFFFF;border:1px solid #E4E4E0;border-radius:12px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;padding:0 14px;border-radius:8px;font:inherit;font-weight:600;text-decoration:none;cursor:pointer;border:1px solid transparent;white-space:nowrap;background:none}
+.btn-primary{background:#2B3A86;color:#FFFFFF}.btn-primary:hover{background:#1E2A66;color:#FFFFFF}
+.btn-outline{background:#FFFFFF;color:#18181B;border-color:#D6D6D0}.btn-outline:hover{background:#F3F3F1;color:#18181B}
+.seg{display:inline-flex;padding:3px;background:#F0F0EC;border-radius:9px;gap:2px}
+.seg button{min-height:34px;padding:0 12px;border:0;border-radius:7px;background:none;font:inherit;font-weight:600;color:#5F5F66;cursor:pointer}
+.seg button.on{background:#FFFFFF;color:#18181B;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.badge{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.b-in{background:#E6F4EF;color:#0B5C4B}.b-low{background:#FDF0DC;color:#8A4405}.b-out{background:#FDE8E6;color:#A3221A}
+.thumb{width:40px;height:40px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex:none}
+table{border-collapse:collapse;width:100%}
+th{font-size:12px;font-weight:600;color:#5F5F66;text-align:left;padding:10px 16px;border-bottom:1px solid #E4E4E0;white-space:nowrap}
+td{padding:12px 16px;border-bottom:1px solid #EFEFEB;vertical-align:middle}
+tbody tr:last-child td{border-bottom:0}
+label{font-weight:600;font-size:13px}
+select{font:inherit;min-height:40px;border:1px solid #D6D6D0;border-radius:8px;padding:0 12px;background:#FFFFFF;color:#18181B}
+@media (max-width:860px){.side{max-width:none !important;border-right:0 !important;border-bottom:1px solid #E4E4E0}.nav{flex-direction:row !important;flex-wrap:wrap}.side-foot{display:none !important}}
+</style>
+</helmet>
+<div style="display: flex; flex-wrap: wrap; min-height: 100vh">
+
+<aside class="side" style="flex: 1 1 240px; max-width: 264px; background: #F3F3F1; border-right: 1px solid #E4E4E0; padding: 20px 14px; display: flex; flex-direction: column; gap: 24px">
+<a href="Main.dc.html" style="display: flex; align-items: center; gap: 10px; text-decoration: none; color: #18181B; padding: 4px 6px">
+<span style="width: 32px; height: 32px; border-radius: 8px; background: #2B3A86; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px">I</span>
+<span style="font-weight: 700; font-size: 18px; letter-spacing: -0.01em">Invory</span>
+</a>
+<nav aria-label="Main" class="nav" style="display: flex; flex-direction: column; gap: 2px">
+<a class="on" href="Main.dc.html" aria-current="page"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="7" height="9" x="3" y="3" rx="1"></rect><rect width="7" height="5" x="14" y="3" rx="1"></rect><rect width="7" height="9" x="14" y="12" rx="1"></rect><rect width="7" height="5" x="3" y="16" rx="1"></rect></svg>Dashboard</a>
+<a href="Materials.dc.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.3 7 12 12 20.7 7"></polyline><line x1="12" x2="12" y1="22" y2="12"></line></svg>Materials</a>
+<a href="Products.dc.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"></path></svg>Products</a>
+<a href="Sales.dc.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"></path><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"></path><path d="M12 17.5v-11"></path></svg>Sales</a>
+</nav>
+<div class="side-foot" style="margin-top: auto; display: flex; align-items: center; gap: 10px; padding: 10px 6px; border-top: 1px solid #E4E4E0">
+<span style="width: 32px; height: 32px; border-radius: 999px; background: #DADCEB; color: #2B3A86; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px">AD</span>
+<span style="display: flex; flex-direction: column; min-width: 0"><span style="font-weight: 600">Admin</span><span class="muted" style="font-size: 12px">admin@invory.test</span></span>
+</div>
+</aside>
+
+<main style="flex: 999 1 560px; min-width: 0; padding: 28px 32px 56px">
+<div style="max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px">
+
+<header style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 4px">
+<h1 style="font-size: 26px; font-weight: 700; letter-spacing: -0.02em">Dashboard</h1>
+<p class="muted">Sales and stock at a glance.</p>
+</div>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px">
+<label for="period" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Period</label>
+<select id="period"><option>Last 30 days</option><option>Last 7 days</option><option>This month</option><option>This year</option></select>
+<a class="btn btn-primary" href="Sales.dc.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>Record sale</a>
+</div>
+</header>
+
+<div role="alert" style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 12px 16px; border-radius: 10px; background: #FDE8E6; color: #7A1A13">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>
+<span style="flex: 1 1 320px"><strong>Canvas Low Sneaker can't be produced.</strong> Rubber cupsole 42 is out of stock.</span>
+<a href="ProductDetail.dc.html" style="color: #7A1A13; font-weight: 600">See product</a>
+</div>
+
+<section aria-label="Key figures" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px">
+<div class="card" style="padding: 18px 20px; display: flex; flex-direction: column; gap: 6px">
+<span class="muted" style="font-weight: 500">Total sales</span>
+<span style="font-size: 28px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums">€16,850.00</span>
+<span class="muted" style="font-size: 13px">48 sales · last 30 days</span>
+</div>
+<div class="card" style="padding: 18px 20px; display: flex; flex-direction: column; gap: 6px">
+<span class="muted" style="font-weight: 500">Units sold</span>
+<span style="font-size: 28px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums">296</span>
+<span class="muted" style="font-size: 13px">across 6 products</span>
+</div>
+<div class="card" style="padding: 18px 20px; display: flex; flex-direction: column; gap: 6px">
+<span class="muted" style="font-weight: 500">Inventory value</span>
+<span style="font-size: 28px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums">€10,544.30</span>
+<span class="muted" style="font-size: 13px">12 materials</span>
+</div>
+<a class="card" href="Materials.dc.html" style="padding: 18px 20px; display: flex; flex-direction: column; gap: 6px; text-decoration: none; color: #18181B">
+<span class="muted" style="font-weight: 500">Needs restock</span>
+<span style="font-size: 28px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums">4</span>
+<span style="font-size: 13px; color: #8A4405; font-weight: 600">3 low · 1 out of stock →</span>
+</a>
+<a class="card" href="Products.dc.html" style="padding: 18px 20px; display: flex; flex-direction: column; gap: 6px; text-decoration: none; color: #18181B">
+<span class="muted" style="font-weight: 500">Can't produce</span>
+<span style="font-size: 28px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums">1</span>
+<span style="font-size: 13px; color: #A3221A; font-weight: 600">of 7 products →</span>
+</a>
+</section>
+
+<div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start">
+
+<section class="card" aria-labelledby="top-title" style="padding: 20px; display: flex; flex-direction: column; gap: 12px; flex: 2 1 520px; min-width: 0">
+<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px">
+<div style="display: flex; flex-direction: column; gap: 2px">
+<h2 id="top-title" style="font-size: 16px; font-weight: 700">Top selling products</h2>
+<p class="muted" style="font-size: 13px">Last 30 days, ranked by {{rankedBy}}</p>
+</div>
+<div class="seg" role="group" aria-label="Rank by">
+<button type="button" class="{{unitsCls}}" aria-pressed="{{unitsOn}}" onClick="{{showUnits}}">Units</button>
+<button type="button" class="{{revenueCls}}" aria-pressed="{{revenueOn}}" onClick="{{showRevenue}}">Revenue</button>
+</div>
+</div>
+<ol style="list-style: none; margin: 0; padding: 0">
+<sc-for list="{{top}}" as="p" hint-placeholder-count="5">
+<li style="display: grid; grid-template-columns: 20px 40px minmax(0, 1fr) minmax(60px, 200px) 104px; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid #EFEFEB">
+<span class="muted" style="font-weight: 600; font-variant-numeric: tabular-nums">{{p.rank}}</span>
+<span class="thumb" style="background: {{p.tint}}; color: {{p.ink}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"></path></svg></span>
+<span style="display: flex; flex-direction: column; min-width: 0">
+<a href="ProductDetail.dc.html" style="font-weight: 600; color: #18181B; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{p.name}}</a>
+<span class="mono muted">{{p.sku}}</span>
+</span>
+<span aria-hidden="true" style="height: 8px; background: #E6E8F4; border-radius: 4px; overflow: hidden"><span style="display: block; height: 100%; width: {{p.bar}}; background: #2B3A86; border-radius: 4px"></span></span>
+<span class="num" style="display: flex; flex-direction: column; align-items: flex-end">
+<span style="font-weight: 700">{{p.main}}</span>
+<span class="muted" style="font-size: 12px">{{p.sub}}</span>
+</span>
+</li>
+</sc-for>
+</ol>
+</section>
+
+<section class="card" aria-labelledby="restock-title" style="padding: 20px; display: flex; flex-direction: column; gap: 12px; flex: 1 1 300px; min-width: 0">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+<h2 id="restock-title" style="font-size: 16px; font-weight: 700">Needs restock</h2>
+<a href="Materials.dc.html" style="font-weight: 600; font-size: 13px">View all</a>
+</div>
+<ul style="list-style: none; margin: 0; padding: 0">
+<sc-for list="{{restock}}" as="m" hint-placeholder-count="4">
+<li style="display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid #EFEFEB">
+<span class="thumb" style="background: {{m.tint}}; color: {{m.ink}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"></path></svg></span>
+<span style="display: flex; flex-direction: column; min-width: 0; flex: 1">
+<a href="MaterialDetail.dc.html" style="font-weight: 600; color: #18181B; text-decoration: none">{{m.name}}</a>
+<span class="muted" style="font-size: 12px; font-variant-numeric: tabular-nums">{{m.stock}} · reorder at {{m.reorder}}</span>
+</span>
+<span class="badge {{m.cls}}">
+<sc-if value="{{m.isOut}}" hint-placeholder-val="{{false}}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></sc-if>
+<sc-if value="{{m.isLow}}" hint-placeholder-val="{{true}}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v9"></path><path d="M12 19h.01"></path></svg></sc-if>
+{{m.label}}</span>
+</li>
+</sc-for>
+</ul>
+</section>
+
+</div>
+
+<section class="card" aria-labelledby="recent-title" style="display: flex; flex-direction: column">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 20px 8px">
+<h2 id="recent-title" style="font-size: 16px; font-weight: 700">Recent sales</h2>
+<a href="Sales.dc.html" style="font-weight: 600; font-size: 13px">View all sales</a>
+</div>
+<div style="overflow-x: auto">
+<table>
+<thead><tr><th scope="col">Date</th><th scope="col">Product</th><th scope="col" style="text-align: right">Qty</th><th scope="col" style="text-align: right">Unit price</th><th scope="col" style="text-align: right">Total</th><th scope="col">Note</th></tr></thead>
+<tbody>
+<sc-for list="{{recent}}" as="s" hint-placeholder-count="5">
+<tr>
+<td class="muted" style="white-space: nowrap">{{s.date}}</td>
+<td><a href="ProductDetail.dc.html" style="font-weight: 600; color: #18181B; text-decoration: none">{{s.product}}</a></td>
+<td class="num">{{s.qty}}</td>
+<td class="num">{{s.price}}</td>
+<td class="num" style="font-weight: 700">{{s.total}}</td>
+<td class="muted">{{s.note}}</td>
+</tr>
+</sc-for>
+</tbody>
+</table>
+</div>
+</section>
+
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1200}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { metric: 'units' };
+  }
+  renderVals() {
+    const products = [
+      { name: 'Classic White T-shirt', sku: 'PRD-TSH-002', units: 142, revenue: '€3,408.00', rev: 3408, tint: '#ECECE8', ink: '#5F5F66' },
+      { name: 'Denim Jeans 5-pocket', sku: 'PRD-JNS-005', units: 64, revenue: '€5,056.00', rev: 5056, tint: '#2F3B66', ink: '#FFFFFF' },
+      { name: 'Denim Jacket', sku: 'PRD-JKT-001', units: 38, revenue: '€3,382.00', rev: 3382, tint: '#3B4A7A', ink: '#FFFFFF' },
+      { name: 'Leather Belt', sku: 'PRD-BLT-007', units: 31, revenue: '€1,395.00', rev: 1395, tint: '#7A4425', ink: '#FFFFFF' },
+      { name: 'Leather Tote', sku: 'PRD-TOT-004', units: 12, revenue: '€2,988.00', rev: 2988, tint: '#9A5B34', ink: '#FFFFFF' },
+      { name: 'Canvas Low Sneaker', sku: 'PRD-SNK-003', units: 9, revenue: '€621.00', rev: 621, tint: '#D9CBB0', ink: '#5B4A2A' }
+    ];
+    const byUnits = this.state.metric === 'units';
+    const sorted = products.slice().sort((a, b) => byUnits ? b.units - a.units : b.rev - a.rev).slice(0, 5);
+    const max = byUnits ? sorted[0].units : sorted[0].rev;
+    const top = sorted.map((p, i) => ({
+      ...p,
+      rank: i + 1,
+      bar: Math.round(((byUnits ? p.units : p.rev) / max) * 100) + '%',
+      main: byUnits ? p.units + ' units' : p.revenue,
+      sub: byUnits ? p.revenue : p.units + ' units'
+    }));
+    return {
+      top,
+      rankedBy: byUnits ? 'units sold' : 'revenue',
+      unitsOn: byUnits ? 'true' : 'false',
+      revenueOn: byUnits ? 'false' : 'true',
+      unitsCls: byUnits ? 'on' : '',
+      revenueCls: byUnits ? '' : 'on',
+      showUnits: () => this.setState({ metric: 'units' }),
+      showRevenue: () => this.setState({ metric: 'revenue' }),
+      restock: [
+        { name: 'Rubber cupsole 42', stock: '0 pair', reorder: '40 pair', label: 'Out of stock', cls: 'b-out', isOut: true, isLow: false, tint: '#EFEDE6', ink: '#5F5F66' },
+        { name: 'Metal shank button 17mm', stock: '900 pc', reorder: '1,000 pc', label: 'Low', cls: 'b-low', isOut: false, isLow: true, tint: '#A88B4A', ink: '#FFFFFF' },
+        { name: 'Cotton jersey 180gsm White', stock: '64 m', reorder: '80 m', label: 'Low', cls: 'b-low', isOut: false, isLow: true, tint: '#ECECE8', ink: '#5F5F66' },
+        { name: 'Woven brand label', stock: '400 pc', reorder: '500 pc', label: 'Low', cls: 'b-low', isOut: false, isLow: true, tint: '#1F1F23', ink: '#FFFFFF' }
+      ],
+      recent: [
+        { date: '7 Oct 2026', product: 'Denim Jeans 5-pocket', qty: '6', price: '€79.00', total: '€474.00', note: 'Boutique Lyon' },
+        { date: '7 Oct 2026', product: 'Classic White T-shirt', qty: '20', price: '€24.00', total: '€480.00', note: 'Web shop' },
+        { date: '6 Oct 2026', product: 'Leather Tote', qty: '2', price: '€249.00', total: '€498.00', note: 'Showroom' },
+        { date: '5 Oct 2026', product: 'Denim Jacket', qty: '4', price: '€89.00', total: '€356.00', note: 'Web shop' },
+        { date: '5 Oct 2026', product: 'Leather Belt', qty: '3', price: '€45.00', total: '€135.00', note: 'Boutique Lyon' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Invory · Materials</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&amp;family=Instrument+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#FAFAF9;color:#18181B;font-family:'Instrument Sans',system-ui,sans-serif;font-size:14px;line-height:1.45}
+*{box-sizing:border-box}
+a{color:#2B3A86}a:hover{color:#1E2A66}
+h1,h2,h3,p{margin:0}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px}
+.muted{color:#5F5F66}
+.num{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.nav a{display:flex;align-items:center;gap:10px;padding:0 10px;min-height:40px;border-radius:8px;color:#3F3F46;text-decoration:none;font-weight:500}
+.nav a:hover{background:#E9E9E5;color:#18181B}
+.nav a.on{background:#FFFFFF;color:#18181B;box-shadow:0 0 0 1px #E4E4E0}
+.card{background:#FFFFFF;border:1px solid #E4E4E0;border-radius:12px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;padding:0 14px;border-radius:8px;font:inherit;font-weight:600;text-decoration:none;cursor:pointer;border:1px solid transparent;white-space:nowrap;background:none}
+.btn-primary{background:#2B3A86;color:#FFFFFF}.btn-primary:hover{background:#1E2A66;color:#FFFFFF}
+.btn-outline{background:#FFFFFF;color:#18181B;border-color:#D6D6D0}.btn-outline:hover{background:#F3F3F1;color:#18181B}
+.icon-btn{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:8px;border:0;background:none;color:#5F5F66;cursor:pointer;text-decoration:none}
+.icon-btn:hover{background:#F0F0EC;color:#18181B}
+.icon-btn.on{background:#EEF0FA;color:#2B3A86}
+.mini{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 10px;border-radius:8px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;border:1px solid #D6D6D0;background:#FFFFFF;color:#18181B;white-space:nowrap;vertical-align:middle}
+.mini:hover{background:#F3F3F1}
+.mini.urgent{background:#2B3A86;border-color:#2B3A86;color:#FFFFFF}.mini.urgent:hover{background:#1E2A66}
+.mini.on{background:#EEF0FA;border-color:#9AA3D6;color:#2B3A86}
+.pop{margin-left:auto;max-width:660px;background:#FFFFFF;border:1px solid #D6D6D0;border-radius:12px;box-shadow:0 10px 28px rgba(24,24,27,.10);padding:16px;display:flex;flex-direction:column;gap:14px;text-align:left;white-space:normal}
+.pop-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
+.pf{display:flex;flex-direction:column;gap:6px;min-width:0}
+.affix{position:relative}.affix .pre{position:absolute;left:12px;top:10px;color:#5F5F66}.affix .suf{position:absolute;right:12px;top:10px;color:#5F5F66;font-weight:600}
+.hint{font-size:12px;color:#5F5F66}
+.h-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.h-list li{display:grid;grid-template-columns:92px 104px minmax(0,1fr) auto;gap:12px;align-items:center;padding:9px 0;border-top:1px solid #EFEFEB}
+.h-list li:first-child{border-top:0}
+.b-restock{background:#E6F4EF;color:#0B5C4B}.b-price{background:#EEF0FA;color:#2B3A86}
+.badge{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.b-in{background:#E6F4EF;color:#0B5C4B}.b-low{background:#FDF0DC;color:#8A4405}.b-out{background:#FDE8E6;color:#A3221A}.b-neutral{background:#F0F0EC;color:#3F3F46}
+.thumb{width:40px;height:40px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex:none;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
+table{border-collapse:collapse;width:100%}
+th{font-size:12px;font-weight:600;color:#5F5F66;text-align:left;padding:10px 14px;border-bottom:1px solid #E4E4E0;white-space:nowrap;background:#FAFAF9}
+td{padding:10px 14px;border-bottom:1px solid #EFEFEB;vertical-align:middle}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover td{background:#FAFAF9}
+label{font-weight:600;font-size:13px}
+input,select{font:inherit;min-height:40px;border:1px solid #D6D6D0;border-radius:8px;padding:0 12px;background:#FFFFFF;color:#18181B;width:100%}
+input::placeholder{color:#8A8A90}
+.check{display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 12px;border:1px solid #D6D6D0;border-radius:8px;background:#FFFFFF;font-weight:600;cursor:pointer;white-space:nowrap}
+.check input{width:16px;height:16px;min-height:0;margin:0;accent-color:#2B3A86}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+@media (max-width:860px){.side{max-width:none !important;border-right:0 !important;border-bottom:1px solid #E4E4E0}.nav{flex-direction:row !important;flex-wrap:wrap}.side-foot{display:none !important}}
+</style>
+</helmet>
+<div style="display: flex; flex-wrap: wrap; min-height: 100vh">
+
+<aside class="side" style="flex: 1 1 240px; max-width: 264px; background: #F3F3F1; border-right: 1px solid #E4E4E0; padding: 20px 14px; display: flex; flex-direction: column; gap: 24px">
+<a href="Main.dc.html" style="display: flex; align-items: center; gap: 10px; text-decoration: none; color: #18181B; padding: 4px 6px">
+<span style="width: 32px; height: 32px; border-radius: 8px; background: #2B3A86; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px">I</span>
+<span style="font-weight: 700; font-size: 18px; letter-spacing: -0.01em">Invory</span>
+</a>
+<nav aria-label="Main" class="nav" style="display: flex; flex-direction: column; gap: 2px">
+<a href="Main.dc.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="7" height="9" x="3" y="3" rx="1"></rect><rect width="7" height="5" x="14" y="3" rx="1"></rect><rect width="7" height="9" x="14" y="12" rx="1"></rect><rect width="7" height="5" x="3" y="16" rx="1"></rect></svg>Dashboard</a>
+<a class="on" href="Materials.dc.html" aria-current="page"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.3 7 12 12 20.7 7"></polyline><line x1="12" x2="12" y1="22" y2="12"></line></svg>Materials</a>
+<a href="Products.dc.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"></path></svg>Products</a>
+<a href="Sales.dc.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"></path><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"></path><path d="M12 17.5v-11"></path></svg>Sales</a>
+</nav>
+<div class="side-foot" style="margin-top: auto; display: flex; align-items: center; gap: 10px; padding: 10px 6px; border-top: 1px solid #E4E4E0">
+<span style="width: 32px; height: 32px; border-radius: 999px; background: #DADCEB; color: #2B3A86; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px">AD</span>
+<span style="display: flex; flex-direction: column; min-width: 0"><span style="font-weight: 600">Admin</span><span class="muted" style="font-size: 12px">admin@invory.test</span></span>
+</div>
+</aside>
+
+<main style="flex: 999 1 560px; min-width: 0; padding: 28px 32px 56px">
+<div style="max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px">
+
+<header style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 4px">
+<h1 style="font-size: 26px; font-weight: 700; letter-spacing: -0.02em">Materials</h1>
+<p class="muted">12 primary items in stock · inventory value <strong style="color: #18181B; font-variant-numeric: tabular-nums">€10,544.30</strong></p>
+</div>
+<a class="btn btn-primary" href="MaterialForm.dc.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>Add material</a>
+</header>
+
+<section class="card" aria-label="Materials list" style="display: flex; flex-direction: column">
+<div style="display: flex; flex-wrap: wrap; gap: 10px; padding: 14px 16px; border-bottom: 1px solid #E4E4E0">
+<div style="position: relative; flex: 1 1 240px">
+<label for="m-search" class="sr">Search materials</label>
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5F5F66" stroke-width="2" stroke-linecap="round" aria-hidden="true" style="position: absolute; left: 12px; top: 12px"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+<input id="m-search" type="search" placeholder="Search by name, SKU or supplier" style="padding-left: 36px">
+</div>
+<label for="m-category" class="sr">Category</label>
+<select id="m-category" style="width: auto; flex: 0 1 180px"><option>All categories</option><option>Fabric</option><option>Lining</option><option>Leather</option><option>Thread</option><option>Trim</option><option>Fastener</option><option>Label</option><option>Sole</option><option>Hardware</option><option>Packaging</option><option>Other</option></select>
+<label class="check"><input type="checkbox" checked="{{restockOnly}}" onChange="{{toggleRestock}}">Needs restock</label>
+<label for="m-sort" class="sr">Sort by</label>
+<select id="m-sort" style="width: auto; flex: 0 1 190px"><option>Sort: Name (A–Z)</option><option>Sort: SKU</option><option>Sort: Stock (lowest first)</option><option>Sort: Unit cost (highest first)</option><option>Sort: Recently updated</option></select>
+</div>
+<div style="overflow-x: auto">
+<table>
+<thead><tr>
+<th scope="col">Material</th><th scope="col">Category</th><th scope="col" style="text-align: right">In stock</th><th scope="col" style="text-align: right">Reorder at</th><th scope="col" style="text-align: right">Unit cost</th><th scope="col" style="text-align: right">Stock value</th><th scope="col">Status</th><th scope="col" style="text-align: right">Used in</th><th scope="col"><span class="sr">Actions</span></th>
+</tr></thead>
+<tbody>
+<sc-for list="{{rows}}" as="m" hint-placeholder-count="12">
+<tr>
+<td style="min-width: 240px"><span style="display: flex; align-items: center; gap: 12px">
+<span class="thumb" style="background: {{m.tint}}; color: {{m.ink}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"></path></svg></span>
+<span style="display: flex; flex-direction: column; min-width: 0"><a href="MaterialDetail.dc.html" style="font-weight: 600; color: #18181B; text-decoration: none">{{m.name}}</a><span class="mono muted">{{m.sku}}</span></span>
+</span></td>
+<td><span class="badge b-neutral">{{m.category}}</span></td>
+<td class="num" style="font-weight: 600">{{m.stock}}</td>
+<td class="num muted">{{m.reorder}}</td>
+<td class="num">{{m.cost}}</td>
+<td class="num">{{m.value}}</td>
+<td><span class="badge {{m.cls}}">
+<sc-if value="{{m.isIn}}" hint-placeholder-val="{{true}}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg></sc-if>
+<sc-if value="{{m.isLow}}" hint-placeholder-val="{{false}}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v9"></path><path d="M12 19h.01"></path></svg></sc-if>
+<sc-if value="{{m.isOut}}" hint-placeholder-val="{{false}}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></sc-if>
+{{m.status}}</span></td>
+<td class="num muted">{{m.usedIn}}</td>
+<td style="white-space: nowrap; text-align: right">
+<button type="button" class="{{m.restockCls}}" aria-label="Restock {{m.name}}" aria-expanded="{{m.restockExpanded}}" onClick="{{m.toggleRestock}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>Restock</button>
+<button type="button" class="{{m.historyCls}}" aria-label="History of {{m.name}}" aria-expanded="{{m.historyExpanded}}" onClick="{{m.toggleHistory}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path><path d="M12 7v5l4 2"></path></svg></button>
+<a class="icon-btn" href="MaterialDetail.dc.html" aria-label="View {{m.name}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg></a>
+<a class="icon-btn" href="MaterialForm.dc.html" aria-label="Edit {{m.name}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path></svg></a>
+</td>
+</tr>
+<sc-if value="{{m.showRestock}}" hint-placeholder-val="{{false}}">
+<tr class="pop-row"><td colspan="9" style="padding: 0 14px 14px; background: #FAFAF9">
+<div class="pop" role="group" aria-labelledby="rs-{{m.sku}}">
+<div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px">
+<div style="display: flex; flex-direction: column; gap: 2px">
+<h3 id="rs-{{m.sku}}" style="font-size: 15px; font-weight: 700">Restock {{m.name}}</h3>
+<p class="hint">In stock now: <strong style="color: #18181B">{{m.stock}}</strong> · unit cost {{m.cost}}</p>
+</div>
+<button type="button" class="icon-btn" aria-label="Close restock" onClick="{{m.close}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button>
+</div>
+<div class="pop-grid">
+<div class="pf"><label for="rq-{{m.sku}}">Quantity received</label><div class="affix"><input id="rq-{{m.sku}}" inputmode="decimal" placeholder="0" style="padding-right: 52px"><span class="suf" aria-hidden="true">{{m.unit}}</span></div></div>
+<div class="pf"><label for="rp-{{m.sku}}">Unit price paid</label><div class="affix"><span class="pre" aria-hidden="true">€</span><input id="rp-{{m.sku}}" inputmode="decimal" placeholder="{{m.costPlain}}" style="padding-left: 28px"></div></div>
+<div class="pf"><label for="rd-{{m.sku}}">Date</label><input id="rd-{{m.sku}}" type="date" value="2026-10-08"></div>
+<div class="pf"><label for="rn-{{m.sku}}">Reference <span class="hint" style="font-weight: 400">(optional)</span></label><input id="rn-{{m.sku}}" placeholder="PO or delivery note"></div>
+</div>
+<label style="display: flex; align-items: center; gap: 8px; font-weight: 500; font-size: 13px"><input type="checkbox" checked="{{true}}" style="width: 16px; height: 16px; min-height: 0; margin: 0; accent-color: #2B3A86">Use this price as the new unit cost</label>
+<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px">
+<p class="hint">Logged in the material's history. The new stock is calculated when you save.</p>
+<div style="display: flex; gap: 8px"><button type="button" class="btn btn-outline" onClick="{{m.close}}">Cancel</button><button type="button" class="btn btn-primary">Add to stock</button></div>
+</div>
+</div>
+</td></tr>
+</sc-if>
+<sc-if value="{{m.showHistory}}" hint-placeholder-val="{{false}}">
+<tr class="pop-row"><td colspan="9" style="padding: 0 14px 14px; background: #FAFAF9">
+<div class="pop" role="group" aria-labelledby="hs-{{m.sku}}" style="max-width: 620px">
+<div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px">
+<div style="display: flex; flex-direction: column; gap: 2px">
+<h3 id="hs-{{m.sku}}" style="font-size: 15px; font-weight: 700">History · {{m.name}}</h3>
+<p class="hint">Restocks, stock corrections and unit price changes, newest first.</p>
+</div>
+<button type="button" class="icon-btn" aria-label="Close history" onClick="{{m.close}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button>
+</div>
+<ol class="h-list">
+<sc-for list="{{m.history}}" as="h" hint-placeholder-count="3">
+<li><span class="muted" style="font-size: 13px; white-space: nowrap">{{h.date}}</span><span><span class="badge {{h.cls}}">{{h.kind}}</span></span><span style="font-variant-numeric: tabular-nums; font-weight: 500">{{h.text}}</span><span class="hint">{{h.by}}</span></li>
+</sc-for>
+</ol>
+<a href="MaterialDetail.dc.html" style="font-weight: 600; font-size: 13px">Open material page</a>
+</div>
+</td></tr>
+</sc-if>
+</sc-for>
+</tbody>
+</table>
+</div>
+<nav aria-label="Pagination" style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 16px; border-top: 1px solid #E4E4E0">
+<span class="muted" style="font-size: 13px">{{countLabel}}</span>
+<span style="display: flex; gap: 6px"><a class="btn btn-outline" href="#" aria-disabled="true" style="color: #8A8A90">Previous</a><a class="btn btn-outline" href="#" aria-disabled="true" style="color: #8A8A90">Next</a></span>
+</nav>
+</section>
+
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1640}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { restockOnly: false, open: { 'MAT-BTN-017': 'history', 'MAT-SOL-042': 'restock' } };
+  }
+  renderVals() {
+    const st = (s) => ({
+      in_stock: { status: 'In stock', cls: 'b-in', isIn: true, isLow: false, isOut: false },
+      low: { status: 'Low', cls: 'b-low', isIn: false, isLow: true, isOut: false },
+      out: { status: 'Out of stock', cls: 'b-out', isIn: false, isLow: false, isOut: true }
+    })[s];
+    const H = {
+      'MAT-RVT-009': [['18 Sep 2026', 'Restock', '+2,000 pc at €0.08 · PO-2270'], ['1 Sep 2026', 'Created', '3,000 pc at €0.08']],
+      'MAT-CAN-010': [['22 Sep 2026', 'Restock', '+120 m at €5.40'], ['1 Sep 2026', 'Created', '180 m at €5.40']],
+      'MAT-JRS-180': [['25 Sep 2026', 'Correction', '120 m → 64 m (stock count)'], ['1 Sep 2026', 'Created', '120 m at €4.20']],
+      'MAT-DEN-012': [['20 Sep 2026', 'Restock', '+100 m at €8.50 · PO-2281'], ['1 Sep 2026', 'Created', '150 m at €8.50']],
+      'MAT-BTN-017': [['2 Oct 2026', 'Price change', '€0.32 → €0.35 per pc'], ['2 Oct 2026', 'Restock', '+500 pc at €0.35 · PO-2291'], ['14 Sep 2026', 'Correction', '600 pc → 400 pc (stock count)'], ['1 Sep 2026', 'Created', '600 pc at €0.32']],
+      'MAT-ZIP-018': [['16 Sep 2026', 'Restock', '+500 pc at €0.95'], ['1 Sep 2026', 'Created', '750 pc at €0.95']],
+      'MAT-LTH-NAP': [['28 Sep 2026', 'Restock', '+200 sqft at €6.80 · PO-2286'], ['1 Sep 2026', 'Created', '340 sqft at €6.80']],
+      'MAT-THR-PES': [['10 Sep 2026', 'Restock', '+10,000 m at €0.0040'], ['1 Sep 2026', 'Created', '10,000 m at €0.0040']],
+      'MAT-SOL-042': [['30 Sep 2026', 'Correction', '60 pair → 0 pair (used in production)'], ['1 Sep 2026', 'Created', '60 pair at €5.90']],
+      'MAT-LIN-VIS': [['1 Sep 2026', 'Created', '180 m at €3.10']],
+      'MAT-LAC-120': [['12 Sep 2026', 'Restock', '+200 pair at €0.45'], ['1 Sep 2026', 'Created', '400 pair at €0.45']],
+      'MAT-LBL-WOV': [['24 Sep 2026', 'Price change', '€0.10 → €0.12 per pc'], ['24 Sep 2026', 'Restock', '+150 pc at €0.12'], ['1 Sep 2026', 'Created', '250 pc at €0.10']]
+    };
+    const kinds = { Restock: 'b-restock', 'Price change': 'b-price', Correction: 'b-low', Created: 'b-neutral' };
+    const open = this.state.open;
+    const setPanel = (sku, panel) => {
+      const next = { ...this.state.open };
+      if (next[sku] === panel) delete next[sku]; else next[sku] = panel;
+      this.setState({ open: next });
+    };
+    const rowUi = (m) => {
+      const p = open[m.sku];
+      return {
+        unit: m.stock.split(' ').pop(),
+        costPlain: m.cost.replace('€', ''),
+        showRestock: p === 'restock',
+        showHistory: p === 'history',
+        restockExpanded: p === 'restock' ? 'true' : 'false',
+        historyExpanded: p === 'history' ? 'true' : 'false',
+        restockCls: p === 'restock' ? 'mini on' : (m.s !== 'in_stock' ? 'mini urgent' : 'mini'),
+        historyCls: p === 'history' ? 'icon-btn on' : 'icon-btn',
+        toggleRestock: () => setPanel(m.sku, 'restock'),
+        toggleHistory: () => setPanel(m.sku, 'history'),
+        close: () => setPanel(m.sku, p),
+        history: (H[m.sku] || []).map((e) => ({ date: e[0], kind: e[1], text: e[2], by: 'Admin', cls: kinds[e[1]] }))
+      };
+    };
+    const all = [
+      { name: 'Brass rivet 9mm', sku: 'MAT-RVT-009', category: 'Hardware', stock: '5,000 pc', reorder: '1,000 pc', cost: '€0.08', value: '€400.00', s: 'in_stock', usedIn: '3 products', tint: '#B8954A', ink: '#FFFFFF' },
+      { name: 'Cotton canvas 10oz Natural', sku: 'MAT-CAN-010', category: 'Fabric', stock: '300 m', reorder: '60 m', cost: '€5.40', value: '€1,620.00', s: 'in_stock', usedIn: '2 products', tint: '#D9CBB0', ink: '#5B4A2A' },
+      { name: 'Cotton jersey 180gsm White', sku: 'MAT-JRS-180', category: 'Fabric', stock: '64 m', reorder: '80 m', cost: '€4.20', value: '€268.80', s: 'low', usedIn: '1 product', tint: '#ECECE8', ink: '#5F5F66' },
+      { name: 'Denim 12oz Indigo', sku: 'MAT-DEN-012', category: 'Fabric', stock: '250 m', reorder: '100 m', cost: '€8.50', value: '€2,125.00', s: 'in_stock', usedIn: '2 products', tint: '#3B4A7A', ink: '#FFFFFF' },
+      { name: 'Metal shank button 17mm', sku: 'MAT-BTN-017', category: 'Fastener', stock: '900 pc', reorder: '1,000 pc', cost: '€0.35', value: '€315.00', s: 'low', usedIn: '3 products', tint: '#A88B4A', ink: '#FFFFFF' },
+      { name: 'Metal zipper 18cm', sku: 'MAT-ZIP-018', category: 'Fastener', stock: '1,250 pc', reorder: '300 pc', cost: '€0.95', value: '€1,187.50', s: 'in_stock', usedIn: '2 products', tint: '#B9BCC4', ink: '#2A2A2E' },
+      { name: 'Nappa leather Cognac', sku: 'MAT-LTH-NAP', category: 'Leather', stock: '540 sqft', reorder: '150 sqft', cost: '€6.80', value: '€3,672.00', s: 'in_stock', usedIn: '2 products', tint: '#9A5B34', ink: '#FFFFFF' },
+      { name: 'Polyester thread', sku: 'MAT-THR-PES', category: 'Thread', stock: '20,000 m', reorder: '5,000 m', cost: '€0.0040', value: '€80.00', s: 'in_stock', usedIn: '6 products', tint: '#F4F1EA', ink: '#5F5F66' },
+      { name: 'Rubber cupsole 42', sku: 'MAT-SOL-042', category: 'Sole', stock: '0 pair', reorder: '40 pair', cost: '€5.90', value: '€0.00', s: 'out', usedIn: '1 product', tint: '#EFEDE6', ink: '#5F5F66' },
+      { name: 'Viscose lining Black', sku: 'MAT-LIN-VIS', category: 'Lining', stock: '180 m', reorder: '50 m', cost: '€3.10', value: '€558.00', s: 'in_stock', usedIn: '1 product', tint: '#2A2A2E', ink: '#FFFFFF' },
+      { name: 'Waxed cotton laces 120cm', sku: 'MAT-LAC-120', category: 'Trim', stock: '600 pair', reorder: '200 pair', cost: '€0.45', value: '€270.00', s: 'in_stock', usedIn: '1 product', tint: '#6B4A33', ink: '#FFFFFF' },
+      { name: 'Woven brand label', sku: 'MAT-LBL-WOV', category: 'Label', stock: '400 pc', reorder: '500 pc', cost: '€0.12', value: '€48.00', s: 'low', usedIn: '6 products', tint: '#1F1F23', ink: '#FFFFFF' }
+    ].map((m) => ({ ...m, ...st(m.s), ...rowUi(m) }));
+    const rows = this.state.restockOnly ? all.filter((m) => m.s !== 'in_stock') : all;
+    return {
+      rows,
+      restockOnly: this.state.restockOnly,
+      toggleRestock: () => this.setState({ restockOnly: !this.state.restockOnly }),
+      countLabel: 'Showing 1–' + rows.length + ' of ' + rows.length
+    };
+  }
+}
+</script>
+</body>
+</html>
