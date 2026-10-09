@@ -597,7 +597,7 @@ Phase 4                                         S-27 (perf dataset + budgets) �
 | Q5 | keep `App\Mock` until each real story replaces its part | **provisional** |
 | Q6 | currency and locale stay in config | **provisional** |
 | Q7 | block changing a material's unit while any non-deleted product's BOM uses it: a validation error on `unit`, tested now against the preview usage and built so S-04 only swaps the usage source | **confirmed 2026-10-09** |
-| Q8 | sales are hard-deleted; "the stock they used is restored through a ledger entry" (the human's words) | **confirmed 2026-10-09 for S-14-BE**. ⚠️ Conflicts with the costing skill ("recording, editing or deleting a sale never changes material stock"), so there is no stock to restore. Clarify with the human before S-14-BE |
+| Q8 | sales are **hard-deleted** and stay **stock-neutral**: recording, editing or deleting a sale never changes material stock and writes no ledger entry (costing skill, decision 1, 2026-10-08) | **confirmed 2026-10-09** (corrected the same day: an earlier note about restoring stock through a ledger entry was a relay mistake and is withdrawn) |
 | Q9 | production runs not urgent | **provisional** |
 
 ### S-21 design (tech-lead, 2026-10-09; the story's scope as approved by the human)
@@ -673,12 +673,19 @@ Phase 4                                         S-27 (perf dataset + budgets) �
   invalidation tests, product Edit CTA prefetch). The tech-lead wrote SETUP.md §4 (native serving) and the CI step override. All gates green:
   Pest 1 323, Vitest 1 023, check, types, build (no test chunks). PG parity not run: Docker Desktop was down. S-18 timing to be verified by the
   human after the machine steps.
-- 2026-10-09: S-21 approved by the human (S-22 not yet). Q7 and Q8 confirmed (the Q8 wording conflicts with the costing skill: flagged).
+- 2026-10-09: S-21 approved by the human (S-22 not yet). Q7 and Q8 confirmed. (Q8 was first relayed with a stock-restore clause, later corrected:
+  sales stay stock-neutral.)
   Design recorded above; dispatched backend-developer (single BE, no FE needed: the contract stays on codes).
 - 2026-10-09: S-21 approved after one BE round plus a one-line FE type-compat fix (`material-form.tsx`, the redundant `| ''` union).
   Gates: Pest 1 759 (SQLite), PostgreSQL parity 1 759, Vitest 1 023, check, types, build. The BE developer also migrated the **dev database**
   (`laravel`) with migrate → rollback → migrate (data preserved, verified row for row). The costing skill §"Units and categories" and
   ARCHITECTURE §4/§5 are updated. **S-22 can start** (its contract is frozen in `domain.ts`), once the human approves it.
+- 2026-10-09: S-21 committed (25bd2a1). S-22 approved by the human, together with F-27 (restore refused when an active row has the same name;
+  archive doesn't re-stamp). Decision (tech-lead): S-22 moves the **category and unit** option consumers (material form and filters, product form
+  and filters) to the shared `reference` prop and drops the per-page `categories`/`units` props. `statuses` and `periods` stay per-page (free
+  enum lists). Dispatched FE (settings UI + consumers) ∥ BE (F-27 + dropping the props + contract).
+- 2026-10-09: S-22 approved in one round (BE and FE in parallel, no fixes needed). Gates: Pest 1 791, PostgreSQL parity 1 791, Vitest 1 116,
+  check, types, build. Per-page `categories`/`units` props are gone; consumers read `reference`. The dev database wasn't touched.
 
 ---
 

@@ -257,6 +257,10 @@ tests/
 | PUT | /sales/{sale} | sales.update | @update | redirect back |
 | DELETE | /sales/{sale} | sales.destroy | @destroy | redirect back |
 
+Settings › Catalogue (S-21/S-22): for each of `units`, `material-categories` and `product-categories`, `GET settings/<list>` (page `settings/<list>`),
+`POST`, `PUT …/{id}`, `DELETE …/{id}`, `PATCH …/{id}/archive` and `PATCH …/{id}/restore`, named `settings.<list>.*`. Option lists for forms and
+filters come from the shared `reference` once-prop, not from page props.
+
 The index pages accept the query parameters `search`, `category`, `status` and `cant_produce` (products), `low_stock` (materials),
 `product_id`, `period`, `record`, `record_product_id` (sales), `sort` and `page`. The dashboard accepts `period`.
 Pagination: 25 per page, `->withQueryString()`. Until Phase 3, product, sale, restock and photo writes are previews (validated, not persisted; ADR-0006).
@@ -284,11 +288,12 @@ resources/js/
 │   ├── materials/          material-form · materials-table · stock-badge · restock form · history list · usage table
 │   ├── products/           product-form · bom-editor · bom-table · cost-breakdown-card
 │   ├── sales/              sales table · sale form
+│   ├── settings/           reference manager (units, material and product categories): table, row actions, form dialogs (S-22)
 │   └── shared/             money · quantity · page-header · empty-state · confirm-delete-dialog · pagination · filters-bar ·
 │                           photo-thumb · photo-field · stat-card · callout · capacity-badge · product-status-badge
 ├── hooks/                  use-flash-toast (starter kit) · use-app-settings · use-debounced-value
 ├── layouts/                # starter kit (sidebar layout; add Materials/Products nav items)
-├── lib/                    format.ts (Intl money/quantity/percent) · utils.ts
+├── lib/                    format.ts (Intl money/quantity/percent) · utils.ts · cache-tags.ts (prefetch tags) · reference.ts (options from the shared `reference` prop)
 ├── types/
 │   ├── index.d.ts          # starter kit (auth, nav)
 │   └── domain.ts           # THE CONTRACT — mirrors API Resources (snake_case, decimals as strings)

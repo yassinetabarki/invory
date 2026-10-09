@@ -22,7 +22,7 @@ material page shows usage per product. Money must stay exact, and the fast test 
   - `CHECK` range constraints on PostgreSQL.
   - `unique(product_id, material_id)`.
 - **Deletes:** soft deletes on `materials` and `products` only; reference tables are archived; the ledger is append-only; sales are hard-deleted
-  (pending decision Q8).
+  (decision Q8, confirmed 2026-10-09: hard delete; sales stay stock-neutral, so a delete writes no ledger entry).
 - **Audit:** `user_id` on `sales` and `stock_movements`; `created_by` / `updated_by` on `materials` and `products`.
 - **Stock:** `materials.quantity_on_hand` is the cached authoritative balance. An append-only `stock_movements` ledger records every change. Both
   are written in one transaction with `lockForUpdate()` on the material. `invory:stock:verify` checks drift. Sales never move stock.

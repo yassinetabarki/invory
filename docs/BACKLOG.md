@@ -225,7 +225,7 @@ The plan's §F.3 lists the amendments to S-04, S-14-BE, S-15-BE, S-16-BE, S-06-B
 - [ ] S-21b: `units` / `material_categories` / `product_categories` with defaults in migrations; `UnitDimension`; materials backfilled to FKs (reversible); Actions with in-use guard and version bump; policies; unit locked while used; `App\Mock` + `DemoCatalogSeeder` on codes; old enums deleted; PG `pg_trgm` + CHECKs
 - **Acceptance:** existing materials keep their unit and category; archive/delete rules; the once-prop is resent only after a version bump; PG parity green
 
-## S-22 · Reference data — UI — `Proposed` · size M
+## S-22 · Reference data — UI — `review` (approved by the tech-lead 2026-10-09; includes F-27) · size M
 **Owner:** FE · **Depends on:** S-21a (parallel with S-21b)
 - [ ] Settings "Catalogue": Units, Material categories, Product categories (table, create/edit dialog, archive/restore, delete confirm with reason); forms and filters read `reference`, submit ids, hide archived options
 - **Acceptance:** add "Elastic" and "inch" without a deploy and use them on a material; 375 px, dark mode, keyboard
@@ -314,10 +314,19 @@ From the S-21 review (2026-10-09, MINOR/NIT, none blocking):
 - **F-26 (MINOR, BE perf)**: `Material::$with = ['category','unit']` adds 2 queries to every page that loads materials, and the `reference`
   once-prop adds 3 queries on full loads (SPA visits that hold the key skip them). All pages are within the ≤ 10 budget. Option: resolve the labels
   from a version-keyed cached `ReferenceData` payload (0 queries on a hit). Revisit with S-23 / S-27.
-- **F-27 (NIT, BE)**: restore doesn't re-check name uniqueness against active rows (codes stay unique); archiving an archived row re-stamps
-  `archived_at`. Decide during S-22 (refuse with a toast?).
+- ~~**F-27**: restore name clash, archive re-stamp.~~ **Done in S-22 (2026-10-09)**: restore is refused with a `name` error when an active row has
+  the name; archiving an archived row is a no-op.
 - **F-28 (S-22 note)**: system units only accept `name` and `position` on update (`dimension`/`factor_to_base` are `prohibited`, even unchanged);
   `factor_to_base` arrives as a scale-12 string (`"0.010000000000"`), so S-22 trims it for display.
 - **F-29 (S-04 note)**: S-04 swaps the MOCK usage sources: `UpdateMaterialRequest::compositionsUsing()` (Q7 lock),
   `PreviewFixture::productCountsByCategory()` (product-category usage and delete guard, passed into `DeleteProductCategory`). S-04 also takes
   over `pg_trgm`, PostgreSQL CHECKs and `created_by`/`updated_by` (moved out of S-21).
+
+From the S-22 review (2026-10-09, MINOR/NIT, none blocking):
+- **F-30 (NIT, BE)**: restoring an already-active row still writes `archived_at = null` and bumps the reference version (one needless client
+  refetch). Add the same early return as archive.
+- **F-31 (UX, ask after the click-through)**: the settings tables switch from cards to a table only at `xl` (the sidebar plus the settings menu
+  leave ~500 px at `md`/`lg`); a kept archived option shows its plain name, with no "(archived)" suffix; there's no "Manage units" link in the
+  material form yet (needs `FormField.hint` to accept a node). Restoring a deleted-in-error item needs archive → delete, by design.
+- **F-32 (NIT, BE)**: name uniqueness for reference rows is case-sensitive as the database compares (create, update and restore agree). Make it
+  case-insensitive in all three places if the human wants.
