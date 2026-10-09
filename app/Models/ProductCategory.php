@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * A ProductCategory (ADR-0008, table `product_categories`). `code` is immutable and is what URLs, filters and forms carry.
@@ -36,6 +37,16 @@ class ProductCategory extends Model
             'position' => 'integer',
             'archived_at' => 'datetime',
         ];
+    }
+
+    /**
+     * The non-deleted products in the category (`withTrashed()` for the ones the foreign key still counts).
+     *
+     * @return HasMany<Product, $this>
+     */
+    public function products(): HasMany
+    {
+        return $this->hasMany(Product::class, 'category_id');
     }
 
     public function isArchived(): bool

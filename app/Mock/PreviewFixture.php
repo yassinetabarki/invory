@@ -6,31 +6,17 @@ declare(strict_types=1);
 
 namespace App\Mock;
 
-use App\Enums\ProductStatus;
 use App\Enums\StockMovementType;
 
 /**
- * The raw INPUTS of the UI-first preview: everything that has no table yet (products and their compositions,
- * selling prices, sales, stock history, photo swatches). Source: docs/plans/phase-2-ui-first-preview.md, "Preview fixture".
+ * The raw INPUTS of the UI-first preview: everything that has no table yet (sales, stock history, photo swatches). Source:
+ * docs/plans/phase-2-ui-first-preview.md, "Preview fixture".
  *
- * Nothing here is derived: costs, capacities, margins, totals and rankings are computed on the server by the
- * production domain classes (CostingCalculator, MarginCalculator, SalesCalculator). Dates are `days_ago`, relative to today.
- * The 12 materials themselves are real rows seeded by DemoCatalogSeeder; products reference them by SKU.
+ * Nothing here is derived: totals and rankings are computed on the server by the production domain class (SalesCalculator).
+ * Dates are `days_ago`, relative to today. The materials and the demo products are real rows seeded by DemoCatalogSeeder and
+ * DemoProductsSeeder; the sales and the history reference them by SKU, and a SKU with no row is skipped.
  *
- * @phpstan-type FixtureLine array{sku: string, quantity: string, waste_percent: string, notes: string}
- * @phpstan-type FixtureProduct array{
- *     id: int,
- *     sku: string,
- *     name: string,
- *     category: string,
- *     status: ProductStatus,
- *     labor_cost: string,
- *     overhead_cost: string,
- *     selling_price: string|null,
- *     description: string,
- *     lines: list<FixtureLine>,
- * }
- * @phpstan-type FixtureSale array{id: int, days_ago: int, product_id: int, quantity: int, note: string|null}
+ * @phpstan-type FixtureSale array{id: int, days_ago: int, product_sku: string, quantity: int, unit_price: string, note: string|null}
  * @phpstan-type FixtureMovement array{
  *     days_ago: int,
  *     type: StockMovementType,
@@ -51,9 +37,6 @@ final class PreviewFixture
 
     /** Public folder of the static swatches, relative to `public/`. */
     public const PHOTO_DIRECTORY = 'mock/photos';
-
-    /** Days ago the fixture products were created (the same day as the opening stock of the materials). */
-    public const CREATED_DAYS_AGO = 37;
 
     /**
      * Photo swatches by SKU (materials and products): background tint and ink colour.
@@ -81,146 +64,24 @@ final class PreviewFixture
     ];
 
     /**
-     * The 7 fixture products, ids 1 to 7. Line quantities are in the material's own unit.
-     *
-     * @return list<FixtureProduct>
-     */
-    public static function products(): array
-    {
-        return [
-            [
-                'id' => 1,
-                'sku' => 'PRD-JKT-001',
-                'name' => 'Denim Jacket',
-                'category' => 'apparel',
-                'status' => ProductStatus::Active,
-                'labor_cost' => '12.0000',
-                'overhead_cost' => '3.5000',
-                'selling_price' => '89.0000',
-                'description' => 'Classic trucker jacket in 12oz indigo denim with metal shank buttons.',
-                'lines' => [
-                    ['sku' => 'MAT-DEN-012', 'quantity' => '1.8000', 'waste_percent' => '10.00', 'notes' => 'Body, sleeves, collar'],
-                    ['sku' => 'MAT-BTN-017', 'quantity' => '8', 'waste_percent' => '0', 'notes' => 'Front placket (6), cuffs (2)'],
-                    ['sku' => 'MAT-THR-PES', 'quantity' => '120', 'waste_percent' => '5.00', 'notes' => 'All seams'],
-                    ['sku' => 'MAT-LBL-WOV', 'quantity' => '1', 'waste_percent' => '0', 'notes' => 'Inside back yoke'],
-                ],
-            ],
-            [
-                'id' => 2,
-                'sku' => 'PRD-TSH-002',
-                'name' => 'Classic White T-shirt',
-                'category' => 'apparel',
-                'status' => ProductStatus::Active,
-                'labor_cost' => '3.2000',
-                'overhead_cost' => '0.7500',
-                'selling_price' => '24.0000',
-                'description' => 'Everyday crew-neck tee in soft 180gsm white cotton jersey.',
-                'lines' => [
-                    ['sku' => 'MAT-JRS-180', 'quantity' => '1.2000', 'waste_percent' => '6.00', 'notes' => 'Body and sleeves'],
-                    ['sku' => 'MAT-THR-PES', 'quantity' => '80', 'waste_percent' => '5.00', 'notes' => 'All seams'],
-                    ['sku' => 'MAT-LBL-WOV', 'quantity' => '1', 'waste_percent' => '0', 'notes' => 'Neck'],
-                ],
-            ],
-            [
-                'id' => 3,
-                'sku' => 'PRD-SNK-003',
-                'name' => 'Canvas Low Sneaker',
-                'category' => 'footwear',
-                'status' => ProductStatus::Active,
-                'labor_cost' => '9.3000',
-                'overhead_cost' => '2.0000',
-                'selling_price' => '69.0000',
-                'description' => 'Low-top sneaker in natural cotton canvas on a vulcanised rubber cupsole.',
-                'lines' => [
-                    ['sku' => 'MAT-CAN-010', 'quantity' => '0.6500', 'waste_percent' => '10.00', 'notes' => 'Upper'],
-                    ['sku' => 'MAT-SOL-042', 'quantity' => '1', 'waste_percent' => '0', 'notes' => 'Outsole'],
-                    ['sku' => 'MAT-LAC-120', 'quantity' => '1', 'waste_percent' => '0', 'notes' => 'Laces'],
-                    ['sku' => 'MAT-THR-PES', 'quantity' => '40', 'waste_percent' => '5.00', 'notes' => 'Upper seams'],
-                    ['sku' => 'MAT-LBL-WOV', 'quantity' => '1', 'waste_percent' => '0', 'notes' => 'Tongue'],
-                ],
-            ],
-            [
-                'id' => 4,
-                'sku' => 'PRD-TOT-004',
-                'name' => 'Leather Tote',
-                'category' => 'bag',
-                'status' => ProductStatus::Active,
-                'labor_cost' => '22.5000',
-                'overhead_cost' => '4.7700',
-                'selling_price' => '249.0000',
-                'description' => 'Structured tote in cognac nappa leather, viscose-lined with an inner zip pocket.',
-                'lines' => [
-                    ['sku' => 'MAT-LTH-NAP', 'quantity' => '9.2000', 'waste_percent' => '10.00', 'notes' => 'Body and handles'],
-                    ['sku' => 'MAT-LIN-VIS', 'quantity' => '0.8000', 'waste_percent' => '5.00', 'notes' => 'Lining'],
-                    ['sku' => 'MAT-ZIP-018', 'quantity' => '1', 'waste_percent' => '0', 'notes' => 'Inner pocket'],
-                    ['sku' => 'MAT-RVT-009', 'quantity' => '8', 'waste_percent' => '0', 'notes' => 'Handle anchors'],
-                    ['sku' => 'MAT-THR-PES', 'quantity' => '150', 'waste_percent' => '5.00', 'notes' => 'All seams'],
-                    ['sku' => 'MAT-LBL-WOV', 'quantity' => '1', 'waste_percent' => '0', 'notes' => 'Inner pocket'],
-                ],
-            ],
-            [
-                'id' => 5,
-                'sku' => 'PRD-JNS-005',
-                'name' => 'Denim Jeans 5-pocket',
-                'category' => 'apparel',
-                'status' => ProductStatus::Active,
-                'labor_cost' => '11.0000',
-                'overhead_cost' => '2.9700',
-                'selling_price' => '79.0000',
-                'description' => 'Straight-leg five-pocket jeans in 12oz indigo denim with riveted pocket corners.',
-                'lines' => [
-                    ['sku' => 'MAT-DEN-012', 'quantity' => '1.4000', 'waste_percent' => '8.00', 'notes' => 'Body'],
-                    ['sku' => 'MAT-BTN-017', 'quantity' => '1', 'waste_percent' => '0', 'notes' => 'Waistband'],
-                    ['sku' => 'MAT-RVT-009', 'quantity' => '6', 'waste_percent' => '0', 'notes' => 'Pocket corners'],
-                    ['sku' => 'MAT-ZIP-018', 'quantity' => '1', 'waste_percent' => '0', 'notes' => 'Fly'],
-                    ['sku' => 'MAT-THR-PES', 'quantity' => '180', 'waste_percent' => '5.00', 'notes' => 'All seams'],
-                    ['sku' => 'MAT-LBL-WOV', 'quantity' => '1', 'waste_percent' => '0', 'notes' => 'Back waistband'],
-                ],
-            ],
-            [
-                'id' => 6,
-                'sku' => 'PRD-JKT-006',
-                'name' => 'Canvas Chore Jacket',
-                'category' => 'apparel',
-                'status' => ProductStatus::Draft,
-                'labor_cost' => '14.5000',
-                'overhead_cost' => '3.0400',
-                'selling_price' => null,
-                'description' => 'Boxy chore jacket in natural cotton canvas. Still in development: not priced yet.',
-                'lines' => [
-                    ['sku' => 'MAT-CAN-010', 'quantity' => '2.1000', 'waste_percent' => '10.00', 'notes' => 'Body, sleeves, pockets'],
-                    ['sku' => 'MAT-BTN-017', 'quantity' => '5', 'waste_percent' => '0', 'notes' => 'Front'],
-                    ['sku' => 'MAT-THR-PES', 'quantity' => '130', 'waste_percent' => '5.00', 'notes' => 'All seams'],
-                    ['sku' => 'MAT-LBL-WOV', 'quantity' => '1', 'waste_percent' => '0', 'notes' => 'Neck'],
-                ],
-            ],
-            [
-                'id' => 7,
-                'sku' => 'PRD-BLT-007',
-                'name' => 'Leather Belt',
-                'category' => 'accessory',
-                'status' => ProductStatus::Active,
-                'labor_cost' => '6.0000',
-                'overhead_cost' => '1.3400',
-                'selling_price' => '45.0000',
-                'description' => 'Classic 35mm belt cut from cognac nappa leather with a riveted keeper.',
-                'lines' => [
-                    ['sku' => 'MAT-LTH-NAP', 'quantity' => '1.2000', 'waste_percent' => '15.00', 'notes' => 'Strap'],
-                    ['sku' => 'MAT-RVT-009', 'quantity' => '4', 'waste_percent' => '0', 'notes' => 'Buckle and keeper'],
-                ],
-            ],
-        ];
-    }
-
-    /**
-     * The 60 sales, ids 1 to 60 in this order. The unit price of a sale is the selling price of its product.
+     * The 60 sales, ids 1 to 60 in this order. The unit price of a sale is the price its product was sold at (the demo selling
+     * price): an input of the fixture, so editing a product's selling price doesn't rewrite the history.
      *
      * @return list<FixtureSale>
      */
     public static function sales(): array
     {
+        $jacket = 'PRD-JKT-001';
+        $tshirt = 'PRD-TSH-002';
+        $sneaker = 'PRD-SNK-003';
+        $tote = 'PRD-TOT-004';
+        $jeans = 'PRD-JNS-005';
+        $belt = 'PRD-BLT-007';
+        $prices = [$jacket => '89.0000', $tshirt => '24.0000', $sneaker => '69.0000', $tote => '249.0000', $jeans => '79.0000', $belt => '45.0000'];
+        $bySku = [1 => $jacket, 2 => $tshirt, 3 => $sneaker, 4 => $tote, 5 => $jeans, 7 => $belt];
+
         $rows = [
-            // [id, days ago, product id, quantity, note]
+            // [id, days ago, product (1 jacket, 2 t-shirt, 3 sneaker, 4 tote, 5 jeans, 7 belt), quantity, note]
             [1, 150, 2, 30, 'Wholesale order'], [2, 138, 5, 12, 'Wholesale order'], [3, 121, 1, 6, 'Showroom'],
             [4, 110, 7, 10, 'Boutique Lyon'], [5, 96, 4, 3, 'Showroom'], [6, 84, 2, 25, 'Web shop'],
             [7, 73, 3, 6, 'Web shop'], [8, 61, 5, 9, 'Boutique Lyon'], [9, 52, 1, 7, 'Wholesale order'],
@@ -247,8 +108,9 @@ final class PreviewFixture
             static fn (array $row): array => [
                 'id' => $row[0],
                 'days_ago' => $row[1],
-                'product_id' => $row[2],
+                'product_sku' => $bySku[$row[2]],
                 'quantity' => $row[3],
+                'unit_price' => $prices[$bySku[$row[2]]],
                 'note' => $row[4],
             ],
             $rows,
@@ -323,20 +185,6 @@ final class PreviewFixture
     }
 
     /**
-     * @return FixtureProduct|null
-     */
-    public static function product(int $id): ?array
-    {
-        foreach (self::products() as $product) {
-            if ($product['id'] === $id) {
-                return $product;
-            }
-        }
-
-        return null;
-    }
-
-    /**
      * @return FixtureSale|null
      */
     public static function sale(int $id): ?array
@@ -348,55 +196,6 @@ final class PreviewFixture
         }
 
         return null;
-    }
-
-    /**
-     * Every material SKU a fixture product references: the one query that feeds the preview costing.
-     *
-     * @return list<string>
-     */
-    public static function materialSkus(): array
-    {
-        $skus = [];
-
-        foreach (self::products() as $product) {
-            foreach ($product['lines'] as $line) {
-                $skus[$line['sku']] = true;
-            }
-        }
-
-        return array_keys($skus);
-    }
-
-    /** Fixture products whose composition uses this material SKU. */
-    public static function usedInCount(string $sku): int
-    {
-        $count = 0;
-
-        foreach (self::products() as $product) {
-            if (array_filter($product['lines'], static fn (array $line): bool => $line['sku'] === $sku) !== []) {
-                $count++;
-            }
-        }
-
-        return $count;
-    }
-
-    /**
-     * MOCK (ADR-0006, S-04 swaps to a count on `products.category_id`): how many fixture products each product category
-     * code has. It is the only source of the "usage" of a product category until the products table exists.
-     *
-     * @return array<string, int> category code => number of products
-     */
-    public static function productCountsByCategory(): array
-    {
-        $counts = [];
-
-        foreach (self::products() as $product) {
-            $counts[$product['category']] = ($counts[$product['category']] ?? 0) + 1;
-        }
-
-        return $counts;
     }
 
     /** URL of the static swatch of a SKU, or null when it has no photo. */

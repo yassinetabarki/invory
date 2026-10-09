@@ -19,6 +19,10 @@ use function Pest\Laravel\actingAs;
 | The final routes of products, sales, restocks and the dashboard: this file pins the route contract, authentication,
 | the 404 rules and the production lock that must hold for as long as App\Mock exists. The props are asserted in
 | ProductPagesTest, SalesPageTest and DashboardPreviewTest, the validation in the *WriteTest files.
+|
+| Products are real since S-04b (route-model binding, ProductPolicy, nothing behind the preview ability): they stay in the
+| route and authentication datasets, and are left out of the preview-only ones (the production lock, "persists nothing").
+| A 'product' parameter below is the Denim Jacket: `pid(1)` gives its database id.
 */
 
 /** A Material policy that refuses updates, to prove the restock action asks the policy. */
@@ -32,28 +36,49 @@ class DenyMaterialUpdatePolicy extends MaterialPolicy
 
 beforeEach(fn () => $this->user = preparePreview($this));
 
-/** Every new route: [method, route name, route parameter ('material' = create a Material first)]. */
-dataset('previewRoutes', [
-    'dashboard' => ['get', 'dashboard', null],
-    'products.index' => ['get', 'products.index', null],
-    'products.create' => ['get', 'products.create', null],
-    'products.store' => ['post', 'products.store', null],
-    'products.show' => ['get', 'products.show', 1],
-    'products.edit' => ['get', 'products.edit', 1],
-    'products.update' => ['put', 'products.update', 1],
-    'products.destroy' => ['delete', 'products.destroy', 1],
-    'sales.index' => ['get', 'sales.index', null],
-    'sales.store' => ['post', 'sales.store', null],
-    'sales.update' => ['put', 'sales.update', 1],
-    'sales.destroy' => ['delete', 'sales.destroy', 1],
-    'materials.restocks.store' => ['post', 'materials.restocks.store', 'material'],
-]);
+/**
+ * Every new route: [method, route name, route parameter ('material' = create a Material first, 'product' = the Denim Jacket, a
+ * number = a fixture sale)].
+ *
+ * @return array<string, array{string, string, int|string|null}>
+ */
+function previewRouteRows(): array
+{
+    return [
+        'dashboard' => ['get', 'dashboard', null],
+        'products.index' => ['get', 'products.index', null],
+        'products.create' => ['get', 'products.create', null],
+        'products.store' => ['post', 'products.store', null],
+        'products.show' => ['get', 'products.show', 'product'],
+        'products.edit' => ['get', 'products.edit', 'product'],
+        'products.update' => ['put', 'products.update', 'product'],
+        'products.destroy' => ['delete', 'products.destroy', 'product'],
+        'sales.index' => ['get', 'sales.index', null],
+        'sales.store' => ['post', 'sales.store', null],
+        'sales.update' => ['put', 'sales.update', 1],
+        'sales.destroy' => ['delete', 'sales.destroy', 1],
+        'materials.restocks.store' => ['post', 'materials.restocks.store', 'material'],
+    ];
+}
+
+dataset('previewRoutes', previewRouteRows());
+
+/** The routes that are still served from fixtures, so still behind the `access-preview` ability. */
+dataset('previewOnlyRoutes', array_filter(
+    previewRouteRows(),
+    static fn (string $name): bool => ! str_starts_with($name, 'products.'),
+    ARRAY_FILTER_USE_KEY,
+));
 
 /** Build the URL of a route from the dataset's parameter column. */
 function previewUrl(string $route, int|string|null $parameter): string
 {
     if ($parameter === 'material') {
         $parameter = Material::factory()->create();
+    }
+
+    if ($parameter === 'product') {
+        $parameter = pid(1);
     }
 
     return route($route, $parameter === null ? [] : [$parameter]);
@@ -117,7 +142,7 @@ it('keeps the existing materials route names and does not add sale pages beyond 
     }
 });
 
-it('renders each page component for a verified user', function (string $route, ?int $parameter, string $component) {
+it('renders each page component for a verified user', function (string $route, int|string|null $parameter, string $component) {
     actingAs($this->user)->get(previewUrl($route, $parameter))
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page->component($component));
@@ -125,8 +150,8 @@ it('renders each page component for a verified user', function (string $route, ?
     'dashboard' => ['dashboard', null, 'dashboard'],
     'products.index' => ['products.index', null, 'products/index'],
     'products.create' => ['products.create', null, 'products/create'],
-    'products.show' => ['products.show', 1, 'products/show'],
-    'products.edit' => ['products.edit', 1, 'products/edit'],
+    'products.show' => ['products.show', 'product', 'products/show'],
+    'products.edit' => ['products.edit', 'product', 'products/edit'],
     'sales.index' => ['sales.index', null, 'sales/index'],
 ]);
 
@@ -136,8 +161,9 @@ it('does not mistake /products/create for a product id', function () {
         ->assertInertia(fn (Assert $page) => $page->component('products/create'));
 });
 
-it('redirects valid preview writes to the page the contract names', function (string $method, string $route, ?int $parameter, string $payload, ?string $target, array $targetParameters) {
+it('redirects valid writes to the page the contract names', function (string $method, string $route, int|string|null $parameter, string $payload, ?string $target, array $targetParameters) {
     // A null target means "back to the page the request came from".
+    $targetParameters = array_map(fn (mixed $value): mixed => $value === 'product' ? pid(1) : $value, $targetParameters);
     $expected = $target === null ? route('sales.index') : route($target, $targetParameters);
 
     actingAs($this->user)
@@ -146,9 +172,8 @@ it('redirects valid preview writes to the page the contract names', function (st
         ->assertRedirect($expected)
         ->assertSessionHasNoErrors();
 })->with([
-    'products.store goes to the list' => ['post', 'products.store', null, 'product', 'products.index', []],
-    'products.update goes to the product' => ['put', 'products.update', 1, 'product', 'products.show', [1]],
-    'products.destroy goes to the list' => ['delete', 'products.destroy', 1, 'none', 'products.index', []],
+    'products.update goes to the product' => ['put', 'products.update', 'product', 'product', 'products.show', ['product']],
+    'products.destroy goes to the list' => ['delete', 'products.destroy', 'product', 'none', 'products.index', []],
     'sales.store goes back' => ['post', 'sales.store', null, 'sale', null, []],
     'sales.update goes back' => ['put', 'sales.update', 1, 'sale', null, []],
     'sales.destroy goes back' => ['delete', 'sales.destroy', 1, 'none', null, []],
@@ -162,7 +187,7 @@ it('sends an invalid preview write back to where it came from, with its errors',
         ->assertSessionHasErrors($errors);
 })->with([
     'products.store' => ['post', 'products.store', null, ['sku', 'name', 'category', 'status', 'labor_cost', 'overhead_cost']],
-    'products.update' => ['put', 'products.update', 1, ['sku', 'name', 'category', 'status', 'labor_cost', 'overhead_cost']],
+    'products.update' => ['put', 'products.update', 'product', ['sku', 'name', 'category', 'status', 'labor_cost', 'overhead_cost']],
     'sales.store' => ['post', 'sales.store', null, ['product_id', 'quantity', 'unit_price', 'sold_on']],
     'sales.update' => ['put', 'sales.update', 1, ['product_id', 'quantity', 'unit_price', 'sold_on']],
     'restock' => ['post', 'materials.restocks.store', 'material', ['quantity', 'unit_price', 'received_on', 'update_unit_cost']],
@@ -178,7 +203,7 @@ it('redirects a restock back to where it came from', function () {
         ->assertSessionHasNoErrors();
 });
 
-it('persists nothing on valid preview writes', function () {
+it('persists nothing on valid preview writes (sales and restocks)', function () {
     $material = Material::factory()->create(['quantity_on_hand' => '10.0000', 'unit_cost' => '2.0000']);
     $rowsBefore = Material::withTrashed()->orderBy('id')->get()->toArray();
     $tablesBefore = Schema::getTableListing();
@@ -187,9 +212,6 @@ it('persists nothing on valid preview writes', function () {
     actingAs($this->user)->post(route('sales.store'), validSalePayload())->assertSessionHasNoErrors();
     actingAs($this->user)->put(route('sales.update', 1), validSalePayload())->assertSessionHasNoErrors();
     actingAs($this->user)->delete(route('sales.destroy', 1))->assertSessionHasNoErrors();
-    actingAs($this->user)->post(route('products.store'), validProductPayload())->assertSessionHasNoErrors();
-    actingAs($this->user)->put(route('products.update', 1), validProductPayload())->assertSessionHasNoErrors();
-    actingAs($this->user)->delete(route('products.destroy', 1))->assertSessionHasNoErrors();
 
     expect(Material::withTrashed()->orderBy('id')->get()->toArray())->toBe($rowsBefore)
         ->and(Schema::getTableListing())->toBe($tablesBefore)
@@ -238,26 +260,26 @@ it('answers 404 for a non-numeric product or sale id', function (string $method,
     'sale destroy, negative' => ['delete', '/sales/-3'],
 ]);
 
-// The fixture has products 1 to 7 and sales 1 to 60: any other id is unknown, as route model binding will make it.
+// Route model binding makes an unknown product a 404; the fixture has sales 1 to 60, so any other sale id is unknown.
 it('answers 404 for an unknown product or sale id, before anything is validated', function (string $method, string $uri, string $payload) {
     actingAs($this->user)->{$method}($uri, previewPayload($payload))->assertNotFound();
     actingAs($this->user)->{$method}($uri)->assertNotFound();
 })->with([
-    'show a product' => ['get', '/products/8', 'none'],
-    'edit a product' => ['get', '/products/8/edit', 'none'],
-    'update a product' => ['put', '/products/8', 'product'],
-    'destroy a product' => ['delete', '/products/8', 'none'],
+    'show a product' => ['get', '/products/900000000', 'none'],
+    'edit a product' => ['get', '/products/900000000/edit', 'none'],
+    'update a product' => ['put', '/products/900000000', 'product'],
+    'destroy a product' => ['delete', '/products/900000000', 'none'],
     'product zero' => ['get', '/products/0', 'none'],
-    'a far away product' => ['put', '/products/999999', 'product'],
+    'a far away product' => ['put', '/products/999999999999', 'product'],
     'update a sale' => ['put', '/sales/61', 'sale'],
     'destroy a sale' => ['delete', '/sales/61', 'none'],
     'sale zero' => ['put', '/sales/0', 'sale'],
     'a far away sale' => ['delete', '/sales/999999', 'none'],
 ]);
 
-it('serves the last fixture product and sale', function () {
-    actingAs($this->user)->get('/products/7')->assertOk();
-    actingAs($this->user)->get('/products/7/edit')->assertOk();
+it('serves the last demo product and the last fixture sale', function () {
+    actingAs($this->user)->get('/products/'.pid(7))->assertOk();
+    actingAs($this->user)->get('/products/'.pid(7).'/edit')->assertOk();
     actingAs($this->user)->put('/sales/60', validSalePayload())->assertRedirect();
     actingAs($this->user)->delete('/sales/60')->assertRedirect();
 });
@@ -287,7 +309,7 @@ describe('access-preview', function () {
         expect(Gate::allows('access-preview'))->toBeFalse();
     });
 
-    it('answers 403 on every new route in production', function (string $method, string $route, int|string|null $parameter) {
+    it('answers 403 on every preview route in production', function (string $method, string $route, int|string|null $parameter) {
         $url = previewUrl($route, $parameter);
         $this->app->detectEnvironment(fn () => 'production');
 
@@ -297,10 +319,10 @@ describe('access-preview', function () {
             ->{$method}($url, $method === 'get' ? [] : ['_token' => 'preview-test']);
 
         $response->assertForbidden();
-    })->with('previewRoutes');
+    })->with('previewOnlyRoutes');
 
     // The 403 above could in theory come from elsewhere: prove it is the ability that refuses.
-    it('refuses every new route with an authorization exception in production', function (string $method, string $route, int|string|null $parameter) {
+    it('refuses every preview route with an authorization exception in production', function (string $method, string $route, int|string|null $parameter) {
         $url = previewUrl($route, $parameter);
         $this->app->detectEnvironment(fn () => 'production');
         $this->withoutExceptionHandling();
@@ -308,7 +330,7 @@ describe('access-preview', function () {
         actingAs($this->user)
             ->withSession(['_token' => 'preview-test'])
             ->{$method}($url, $method === 'get' ? [] : ['_token' => 'preview-test']);
-    })->with('previewRoutes')->throws(AuthorizationException::class, 'This action is unauthorized.');
+    })->with('previewOnlyRoutes')->throws(AuthorizationException::class, 'This action is unauthorized.');
 
     // A valid body must not get past the lock either (the 403 comes before validation and before the preview action).
     it('refuses valid preview writes in production', function (string $method, string $uri, string $payload) {
@@ -319,9 +341,6 @@ describe('access-preview', function () {
             ->{$method}($uri, [...previewPayload($payload), '_token' => 'preview-test'])
             ->assertForbidden();
     })->with([
-        'products.store' => ['post', '/products', 'product'],
-        'products.update' => ['put', '/products/1', 'product'],
-        'products.destroy' => ['delete', '/products/1', 'none'],
         'sales.store' => ['post', '/sales', 'sale'],
         'sales.update' => ['put', '/sales/1', 'sale'],
         'sales.destroy' => ['delete', '/sales/1', 'none'],

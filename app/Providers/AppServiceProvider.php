@@ -36,8 +36,8 @@ class AppServiceProvider extends ServiceProvider
      */
     protected function configureAuthorization(): void
     {
-        // MOCK (ADR-0006, removed by S-17): preview-only controllers (products, sales, dashboard, restocks)
-        // serve fixture data and must never be reachable in production.
+        // MOCK (ADR-0006, removed by S-17): preview-only controllers (sales, dashboard, restocks) serve fixture data and
+        // must never be reachable in production. Products are real since S-04b and are guarded by ProductPolicy.
         Gate::define('access-preview', fn (User $user): bool => ! app()->isProduction());
     }
 

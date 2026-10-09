@@ -1,6 +1,8 @@
 <?php
 
 use App\Models\Material;
+use App\Models\Product;
+use App\Models\ProductComponent;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -9,12 +11,12 @@ use function Pest\Laravel\actingAs;
 
 /*
 |--------------------------------------------------------------------------
-| Dashboard on the preview fixture (ADR-0006, S-13c)
+| Dashboard on the real products (ADR-0006, S-13c, S-04b)
 |--------------------------------------------------------------------------
 |
-| Time frozen at 2026-10-08, the 12 DemoCatalogSeeder materials in the database. Every number is computed by the production
-| domain code (SalesCalculator, CostingCalculator, InventorySummary); these tests pin the "Expected" tables of
-| docs/plans/phase-2-ui-first-preview.md exactly.
+| Time frozen at 2026-10-08, DemoCatalogSeeder run (the 12 materials and the 7 demo products). Every number is computed by the
+| production domain code (SalesCalculator, ProductCostingService, InventorySummary); these tests pin the "Expected" tables of
+| docs/plans/phase-2-ui-first-preview.md exactly, which is the proof that the figures did not move when the products left the fixture.
 */
 
 beforeEach(fn () => $this->user = preparePreview($this));
@@ -32,10 +34,10 @@ function materialRef(string $sku): array
     return ['id' => $material->id, 'sku' => $sku, 'name' => $material->name, 'unit' => $material->unit->code];
 }
 
-/** A product reference as the contract sends it (`photo` is null for the draft Chore Jacket only). */
-function productRef(int $id, string $sku, string $name): array
+/** A product reference as the contract sends it (`photo` is null for the draft Chore Jacket only). `$number` is the plan's number of the demo product. */
+function productRef(int $number, string $sku, string $name): array
 {
-    return ['id' => $id, 'sku' => $sku, 'name' => $name, 'photo_url' => asset('mock/photos/'.strtolower($sku).'.svg')];
+    return ['id' => pid($number), 'sku' => $sku, 'name' => $name, 'photo_url' => asset('mock/photos/'.strtolower($sku).'.svg')];
 }
 
 it('sends the DashboardProps contract', function () {
@@ -174,11 +176,11 @@ describe('top products', function () {
         $response = actingAs($this->user)->get(dashboardUrl(['period' => 'last_7_days']));
 
         // Tote and Sneaker both sold 2 units: the Tote earned more, so it takes the fifth place and the Sneaker drops out.
-        expect(pageProp($response, 'top_products.by_units.*.product.id'))->toBe([2, 5, 1, 7, 4])
+        expect(pageProp($response, 'top_products.by_units.*.product.id'))->toBe(array_map(pid(...), [2, 5, 1, 7, 4]))
             ->and(pageProp($response, 'top_products.by_units.*.units_sold'))->toBe([32, 14, 4, 3, 2])
             ->and(pageProp($response, 'top_products.by_units.*.percent_of_top'))->toBe(['100.00', '43.75', '12.50', '9.38', '6.25'])
             // By revenue the Belt (135) is the sixth and drops out instead.
-            ->and(pageProp($response, 'top_products.by_revenue.*.product.id'))->toBe([5, 2, 4, 1, 3])
+            ->and(pageProp($response, 'top_products.by_revenue.*.product.id'))->toBe(array_map(pid(...), [5, 2, 4, 1, 3]))
             ->and(pageProp($response, 'top_products.by_revenue.*.revenue'))->toBe(['1106.0000', '768.0000', '498.0000', '356.0000', '138.0000'])
             ->and(pageProp($response, 'top_products.by_revenue.*.percent_of_top'))->toBe(['100.00', '69.44', '45.03', '32.19', '12.48']);
     });
@@ -308,31 +310,51 @@ describe('recent sales and alerts', function () {
     });
 
     it('does not count a product without a composition as one that can\'t be produced', function () {
-        // No material left: every composition is empty, so no capacity is 0 (it is null) and nothing raises an alert.
-        Material::query()->delete();
+        // Every composition is empty: no capacity is 0 (it is null), so nothing raises an alert.
+        ProductComponent::query()->delete();
 
         $response = actingAs($this->user)->get(dashboardUrl());
 
         expect(pageProp($response, 'stats.unproducible_count'))->toBe(0)
             ->and(pageProp($response, 'stats.products_count'))->toBe(7)
-            ->and(pageProp($response, 'stats.materials_count'))->toBe(0)
-            ->and(pageProp($response, 'stats.inventory_value'))->toBe('0.0000')
-            ->and(pageProp($response, 'alerts'))->toBe([])
-            ->and(pageProp($response, 'needs_restock'))->toBe([]);
+            ->and(pageProp($response, 'stats.materials_count'))->toBe(12)
+            ->and(pageProp($response, 'alerts'))->toBe([]);
     });
 
-    it('drops the alert of a product whose bottleneck material was deleted', function () {
+    it('stops alerting about a product once its bottleneck is taken off its composition', function () {
         // Without the cupsole the Sneaker's composition is canvas, laces, thread and label: the label limits it to 400.
-        previewMaterial('MAT-SOL-042')->delete();
+        ProductComponent::query()->where('product_id', pid(3))->where('material_id', previewMaterial('MAT-SOL-042')->id)->delete();
 
         $response = actingAs($this->user)->get(dashboardUrl());
 
         expect(pageProp($response, 'alerts'))->toBe([])
             ->and(pageProp($response, 'stats.unproducible_count'))->toBe(0);
     });
+
+    it('counts the real products: a new one, a deleted one, a draft', function () {
+        Product::factory()->draft()->create();
+        previewProduct('PRD-BLT-007')->delete();
+
+        $response = actingAs($this->user)->get(dashboardUrl());
+
+        expect(pageProp($response, 'stats.products_count'))->toBe(7)
+            // The deleted Belt is not a product any more, and its sales are skipped with it: 31 units of the last 30 days.
+            ->and(pageProp($response, 'stats.units_sold'))->toBe(296 - 31)
+            ->and(pageProp($response, 'stats.sales_count'))->toBe(48 - 8);
+    });
+
+    it('skips the preview sales of a product that was deleted', function () {
+        previewProduct('PRD-TSH-002')->delete();
+
+        $response = actingAs($this->user)->get(dashboardUrl());
+
+        expect(pageProp($response, 'top_products.by_units.*.product.sku'))->toBe(['PRD-JNS-005', 'PRD-JKT-001', 'PRD-BLT-007', 'PRD-TOT-004', 'PRD-SNK-003'])
+            ->and(pageProp($response, 'top_products.by_units.0.percent_of_top'))->toBe('100.00')
+            ->and(pageProp($response, 'recent_sales.*.id'))->toBe([60, 58, 57, 56, 54]);
+    });
 });
 
-it('answers within a bounded number of queries, whatever the number of materials', function () {
+it('answers within a bounded number of queries, whatever the number of materials and products', function () {
     $queries = function (): int {
         DB::enableQueryLog();
         DB::flushQueryLog();
@@ -344,9 +366,10 @@ it('answers within a bounded number of queries, whatever the number of materials
     $baseline = $queries();
 
     Material::factory()->count(40)->create();
+    Product::factory()->count(30)->withComponents(5)->create();
 
-    // The inventory totals, the restock list with its categories and units, the one materials query by SKU with its units, and
-    // the reference lists of a full load.
-    expect($baseline)->toBeLessThanOrEqual(6 + REFERENCE_QUERIES)
+    // The units, the products with their lines and the materials of those (3), the inventory totals, the restock list with its
+    // categories (the units are shared with the compositions), and the reference lists of a full load.
+    expect($baseline)->toBeLessThanOrEqual(7 + REFERENCE_QUERIES)
         ->and($queries())->toBe($baseline);
 });

@@ -1,6 +1,8 @@
 <?php
 
+use App\Actions\Products\CreateProduct;
 use App\Models\Material;
+use App\Models\Product;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Database\Seeders\DemoCatalogSeeder;
@@ -160,6 +162,27 @@ function pageProp(TestResponse $response, string $path): mixed
 }
 
 /**
+ * The SKU of each demo product by the number the plan and the fixtures give it (1 = Denim Jacket ... 7 = Leather Belt).
+ * Database ids are not those numbers (a PostgreSQL sequence never goes back), so tests resolve them with `pid()`.
+ */
+const DEMO_PRODUCT_SKUS = [1 => 'PRD-JKT-001', 2 => 'PRD-TSH-002', 3 => 'PRD-SNK-003', 4 => 'PRD-TOT-004', 5 => 'PRD-JNS-005', 6 => 'PRD-JKT-006', 7 => 'PRD-BLT-007'];
+
+/** The product (non-deleted) with this SKU: the one `DemoProductsSeeder` created, or one a test made. */
+function previewProduct(string $sku): Product
+{
+    return Product::query()->where('sku', $sku)->firstOrFail();
+}
+
+/** The database id of the demo product with this number (1 = Denim Jacket ... 7 = Leather Belt). */
+function pid(int $number): int
+{
+    return previewProduct(DEMO_PRODUCT_SKUS[$number])->id;
+}
+
+/** An id no product has, however many a long test run created (the id of a PostgreSQL sequence only grows). */
+const NO_SUCH_ID = 900000000;
+
+/**
  * A valid Store/UpdateProductRequest payload: the Denim Jacket composition on the seeded materials, with overrides.
  * Needs the seeded materials (`preparePreview()`); the SKU is new, so it also passes the create rules.
  *
@@ -186,7 +209,7 @@ function validProductPayload(array $overrides = []): array
 }
 
 /**
- * A valid Store/UpdateSaleRequest payload (sells the active Denim Jacket today), with overrides.
+ * A valid Store/UpdateSaleRequest payload (sells the active Denim Jacket today: needs the demo products), with overrides.
  *
  * @param  array<string, mixed>  $overrides
  * @return array<string, mixed>
@@ -194,7 +217,7 @@ function validProductPayload(array $overrides = []): array
 function validSalePayload(array $overrides = []): array
 {
     return [
-        'product_id' => 1,
+        'product_id' => pid(1),
         'quantity' => '3',
         'unit_price' => '89',
         'sold_on' => '2026-10-08',
@@ -289,4 +312,91 @@ function partialReloadQueries(TestResponse $firstVisit, array $only, Closure $as
 function queriesMatching(array $queries, string $pattern): array
 {
     return array_values(array_filter($queries, static fn (string $sql): bool => preg_match('/'.$pattern.'/i', $sql) === 1));
+}
+
+/*
+|--------------------------------------------------------------------------
+| Products and their composition (S-04a)
+|--------------------------------------------------------------------------
+*/
+
+/**
+ * The four materials of the worked example in the invory-costing-domain skill, created through the factory.
+ *
+ * @return array{denim: Material, button: Material, thread: Material, label: Material}
+ */
+function workedExampleMaterials(string $buttonStock = '900.0000'): array
+{
+    return [
+        'denim' => Material::factory()->create([
+            'sku' => 'MAT-DEN-012', 'name' => 'Denim 12oz Indigo', 'category' => 'fabric', 'unit' => 'm',
+            'unit_cost' => '8.5000', 'quantity_on_hand' => '250.0000',
+        ]),
+        'button' => Material::factory()->create([
+            'sku' => 'MAT-BTN-017', 'name' => 'Metal shank button 17mm', 'category' => 'fastener', 'unit' => 'pc',
+            'unit_cost' => '0.3500', 'quantity_on_hand' => $buttonStock,
+        ]),
+        'thread' => Material::factory()->create([
+            'sku' => 'MAT-THR-PES', 'name' => 'Polyester thread', 'category' => 'thread', 'unit' => 'm',
+            'unit_cost' => '0.0040', 'quantity_on_hand' => '20000.0000',
+        ]),
+        'label' => Material::factory()->create([
+            'sku' => 'MAT-LBL-WVN', 'name' => 'Woven brand label', 'category' => 'label', 'unit' => 'pc',
+            'unit_cost' => '0.1200', 'quantity_on_hand' => '400.0000',
+        ]),
+    ];
+}
+
+/**
+ * The Denim Jacket composition of the worked example, as validated input for CreateProduct / SyncProductComponents.
+ *
+ * @param  array{denim: Material, button: Material, thread: Material, label: Material}  $materials
+ * @return list<array{material_id: int, quantity: string, waste_percent: string, notes: string}>
+ */
+function workedExampleLines(array $materials): array
+{
+    return [
+        ['material_id' => $materials['denim']->id, 'quantity' => '1.8000', 'waste_percent' => '10.00', 'notes' => 'Body'],
+        ['material_id' => $materials['button']->id, 'quantity' => '8.0000', 'waste_percent' => '0.00', 'notes' => 'Front'],
+        ['material_id' => $materials['thread']->id, 'quantity' => '120.0000', 'waste_percent' => '5.00', 'notes' => 'Seams'],
+        ['material_id' => $materials['label']->id, 'quantity' => '1.0000', 'waste_percent' => '0.00', 'notes' => 'Neck'],
+    ];
+}
+
+/**
+ * Validated input for CreateProduct / UpdateProduct: the Denim Jacket (labor 12.0000, overhead 3.5000), with overrides.
+ *
+ * @param  array<string, mixed>  $overrides
+ * @return array<string, mixed>
+ */
+function productData(array $overrides = []): array
+{
+    return [
+        'sku' => 'PRD-DJ-001',
+        'name' => 'Denim Jacket',
+        'category' => 'apparel',
+        'status' => 'active',
+        'description' => 'A classic.',
+        'labor_cost' => '12.0000',
+        'overhead_cost' => '3.5000',
+        'selling_price' => null,
+        'components' => [],
+        ...$overrides,
+    ];
+}
+
+/**
+ * The Denim Jacket of the worked example, created through the CreateProduct Action and read back with its composition loaded.
+ *
+ * @param  array{denim: Material, button: Material, thread: Material, label: Material}  $materials
+ * @param  array<string, mixed>  $overrides
+ */
+function createDenimJacket(array $materials, array $overrides = [], ?User $actor = null): Product
+{
+    $product = app(CreateProduct::class)->handle(
+        productData(['components' => workedExampleLines($materials), ...$overrides]),
+        $actor ?? User::factory()->create(),
+    );
+
+    return Product::query()->with('components.material')->findOrFail($product->id);
 }

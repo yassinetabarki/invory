@@ -1,11 +1,12 @@
 <?php
 
-use App\Mock\PreviewFixture;
 use App\Models\Material;
 use App\Models\MaterialCategory;
+use App\Models\Product;
 use App\Models\ProductCategory;
 use App\Models\Unit;
 use App\Models\User;
+use Illuminate\Database\QueryException;
 use Inertia\Testing\AssertableInertia as Assert;
 
 use function Pest\Laravel\actingAs;
@@ -26,7 +27,11 @@ beforeEach(function () {
 describe('the option lists moved to the shared reference prop (S-22)', function () {
     it('sends no categories or units prop on any materials or products page', function (string $route, array $parameters, array $absent) {
         $this->preview = Material::factory()->create();
-        $parameters = array_map(fn ($value) => $value === '{material}' ? $this->preview : $value, $parameters);
+        $parameters = array_map(fn ($value) => match ($value) {
+            '{material}' => $this->preview,
+            '{product}' => pid(1),
+            default => $value,
+        }, $parameters);
 
         actingAs($this->user)->get(route($route, $parameters))
             ->assertOk()
@@ -37,8 +42,7 @@ describe('the option lists moved to the shared reference prop (S-22)', function 
         'materials edit' => ['materials.edit', ['{material}'], ['categories', 'units']],
         'products index' => ['products.index', [], ['categories', 'units']],
         'products create' => ['products.create', [], ['categories', 'units']],
-        // MOCK (ADR-0006): product 1 is the Denim Jacket.
-        'products edit' => ['products.edit', [1], ['categories', 'units']],
+        'products edit' => ['products.edit', ['{product}'], ['categories', 'units']],
     ]);
 
     it('still sends the free enum lists that stay per page', function () {
@@ -217,9 +221,10 @@ describe('the product forms', function () {
     it('keeps the current archived category valid on update, and refuses another archived one', function () {
         ProductCategory::query()->whereIn('code', ['apparel', 'bag'])->update(['archived_at' => now()]);
 
-        // MOCK (ADR-0006): product 1 is in apparel.
-        actingAs($this->user)->put(route('products.update', 1), validProductPayload(['sku' => 'PRD-001', 'category' => 'apparel']))->assertSessionHasNoErrors();
-        actingAs($this->user)->put(route('products.update', 1), validProductPayload(['sku' => 'PRD-001', 'category' => 'bag']))->assertSessionHasErrors('category');
+        // The Denim Jacket is in apparel.
+        $jacket = pid(1);
+        actingAs($this->user)->put(route('products.update', $jacket), validProductPayload(['sku' => 'PRD-001', 'category' => 'apparel']))->assertSessionHasNoErrors();
+        actingAs($this->user)->put(route('products.update', $jacket), validProductPayload(['sku' => 'PRD-001', 'category' => 'bag']))->assertSessionHasErrors('category');
     });
 
     it('filters the products list by an archived category code and 422s on an unknown one', function () {
@@ -231,7 +236,7 @@ describe('the product forms', function () {
         actingAs($this->user)->get(route('products.index', ['category' => 'hats']))->assertSessionHasErrors('category');
     });
 
-    it('labels the preview products from the product_categories table, read once', function () {
+    it('labels the products from the product_categories table, read once', function () {
         ProductCategory::query()->where('code', 'apparel')->update(['name' => 'Clothing']);
 
         $queries = queryLog(fn () => $response = actingAs($this->user)->get(route('products.index')));
@@ -244,23 +249,20 @@ describe('the product forms', function () {
             // The names of the products (once, not per product) and the shared reference lists of a full load. The option list's
             // own query is gone since S-22: 3 reads became 2.
             ->and(queriesMatching($queries, 'from "product_categories"'))->toHaveCount(2)
-            ->and(actingAs($this->user)->get(route('products.show', 1))->inertiaProps('product.category_label'))->toBe('Clothing');
+            ->and(actingAs($this->user)->get(route('products.show', pid(1)))->inertiaProps('product.category_label'))->toBe('Clothing');
     });
 
-    it('shows a product category with no row as its code, not a crash', function () {
-        // The defaults can't be deleted while a product uses them, but a database edited by hand could be missing one.
-        ProductCategory::query()->where('code', 'jewelry')->delete();
-        ProductCategory::query()->where('code', 'bag')->delete();
-
-        actingAs($this->user)->get(route('products.show', 4))->assertOk()
-            ->assertInertia(fn (Assert $page) => $page->where('product.category', 'bag')->where('product.category_label', 'bag'));
+    it('can no longer lose the category of a product: the foreign key refuses to delete it', function () {
+        // `products.category_id` restricts: a category some product points at can't be removed from the table (the settings page
+        // archives it instead), so a product always has its category row.
+        expect(fn () => ProductCategory::query()->where('code', 'bag')->delete())->toThrow(QueryException::class);
     });
 });
 
 describe('the unit lock while a product uses the material (decision Q7)', function () {
-    /** [sku, how many fixture products use it] for the first material used by exactly one product, and the first used by several. */
+    /** [sku, how many products use it] for the first material used by exactly one product, and the first used by several. */
     $usage = function (): array {
-        $counts = collect(PreviewFixture::materialSkus())->mapWithKeys(fn (string $sku): array => [$sku => PreviewFixture::usedInCount($sku)]);
+        $counts = Material::query()->withUsedInCount()->orderBy('id')->get()->pluck('used_in_count', 'sku')->filter(fn (int $count): bool => $count > 0);
 
         return [
             [$counts->filter(fn (int $count): bool => $count === 1)->keys()->first(), 1],
@@ -342,15 +344,46 @@ describe('the unit lock while a product uses the material (decision Q7)', functi
         actingAs($this->user)->post(route('materials.store'), validMaterialPayload(['sku' => 'NEW-1', 'unit' => 'kg']))->assertSessionHasNoErrors();
     });
 
-    it('counts the products of the preview fixture in one place', function () {
-        // Denim Jacket, Jeans, Chore Jacket... all use the denim; the lock reads PreviewFixture::usedInCount.
+    it('locks the unit of a material the demo products use', function () {
+        // The denim is in the compositions of the Denim Jacket and the Jeans.
         $material = previewMaterial('MAT-DEN-012');
-
-        expect(PreviewFixture::usedInCount($material->sku))->toBeGreaterThan(0);
 
         actingAs($this->user)->put(route('materials.update', $material), validMaterialPayload([
             'sku' => $material->sku, 'name' => $material->name, 'unit' => 'cm',
-        ]))->assertSessionHasErrors('unit');
+        ]))->assertSessionHasErrors(['unit' => "This material is used in 2 product compositions, so its unit can't change."]);
+    });
+
+    it('allows the change once only soft-deleted products use the material, and locks it again on restore', function () {
+        $material = previewMaterial('MAT-SOL-042');
+        $sneaker = previewProduct('PRD-SNK-003');
+        $update = fn (string $unit) => actingAs($this->user)->put(route('materials.update', $material), validMaterialPayload([
+            'sku' => $material->sku, 'name' => $material->name, 'category' => 'sole', 'unit' => $unit, 'reorder_level' => '40',
+        ]));
+
+        // The cupsole is only in the composition of the Sneaker.
+        $update('kg')->assertSessionHasErrors(['unit' => "This material is used in 1 product composition, so its unit can't change."]);
+
+        $sneaker->delete();
+        $update('kg')->assertSessionHasNoErrors();
+        expect($material->refresh()->unit->code)->toBe('kg');
+
+        // Restore the Sneaker: its line is back in use, so the unit is locked again.
+        $sneaker->restore();
+        $update('g')->assertSessionHasErrors('unit');
+    });
+
+    it('locks the unit as soon as a product created through the form uses the material', function () {
+        $material = Material::factory()->create(['sku' => 'ZZZ-NEW', 'name' => 'Zzz new', 'unit' => 'm']);
+        $payload = fn (string $unit): array => validMaterialPayload(['sku' => 'ZZZ-NEW', 'name' => 'Zzz new', 'unit' => $unit, 'category' => $material->category->code]);
+
+        actingAs($this->user)->put(route('materials.update', $material), $payload('kg'))->assertSessionHasNoErrors();
+
+        actingAs($this->user)->post(route('products.store'), validProductPayload(['components' => [
+            ['material_id' => $material->id, 'quantity' => '2', 'waste_percent' => '0'],
+        ]]))->assertSessionHasNoErrors();
+
+        actingAs($this->user)->put(route('materials.update', $material), $payload('g'))
+            ->assertSessionHasErrors(['unit' => "This material is used in 1 product composition, so its unit can't change."]);
     });
 });
 

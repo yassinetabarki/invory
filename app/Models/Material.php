@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use InvalidArgumentException;
 
@@ -34,8 +35,10 @@ use InvalidArgumentException;
  * @property string|null $color
  * @property string|null $composition
  * @property string|null $notes
- * @property int $used_in_count Products whose composition uses this material. Not a column: the controllers set it as an attribute (the real `withCount()` later).
- * @property string|null $photo_url Public URL of the photo. Not a column: the controllers set it as an attribute (a photo accessor later).
+ * @property int|null $created_by Audit: the user who created the material (null for rows that predate the column or a deleted user).
+ * @property int|null $updated_by Audit: the user who last changed it.
+ * @property int $used_in_count Non-deleted products whose composition uses this material. Not a column: `withUsedInCount()` provides it (route binding adds it too), strict models throw when a caller forgot.
+ * @property string|null $photo_url Public URL of the photo. Not a column: the controllers set it as an attribute (a photo accessor in S-15-BE).
  * @property CarbonInterface $created_at
  * @property CarbonInterface $updated_at
  * @property CarbonInterface|null $deleted_at
@@ -84,6 +87,29 @@ class Material extends Model
     public function unit(): BelongsTo
     {
         return $this->belongsTo(Unit::class, 'unit_id');
+    }
+
+    /**
+     * The BOM lines that use this material (any product, deleted ones included: the lines stay for history and restore).
+     *
+     * @return HasMany<ProductComponent, $this>
+     */
+    public function components(): HasMany
+    {
+        return $this->hasMany(ProductComponent::class);
+    }
+
+    /**
+     * A route-bound material carries `used_in_count` too (a sub-select in the one query that finds it), so the show and edit pages
+     * don't pay a query of their own for it. A soft-deleted material is not found.
+     *
+     * @param  mixed  $value
+     * @param  string|null  $field
+     * @return static|null
+     */
+    public function resolveRouteBinding($value, $field = null)
+    {
+        return static::query()->withUsedInCount()->where($field ?? $this->getRouteKeyName(), $value)->first();
     }
 
     /**
@@ -142,6 +168,18 @@ class Material extends Model
         if ($categoryCode !== null) {
             $query->whereIn('category_id', MaterialCategory::query()->where('code', $categoryCode)->select('id'));
         }
+    }
+
+    /**
+     * Adds `used_in_count`: how many non-deleted products' compositions use the material (one sub-select, no extra query).
+     *
+     * @param  Builder<Material>  $query
+     */
+    #[Scope]
+    protected function withUsedInCount(Builder $query): void
+    {
+        // Lines of non-deleted products only: the lines of a soft-deleted product stay for history and don't count as a use.
+        $query->withCount(['components as used_in_count' => fn (Builder $lines) => $lines->whereIn('product_id', Product::query()->select('id'))]);
     }
 
     /**

@@ -1,7 +1,8 @@
 <?php
 
 use App\Models\Material;
-use Carbon\CarbonImmutable;
+use App\Models\Product;
+use App\Models\ProductComponent;
 use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -9,11 +10,14 @@ use function Pest\Laravel\actingAs;
 
 /*
 |--------------------------------------------------------------------------
-| Products pages on the preview fixture (ADR-0006, S-13c)
+| Products pages on the real tables (ADR-0006, S-13c, S-04b)
 |--------------------------------------------------------------------------
 |
-| Time frozen at 2026-10-08, the 12 DemoCatalogSeeder materials in the database. Every derived number is computed by the
-| production domain code; these tests pin the "Expected" tables of docs/plans/phase-2-ui-first-preview.md exactly.
+| Time frozen at 2026-10-08, DemoCatalogSeeder run (the 12 materials and the 7 demo products). Every derived number is computed
+| by the production domain code; these tests pin the "Expected" tables of docs/plans/phase-2-ui-first-preview.md exactly, which
+| is the proof that the pages send the same props as before the switch from the fixture to the tables.
+|
+| `$id` in the datasets is the number of the plan (1 = Denim Jacket ... 7 = Leather Belt): `pid()` gives the database id.
 */
 
 beforeEach(fn () => $this->user = preparePreview($this));
@@ -67,7 +71,7 @@ describe('index', function () {
         expect(pageProp($response, 'products.data.*.name'))->toBe([
             'Canvas Chore Jacket', 'Canvas Low Sneaker', 'Classic White T-shirt', 'Denim Jacket',
             'Denim Jeans 5-pocket', 'Leather Belt', 'Leather Tote',
-        ])->and(pageProp($response, 'products.data.*.id'))->toBe([6, 3, 2, 1, 5, 7, 4]);
+        ])->and(pageProp($response, 'products.data.*.id'))->toBe(array_map(pid(...), [6, 3, 2, 1, 5, 7, 4]));
 
         $response->assertInertia(fn (Assert $page) => $page
             ->has('products.data.0', fn (Assert $item) => $item->hasAll([
@@ -88,7 +92,7 @@ describe('index', function () {
         $response->assertInertia(fn (Assert $page) => $page
             ->has('products.data', 1)
             ->has('products.data.0', fn (Assert $item) => $item
-                ->where('id', $id)
+                ->where('id', pid($id))
                 ->where('sku', $sku)
                 ->where('name', $name)
                 ->where('category', $category)
@@ -238,7 +242,7 @@ describe('index', function () {
 
 describe('show', function () {
     it('sends the ProductShowProps contract', function () {
-        actingAs($this->user)->get(route('products.show', 1))
+        actingAs($this->user)->get(route('products.show', pid(1)))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('products/show')
@@ -262,9 +266,9 @@ describe('show', function () {
     ) {
         $bottleneck = previewMaterial($bottleneckSku);
 
-        actingAs($this->user)->get(route('products.show', $id))
+        actingAs($this->user)->get(route('products.show', pid($id)))
             ->assertInertia(fn (Assert $page) => $page
-                ->where('product.id', $id)
+                ->where('product.id', pid($id))
                 ->where('product.sku', $sku)
                 ->where('product.name', $name)
                 ->where('product.status', $status)
@@ -281,7 +285,7 @@ describe('show', function () {
     })->with('expectedProducts');
 
     it('matches the worked example of the costing domain skill for the Denim Jacket', function () {
-        $response = actingAs($this->user)->get(route('products.show', 1));
+        $response = actingAs($this->user)->get(route('products.show', pid(1)));
 
         $response->assertInertia(fn (Assert $page) => $page
             ->where('product.labor_cost', '12.0000')
@@ -296,9 +300,9 @@ describe('show', function () {
             ->where('product.category_label', 'Apparel')
             ->where('product.status_label', 'Active')
             ->where('product.photo_url', asset('mock/photos/prd-jkt-001.svg'))
-            // Created with the opening stock, 37 days ago, as ISO-8601 strings.
-            ->where('product.created_at', CarbonImmutable::parse('2026-09-01 09:00:00')->toIso8601String())
-            ->where('product.updated_at', CarbonImmutable::parse('2026-09-01 09:00:00')->toIso8601String()));
+            // The real timestamps of the row (the seeder ran at the frozen clock), as ISO-8601 strings.
+            ->where('product.created_at', '2026-10-08T12:00:00+00:00')
+            ->where('product.updated_at', '2026-10-08T12:00:00+00:00'));
 
         // The golden lines: effective quantity, line cost, units possible and the bottleneck of each of the 4 lines.
         expect(pageProp($response, 'product.components.*.effective_quantity'))->toBe(['1.9800', '8.0000', '126.0000', '1.0000'])
@@ -309,16 +313,19 @@ describe('show', function () {
 
     it('sends the composition lines with the ProductComponentLine contract, in position order', function () {
         $denim = previewMaterial('MAT-DEN-012');
-        $response = actingAs($this->user)->get(route('products.show', 1));
+        $response = actingAs($this->user)->get(route('products.show', pid(1)));
 
-        expect(pageProp($response, 'product.components.*.id'))->toBe([101, 102, 103, 104])
+        // The ids are the real ids of the stored lines, in position order.
+        $ids = ProductComponent::query()->where('product_id', pid(1))->orderBy('position')->pluck('id')->all();
+
+        expect(pageProp($response, 'product.components.*.id'))->toBe($ids)
             ->and(pageProp($response, 'product.components.*.position'))->toBe([1, 2, 3, 4])
             ->and(pageProp($response, 'product.components.*.material.sku'))->toBe(['MAT-DEN-012', 'MAT-BTN-017', 'MAT-THR-PES', 'MAT-LBL-WOV'])
             ->and(pageProp($response, 'product.components.*.notes'))->toBe(['Body, sleeves, collar', 'Front placket (6), cuffs (2)', 'All seams', 'Inside back yoke']);
 
         $response->assertInertia(fn (Assert $page) => $page
             ->has('product.components.0', fn (Assert $line) => $line
-                ->where('id', 101)
+                ->where('id', $ids[0])
                 ->where('position', 1)
                 ->where('material', [
                     'id' => $denim->id,
@@ -345,17 +352,18 @@ describe('show', function () {
             ->where('product.capacity.bottleneck.sku', 'MAT-BTN-017'));
     });
 
-    it('numbers the lines of every product product_id x 100 + position', function () {
-        foreach ([1 => 4, 2 => 3, 3 => 5, 4 => 6, 5 => 6, 6 => 4, 7 => 2] as $id => $count) {
-            $response = actingAs($this->user)->get(route('products.show', $id));
+    it('numbers the lines of every product from 1 in the order they are stored', function () {
+        foreach ([1 => 4, 2 => 3, 3 => 5, 4 => 6, 5 => 6, 6 => 4, 7 => 2] as $number => $count) {
+            $response = actingAs($this->user)->get(route('products.show', pid($number)));
+            $stored = ProductComponent::query()->where('product_id', pid($number))->orderBy('position')->pluck('id')->all();
 
-            expect(pageProp($response, 'product.components.*.id'))
-                ->toBe(array_map(fn (int $position): int => $id * 100 + $position, range(1, $count)));
+            expect(pageProp($response, 'product.components.*.position'))->toBe(range(1, $count))
+                ->and(pageProp($response, 'product.components.*.id'))->toBe($stored);
         }
     });
 
     it('sends the sales of the last 30 days and the newest 5 sales of the product', function () {
-        $response = actingAs($this->user)->get(route('products.show', 1));
+        $response = actingAs($this->user)->get(route('products.show', pid(1)));
 
         expect(pageProp($response, 'recent_sales.*.id'))->toBe([57, 52, 43, 40, 38])
             ->and(pageProp($response, 'recent_sales.*.sold_on'))->toBe(['2026-10-05', '2026-10-01', '2026-09-26', '2026-09-25', '2026-09-24']);
@@ -370,7 +378,7 @@ describe('show', function () {
                 ->where('sold_on', '2026-10-05')
                 ->where('note', 'Web shop')
                 ->where('product', [
-                    'id' => 1,
+                    'id' => pid(1),
                     'sku' => 'PRD-JKT-001',
                     'name' => 'Denim Jacket',
                     'photo_url' => asset('mock/photos/prd-jkt-001.svg'),
@@ -378,7 +386,7 @@ describe('show', function () {
     });
 
     it('sends no sales and no margin for the unpriced draft', function () {
-        actingAs($this->user)->get(route('products.show', 6))
+        actingAs($this->user)->get(route('products.show', pid(6)))
             ->assertInertia(fn (Assert $page) => $page
                 ->where('product.selling_price', null)
                 ->where('product.margin', null)
@@ -387,10 +395,10 @@ describe('show', function () {
                 ->where('recent_sales', []));
     });
 
-    it('has no capacity and no bottleneck when none of the materials exists', function () {
-        Material::query()->delete();
+    it('has no capacity and no bottleneck for a product without a composition', function () {
+        $product = Product::factory()->create(['labor_cost' => '12.0000', 'overhead_cost' => '3.5000', 'selling_price' => '89.0000']);
 
-        actingAs($this->user)->get(route('products.show', 1))
+        actingAs($this->user)->get(route('products.show', $product))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->where('product.components', [])
@@ -404,42 +412,39 @@ describe('show', function () {
                 ->where('product.margin', ['amount' => '73.5000', 'percent' => '82.58']));
     });
 
-    it('skips the lines of a material missing from the database and renumbers the positions', function () {
-        previewMaterial('MAT-BTN-017')->forceDelete();
-
-        $response = actingAs($this->user)->get(route('products.show', 1));
-
-        expect(pageProp($response, 'product.components.*.material.sku'))->toBe(['MAT-DEN-012', 'MAT-THR-PES', 'MAT-LBL-WOV'])
-            ->and(pageProp($response, 'product.components.*.position'))->toBe([1, 2, 3])
-            // The line ids stay those of the fixture lines.
-            ->and(pageProp($response, 'product.components.*.id'))->toBe([101, 103, 104]);
-
-        $response->assertInertia(fn (Assert $page) => $page
-                // Without the button the Denim 12oz Indigo is the bottleneck (126 units).
-            ->where('product.capacity.max_producible', 126)
-            ->where('product.capacity.bottleneck.sku', 'MAT-DEN-012')
-            ->where('product.cost.material_cost', '17.4540'));
-    });
-
-    it('counts a soft-deleted material as missing', function () {
+    it('costs a line whose material was soft-deleted like any other (a delete that bypassed the guard)', function () {
+        // The application refuses to delete a material that a product uses; the lines stay costed if one was removed anyway.
         previewMaterial('MAT-BTN-017')->delete();
 
-        actingAs($this->user)->get(route('products.show', 1))
+        actingAs($this->user)->get(route('products.show', pid(1)))
+            ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->has('product.components', 3)
-                ->where('product.capacity.max_producible', 126));
+                ->has('product.components', 4)
+                ->where('product.capacity.max_producible', 112)
+                ->where('product.capacity.bottleneck.sku', 'MAT-BTN-017')
+                ->where('product.cost.unit_cost', '35.7540'));
+    });
 
-        actingAs($this->user)->get(productsIndexUrl(['search' => 'PRD-JKT-001']))
-            ->assertInertia(fn (Assert $page) => $page
-                ->where('products.data.0.components_count', 3)
-                ->where('products.data.0.capacity.max_producible', 126));
+    it('sends the lines in position order after the composition was reordered', function () {
+        $jacket = pid(1);
+        // Put the label first and the denim last.
+        ProductComponent::query()->where('product_id', $jacket)->where('material_id', previewMaterial('MAT-LBL-WOV')->id)->update(['position' => 0]);
+        ProductComponent::query()->where('product_id', $jacket)->where('material_id', previewMaterial('MAT-DEN-012')->id)->update(['position' => 9]);
+
+        $response = actingAs($this->user)->get(route('products.show', $jacket));
+
+        expect(pageProp($response, 'product.components.*.material.sku'))->toBe(['MAT-LBL-WOV', 'MAT-BTN-017', 'MAT-THR-PES', 'MAT-DEN-012'])
+            ->and(pageProp($response, 'product.components.*.position'))->toBe([1, 2, 3, 4])
+            // The figures follow the lines they belong to.
+            ->and(pageProp($response, 'product.components.*.units_possible'))->toBe([400, 112, 158, 126])
+            ->and(pageProp($response, 'product.capacity.bottleneck.sku'))->toBe('MAT-BTN-017');
     });
 
     it('follows the stock of the materials immediately', function () {
         // The Denim Jacket needs 8 buttons: 7 are not enough for one unit.
         previewMaterial('MAT-BTN-017')->update(['quantity_on_hand' => '7']);
 
-        actingAs($this->user)->get(route('products.show', 1))
+        actingAs($this->user)->get(route('products.show', pid(1)))
             ->assertInertia(fn (Assert $page) => $page
                 ->where('product.capacity.max_producible', 0)
                 ->where('product.capacity.bottleneck.sku', 'MAT-BTN-017'));
@@ -448,7 +453,22 @@ describe('show', function () {
     it('answers 404 for an unknown product', function (string $id) {
         actingAs($this->user)->get("/products/{$id}")->assertNotFound();
         actingAs($this->user)->get("/products/{$id}/edit")->assertNotFound();
-    })->with(['just past the fixture' => '8', 'zero' => '0', 'far away' => '999999', 'letters' => 'abc']);
+    })->with(['zero' => '0', 'far away' => '999999999999', 'letters' => 'abc']);
+
+    it('answers 404 for the id just past the last product', function () {
+        $next = Product::query()->max('id') + 1;
+
+        actingAs($this->user)->get("/products/{$next}")->assertNotFound();
+        actingAs($this->user)->get("/products/{$next}/edit")->assertNotFound();
+    });
+
+    it('answers 404 for a soft-deleted product', function () {
+        $product = previewProduct('PRD-TSH-002');
+        $product->delete();
+
+        actingAs($this->user)->get(route('products.show', $product->id))->assertNotFound();
+        actingAs($this->user)->get(route('products.edit', $product->id))->assertNotFound();
+    });
 });
 
 describe('create and edit', function () {
@@ -497,14 +517,14 @@ describe('create and edit', function () {
     });
 
     it('sends the same props plus the product on the edit page', function () {
-        actingAs($this->user)->get(route('products.edit', 4))
+        actingAs($this->user)->get(route('products.edit', pid(4)))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('products/edit')
                 ->missing('categories')
                 ->has('statuses', 3)
                 ->has('materials', 12)
-                ->where('product.id', 4)
+                ->where('product.id', pid(4))
                 ->where('product.name', 'Leather Tote')
                 ->where('product.cost.unit_cost', '101.0300')
                 ->has('product.components', 6));
@@ -521,27 +541,32 @@ it('reads the materials table once per page and answers within a bounded number 
 
         return [
             'all' => count($log),
-            'materials' => count(array_filter($log, fn (string $sql): bool => str_contains($sql, '"materials"'))),
+            'materials' => count(array_filter($log, fn (string $sql): bool => str_contains($sql, 'from "materials"'))),
         ];
     };
 
     $urls = [
         'index' => productsIndexUrl(),
-        'show' => route('products.show', 1),
+        'show' => route('products.show', pid(1)),
         'create' => route('products.create'),
-        'edit' => route('products.edit', 1),
+        'edit' => route('products.edit', pid(1)),
     ];
+
+    // What each page runs besides the reference lists of a full load: the list is the count, the products, their categories, their
+    // lines, the materials of the lines and the units of those (6); a product is the row, its category, its lines, their materials
+    // and the units of those (5); the form needs the picker's materials and units (2); the edit page shares the picker with the lines (5).
+    $budget = ['index' => 6, 'show' => 5, 'create' => 2, 'edit' => 5];
 
     $baseline = array_map($count, $urls);
 
     Material::factory()->count(40)->create();
+    Product::factory()->count(30)->withComponents(4)->create();
 
     foreach ($urls as $page => $url) {
-        // One read of the materials (by SKU for the fixture, or every material for the pickers), their units (eager), the category
-        // names of the products, and the reference lists of a full load (the option list's own query is gone since S-22).
+        // One read of the materials (the lines' or the picker's), never one per row.
         expect($baseline[$page]['materials'])->toBe(1, "the {$page} page reads the materials table once")
-            ->and($baseline[$page]['all'])->toBeLessThanOrEqual(3 + REFERENCE_QUERIES)
-            // 40 more materials: not one more query.
+            ->and($baseline[$page]['all'])->toBeLessThanOrEqual($budget[$page] + REFERENCE_QUERIES)
+            // 40 more materials and 30 more products: not one more query.
             ->and($count($url))->toBe($baseline[$page]);
     }
 });

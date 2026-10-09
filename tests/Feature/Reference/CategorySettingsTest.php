@@ -2,9 +2,11 @@
 
 use App\Models\Material;
 use App\Models\MaterialCategory;
+use App\Models\Product;
 use App\Models\ProductCategory;
 use App\Models\User;
 use App\Services\Reference\ReferenceVersion;
+use Database\Seeders\DemoCatalogSeeder;
 use Inertia\Testing\AssertableInertia as Assert;
 
 use function Pest\Laravel\actingAs;
@@ -14,8 +16,8 @@ use function Pest\Laravel\actingAs;
 | Settings > material categories and product categories (ADR-0008)
 |--------------------------------------------------------------------------
 |
-| The two pages share one shape, so every test runs for both. The only difference is where "in use" comes from: materials
-| are real rows; products are the preview fixture until S-04 (4 apparel, 1 footwear, 1 bag, 1 accessory).
+| The two pages share one shape, so every test runs for both. The only difference is what "in use" counts: materials and
+| products are real rows (the demo products are 4 apparel, 1 footwear, 1 bag and 1 accessory).
 */
 
 beforeEach(function () {
@@ -56,9 +58,18 @@ dataset('categoryKinds', [
         'table' => 'product_categories',
         'defaults' => 6,
         'noun' => 'products',
-        // MOCK (ADR-0006): the preview fixture has 4 apparel products.
-        'used' => fn (): array => [ProductCategory::query()->where('code', 'apparel')->firstOrFail(), 4, 4],
-        'usedByTrashed' => null,
+        // 4 apparel products, and a category that only a soft-deleted product uses.
+        'used' => function (): array {
+            Product::factory()->count(4)->create(['category' => 'apparel']);
+
+            return [ProductCategory::query()->where('code', 'apparel')->firstOrFail(), 4, 4];
+        },
+        'usedByTrashed' => function (): ProductCategory {
+            $category = ProductCategory::factory()->create(['name' => 'Retired']);
+            Product::factory()->create(['category' => $category])->delete();
+
+            return $category;
+        },
     ]],
 ]);
 
@@ -328,6 +339,23 @@ it('counts a soft-deleted material as a user, because the foreign key would refu
     $this->assertDatabaseHas('material_categories', ['id' => $category->id]);
 });
 
+it('counts a soft-deleted product as a user of its category when deleting, but not in the usage shown', function () {
+    $category = ProductCategory::factory()->create(['name' => 'Retired']);
+    Product::factory()->create(['category' => $category])->delete();
+    Product::factory()->create(['category' => $category]);
+
+    $rows = collect(actingAs($this->user)->get(route('settings.product-categories.index'))->inertiaProps('categories'));
+
+    // The page counts the products that exist (1), the delete guard also the soft-deleted one (the foreign key would refuse it).
+    expect($rows->firstWhere('code', $category->code)['usage_count'])->toBe(1);
+
+    actingAs($this->user)
+        ->delete(route('settings.product-categories.destroy', $category->id))
+        ->assertInertiaFlash('toast', ['type' => 'error', 'message' => "Retired is used by 2 products, so it can't be deleted. Archive it instead."]);
+
+    $this->assertDatabaseHas('product_categories', ['id' => $category->id]);
+});
+
 it('says "material" for one user and "materials" for several', function () {
     $one = MaterialCategory::factory()->create(['name' => 'One']);
     $two = MaterialCategory::factory()->create(['name' => 'Two']);
@@ -352,8 +380,10 @@ it('deletes a material category once its last material is gone for good', functi
     $this->assertDatabaseMissing('material_categories', ['id' => $category->id]);
 });
 
-it('deletes the product categories no preview product uses, and refuses the ones they use', function () {
-    // MOCK (ADR-0006): the fixture has apparel (4), footwear, bag and accessory (1 each); jewelry and other are free.
+it('deletes the product categories no demo product uses, and refuses the ones they use', function () {
+    // The demo products: apparel (4), footwear, bag and accessory (1 each); jewelry and other are free.
+    $this->seed(DemoCatalogSeeder::class);
+
     foreach (['apparel' => 4, 'footwear' => 1, 'bag' => 1, 'accessory' => 1] as $code => $count) {
         $category = ProductCategory::query()->where('code', $code)->firstOrFail();
 
@@ -376,7 +406,9 @@ it('deletes the product categories no preview product uses, and refuses the ones
     }
 });
 
-it('shows the usage of the product categories from the preview fixture', function () {
+it('shows the usage of the product categories from the real products', function () {
+    $this->seed(DemoCatalogSeeder::class);
+
     $rows = collect(actingAs($this->user)->get(route('settings.product-categories.index'))->inertiaProps('categories'));
 
     expect($rows->pluck('usage_count', 'code')->all())->toBe([

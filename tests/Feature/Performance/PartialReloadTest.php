@@ -143,7 +143,7 @@ describe('products create and edit', function () {
     });
 
     it('reads the materials once for the picker and the costing of the product on the edit page', function () {
-        $firstVisit = $this->get(route('products.edit', 1))->assertOk();
+        $firstVisit = $this->get(route('products.edit', pid(1)))->assertOk();
 
         $queries = partialReloadQueries(
             $firstVisit,
@@ -151,14 +151,14 @@ describe('products create and edit', function () {
             fn (Assert $partial) => $partial->has('materials', 12)->has('product.components'),
         );
 
-        // One read of the materials (however many of the two props are sent), their units (eager-loaded) and the category names
-        // of the product.
+        // The route-model binding of the product, its category and lines, ONE read of the materials (the picker's, which the lines
+        // share, however many of the two props are sent) and their units (eager-loaded).
         expect(queriesMatching($queries, 'from "materials"'))->toHaveCount(1)
-            ->and($queries)->toHaveCount(3);
+            ->and($queries)->toHaveCount(5);
     });
 
     it('loads nothing on the edit page when only the status list is requested', function () {
-        $firstVisit = $this->get(route('products.edit', 1))->assertOk();
+        $firstVisit = $this->get(route('products.edit', pid(1)))->assertOk();
 
         $queries = partialReloadQueries(
             $firstVisit,
@@ -166,8 +166,9 @@ describe('products create and edit', function () {
             fn (Assert $partial) => $partial->missingAll(['materials', 'product', 'categories']),
         );
 
-        // No query: neither the materials nor the product are loaded.
-        expect($queries)->toBeEmpty();
+        // Only the route-model binding of the product: neither the materials, nor the category and the lines are loaded.
+        expect($queries)->toHaveCount(1)
+            ->and(queriesMatching($queries, 'from "materials"'))->toBeEmpty();
     });
 });
 
@@ -186,7 +187,9 @@ describe('sales index', function () {
                 ->where('filters.period', 'last_7_days'),
         );
 
-        expect($queries)->toBeEmpty();
+        // The one query that resolves the sales fixture against the products (by SKU): no product options, no costing.
+        expect($queries)->toHaveCount(1)
+            ->and(queriesMatching($queries, 'from "products" where "sku" in'))->toHaveCount(1);
     });
 
     it('sends the product options and the record prop when they are requested', function () {
@@ -229,15 +232,19 @@ describe('dashboard', function () {
         );
 
         expect(queriesMatching($queries, NEEDS_RESTOCK_QUERY))->toBeEmpty()
-            // The stats still need the inventory summary and the costed products (and their units), once each.
+            // The stats still need the inventory summary and the costed products (the units, the products, their lines and the
+            // materials of those), once each: the sales are resolved from those products, with no query of their own.
             ->and(queriesMatching($queries, SUMMARY_SCAN))->toHaveCount(1)
-            ->and($queries)->toHaveCount(3);
+            ->and($queries)->toHaveCount(5);
     });
 
     it('builds the costed products once when several sections need them', function () {
         $queries = queryLog(fn () => $this->get(route('dashboard'))->assertOk());
 
-        expect(queriesMatching($queries, '"sku" in'))->toHaveCount(1);
+        // One read of the products and their lines, and the sales are resolved from them (no query by SKU of their own).
+        expect(queriesMatching($queries, 'select \* from "products"'))->toHaveCount(1)
+            ->and(queriesMatching($queries, 'from "product_components" where "product_components"."product_id" in'))->toHaveCount(1)
+            ->and(queriesMatching($queries, '"sku" in'))->toBeEmpty();
     });
 
     it('loads only the restock list when only that is requested', function () {

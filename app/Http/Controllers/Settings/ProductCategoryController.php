@@ -11,7 +11,6 @@ use App\Exceptions\ReferenceInUseException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Reference\StoreProductCategoryRequest;
 use App\Http\Requests\Reference\UpdateProductCategoryRequest;
-use App\Mock\PreviewFixture;
 use App\Models\ProductCategory;
 use App\Services\Reference\ReferenceData;
 use Illuminate\Http\RedirectResponse;
@@ -23,8 +22,8 @@ use Inertia\Response;
  * Settings > Product categories (ADR-0008). Any verified user manages them (decision Q3); every route goes through
  * ProductCategoryPolicy.
  *
- * MOCK (ADR-0006, S-04 swaps to `withCount('products')`): products have no table yet, so the usage of a category is the
- * number of preview products that have its code.
+ * `usage_count` counts the non-deleted products of the category. Deleting is refused while any product still points at it,
+ * soft-deleted ones included (the foreign key would refuse anyway, and restoring such a product must find its category).
  */
 final class ProductCategoryController extends Controller
 {
@@ -33,15 +32,12 @@ final class ProductCategoryController extends Controller
         Gate::authorize('viewAny', ProductCategory::class);
 
         return Inertia::render('settings/product-categories', [
-            'categories' => function (): array {
-                $usage = PreviewFixture::productCountsByCategory();
-
-                return ProductCategory::query()
-                    ->ordered()
-                    ->get()
-                    ->map(fn (ProductCategory $category): array => [...ReferenceData::category($category), 'usage_count' => $usage[$category->code] ?? 0])
-                    ->all();
-            },
+            'categories' => fn (): array => ProductCategory::query()
+                ->withCount('products')
+                ->ordered()
+                ->get()
+                ->map(fn (ProductCategory $category): array => [...ReferenceData::category($category), 'usage_count' => $category->products_count])
+                ->all(),
         ]);
     }
 
@@ -68,7 +64,7 @@ final class ProductCategoryController extends Controller
         Gate::authorize('delete', $productCategory);
 
         try {
-            $deleteCategory->handle($productCategory, PreviewFixture::productCountsByCategory()[$productCategory->code] ?? 0);
+            $deleteCategory->handle($productCategory);
         } catch (ReferenceInUseException $e) {
             Inertia::flash('toast', ['type' => 'error', 'message' => $e->getMessage()]);
 

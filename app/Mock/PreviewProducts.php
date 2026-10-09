@@ -6,247 +6,137 @@ declare(strict_types=1);
 
 namespace App\Mock;
 
-use App\Domain\Costing\BomLine;
-use App\Domain\Costing\CostingCalculator;
-use App\Domain\Costing\Margin;
-use App\Domain\Costing\MarginCalculator;
-use App\Domain\Sales\SalesCalculator;
 use App\Enums\ProductStatus;
-use App\Enums\SalesPeriod;
 use App\Models\Material;
-use App\Models\ProductCategory;
+use App\Models\Product;
+use App\Models\ProductComponent;
+use App\Models\Unit;
+use App\Services\Costing\ProductCosting;
+use App\Services\Costing\ProductCostingService;
 use Brick\Math\BigDecimal;
-use Carbon\CarbonImmutable;
-use LogicException;
+use Illuminate\Database\Eloquent\Collection;
 
 /**
- * The fixture products, resolved against the real materials and costed by the production domain code, and the builders of
- * every product-shaped prop (`ProductListItem`, `Product`, `MaterialUsage`, `UnproducibleAlert`).
+ * MOCK (ADR-0006): an adapter over the REAL products, for the pages that still read their product data from the preview layer
+ * (the dashboard, the usage of a material, the product options of the sales form). S-06-BE and S-07-BE replace it with their
+ * final services (`product_metrics`, cached aggregates), which deletes this class.
  *
- * The materials come from the database by SKU in ONE query per request (`load()`), so editing a material's stock moves the
- * preview capacities immediately. A line whose SKU is missing (or soft-deleted) is skipped.
- *
- * @phpstan-import-type FixtureProduct from PreviewFixture
+ * `load()` reads every non-deleted product with its composition in a constant number of queries and costs them with
+ * ProductCostingService::costMany. Nothing here is a fixture any more except the photo swatches (S-15-BE).
  */
 final class PreviewProducts
 {
-    /** @var array<int, Material> */
-    private array $materialsById = [];
-
-    /** @var list<PreviewProduct>|null */
-    private ?array $products = null;
-
-    /** @var array<string, string>|null Product category code => name, read once per request (see `categoryName()`). */
-    private ?array $categoryNames = null;
-
-    /** @param array<string, Material> $materialsBySku */
-    private function __construct(private readonly array $materialsBySku)
-    {
-        foreach ($materialsBySku as $material) {
-            $this->materialsById[$material->id] = $material;
-        }
-    }
-
-    /** Runs the single materials query of the request. */
-    public static function load(): self
-    {
-        // The costing reads the unit (always eager-loaded), never the category: skip that query.
-        return self::from(Material::query()->without('category')->whereIn('sku', PreviewFixture::materialSkus())->get());
-    }
+    /**
+     * @param  Collection<int, Product>  $products  by name (case-insensitive), then id, each with `components.material` loaded
+     * @param  array<int, ProductCosting>  $costings  by product id
+     */
+    private function __construct(
+        private readonly Collection $products,
+        private readonly array $costings,
+        private readonly ProductCostingService $service,
+    ) {}
 
     /**
-     * Resolves the fixture against materials a page has already loaded (so a page that also lists every material, such as
-     * the product form, reads the table once). Materials the fixture does not reference are ignored.
+     * Every non-deleted product, with its composition, costed: 4 queries however many products there are.
      *
-     * @param  iterable<Material>  $materials
+     * @param  Collection<int, Unit>|null  $units  every unit by id when the caller already holds them (the materials of the lines
+     *                                             then get theirs from it instead of an eager load of their own), else read here
      */
-    public static function from(iterable $materials): self
+    public static function load(?Collection $units = null): self
     {
-        $skus = array_flip(PreviewFixture::materialSkus());
-        $bySku = [];
+        $service = app(ProductCostingService::class);
+        $products = Product::query()
+            ->with(['components.material' => fn ($materials) => $materials->without(['category', 'unit'])])
+            ->byName()
+            ->get();
 
-        foreach ($materials as $material) {
-            if (isset($skus[$material->sku])) {
-                $bySku[$material->sku] = $material;
+        $units ??= Unit::query()->get()->keyBy('id');
+
+        foreach ($products as $product) {
+            foreach ($product->components as $component) {
+                $component->material->setRelation('unit', $units->get($component->material->unit_id));
             }
         }
 
-        return new self($bySku);
+        return new self($products, $service->costMany($products), $service);
     }
 
     /**
-     * Every fixture product, costed, in id order.
+     * The products, by name then id.
      *
-     * @return list<PreviewProduct>
+     * @return Collection<int, Product>
      */
-    public function all(): array
+    public function products(): Collection
     {
-        return $this->products ??= array_map($this->resolve(...), PreviewFixture::products());
-    }
-
-    public function find(int $id): ?PreviewProduct
-    {
-        foreach ($this->all() as $product) {
-            if ($product->id() === $id) {
-                return $product;
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * Products by name (case-insensitive), then id.
-     *
-     * @param  list<PreviewProduct>  $products
-     * @return list<PreviewProduct>
-     */
-    public static function byName(array $products): array
-    {
-        usort($products, static fn (PreviewProduct $a, PreviewProduct $b): int => [strtolower($a->name()), $a->id()] <=> [strtolower($b->name()), $b->id()]);
-
-        return $products;
-    }
-
-    /**
-     * The products list filters: name or SKU (case-insensitive), category, status, and "can't produce" (`max_producible = 0`).
-     *
-     * @param  list<PreviewProduct>  $products
-     * @return list<PreviewProduct>
-     */
-    public static function filter(array $products, ?string $search, ?string $category, ?string $status, bool $cantProduce): array
-    {
-        return array_values(array_filter($products, static function (PreviewProduct $product) use ($search, $category, $status, $cantProduce): bool {
-            $matchesSearch = $search === null || $search === ''
-                || mb_stripos($product->name(), $search) !== false
-                || mb_stripos($product->fixture['sku'], $search) !== false;
-
-            return $matchesSearch
-                && ($category === null || $product->fixture['category'] === $category)
-                && ($status === null || $product->fixture['status']->value === $status)
-                && (! $cantProduce || $product->maxProducible() === 0);
-        }));
-    }
-
-    /** The id when it is an active product (the only ones that can be sold), else null. */
-    public static function sellableId(?int $id): ?int
-    {
-        $product = $id === null ? null : PreviewFixture::product($id);
-
-        return $product !== null && $product['status'] === ProductStatus::Active ? $id : null;
+        return $this->products;
     }
 
     /** Products (any status) that can't be made now: `max_producible = 0`. Products without a composition are not counted. */
     public function unproducibleCount(): int
     {
-        return count(array_filter($this->all(), static fn (PreviewProduct $product): bool => $product->maxProducible() === 0));
+        return count(array_filter($this->costings, static fn (ProductCosting $costing): bool => $costing->cantProduce()));
     }
 
     /**
      * `ProductRef`.
      *
-     * @param  FixtureProduct  $product
      * @return array{id: int, sku: string, name: string, photo_url: string|null}
      */
-    public static function ref(array $product): array
+    public static function ref(Product $product): array
     {
         return [
-            'id' => $product['id'],
-            'sku' => $product['sku'],
-            'name' => $product['name'],
-            'photo_url' => PreviewFixture::photoUrl($product['sku']),
+            'id' => $product->id,
+            'sku' => $product->sku,
+            'name' => $product->name,
+            'photo_url' => PreviewFixture::photoUrl($product->sku),
         ];
     }
 
     /**
-     * `SaleProductOption[]`: every fixture product by name.
+     * Set `photo_url` on the products, and on the material of each of their lines when the composition is loaded, as the
+     * Resources read it. Strict models throw on a missing attribute, so every place that serialises a product calls this first.
+     *
+     * @param  iterable<Product>  $products
+     */
+    public static function decorate(iterable $products): void
+    {
+        foreach ($products as $product) {
+            $product->setAttribute('photo_url', PreviewFixture::photoUrl($product->sku));
+
+            if ($product->relationLoaded('components')) {
+                PreviewMaterials::decorate($product->components->map(static fn (ProductComponent $component): Material => $component->material));
+            }
+        }
+    }
+
+    /**
+     * `SaleProductOption[]`: every non-deleted product by name.
      *
      * @return list<array<string, mixed>>
      */
     public static function saleOptions(): array
     {
-        $products = PreviewFixture::products();
-        usort($products, static fn (array $a, array $b): int => [strtolower($a['name']), $a['id']] <=> [strtolower($b['name']), $b['id']]);
-
-        return array_map(
-            static fn (array $product): array => [
+        return array_values(Product::query()
+            ->byName()
+            ->get(['id', 'sku', 'name', 'status', 'selling_price'])
+            ->map(static fn (Product $product): array => [
                 ...self::ref($product),
-                'status' => $product['status']->value,
-                'selling_price' => PreviewDecimal::scale4($product['selling_price']),
-            ],
-            $products,
-        );
+                'status' => $product->status->value,
+                'selling_price' => $product->selling_price,
+            ])
+            ->all());
     }
 
-    /**
-     * `ProductListItem[]`.
-     *
-     * @param  list<PreviewProduct>  $products
-     * @return list<array<string, mixed>>
-     */
-    public function listItems(array $products): array
+    /** The id when it is an active product (the only ones that can be sold), else null. */
+    public static function sellableId(?int $id): ?int
     {
-        $lastThirtyDays = PreviewSales::inPeriod(PreviewSales::all(), SalesPeriod::LastThirtyDays);
-        $calculator = new SalesCalculator;
+        if ($id === null) {
+            return null;
+        }
 
-        return array_map(
-            fn (PreviewProduct $product): array => [
-                'id' => $product->id(),
-                'sku' => $product->fixture['sku'],
-                'name' => $product->name(),
-                'category' => $product->fixture['category'],
-                'category_label' => $this->categoryName($product->fixture['category']),
-                'status' => $product->fixture['status']->value,
-                'status_label' => $product->fixture['status']->label(),
-                'photo_url' => PreviewFixture::photoUrl($product->fixture['sku']),
-                'components_count' => count($product->lines),
-                'unit_cost' => $product->costing->cost->unitCost,
-                'selling_price' => PreviewDecimal::scale4($product->fixture['selling_price']),
-                'margin' => self::margin($product->margin),
-                'capacity' => $this->capacity($product),
-                'units_sold_last_30_days' => $calculator->summarize(
-                    PreviewSales::lines(PreviewSales::ofProduct($lastThirtyDays, $product->id())),
-                )->unitsSold,
-            ],
-            $products,
-        );
-    }
+        $found = Product::query()->whereKey($id)->where('status', ProductStatus::Active->value)->value('id');
 
-    /**
-     * `Product`.
-     *
-     * @return array<string, mixed>
-     */
-    public function detail(PreviewProduct $product): array
-    {
-        $cost = $product->costing->cost;
-        $createdAt = CarbonImmutable::today()->subDays(PreviewFixture::CREATED_DAYS_AGO)->setTime(9, 0)->toIso8601String();
-
-        return [
-            'id' => $product->id(),
-            'sku' => $product->fixture['sku'],
-            'name' => $product->name(),
-            'category' => $product->fixture['category'],
-            'category_label' => $this->categoryName($product->fixture['category']),
-            'status' => $product->fixture['status']->value,
-            'status_label' => $product->fixture['status']->label(),
-            'description' => $product->fixture['description'],
-            'photo_url' => PreviewFixture::photoUrl($product->fixture['sku']),
-            'labor_cost' => $cost->laborCost,
-            'overhead_cost' => $cost->overheadCost,
-            'selling_price' => PreviewDecimal::scale4($product->fixture['selling_price']),
-            'cost' => [
-                'material_cost' => $cost->materialCost,
-                'labor_cost' => $cost->laborCost,
-                'overhead_cost' => $cost->overheadCost,
-                'unit_cost' => $cost->unitCost,
-            ],
-            'margin' => self::margin($product->margin),
-            'capacity' => $this->capacity($product),
-            'components' => $this->components($product),
-            'created_at' => $createdAt,
-            'updated_at' => $createdAt,
-        ];
+        return is_int($found) ? $found : null;
     }
 
     /**
@@ -256,23 +146,25 @@ final class PreviewProducts
      */
     public function usageOf(Material $material): array
     {
-        $calculator = new CostingCalculator;
         $usages = [];
 
-        foreach ($this->all() as $product) {
+        foreach ($this->products as $product) {
+            $costing = $this->costings[$product->id];
+            $materials = self::materialsOf($product);
+
+            // A material is on one line per product (DB-unique), but the requirements are summed like the domain does.
             $effective = null;
             $covered = null;
 
-            // A material is on one line per product (DB-unique), but the requirements are summed like the domain does.
-            foreach ($product->costing->cost->lines as $line) {
+            foreach ($costing->result->cost->lines as $line) {
                 if ($line->materialId === $material->id) {
                     $effective = ($effective ?? BigDecimal::zero())->plus($line->effectiveQuantity);
                     $covered = $line->unitsPossible;
                 }
             }
 
-            $capacity = $product->costing->capacity;
-            $bottleneck = $capacity->bottleneckMaterialId === null ? null : ($this->materialsById[$capacity->bottleneckMaterialId] ?? null);
+            $capacity = $costing->result->capacity;
+            $bottleneck = $capacity->bottleneckMaterialId === null ? null : ($materials[$capacity->bottleneckMaterialId] ?? null);
 
             if ($effective === null || $covered === null || $capacity->maxProducible === null || $bottleneck === null) {
                 continue;
@@ -282,24 +174,24 @@ final class PreviewProducts
             $nextLimit = null;
 
             if ($isBottleneck) {
-                $next = $calculator->capacityWithout($product->bom, $material->id);
-                $limiting = $next->bottleneckMaterialId === null ? null : ($this->materialsById[$next->bottleneckMaterialId] ?? null);
-
                 // Null when the material is the only one of the composition.
-                if ($next->maxProducible !== null && $limiting !== null) {
+                $next = $this->service->nextLimit($costing, $material->id);
+                $limiting = $next === null || $next->bottleneckMaterialId === null ? null : ($materials[$next->bottleneckMaterialId] ?? null);
+
+                if ($next !== null && $next->maxProducible !== null && $limiting !== null) {
                     $nextLimit = ['material' => PreviewMaterials::ref($limiting), 'max_producible' => $next->maxProducible];
                 }
             }
 
             $usages[] = [
                 'bottleneck' => $isBottleneck,
-                'name' => strtolower($product->name()),
-                'id' => $product->id(),
+                'name' => strtolower($product->name),
+                'id' => $product->id,
                 'row' => [
                     'product' => [
-                        ...self::ref($product->fixture),
-                        'status' => $product->fixture['status']->value,
-                        'status_label' => $product->fixture['status']->label(),
+                        ...self::ref($product),
+                        'status' => $product->status->value,
+                        'status_label' => $product->status->label(),
                     ],
                     'effective_quantity' => PreviewDecimal::required($effective->toString()),
                     'units_covered' => $covered,
@@ -325,13 +217,13 @@ final class PreviewProducts
     {
         $alerts = [];
 
-        foreach (self::byName($this->all()) as $product) {
-            $capacity = $product->costing->capacity;
-            $bottleneck = $capacity->bottleneckMaterialId === null ? null : ($this->materialsById[$capacity->bottleneckMaterialId] ?? null);
+        foreach ($this->products as $product) {
+            $capacity = $this->costings[$product->id]->result->capacity;
+            $bottleneck = $capacity->bottleneckMaterialId === null ? null : (self::materialsOf($product)[$capacity->bottleneckMaterialId] ?? null);
 
-            if ($product->maxProducible() === 0 && $bottleneck !== null) {
+            if ($capacity->maxProducible === 0 && $bottleneck !== null) {
                 $alerts[] = [
-                    'product' => self::ref($product->fixture),
+                    'product' => self::ref($product),
                     'bottleneck' => [...PreviewMaterials::ref($bottleneck), 'stock_status' => $bottleneck->stockStatus()->value],
                 ];
             }
@@ -341,122 +233,18 @@ final class PreviewProducts
     }
 
     /**
-     * @param  FixtureProduct  $fixture
+     * The materials of a product's composition by id.
+     *
+     * @return array<int, Material>
      */
-    private function resolve(array $fixture): PreviewProduct
+    private static function materialsOf(Product $product): array
     {
-        $bom = [];
-        $lines = [];
+        $materials = [];
 
-        foreach ($fixture['lines'] as $index => $line) {
-            $material = $this->materialsBySku[$line['sku']] ?? null;
-
-            if ($material === null) {
-                continue;
-            }
-
-            $bom[] = new BomLine(
-                materialId: $material->id,
-                materialName: $material->name,
-                unit: $material->unit->code,
-                quantity: $line['quantity'],
-                wastePercent: $line['waste_percent'],
-                unitCost: $material->unit_cost,
-                stockOnHand: $material->quantity_on_hand,
-            );
-
-            $lines[] = [
-                // Stable per fixture line, even when an earlier line is skipped.
-                'id' => $fixture['id'] * 100 + $index + 1,
-                // 1-based display order of the lines that are shown.
-                'position' => count($lines) + 1,
-                'material' => $material,
-                'notes' => $line['notes'],
-            ];
+        foreach ($product->components as $component) {
+            $materials[$component->material_id] = $component->material;
         }
 
-        $costing = (new CostingCalculator)->calculate($bom, $fixture['labor_cost'], $fixture['overhead_cost']);
-
-        return new PreviewProduct(
-            fixture: $fixture,
-            lines: $lines,
-            bom: $bom,
-            costing: $costing,
-            margin: (new MarginCalculator)->calculate($fixture['selling_price'], $costing->cost->unitCost),
-        );
-    }
-
-    /**
-     * `Capacity`.
-     *
-     * @return array{max_producible: int|null, bottleneck: array{id: int, sku: string, name: string, unit: string}|null}
-     */
-    private function capacity(PreviewProduct $product): array
-    {
-        $capacity = $product->costing->capacity;
-        $bottleneck = $capacity->bottleneckMaterialId === null ? null : ($this->materialsById[$capacity->bottleneckMaterialId] ?? null);
-
-        return [
-            'max_producible' => $capacity->maxProducible,
-            'bottleneck' => $bottleneck === null ? null : PreviewMaterials::ref($bottleneck),
-        ];
-    }
-
-    /**
-     * The name of a product category code, from the `product_categories` table. The whole table is read once per request,
-     * not once per product. A code with no row (impossible for the fixture: the defaults can't be deleted while used) shows as is.
-     */
-    private function categoryName(string $code): string
-    {
-        $this->categoryNames ??= ProductCategory::query()->pluck('name', 'code')->all();
-
-        return $this->categoryNames[$code] ?? $code;
-    }
-
-    /**
-     * `Margin`, or null without a selling price.
-     *
-     * @return array{amount: string, percent: string|null}|null
-     */
-    private static function margin(?Margin $margin): ?array
-    {
-        return $margin === null ? null : ['amount' => $margin->amount, 'percent' => $margin->percent];
-    }
-
-    /**
-     * `ProductComponentLine[]`.
-     *
-     * @return list<array<string, mixed>>
-     */
-    private function components(PreviewProduct $product): array
-    {
-        $components = [];
-
-        foreach ($product->lines as $index => $line) {
-            $cost = $product->costing->cost->lines[$index] ?? throw new LogicException('The costing has one line per displayed line.');
-            $material = $line['material'];
-
-            $components[] = [
-                'id' => $line['id'],
-                'position' => $line['position'],
-                'material' => [
-                    ...PreviewMaterials::ref($material),
-                    'photo_url' => PreviewFixture::photoUrl($material->sku),
-                    'stock_status' => $material->stockStatus()->value,
-                    'reorder_level' => $material->reorder_level,
-                ],
-                'quantity' => $cost->quantity,
-                'waste_percent' => $cost->wastePercent,
-                'effective_quantity' => $cost->effectiveQuantity,
-                'unit_cost' => $cost->unitCost,
-                'line_cost' => $cost->lineCost,
-                'stock_on_hand' => $cost->stockOnHand,
-                'units_possible' => $cost->unitsPossible,
-                'is_bottleneck' => $cost->isBottleneck,
-                'notes' => $line['notes'],
-            ];
-        }
-
-        return $components;
+        return $materials;
     }
 }

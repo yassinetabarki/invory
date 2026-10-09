@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Material;
+use App\Models\Product;
 use Inertia\Testing\AssertableInertia as Assert;
 use PHPUnit\Framework\ExpectationFailedException;
 
@@ -39,8 +40,8 @@ dataset('pages', [
     'materials edit' => [fn (Material $material): string => route('materials.edit', $material)],
     'products index' => [fn (Material $material): string => route('products.index')],
     'products create' => [fn (Material $material): string => route('products.create')],
-    'products show' => [fn (Material $material): string => route('products.show', 1)],
-    'products edit' => [fn (Material $material): string => route('products.edit', 1)],
+    'products show' => [fn (Material $material): string => route('products.show', pid(1))],
+    'products edit' => [fn (Material $material): string => route('products.edit', pid(1))],
     'sales index' => [fn (Material $material): string => route('sales.index')],
     'settings units' => [fn (Material $material): string => route('settings.units.index')],
     'settings material categories' => [fn (Material $material): string => route('settings.material-categories.index')],
@@ -67,6 +68,54 @@ it('stays within the query budget and runs the same queries however many materia
     expect(count($few))->toBeLessThanOrEqual(QUERY_BUDGET, implode(PHP_EOL, $few))
         ->and(count($many))->toBe(count($few), implode(PHP_EOL, $many));
 })->with('pages');
+
+/**
+ * Every page that reads products (and the pages that read their compositions), as a function of a product and a material.
+ *
+ * @return array<string, array{Closure(Product, Material): string}>
+ */
+dataset('productPages', [
+    'dashboard' => [fn (Product $product, Material $material): string => route('dashboard')],
+    'products index' => [fn (Product $product, Material $material): string => route('products.index')],
+    'products index, cant produce' => [fn (Product $product, Material $material): string => route('products.index', ['cant_produce' => 1])],
+    'products index, searched' => [fn (Product $product, Material $material): string => route('products.index', ['search' => 'PRD', 'category' => 'apparel', 'status' => 'active'])],
+    'products create' => [fn (Product $product, Material $material): string => route('products.create')],
+    'products show' => [fn (Product $product, Material $material): string => route('products.show', $product)],
+    'products edit' => [fn (Product $product, Material $material): string => route('products.edit', $product)],
+    'sales index' => [fn (Product $product, Material $material): string => route('sales.index')],
+    'materials index' => [fn (Product $product, Material $material): string => route('materials.index')],
+    'materials show' => [fn (Product $product, Material $material): string => route('materials.show', $material)],
+    'materials edit' => [fn (Product $product, Material $material): string => route('materials.edit', $material)],
+    'settings product categories' => [fn (Product $product, Material $material): string => route('settings.product-categories.index')],
+]);
+
+it('stays within the query budget and runs the same queries with 3 and with 30 products', function (Closure $url) {
+    // Start from 3 products (the demo ones go), each with a composition of 3 of the demo materials.
+    Product::query()->forceDelete();
+
+    $lines = fn (): array => array_map(
+        fn (string $sku): array => ['material' => previewMaterial($sku), 'quantity' => '1.5000', 'waste_percent' => '5.00'],
+        ['MAT-DEN-012', 'MAT-BTN-017', 'MAT-THR-PES'],
+    );
+
+    Product::factory()->count(3)->withComponents($lines())->create(['category' => 'apparel', 'status' => 'active']);
+
+    $product = Product::query()->orderBy('id')->firstOrFail();
+    $uri = $url($product, $this->material);
+    actingAs($this->user);
+
+    // Warm up: the first request of a process may run one-off queries (schema introspection, the framework's own caches).
+    $this->get($uri)->assertOk();
+
+    $few = queryLog(fn () => $this->get($uri)->assertOk());
+
+    Product::factory()->count(27)->withComponents($lines())->create(['category' => 'apparel', 'status' => 'active']);
+
+    $many = queryLog(fn () => $this->get($uri)->assertOk());
+
+    expect(count($few))->toBeLessThanOrEqual(QUERY_BUDGET, implode(PHP_EOL, $few))
+        ->and(count($many))->toBe(count($few), implode(PHP_EOL, $many));
+})->with('productPages');
 
 it('stays within the query budget when the deferred recent history of the materials list loads', function () {
     actingAs($this->user);

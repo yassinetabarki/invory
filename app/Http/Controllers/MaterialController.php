@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Actions\Materials\CreateMaterial;
 use App\Actions\Materials\DeleteMaterial;
 use App\Actions\Materials\UpdateMaterial;
+use App\Exceptions\MaterialInUseException;
 use App\Http\Requests\Materials\IndexMaterialRequest;
 use App\Http\Requests\Materials\StoreMaterialRequest;
 use App\Http\Requests\Materials\UpdateMaterialRequest;
@@ -15,8 +16,10 @@ use App\Mock\PreviewHistory;
 use App\Mock\PreviewMaterials;
 use App\Mock\PreviewProducts;
 use App\Models\Material;
+use App\Models\User;
 use App\Services\Inventory\InventorySummary;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Gate;
@@ -24,8 +27,8 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * Materials are real (CRUD on the database). The parts that depend on tables that do not exist yet (used-in counts,
- * photos, usage, stock history) come from App\Mock (ADR-0006, removed by S-17).
+ * Materials are real (CRUD on the database, used-in counts from the real compositions). The parts that depend on tables that
+ * do not exist yet (photos, usage, stock history) come from App\Mock (ADR-0006, removed by S-17).
  */
 final class MaterialController extends Controller
 {
@@ -42,6 +45,7 @@ final class MaterialController extends Controller
         $materials = function () use (&$page, $request, $filters): LengthAwarePaginator {
             if ($page === null) {
                 $page = Material::query()
+                    ->withUsedInCount()
                     ->search($filters['search'])
                     ->inCategory($request->category())
                     ->when($filters['low_stock'], fn ($query) => $query->needsRestock())
@@ -49,7 +53,7 @@ final class MaterialController extends Controller
                     ->paginate(config('invory.per_page'))
                     ->withQueryString();
 
-                // MOCK (ADR-0006): used_in_count and photo_url have no source yet.
+                // MOCK (ADR-0006): photo_url has no source yet.
                 PreviewMaterials::decorate($page);
             }
 
@@ -84,7 +88,7 @@ final class MaterialController extends Controller
     public function store(StoreMaterialRequest $request, CreateMaterial $createMaterial): RedirectResponse
     {
         // Photos are a preview (ADR-0006): validated, but neither stored nor part of the material.
-        $material = $createMaterial->handle($request->safe()->except(['photo', 'remove_photo']));
+        $material = $createMaterial->handle($request->safe()->except(['photo', 'remove_photo']), $this->actor($request));
 
         Inertia::flash('toast', ['type' => 'success', 'message' => $this->toastMessage($request, __('Material created.'))]);
 
@@ -95,7 +99,7 @@ final class MaterialController extends Controller
     {
         Gate::authorize('view', $material);
 
-        // MOCK (ADR-0006): the usage and the history come from the fixture, costed by the production domain code.
+        // MOCK (ADR-0006): the photo, and the history, come from the fixture. The usage is real, costed by ProductCostingService.
         PreviewMaterials::decorate([$material]);
 
         return Inertia::render('materials/show', [
@@ -118,7 +122,7 @@ final class MaterialController extends Controller
 
     public function update(UpdateMaterialRequest $request, Material $material, UpdateMaterial $updateMaterial): RedirectResponse
     {
-        $updateMaterial->handle($material, $request->safe()->except(['photo', 'remove_photo']));
+        $updateMaterial->handle($material, $request->safe()->except(['photo', 'remove_photo']), $this->actor($request));
 
         Inertia::flash('toast', ['type' => 'success', 'message' => $this->toastMessage($request, __('Material updated.'))]);
 
@@ -129,11 +133,26 @@ final class MaterialController extends Controller
     {
         Gate::authorize('delete', $material);
 
-        $deleteMaterial->handle($material);
+        try {
+            $deleteMaterial->handle($material);
+        } catch (MaterialInUseException $e) {
+            // The message names the products that still use the material. Nothing was deleted.
+            Inertia::flash('toast', ['type' => 'error', 'message' => $e->getMessage()]);
+
+            return back();
+        }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Material deleted.')]);
 
         return to_route('materials.index');
+    }
+
+    /** The signed-in user, for the audit columns. The `auth` middleware and the request authorization guarantee one. */
+    private function actor(Request $request): User
+    {
+        $user = $request->user();
+
+        return $user instanceof User ? $user : abort(401);
     }
 
     /**

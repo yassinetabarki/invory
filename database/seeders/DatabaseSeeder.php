@@ -22,7 +22,7 @@ class DatabaseSeeder extends Seeder
             'email' => 'test@example.com',
         ]);
 
-        // The mockup's 12 materials: stock for the UI-first preview to cost its fixture products against.
+        // The mockup's 12 materials and the 7 demo products on them (the sales and stock history of the preview reference them by SKU).
         $this->call(DemoCatalogSeeder::class);
     }
 }

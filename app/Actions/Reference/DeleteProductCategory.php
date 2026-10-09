@@ -13,17 +13,17 @@ final readonly class DeleteProductCategory
     public function __construct(private ReferenceVersion $version) {}
 
     /**
-     * Only an unused category can be deleted; otherwise archive it.
-     *
-     * MOCK (ADR-0006): products have no table yet, so the caller passes how many products use the category (the preview
-     * fixture). S-04 replaces the parameter with a count on `products.category_id` (soft-deleted products included).
+     * Only an unused category can be deleted; otherwise archive it. Soft-deleted products count as users (the foreign key would
+     * refuse the delete, and restoring them must find their category).
      *
      * @throws ReferenceInUseException
      */
-    public function handle(ProductCategory $category, int $productsUsingIt = 0): void
+    public function handle(ProductCategory $category): void
     {
-        if ($productsUsingIt > 0) {
-            throw ReferenceInUseException::inUse($category->name, $productsUsingIt, 'product');
+        $count = $category->products()->withTrashed()->count();
+
+        if ($count > 0) {
+            throw ReferenceInUseException::inUse($category->name, $count, 'product');
         }
 
         $category->delete();

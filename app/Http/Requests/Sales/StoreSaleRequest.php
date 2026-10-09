@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests\Sales;
 
 use App\Enums\ProductStatus;
-use App\Mock\PreviewFixture;
+use App\Models\Product;
 use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -43,17 +43,17 @@ class StoreSaleRequest extends FormRequest
     }
 
     /**
-     * MOCK: products have no table yet, so "exists and is active" reads the fixture products (S-14-BE replaces this with
-     * `Rule::exists('products', 'id')->withoutTrashed()->where('status', 'active')`).
+     * The product exists (not soft-deleted) and is active. The product of the sale being edited stays valid even once it is
+     * no longer active.
      */
     private static function sellableProduct(?int $currentProductId): Closure
     {
         return static function (string $attribute, mixed $value, Closure $fail) use ($currentProductId): void {
-            $product = PreviewFixture::product((int) $value);
+            $product = Product::query()->whereKey($value)->first(['id', 'status']);
 
             if ($product === null) {
                 $fail('validation.exists')->translate();
-            } elseif ($product['status'] !== ProductStatus::Active && $product['id'] !== $currentProductId) {
+            } elseif ($product->status !== ProductStatus::Active && $product->id !== $currentProductId) {
                 $fail(__('Only active products can be sold.'));
             }
         };

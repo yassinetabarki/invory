@@ -12,21 +12,21 @@ use Illuminate\Database\Eloquent\Collection;
 /**
  * Shapes real Material rows for the preview contract.
  *
- * `used_in_count` and `photo_url` have no column yet. The controllers set them on the model as attributes, which is exactly
- * what the real `withCount()` and a photo accessor will provide later, so MaterialResource never depends on App\Mock.
+ * `photo_url` has no column yet (S-15-BE). The controllers set it on the model as an attribute, which is exactly what a photo
+ * accessor will provide later, so the Resources never depend on App\Mock. `used_in_count` is real since S-04b
+ * (`Material::withUsedInCount()`).
  */
 final class PreviewMaterials
 {
     /**
-     * Set `used_in_count` and `photo_url` on every material that MaterialResource is about to serialise.
-     * Strict models throw on a missing attribute, so every place that serialises a MaterialResource calls this first.
+     * Set `photo_url` on every material that a Resource is about to serialise (MaterialResource, and the lines of a product).
+     * Strict models throw on a missing attribute, so every place that serialises one calls this first.
      *
      * @param  iterable<Material>  $materials
      */
     public static function decorate(iterable $materials): void
     {
         foreach ($materials as $material) {
-            $material->setAttribute('used_in_count', PreviewFixture::usedInCount($material->sku));
             $material->setAttribute('photo_url', PreviewFixture::photoUrl($material->sku));
         }
     }

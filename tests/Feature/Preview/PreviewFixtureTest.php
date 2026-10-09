@@ -2,19 +2,25 @@
 
 use App\Mock\PreviewFixture;
 use App\Models\Material;
+use App\Models\Product;
+use App\Models\ProductCategory;
+use App\Models\ProductComponent;
 use App\Models\User;
+use App\Services\Costing\ProductCostingService;
 use App\Services\Inventory\InventorySummary;
 use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\DemoCatalogSeeder;
+use Database\Seeders\DemoProductsSeeder;
 use Illuminate\Support\Facades\Gate;
 
 /*
 |--------------------------------------------------------------------------
-| The seeded materials and the static swatches (ADR-0006, S-13c)
+| The seeded materials and products, the fixture sales and the static swatches (ADR-0006, S-13c, S-04b)
 |--------------------------------------------------------------------------
 |
-| DemoCatalogSeeder seeds the mockup's 12 materials for real, idempotently by SKU. The expected rows below are the plan's
-| "Materials" table, typed out again so that a change to the seeder is caught here.
+| DemoCatalogSeeder seeds the mockup's 12 materials for real, idempotently by SKU, then DemoProductsSeeder the 7 demo products
+| (only the ones whose SKU is missing). The expected rows below are the plan's "Materials" and "Products" tables, typed out again
+| so that a change to a seeder is caught here.
 */
 
 /** [sku, name, category, unit, unit cost, stock, reorder at]. */
@@ -107,7 +113,144 @@ describe('DemoCatalogSeeder', function () {
         $this->seed(DatabaseSeeder::class);
 
         expect(Material::query()->count())->toBe(12)
+            ->and(Product::query()->count())->toBe(7)
             ->and(User::query()->where('email', 'test@example.com')->exists())->toBeTrue();
+    });
+});
+
+/** [sku, name, category, status, labor, overhead, selling price, [material SKUs of the lines, in order]]. */
+dataset('plannedProducts', [
+    'Denim Jacket' => ['PRD-JKT-001', 'Denim Jacket', 'apparel', 'active', '12.0000', '3.5000', '89.0000', ['MAT-DEN-012', 'MAT-BTN-017', 'MAT-THR-PES', 'MAT-LBL-WOV']],
+    'Classic White T-shirt' => ['PRD-TSH-002', 'Classic White T-shirt', 'apparel', 'active', '3.2000', '0.7500', '24.0000', ['MAT-JRS-180', 'MAT-THR-PES', 'MAT-LBL-WOV']],
+    'Canvas Low Sneaker' => ['PRD-SNK-003', 'Canvas Low Sneaker', 'footwear', 'active', '9.3000', '2.0000', '69.0000', ['MAT-CAN-010', 'MAT-SOL-042', 'MAT-LAC-120', 'MAT-THR-PES', 'MAT-LBL-WOV']],
+    'Leather Tote' => ['PRD-TOT-004', 'Leather Tote', 'bag', 'active', '22.5000', '4.7700', '249.0000', ['MAT-LTH-NAP', 'MAT-LIN-VIS', 'MAT-ZIP-018', 'MAT-RVT-009', 'MAT-THR-PES', 'MAT-LBL-WOV']],
+    'Denim Jeans 5-pocket' => ['PRD-JNS-005', 'Denim Jeans 5-pocket', 'apparel', 'active', '11.0000', '2.9700', '79.0000', ['MAT-DEN-012', 'MAT-BTN-017', 'MAT-RVT-009', 'MAT-ZIP-018', 'MAT-THR-PES', 'MAT-LBL-WOV']],
+    'Canvas Chore Jacket' => ['PRD-JKT-006', 'Canvas Chore Jacket', 'apparel', 'draft', '14.5000', '3.0400', null, ['MAT-CAN-010', 'MAT-BTN-017', 'MAT-THR-PES', 'MAT-LBL-WOV']],
+    'Leather Belt' => ['PRD-BLT-007', 'Leather Belt', 'accessory', 'active', '6.0000', '1.3400', '45.0000', ['MAT-LTH-NAP', 'MAT-RVT-009']],
+]);
+
+describe('DemoProductsSeeder', function () {
+    it('seeds the plan\'s products with their compositions', function (string $sku, string $name, string $category, string $status, string $labor, string $overhead, ?string $price, array $materials) {
+        $this->seed(DemoCatalogSeeder::class);
+
+        $product = previewProduct($sku);
+        $lines = ProductComponent::query()->where('product_id', $product->id)->orderBy('position')->get();
+
+        expect($product->name)->toBe($name)
+            ->and($product->category->code)->toBe($category)
+            ->and($product->status->value)->toBe($status)
+            ->and($product->labor_cost)->toBe($labor)
+            ->and($product->overhead_cost)->toBe($overhead)
+            ->and($product->selling_price)->toBe($price)
+            ->and($product->description)->not->toBeEmpty()
+            ->and($product->created_by)->toBeNull()
+            ->and($lines->map(fn (ProductComponent $line): string => Material::query()->without('category', 'unit')->findOrFail($line->material_id)->sku)->all())->toBe($materials)
+            ->and($lines->pluck('position')->all())->toBe(range(0, count($materials) - 1));
+    })->with('plannedProducts');
+
+    it('seeds the lines of the Denim Jacket with the worked example of the costing skill', function () {
+        $this->seed(DemoCatalogSeeder::class);
+
+        $jacket = Product::query()->with('components.material')->where('sku', 'PRD-JKT-001')->firstOrFail();
+        $costing = app(ProductCostingService::class)->cost($jacket);
+
+        expect($jacket->components->pluck('quantity')->all())->toBe(['1.8000', '8.0000', '120.0000', '1.0000'])
+            ->and($jacket->components->pluck('waste_percent')->all())->toBe(['10.00', '0.00', '5.00', '0.00'])
+            ->and($costing->result->cost->unitCost)->toBe('35.7540')
+            ->and($costing->result->capacity->maxProducible)->toBe(112)
+            ->and($costing->result->capacity->bottleneckMaterialName)->toBe('Metal shank button 17mm')
+            ->and($costing->margin?->percent)->toBe('59.83');
+    });
+
+    it('is idempotent: running it twice creates nothing new', function () {
+        $this->seed(DemoCatalogSeeder::class);
+        $products = Product::query()->orderBy('id')->pluck('id', 'sku')->all();
+        $lines = ProductComponent::query()->orderBy('id')->pluck('id')->all();
+
+        $this->seed(DemoProductsSeeder::class);
+        $this->seed(DemoCatalogSeeder::class);
+
+        expect(Product::withTrashed()->count())->toBe(7)
+            ->and(Product::query()->orderBy('id')->pluck('id', 'sku')->all())->toBe($products)
+            ->and(ProductComponent::query()->orderBy('id')->pluck('id')->all())->toBe($lines);
+    });
+
+    it('never overwrites a product the user edited, nor its composition', function () {
+        $this->seed(DemoCatalogSeeder::class);
+        $jacket = previewProduct('PRD-JKT-001');
+        $jacket->update(['name' => 'My jacket', 'selling_price' => '120', 'labor_cost' => '20']);
+        ProductComponent::query()->where('product_id', $jacket->id)->where('material_id', previewMaterial('MAT-LBL-WOV')->id)->delete();
+        ProductComponent::query()->where('product_id', $jacket->id)->where('material_id', previewMaterial('MAT-BTN-017')->id)->update(['quantity' => '3']);
+
+        $this->seed(DemoProductsSeeder::class);
+
+        $jacket->refresh();
+        $lines = ProductComponent::query()->where('product_id', $jacket->id)->orderBy('position')->pluck('quantity')->all();
+
+        expect($jacket->name)->toBe('My jacket')
+            ->and($jacket->selling_price)->toBe('120.0000')
+            ->and($jacket->labor_cost)->toBe('20.0000')
+            ->and($lines)->toBe(['1.8000', '3.0000', '120.0000']);
+    });
+
+    it('leaves the other products of the user alone', function () {
+        $this->seed(DemoCatalogSeeder::class);
+        $mine = Product::factory()->create(['sku' => 'MINE-1', 'name' => 'Mine']);
+
+        $this->seed(DemoProductsSeeder::class);
+
+        expect(Product::query()->count())->toBe(8)
+            ->and($mine->fresh()->name)->toBe('Mine');
+    });
+
+    it('creates only the demo products whose SKU is missing', function () {
+        $this->seed(DemoCatalogSeeder::class);
+        $kept = previewProduct('PRD-TSH-002')->id;
+        previewProduct('PRD-BLT-007')->delete();
+
+        $this->seed(DemoProductsSeeder::class);
+
+        // The deleted Belt has no non-deleted product with its SKU, so it is created again; the others are not.
+        expect(Product::query()->count())->toBe(7)
+            ->and(Product::withTrashed()->count())->toBe(8)
+            ->and(previewProduct('PRD-TSH-002')->id)->toBe($kept)
+            ->and(ProductComponent::query()->where('product_id', previewProduct('PRD-BLT-007')->id)->count())->toBe(2);
+    });
+
+    it('skips a line whose material is missing and still creates the product', function () {
+        $this->seed(DemoCatalogSeeder::class);
+        Product::query()->forceDelete();
+        previewMaterial('MAT-LAC-120')->delete();
+
+        $this->seed(DemoProductsSeeder::class);
+
+        $sneaker = previewProduct('PRD-SNK-003');
+        $skus = ProductComponent::query()->where('product_id', $sneaker->id)->orderBy('position')->get()
+            ->map(fn (ProductComponent $line): string => Material::query()->without('category', 'unit')->findOrFail($line->material_id)->sku)->all();
+
+        expect(Product::query()->count())->toBe(7)
+            // The laces are gone; the lines that exist keep a gap-free position.
+            ->and($skus)->toBe(['MAT-CAN-010', 'MAT-SOL-042', 'MAT-THR-PES', 'MAT-LBL-WOV'])
+            ->and(ProductComponent::query()->where('product_id', $sneaker->id)->orderBy('position')->pluck('position')->all())->toBe([0, 1, 2, 3]);
+    });
+
+    it('creates no composition when none of the materials exists', function () {
+        // Only the products seeder, on a database without the demo materials.
+        $this->seed(DemoProductsSeeder::class);
+
+        expect(Product::query()->count())->toBe(7)
+            ->and(ProductComponent::query()->count())->toBe(0);
+    });
+
+    it('skips a product whose default category was deleted', function () {
+        $this->seed(DemoCatalogSeeder::class);
+        Product::query()->forceDelete();
+        ProductCategory::query()->where('code', 'bag')->delete();
+
+        $this->seed(DemoProductsSeeder::class);
+
+        expect(Product::query()->count())->toBe(6)
+            ->and(Product::query()->where('sku', 'PRD-TOT-004')->exists())->toBeFalse();
     });
 });
 
@@ -140,25 +283,26 @@ describe('static swatches', function () {
 });
 
 describe('fixture inputs', function () {
-    it('has the 7 products and 60 sales of the plan, ids from 1', function () {
-        expect(array_column(PreviewFixture::products(), 'id'))->toBe([1, 2, 3, 4, 5, 6, 7])
-            ->and(array_column(PreviewFixture::sales(), 'id'))->toBe(range(1, 60))
-            ->and(PreviewFixture::product(8))->toBeNull()
-            ->and(PreviewFixture::sale(61))->toBeNull();
+    it('has the 60 sales of the plan, ids from 1, and the 7 demo products', function () {
+        expect(array_column(PreviewFixture::sales(), 'id'))->toBe(range(1, 60))
+            ->and(PreviewFixture::sale(61))->toBeNull()
+            ->and(array_column(DemoProductsSeeder::PRODUCTS, 'sku'))->toBe(array_values(DEMO_PRODUCT_SKUS));
     });
 
-    it('only sells products that have a selling price', function () {
-        $priced = array_filter(PreviewFixture::products(), fn (array $product): bool => $product['selling_price'] !== null);
+    it('only sells demo products that have a selling price, at that price', function () {
+        $prices = array_column(DemoProductsSeeder::PRODUCTS, 'selling_price', 'sku');
 
         foreach (PreviewFixture::sales() as $sale) {
-            expect(array_column($priced, 'id'))->toContain($sale['product_id']);
+            expect($prices[$sale['product_sku']] ?? null)->not->toBeNull()
+                ->and($sale['unit_price'])->toBe($prices[$sale['product_sku']]);
         }
     });
 
     it('references only the seeded materials', function () {
         $seeded = array_column(DemoCatalogSeeder::MATERIALS, 'sku');
+        $referenced = array_unique(array_merge(...array_map(fn (array $product): array => array_column($product['lines'], 'sku'), DemoProductsSeeder::PRODUCTS)));
 
-        expect(PreviewFixture::materialSkus())->each->toBeIn($seeded)
+        expect($referenced)->each->toBeIn($seeded)
             ->and(array_keys(PreviewFixture::history()))->each->toBeIn($seeded);
     });
 });

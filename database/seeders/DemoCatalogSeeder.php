@@ -10,12 +10,12 @@ use App\Models\Unit;
 use Illuminate\Database\Seeder;
 
 /**
- * The 12 materials of the approved mockup (docs/plans/phase-2-ui-first-preview.md, "Materials"), so the UI-first preview
- * has real stock to cost its fixture products against. Together with that fixture they give the inventory value
- * "10544.3000", 4 materials to restock (3 low, 1 out of stock) and the worked example of the costing domain skill.
+ * The 12 materials of the approved mockup (docs/plans/phase-2-ui-first-preview.md, "Materials"), then the demo products on
+ * them ({@see DemoProductsSeeder}). Together they give the inventory value "10544.3000", 4 materials to restock (3 low, 1 out of
+ * stock) and the worked example of the costing domain skill.
  *
- * Idempotent: rows are keyed by SKU, so running it again resets these 12 materials to their values here and creates
- * nothing twice. Other materials are left alone.
+ * Idempotent: materials are keyed by SKU, so running it again resets these 12 materials to their values here and creates
+ * nothing twice. Other materials are left alone. The products are only created when their SKU is missing (never overwritten).
  */
 class DemoCatalogSeeder extends Seeder
 {
@@ -222,5 +222,8 @@ class DemoCatalogSeeder extends Seeder
                 ],
             );
         }
+
+        // After the materials: the demo compositions reference them by SKU.
+        $this->call(DemoProductsSeeder::class);
     }
 }

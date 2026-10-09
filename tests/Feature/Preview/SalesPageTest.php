@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Product;
 use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -7,12 +8,13 @@ use function Pest\Laravel\actingAs;
 
 /*
 |--------------------------------------------------------------------------
-| Sales log on the preview fixture (ADR-0006, S-13c)
+| Sales log on the preview fixture (ADR-0006, S-13c, S-04b)
 |--------------------------------------------------------------------------
 |
-| Time frozen at 2026-10-08. The 60 fixture sales are dated relative to today, the unit price of a sale is the selling price
-| of its product, and every total comes from SalesCalculator. The expected values are the plan's "Expected" tables plus
-| sums worked out by hand from the fixture rows (noted next to each).
+| Time frozen at 2026-10-08. The 60 fixture sales are dated relative to today and name their product by SKU (they are resolved
+| against the real demo products: a sale whose product is missing is skipped), the unit price of a sale is the price its
+| product was sold at, and every total comes from SalesCalculator. The expected values are the plan's "Expected" tables plus
+| sums worked out by hand from the fixture rows (noted next to each). Product ids are `pid(number)` of the demo products.
 */
 
 beforeEach(fn () => $this->user = preparePreview($this));
@@ -91,7 +93,7 @@ describe('list', function () {
 
     it('keeps the filters in the pagination links but not the "record a sale" opener', function () {
         // The whole year (60 sales, 3 pages), searched for "o" (in every note and every product name).
-        $response = actingAs($this->user)->get(salesUrl(['period' => 'this_year', 'search' => 'o', 'record' => '1', 'record_product_id' => '1']));
+        $response = actingAs($this->user)->get(salesUrl(['period' => 'this_year', 'search' => 'o', 'record' => '1', 'record_product_id' => (string) pid(1)]));
 
         $next = pageProp($response, 'sales.links.next');
 
@@ -105,7 +107,7 @@ describe('list', function () {
 
         expect(pageProp($response, 'sales.data.0'))->toBe([
             'id' => 60,
-            'product' => ['id' => 5, 'sku' => 'PRD-JNS-005', 'name' => 'Denim Jeans 5-pocket', 'photo_url' => asset('mock/photos/prd-jns-005.svg')],
+            'product' => ['id' => pid(5), 'sku' => 'PRD-JNS-005', 'name' => 'Denim Jeans 5-pocket', 'photo_url' => asset('mock/photos/prd-jns-005.svg')],
             'quantity' => 6,
             'unit_price' => '79.0000',
             'total' => '474.0000',
@@ -191,12 +193,12 @@ describe('filters', function () {
         // "denim" is in the names of the Jacket (1) and the Jeans (5), and in no note.
         $response = actingAs($this->user)->get(salesUrl(['search' => 'denim']));
 
-        expect(array_unique(pageProp($response, 'sales.data.*.product.id')))->toEqualCanonicalizing([1, 5])
+        expect(array_unique(pageProp($response, 'sales.data.*.product.id')))->toEqualCanonicalizing([pid(1), pid(5)])
             ->and(pageProp($response, 'totals.units_sold'))->toBe(38 + 64);
     });
 
     it('filters by product', function () {
-        $response = actingAs($this->user)->get(salesUrl(['product_id' => 1]));
+        $response = actingAs($this->user)->get(salesUrl(['product_id' => pid(1)]));
 
         // The Denim Jacket sold 38 units in 8 sales over the last 30 days (plan, top 5).
         expect(pageProp($response, 'sales.data.*.id'))->toBe([57, 52, 43, 40, 38, 30, 24, 16])
@@ -206,12 +208,12 @@ describe('filters', function () {
                 'sales_count' => 8,
                 'average_sale' => '422.7500',
             ])
-            ->and(pageProp($response, 'filters.product_id'))->toBe(1);
+            ->and(pageProp($response, 'filters.product_id'))->toBe(pid(1));
     });
 
     it('combines the product, the period and the search', function () {
-        $year = actingAs($this->user)->get(salesUrl(['product_id' => 1, 'period' => 'this_year']));
-        $combined = actingAs($this->user)->get(salesUrl(['product_id' => 1, 'period' => 'this_year', 'search' => 'showroom']));
+        $year = actingAs($this->user)->get(salesUrl(['product_id' => pid(1), 'period' => 'this_year']));
+        $combined = actingAs($this->user)->get(salesUrl(['product_id' => pid(1), 'period' => 'this_year', 'search' => 'showroom']));
 
         expect(pageProp($year, 'sales.data.*.id'))->toBe([57, 52, 43, 40, 38, 30, 24, 16, 9, 3])
             ->and(pageProp($year, 'totals.units_sold'))->toBe(51)
@@ -219,10 +221,15 @@ describe('filters', function () {
             // The Jacket's "Showroom" sales: 3 (6 units, 121 days ago), 24 (6) and 52 (5).
             ->and(pageProp($combined, 'sales.data.*.id'))->toBe([52, 24, 3])
             ->and(pageProp($combined, 'totals.units_sold'))->toBe(17)
-            ->and(pageProp($combined, 'filters'))->toBe(['search' => 'showroom', 'product_id' => 1, 'period' => 'this_year']);
+            ->and(pageProp($combined, 'filters'))->toBe(['search' => 'showroom', 'product_id' => pid(1), 'period' => 'this_year']);
     });
 
     it('answers an empty list and zero totals when nothing matches', function (array $query) {
+        // A number of the plan (1 to 7) is the demo product's real id.
+        if (isset($query['product_id']) && $query['product_id'] <= 7) {
+            $query['product_id'] = pid($query['product_id']);
+        }
+
         $response = actingAs($this->user)->get(salesUrl($query));
 
         expect(pageProp($response, 'sales.data'))->toBe([])
@@ -232,7 +239,7 @@ describe('filters', function () {
     })->with([
         'no match' => [['search' => 'zzz']],
         'a product without sales' => [['product_id' => 6]],
-        'an unknown product' => [['product_id' => 99]],
+        'an unknown product' => [['product_id' => NO_SUCH_ID]],
         'the draft product in the last 7 days' => [['product_id' => 6, 'period' => 'last_7_days']],
     ]);
 
@@ -268,20 +275,33 @@ describe('record a sale', function () {
         'only a product' => [['record_product_id' => '1']],
     ]);
 
-    it('opens the form, with the product when it is an active one', function (array $query, ?int $productId) {
+    it('opens the form, with the product when it is an active one', function (array $query, ?int $number) {
+        // `record_product_id` 1 to 7 is the number of a demo product; the expected id is that of the active ones.
+        if (isset($query['record_product_id']) && (int) $query['record_product_id'] <= 7) {
+            $query['record_product_id'] = (string) pid((int) $query['record_product_id']);
+        }
+
         actingAs($this->user)->get(salesUrl($query))
-            ->assertInertia(fn (Assert $page) => $page->where('record', ['product_id' => $productId]));
+            ->assertInertia(fn (Assert $page) => $page->where('record', ['product_id' => $number === null ? null : pid($number)]));
     })->with([
         'no product' => [['record' => '1'], null],
         'an active product' => [['record' => '1', 'record_product_id' => '1'], 1],
         'the last product' => [['record' => '1', 'record_product_id' => '7'], 7],
         'a draft product' => [['record' => '1', 'record_product_id' => '6'], null],
-        'an unknown product' => [['record' => '1', 'record_product_id' => '99'], null],
+        'an unknown product' => [['record' => '1', 'record_product_id' => (string) NO_SUCH_ID], null],
         'another active product' => [['record' => '1', 'record_product_id' => '3'], 3],
     ]);
 
+    it('does not pre-select a product that was deleted', function () {
+        $jacket = pid(1);
+        Product::query()->findOrFail($jacket)->delete();
+
+        actingAs($this->user)->get(salesUrl(['record' => '1', 'record_product_id' => (string) $jacket]))
+            ->assertInertia(fn (Assert $page) => $page->where('record', ['product_id' => null]));
+    });
+
     it('does not narrow the list or the totals', function () {
-        actingAs($this->user)->get(salesUrl(['record' => '1', 'record_product_id' => '1']))
+        actingAs($this->user)->get(salesUrl(['record' => '1', 'record_product_id' => (string) pid(1)]))
             ->assertInertia(fn (Assert $page) => $page
                 ->where('sales.meta.total', 48)
                 ->where('totals.sales_count', 48)
@@ -299,7 +319,7 @@ describe('product options', function () {
         ])->and(pageProp($response, 'products.*.status'))->toBe(['draft', 'active', 'active', 'active', 'active', 'active', 'active'])
             ->and(pageProp($response, 'products.*.selling_price'))->toBe([null, '69.0000', '24.0000', '89.0000', '79.0000', '45.0000', '249.0000'])
             ->and(pageProp($response, 'products.3'))->toBe([
-                'id' => 1,
+                'id' => pid(1),
                 'sku' => 'PRD-JKT-001',
                 'name' => 'Denim Jacket',
                 'photo_url' => asset('mock/photos/prd-jkt-001.svg'),
@@ -310,10 +330,31 @@ describe('product options', function () {
     });
 });
 
-it('answers within a bounded number of queries', function () {
-    DB::enableQueryLog();
-    actingAs($this->user)->get(salesUrl(['period' => 'this_year', 'page' => 2]))->assertOk();
+it('answers within a bounded number of queries, whatever the number of products', function () {
+    $queries = function (): int {
+        DB::enableQueryLog();
+        DB::flushQueryLog();
+        actingAs($this->user)->get(salesUrl(['period' => 'this_year', 'page' => 2]))->assertOk();
 
-    // Only the reference lists of a full load: the sales and the products come from the fixture.
-    expect(count(DB::getQueryLog()))->toBeLessThanOrEqual(REFERENCE_QUERIES);
+        return count(DB::getQueryLog());
+    };
+
+    $baseline = $queries();
+
+    Product::factory()->count(30)->create();
+
+    // The reference lists of a full load, the products the sales name (one query by SKU) and the product options of the form.
+    expect($baseline)->toBeLessThanOrEqual(REFERENCE_QUERIES + 2)
+        ->and($queries())->toBe($baseline);
+});
+
+it('skips the sales of a product that was deleted', function () {
+    // The Tote has 8 sales: 5, 12, 17, 26, 34, 42, 49 and 58.
+    previewProduct('PRD-TOT-004')->delete();
+
+    $response = actingAs($this->user)->get(salesUrl(['period' => 'this_year']));
+
+    expect(pageProp($response, 'sales.meta.total'))->toBe(60 - 8)
+        ->and(pageProp($response, 'totals.sales_count'))->toBe(60 - 8)
+        ->and(pageProp($response, 'products.*.sku'))->not->toContain('PRD-TOT-004');
 });

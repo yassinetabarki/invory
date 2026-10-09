@@ -19,9 +19,12 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * MOCK data layer (ADR-0006, removed by S-17): sales come from App\Mock and every total from SalesCalculator.
+ * MOCK data layer (ADR-0006, removed by S-17): sales come from App\Mock (resolved against the real products) and every total from
+ * SalesCalculator.
  * Writes are validated by their final FormRequests and persist nothing. {sale} is a plain integer id until S-14-BE adds
  * model binding; an unknown id is a 404.
+ *
+ * @phpstan-import-type DatedSale from PreviewSales
  */
 final class SaleController extends Controller
 {
@@ -33,7 +36,7 @@ final class SaleController extends Controller
 
         // Every prop that costs a computation is a closure, so a partial reload skips what it does not list. `sales` and
         // `totals` share the filtered set.
-        /** @var list<array{id: int, date: string, product_id: int, quantity: int, unit_price: string, note: string|null}>|null $filtered */
+        /** @var list<DatedSale>|null $filtered */
         $filtered = null;
         $sales = function () use (&$filtered, $filters, $request): array {
             return $filtered ??= PreviewSales::filter(PreviewSales::all(), $filters['search'], $filters['product_id'], $request->period());

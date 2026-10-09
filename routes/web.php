@@ -19,9 +19,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->where('material', '[0-9]{1,18}')
         ->name('materials.restocks.store');
 
-    // MOCK (ADR-0006): until the products and sales tables exist, {product} and {sale} are plain integer ids.
-    // Backend stories switch these to model binding.
+    // {product} is route-model bound (an unknown or soft-deleted product is a 404). The digit constraint keeps a malformed id a 404
+    // too, instead of a bigint query error on PostgreSQL.
     Route::resource('products', ProductController::class)->where(['product' => '[0-9]{1,18}']);
+
+    // MOCK (ADR-0006): until the sales table exists (S-14-BE), {sale} is a plain integer id.
     Route::resource('sales', SaleController::class)->only(['index', 'store', 'update', 'destroy'])
         ->where(['sale' => '[0-9]{1,18}']);
 });

@@ -19,9 +19,25 @@ use Illuminate\Support\Facades\Schema;
 const OLD_CATEGORIES = ['fabric', 'lining', 'interlining', 'leather', 'thread', 'trim', 'fastener', 'label', 'sole', 'hardware', 'packaging', 'other'];
 const OLD_UNITS = ['m', 'cm', 'yd', 'sqm', 'sqft', 'kg', 'g', 'l', 'ml', 'pc', 'pair', 'roll', 'cone'];
 
-/** The migration object of S-21. */
+/**
+ * The migration object of S-21.
+ *
+ * The S-04a migrations depend on its tables (`products` points at `product_categories`, and materials carry audit columns on top of
+ * its shape), so a rollback of S-21 has to start with them, newest first, exactly as `migrate:rollback` does. PostgreSQL refuses to
+ * drop a table that a foreign key still points at; SQLite doesn't check. Nothing here needs them again afterwards.
+ */
 function referenceMigration(): Migration
 {
+    if (Schema::hasTable('products')) {
+        foreach ([
+            '2026_10_09_300200_add_postgres_checks_and_trigram_indexes',
+            '2026_10_09_300100_create_products_and_product_components_tables',
+            '2026_10_09_300000_add_audit_columns_to_materials',
+        ] as $newer) {
+            (require database_path("migrations/{$newer}.php"))->down();
+        }
+    }
+
     return require database_path('migrations/2026_10_09_100000_create_reference_tables_and_link_materials.php');
 }
 

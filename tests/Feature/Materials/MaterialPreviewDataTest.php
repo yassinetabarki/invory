@@ -2,6 +2,7 @@
 
 use App\Http\Resources\MaterialResource;
 use App\Models\Material;
+use App\Models\ProductComponent;
 use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -9,11 +10,12 @@ use function Pest\Laravel\actingAs;
 
 /*
 |--------------------------------------------------------------------------
-| Materials on the preview fixture (ADR-0006, S-13c)
+| Materials on the preview fixture (ADR-0006, S-13c, S-04b)
 |--------------------------------------------------------------------------
 |
-| The materials are real rows (DemoCatalogSeeder); what has no table yet (used-in counts, photos, "what you can make with it",
-| stock history) is added from App\Mock and costed by the production domain code. Time frozen at 2026-10-08.
+| The materials are real rows (DemoCatalogSeeder) and so are the products that use them: the used-in counts and "what you can
+| make with it" read the real compositions (costed by ProductCostingService). What has no table yet (photos, stock history) is
+| added from App\Mock. Time frozen at 2026-10-08.
 */
 
 beforeEach(fn () => $this->user = preparePreview($this));
@@ -26,11 +28,11 @@ function usageMaterialRef(string $sku): array
     return ['id' => $material->id, 'sku' => $sku, 'name' => $material->name, 'unit' => $material->unit->code];
 }
 
-/** The product of a usage row: a product reference with its status. */
-function usageProduct(int $id, string $sku, string $name, string $status, bool $photo = true): array
+/** The product of a usage row: a product reference with its status. `$number` is the plan's number of the demo product. */
+function usageProduct(int $number, string $sku, string $name, string $status, bool $photo = true): array
 {
     return [
-        'id' => $id,
+        'id' => pid($number),
         'sku' => $sku,
         'name' => $name,
         'photo_url' => $photo ? asset('mock/photos/'.strtolower($sku).'.svg') : null,
@@ -275,10 +277,10 @@ describe('show', function () {
 
     it('has no next limit when the material is the only one of the composition', function () {
         // The Belt is nappa leather and brass rivets: without the rivets the leather is its only material.
-        previewMaterial('MAT-RVT-009')->delete();
+        ProductComponent::query()->where('product_id', pid(7))->where('material_id', previewMaterial('MAT-RVT-009')->id)->delete();
 
         $response = actingAs($this->user)->get(route('materials.show', previewMaterial('MAT-LTH-NAP')));
-        $belt = collect(pageProp($response, 'usage'))->firstWhere('product.id', 7);
+        $belt = collect(pageProp($response, 'usage'))->firstWhere('product.id', pid(7));
 
         expect($belt['is_bottleneck'])->toBeTrue()
             ->and($belt['max_producible'])->toBe(391)
@@ -287,7 +289,7 @@ describe('show', function () {
 
     it('moves the next limit when another material of the composition goes away', function () {
         // Without denim the jacket's next limit after the button is the thread (158 units).
-        previewMaterial('MAT-DEN-012')->delete();
+        ProductComponent::query()->where('product_id', pid(1))->where('material_id', previewMaterial('MAT-DEN-012')->id)->delete();
 
         $response = actingAs($this->user)->get(route('materials.show', previewMaterial('MAT-BTN-017')));
 
@@ -301,7 +303,7 @@ describe('show', function () {
 
         $response = actingAs($this->user)->get(route('materials.show', previewMaterial('MAT-BTN-017')));
 
-        expect(pageProp($response, 'usage.*.product.id'))->toBe([6, 1, 5])
+        expect(pageProp($response, 'usage.*.product.id'))->toBe(array_map(pid(...), [6, 1, 5]))
             ->and(pageProp($response, 'usage.*.units_covered'))->toBe([1, 0, 7])
             ->and(pageProp($response, 'usage.*.max_producible'))->toBe([1, 0, 7])
             ->and(pageProp($response, 'usage.*.is_bottleneck'))->toBe([true, true, true]);

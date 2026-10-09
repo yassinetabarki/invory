@@ -10,6 +10,7 @@ use App\Domain\Sales\ProductSales;
 use App\Domain\Sales\SaleLine;
 use App\Domain\Sales\SalesCalculator;
 use App\Enums\SalesPeriod;
+use App\Models\Product;
 use Carbon\CarbonImmutable;
 use LogicException;
 
@@ -17,38 +18,81 @@ use LogicException;
  * The fixture sales, dated relative to today, and the builders of every sales-shaped prop.
  * Totals, averages, rankings and percentages all come from SalesCalculator.
  *
- * @phpstan-type DatedSale array{id: int, date: string, product_id: int, quantity: int, unit_price: string, note: string|null}
+ * A fixture sale names its product by SKU. It is resolved against the real, non-deleted products (a sale whose product is missing
+ * is skipped), so every sale carries the real product id and the product's reference as `ProductRef` sends it.
+ *
+ * @phpstan-type ProductReference array{id: int, sku: string, name: string, photo_url: string|null}
+ * @phpstan-type DatedSale array{id: int, date: string, product_id: int, product: ProductReference, quantity: int, unit_price: string, note: string|null}
  */
 final class PreviewSales
 {
     /**
-     * Every fixture sale in id order, with its date ("YYYY-MM-DD", app timezone) and unit price (its product's selling price).
+     * Every fixture sale in id order whose product exists (one query on `products`), with its date ("YYYY-MM-DD", app timezone).
      *
      * @return list<DatedSale>
      */
     public static function all(): array
     {
+        $skus = array_values(array_unique(array_column(PreviewFixture::sales(), 'product_sku')));
+
+        return self::resolve(Product::query()->whereIn('sku', $skus)->get(['id', 'sku', 'name']));
+    }
+
+    /**
+     * The fixture sales of the given products (no query: a page that already holds them uses this), by SKU, in id order.
+     * Only `id`, `sku` and `name` of each product are read.
+     *
+     * @param  iterable<Product>  $products
+     * @return list<DatedSale>
+     */
+    public static function resolve(iterable $products): array
+    {
+        $bySku = [];
+
+        foreach ($products as $product) {
+            $bySku[$product->sku] = $product;
+        }
+
         $today = CarbonImmutable::today();
         $sales = [];
 
         foreach (PreviewFixture::sales() as $sale) {
-            $price = PreviewFixture::product($sale['product_id'])['selling_price'] ?? null;
+            $product = $bySku[$sale['product_sku']] ?? null;
 
-            if ($price === null) {
-                throw new LogicException("Fixture sale {$sale['id']} is of a product without a selling price.");
+            if ($product === null) {
+                continue;
             }
 
             $sales[] = [
                 'id' => $sale['id'],
                 'date' => $today->subDays($sale['days_ago'])->toDateString(),
-                'product_id' => $sale['product_id'],
+                'product_id' => $product->id,
+                'product' => PreviewProducts::ref($product),
                 'quantity' => $sale['quantity'],
-                'unit_price' => PreviewDecimal::required($price),
+                'unit_price' => PreviewDecimal::required($sale['unit_price']),
                 'note' => $sale['note'],
             ];
         }
 
         return $sales;
+    }
+
+    /**
+     * Units sold in the last 30 days by each of the given products (no query), by product id: every product has an entry.
+     *
+     * @param  iterable<Product>  $products
+     * @return array<int, int>
+     */
+    public static function unitsSoldLastThirtyDays(iterable $products): array
+    {
+        $recent = self::inPeriod(self::resolve($products), SalesPeriod::LastThirtyDays);
+        $units = [];
+
+        foreach ($products as $product) {
+            $units[$product->id] = (new SalesCalculator)->summarize(self::lines(self::ofProduct($recent, $product->id)))->unitsSold;
+        }
+
+        return $units;
     }
 
     /**
@@ -112,9 +156,7 @@ final class PreviewSales
 
         if ($search !== null && $search !== '') {
             $sales = array_values(array_filter($sales, static function (array $sale) use ($search): bool {
-                $product = PreviewFixture::product($sale['product_id']);
-
-                foreach ([$product['name'] ?? '', $product['sku'] ?? '', $sale['note'] ?? ''] as $haystack) {
+                foreach ([$sale['product']['name'], $sale['product']['sku'], $sale['note'] ?? ''] as $haystack) {
                     if (mb_stripos($haystack, $search) !== false) {
                         return true;
                     }
@@ -135,11 +177,9 @@ final class PreviewSales
      */
     public static function shape(array $sale): array
     {
-        $product = PreviewFixture::product($sale['product_id']) ?? throw new LogicException("Unknown fixture product {$sale['product_id']}.");
-
         return [
             'id' => $sale['id'],
-            'product' => PreviewProducts::ref($product),
+            'product' => $sale['product'],
             'quantity' => $sale['quantity'],
             'unit_price' => $sale['unit_price'],
             'total' => (new SalesCalculator)->lineTotal($sale['quantity'], $sale['unit_price']),
@@ -213,12 +253,18 @@ final class PreviewSales
      */
     public static function topProducts(array $sales, string $by): array
     {
+        $products = [];
+
+        foreach ($sales as $sale) {
+            $products[$sale['product_id']] = $sale['product'];
+        }
+
         return array_map(
-            static function (ProductSales $ranked): array {
-                $product = PreviewFixture::product($ranked->productId) ?? throw new LogicException("Unknown fixture product {$ranked->productId}.");
+            static function (ProductSales $ranked) use ($products): array {
+                $product = $products[$ranked->productId] ?? throw new LogicException("A ranked product has no sale (#{$ranked->productId}).");
 
                 return [
-                    'product' => PreviewProducts::ref($product),
+                    'product' => $product,
                     'units_sold' => $ranked->unitsSold,
                     'revenue' => $ranked->revenue,
                     'percent_of_top' => $ranked->percentOfTop,

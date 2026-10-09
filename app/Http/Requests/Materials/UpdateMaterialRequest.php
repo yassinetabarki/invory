@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Materials;
 
-use App\Mock\PreviewFixture;
 use App\Models\Material;
+use App\Models\Product;
+use App\Models\ProductComponent;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -61,11 +62,14 @@ class UpdateMaterialRequest extends FormRequest
     }
 
     /**
-     * How many non-deleted products' compositions use this material.
-     * MOCK (ADR-0006, S-04 swaps to product_components): counted from the preview fixture by SKU.
+     * How many non-deleted products' compositions use this material. The lines of a soft-deleted product stay for history and
+     * don't lock the unit.
      */
     private function compositionsUsing(Material $material): int
     {
-        return PreviewFixture::usedInCount($material->sku);
+        return ProductComponent::query()
+            ->where('material_id', $material->id)
+            ->whereIn('product_id', Product::query()->select('id'))
+            ->count();
     }
 }

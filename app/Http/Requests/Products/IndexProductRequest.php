@@ -5,18 +5,17 @@ declare(strict_types=1);
 namespace App\Http\Requests\Products;
 
 use App\Enums\ProductStatus;
+use App\Models\Product;
 use App\Services\Reference\ReferenceCode;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class IndexProductRequest extends FormRequest
 {
-    /**
-     * MOCK (ADR-0006): preview-only, denied in production. Checked here so that a 403 comes before any validation error.
-     */
+    /** Checked here so that a 403 comes before any validation error. */
     public function authorize(): bool
     {
-        return $this->user()?->can('access-preview') ?? false;
+        return $this->user()?->can('viewAny', Product::class) ?? false;
     }
 
     /** @return array<string, mixed> */

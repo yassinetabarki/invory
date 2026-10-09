@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests\Sales;
 
 use App\Mock\PreviewFixture;
+use App\Models\Product;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateSaleRequest extends FormRequest
@@ -27,13 +28,16 @@ class UpdateSaleRequest extends FormRequest
     /** @return array<string, mixed> */
     public function rules(): array
     {
-        return StoreSaleRequest::fieldRules(currentProductId: $this->sale()['product_id'] ?? null);
+        $sku = $this->sale()['product_sku'] ?? null;
+        $currentProductId = $sku === null ? null : Product::query()->where('sku', $sku)->value('id');
+
+        return StoreSaleRequest::fieldRules(currentProductId: is_int($currentProductId) ? $currentProductId : null);
     }
 
     /**
      * The fixture sale of the `{sale}` route parameter (a plain integer id until the sales table exists).
      *
-     * @return array{id: int, days_ago: int, product_id: int, quantity: int, note: string|null}|null
+     * @return array{id: int, days_ago: int, product_sku: string, quantity: int, unit_price: string, note: string|null}|null
      */
     private function sale(): ?array
     {
