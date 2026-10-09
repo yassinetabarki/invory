@@ -204,17 +204,17 @@ ADR drafts (Proposed): [0007 dev runtime](adr/0007-dev-runtime-native-serving.md
 Order: S-18 ∥ S-19 ∥ S-20 (now) → S-21a → S-21b ∥ S-22 → S-04 → S-14-BE ∥ S-16-BE ∥ S-15-BE ∥ S-25 → S-23 → S-06-BE ∥ S-07-BE → S-24 → S-17 → S-27 ∥ S-08 → S-26.
 The plan's §F.3 lists the amendments to S-04, S-14-BE, S-15-BE, S-16-BE, S-06-BE and S-07-BE. They are proposals; the stories above keep their status until the human approves.
 
-## S-18 · Dev runtime performance — `Proposed` · size S
+## S-18 · Dev runtime performance — `review` (repo side approved 2026-10-09; waiting for the human's machine steps, SETUP.md §4.1) · size S
 **Owners:** TL (docs, ADR-0007), human (machine config) · **Depends on:** decision Q1
 - [ ] Serve natively (Laragon web server + OPcache) against Docker PostgreSQL/Mailpit, or the option the human picks; SETUP.md section; Xdebug off by default
 - **Acceptance:** with 3 s between requests, `/login` and authenticated pages p95 ≤ 150 ms (today 2.1 s); the parity suite still runs in the container
 
-## S-19 · SPA navigation quick wins — frontend — `Proposed` · size S
+## S-19 · SPA navigation quick wins — frontend — `review` (approved by the tech-lead 2026-10-09) · size S
 **Owner:** FE · **Depends on:** — (parallel with S-18, S-20)
 - [ ] Exclude `*.test.tsx` from the pages glob (F-13); `prefetch` + `cacheTags` on CTAs, row links, breadcrumbs, KPI links; `invalidateCacheTags` on every write; `only` partial reloads for list filters and the dashboard period; `showProgress: false` on prefetch
 - **Acceptance:** no test chunks in `public/build/manifest.json`; Vitest asserts the router options
 
-## S-20 · Lazy props, query budgets, explicit `auth.user` — backend — `Proposed` · size S
+## S-20 · Lazy props, query budgets, explicit `auth.user` — backend — `review` (approved by the tech-lead 2026-10-09) · size S
 **Owner:** BE · **Depends on:** — (parallel with S-18, S-19)
 - [ ] Closures for non-trivial props (no contract change); F-03 explicit `auth.user`; `expectQueryBudget()` Pest helper + one test per page; partial-reload tests
 - **Acceptance:** a filter-only partial reload of `/materials` doesn't run the inventory summary; every page ≤ 10 queries
@@ -297,4 +297,15 @@ From the Phase 2 review (2026-10-08, all MINOR/NIT, none blocking):
 - **F-21 (NIT, copy)**: when the next limit equals the current capacity (a tie at the bottleneck), the suggestion still reads "the next limit is X at N units". Consider a tie-specific sentence.
 
 From the Phase 3 performance planning (2026-10-08):
-- F-03 is proposed in S-20 and F-13 in S-19 (both `Proposed`).
+- F-03 is fixed by S-20 and F-13 by S-19 (2026-10-09).
+
+From the Phase 3P review (2026-10-09, MINOR/NIT, none blocking):
+- **F-22 (MINOR, FE tests)**: `product-form.test.tsx` "posts the typed values, the selling price and the composition without row keys" failed once
+  (passed on 4 reruns) when the Vitest suite ran at the same time as Pest. It's a long `user.type` test near the 5 s default timeout. Give the
+  heavy form tests a larger timeout or type less, and run the gates sequentially.
+- **F-23 (NIT, FE build)**: the `wayfinder-*.js` chunk is now 377 KB raw (118 KB gzip). That's chunk renaming, not growth: React DOM moved into it, and
+  the entry closure is unchanged at ~565 KB raw / 176 KB gzip. Consider `manualChunks` naming (vendor-react, vendor-inertia) for readable reports.
+- **F-24 (NIT, BE)**: `InventorySummary` reads with `lazyById(500)`, so the materials-index query count grows by one per 500 materials. That's within
+  budget until S-23 caches the summary.
+- **F-25 (docs, main session)**: `CLAUDE.md` and the agent definitions still describe Sail as the runtime and give the parity command without
+  `--profile app`. Update them to match SETUP.md §4–§5 (ADR-0007).

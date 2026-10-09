@@ -1,9 +1,9 @@
 # Phase 3 — Performance, SPA data loading, reference data and database architecture
 
-> Owner: **tech-lead** · Status: **Proposed (planning only, 2026-10-08). Nothing is dispatched until the human answers the decisions at the end.**
+> Owner: **tech-lead** · Status: **3P delivered 2026-10-09: S-19 and S-20 approved; S-18 repo side approved, waiting for the human's machine steps (SETUP.md §4.1). The rest Proposed.** Decisions: see the end of the plan.
 > Stories: S-18 … S-27 (new, `Proposed` in [BACKLOG](../BACKLOG.md)), plus amendments to the existing Phase 3 stories S-04, S-14-BE, S-15-BE,
 > S-16-BE, S-06-BE, S-07-BE and S-17. ADR drafts: [0007](../adr/0007-dev-runtime-native-serving.md), [0008](../adr/0008-reference-data-in-database.md),
-> [0009](../adr/0009-spa-data-loading-on-inertia.md), [0010](../adr/0010-database-architecture.md) (all **Proposed**).
+> [0009](../adr/0009-spa-data-loading-on-inertia.md), [0010](../adr/0010-database-architecture.md). 0007 and 0008 are **Accepted** (2026-10-08); 0009 and 0010 are **Proposed**.
 
 ## Summary: the five questions in one screen
 
@@ -586,7 +586,32 @@ Phase 4                                         S-27 (perf dataset + budgets) �
 
 ---
 
-## Decisions needed from the human
+## Decisions (human, 2026-10-08)
+| # | Decision | Status |
+|---|---|---|
+| Q1 | (a) serve natively with Laragon (web server + OPcache); Docker keeps only PostgreSQL and Mailpit. ADR-0007 **Accepted** | confirmed |
+| Q2 | users may add, rename and archive units; seeded units keep a fixed dimension and factor; BOM unit conversions **later** (columns now). ADR-0008 **Accepted** | confirmed |
+| Q3 | any signed-in user edits units and categories (no roles story) | confirmed |
+| Q10 | start S-18, S-19, S-20 now, alongside the Phase 2 click-through | confirmed |
+| Q4 | bigint identity keys | **provisional** (recommended option) |
+| Q5 | keep `App\Mock` until each real story replaces its part | **provisional** |
+| Q6 | currency and locale stay in config | **provisional** |
+| Q7 | block a material's unit change while a BOM uses it | **provisional**; S-21 needs it confirmed before it starts |
+| Q8 | hard-delete sales | **provisional**; S-14-BE needs it confirmed before it starts |
+| Q9 | production runs not urgent | **provisional** |
+
+### S-18 repo-side design (decided by the tech-lead under Q1)
+- The native app keeps http://localhost:8000: a Laragon Apache virtual host with `Listen 8000` and `DocumentRoot "G:/Projects/Invory/public"`
+  (mod_php, so OPcache memory is shared by all Apache threads). There's no hosts-file change and `APP_URL` doesn't change.
+- `compose.yaml`: `laravel.test` gets `profiles: ["app"]`, its port becomes `${APP_PORT:-8080}`, and its `environment` sets `DB_HOST=pgsql`,
+  `DB_PORT=5432`, `MAIL_HOST=mailpit` and `MAIL_PORT=1025`. Real environment variables win over `.env` (immutable Dotenv), so the container and
+  the native app share one `.env`, which points at `127.0.0.1`. `docker compose up -d` now starts only `pgsql` and `mailpit`.
+- Parity run: `docker compose --profile app up -d laravel.test`, then the usual `docker compose exec … php artisan test`.
+- `.env.example` reflects this native setup (PostgreSQL on 127.0.0.1, Mailpit on 1026/8026, `APP_PORT=8080`).
+- `scripts/perf-probe.php` is the appendix script, made path-independent so it runs natively (`php scripts/perf-probe.php /products/create`)
+  and in the container.
+
+## Decisions as first asked (kept for reference)
 1. **Dev runtime (Q1).** (a) **Recommended:** serve natively with Laragon (Apache/nginx + OPcache) against Docker PostgreSQL and Mailpit. The repo
    stays on `G:\`, and agents and gates are unchanged. (b) Move the repo into the WSL2 filesystem and keep Sail for everything. That's fastest for
    Docker, but native Windows tooling (Laragon, agents, Git) then works over `\\wsl$`, which is slow. (c) Keep everything as is and accept about 2 s
@@ -619,6 +644,12 @@ Phase 4                                         S-27 (perf dataset + budgets) �
 ## Progress log (tech-lead)
 - 2026-10-08: investigation and measurements done; plan, ADR-0007…0010 (Proposed) and backlog entries (Proposed) written. Nothing dispatched.
   Waiting for decisions Q1–Q10.
+- 2026-10-08: the human confirmed Q1, Q2, Q3 and Q10 (Q4–Q9 provisional). ADR-0007 and ADR-0008 Accepted. Wave 3P dispatched: S-20 + S-18 repo
+  side (BE) ∥ S-19 (FE). S-18 machine steps go to the human through the coordinator.
+- 2026-10-09: the rate limit cut off the FE run; the BE handoff had arrived complete. Resumed S-19 from the tree (one short FE round: sale-form
+  invalidation tests, product Edit CTA prefetch). The tech-lead wrote SETUP.md §4 (native serving) and the CI step override. All gates green:
+  Pest 1 323, Vitest 1 023, check, types, build (no test chunks). PG parity not run: Docker Desktop was down. S-18 timing to be verified by the
+  human after the machine steps.
 
 ---
 
