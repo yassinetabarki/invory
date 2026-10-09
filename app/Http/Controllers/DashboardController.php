@@ -31,26 +31,36 @@ final class DashboardController extends Controller
         Gate::authorize('access-preview');
 
         $period = $request->period();
-        $sales = PreviewSales::inPeriod(PreviewSales::all(), $period);
-        $products = PreviewProducts::load();
+
+        // Every section is a closure, so a partial reload (the period switch) skips the ones it does not list. The period's
+        // sales and the costed products are shared by several sections, so a full visit builds each of them once.
+        /** @var list<array{id: int, date: string, product_id: int, quantity: int, unit_price: string, note: string|null}>|null $periodSales */
+        $periodSales = null;
+        $sales = function () use (&$periodSales, $period): array {
+            return $periodSales ??= PreviewSales::inPeriod(PreviewSales::all(), $period);
+        };
+        $catalog = null;
+        $products = function () use (&$catalog): PreviewProducts {
+            return $catalog ??= PreviewProducts::load();
+        };
 
         return Inertia::render('dashboard', [
             'period' => $period->value,
             'periods' => SalesPeriod::options(),
-            'stats' => [
-                ...PreviewSales::summary($sales),
+            'stats' => fn (): array => [
+                ...PreviewSales::summary($sales()),
                 ...$inventory->summarize(),
-                'unproducible_count' => $products->unproducibleCount(),
+                'unproducible_count' => $products()->unproducibleCount(),
                 'products_count' => count(PreviewFixture::products()),
             ],
-            'top_products' => [
-                'by_units' => PreviewSales::topProducts($sales, 'units'),
-                'by_revenue' => PreviewSales::topProducts($sales, 'revenue'),
+            'top_products' => fn (): array => [
+                'by_units' => PreviewSales::topProducts($sales(), 'units'),
+                'by_revenue' => PreviewSales::topProducts($sales(), 'revenue'),
             ],
-            'needs_restock' => MaterialResource::collection($this->needsRestock())->resolve(),
+            'needs_restock' => fn (): array => MaterialResource::collection($this->needsRestock())->resolve(),
             // The newest sales, whatever the period.
-            'recent_sales' => PreviewSales::recent(PreviewSales::all(), self::LIST_SIZE),
-            'alerts' => $products->alerts(),
+            'recent_sales' => fn (): array => PreviewSales::recent(PreviewSales::all(), self::LIST_SIZE),
+            'alerts' => fn (): array => $products()->alerts(),
         ]);
     }
 

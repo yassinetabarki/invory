@@ -15,7 +15,10 @@ use App\Mock\PreviewMaterials;
 use App\Mock\PreviewPage;
 use App\Mock\PreviewProducts;
 use App\Mock\PreviewSales;
+use App\Models\Material;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
@@ -33,17 +36,21 @@ final class ProductController extends Controller
         Gate::authorize('access-preview');
 
         $filters = $request->filters();
-        $catalog = PreviewProducts::load();
-        $products = PreviewProducts::filter(
-            PreviewProducts::byName($catalog->all()),
-            $filters['search'],
-            $filters['category'],
-            $filters['status'],
-            $filters['cant_produce'],
-        );
 
+        // Lazy (a closure): costing every product is the expensive part, and a partial reload that does not list `products` skips it.
         return Inertia::render('products/index', [
-            'products' => PreviewPage::paginate($catalog->listItems($products), $request, route('products.index')),
+            'products' => function () use ($request, $filters): AnonymousResourceCollection {
+                $catalog = PreviewProducts::load();
+                $products = PreviewProducts::filter(
+                    PreviewProducts::byName($catalog->all()),
+                    $filters['search'],
+                    $filters['category'],
+                    $filters['status'],
+                    $filters['cant_produce'],
+                );
+
+                return PreviewPage::paginate($catalog->listItems($products), $request, route('products.index'));
+            },
             'filters' => $filters,
             'categories' => ProductCategory::options(),
             'statuses' => ProductStatus::options(),
@@ -57,7 +64,7 @@ final class ProductController extends Controller
         return Inertia::render('products/create', [
             'categories' => ProductCategory::options(),
             'statuses' => ProductStatus::options(),
-            'materials' => PreviewMaterials::options(PreviewMaterials::byName()),
+            'materials' => fn (): array => PreviewMaterials::options(PreviewMaterials::byName()),
         ]);
     }
 
@@ -73,16 +80,23 @@ final class ProductController extends Controller
         Gate::authorize('access-preview');
         $this->ensureExists($product);
 
-        $catalog = PreviewProducts::load();
-        $sales = PreviewSales::ofProduct(PreviewSales::all(), $product);
+        /** @var list<array{id: int, date: string, product_id: int, quantity: int, unit_price: string, note: string|null}>|null $loaded */
+        $loaded = null;
+        $sales = function () use (&$loaded, $product): array {
+            return $loaded ??= PreviewSales::ofProduct(PreviewSales::all(), $product);
+        };
 
         return Inertia::render('products/show', [
-            'product' => $catalog->detail($catalog->find($product) ?? abort(404)),
-            'sales_last_30_days' => Arr::only(
-                PreviewSales::totals(PreviewSales::inPeriod($sales, SalesPeriod::LastThirtyDays)),
+            'product' => function () use ($product): array {
+                $catalog = PreviewProducts::load();
+
+                return $catalog->detail($catalog->find($product) ?? abort(404));
+            },
+            'sales_last_30_days' => fn (): array => Arr::only(
+                PreviewSales::totals(PreviewSales::inPeriod($sales(), SalesPeriod::LastThirtyDays)),
                 ['units_sold', 'revenue'],
             ),
-            'recent_sales' => PreviewSales::recent($sales),
+            'recent_sales' => fn (): array => PreviewSales::recent($sales()),
         ]);
     }
 
@@ -91,15 +105,23 @@ final class ProductController extends Controller
         Gate::authorize('access-preview');
         $this->ensureExists($product);
 
-        // One query: the picker lists every material and the product is costed against the same rows.
-        $materials = PreviewMaterials::byName();
-        $catalog = PreviewProducts::from($materials);
+        // One query, however many of the two props below are sent: the picker lists every material and the product is
+        // costed against the same rows. A partial reload that lists neither runs no query.
+        /** @var Collection<int, Material>|null $loaded */
+        $loaded = null;
+        $materials = function () use (&$loaded): Collection {
+            return $loaded ??= PreviewMaterials::byName();
+        };
 
         return Inertia::render('products/edit', [
             'categories' => ProductCategory::options(),
             'statuses' => ProductStatus::options(),
-            'materials' => PreviewMaterials::options($materials),
-            'product' => $catalog->detail($catalog->find($product) ?? abort(404)),
+            'materials' => fn (): array => PreviewMaterials::options($materials()),
+            'product' => function () use ($materials, $product): array {
+                $catalog = PreviewProducts::from($materials());
+
+                return $catalog->detail($catalog->find($product) ?? abort(404));
+            },
         ]);
     }
 

@@ -13,6 +13,7 @@ use App\Mock\PreviewPage;
 use App\Mock\PreviewProducts;
 use App\Mock\PreviewSales;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -29,17 +30,24 @@ final class SaleController extends Controller
         Gate::authorize('access-preview');
 
         $filters = $request->filters();
-        $sales = PreviewSales::filter(PreviewSales::all(), $filters['search'], $filters['product_id'], $request->period());
+
+        // Every prop that costs a computation is a closure, so a partial reload skips what it does not list. `sales` and
+        // `totals` share the filtered set.
+        /** @var list<array{id: int, date: string, product_id: int, quantity: int, unit_price: string, note: string|null}>|null $filtered */
+        $filtered = null;
+        $sales = function () use (&$filtered, $filters, $request): array {
+            return $filtered ??= PreviewSales::filter(PreviewSales::all(), $filters['search'], $filters['product_id'], $request->period());
+        };
 
         return Inertia::render('sales/index', [
-            'sales' => PreviewPage::paginate(PreviewSales::shapeAll($sales), $request, route('sales.index')),
+            'sales' => fn (): AnonymousResourceCollection => PreviewPage::paginate(PreviewSales::shapeAll($sales()), $request, route('sales.index')),
             'filters' => $filters,
             // For the whole filtered set, not just this page.
-            'totals' => PreviewSales::totals($sales),
+            'totals' => fn (): array => PreviewSales::totals($sales()),
             'periods' => SalesPeriod::options(),
-            'products' => PreviewProducts::saleOptions(),
+            'products' => fn (): array => PreviewProducts::saleOptions(),
             // Non-null opens "Record a sale" on load; the product is pre-selected only if it can be sold.
-            'record' => $request->record() ? ['product_id' => PreviewProducts::sellableId($request->recordProductId())] : null,
+            'record' => fn (): ?array => $request->record() ? ['product_id' => PreviewProducts::sellableId($request->recordProductId())] : null,
         ]);
     }
 

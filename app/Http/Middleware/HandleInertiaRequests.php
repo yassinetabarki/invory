@@ -2,7 +2,9 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -39,7 +41,7 @@ class HandleInertiaRequests extends Middleware
             ...parent::share($request),
             'name' => config('app.name'),
             'auth' => [
-                'user' => $request->user(),
+                'user' => $this->authUser($request),
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'app' => [
@@ -49,5 +51,30 @@ class HandleInertiaRequests extends Middleware
                 'today' => now()->toDateString(),
             ],
         ];
+    }
+
+    /**
+     * The signed-in user as the `User` type of resources/js/types/auth.ts: an explicit allow-list, never the whole model, so a
+     * future column (or a secret such as the password hash, the remember token or the two-factor secret) can't reach the page.
+     * Dates keep the model's own serialisation. Null for guests.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function authUser(Request $request): ?array
+    {
+        $user = $request->user();
+
+        if (! $user instanceof User) {
+            return null;
+        }
+
+        return Arr::only($user->attributesToArray(), [
+            'id',
+            'name',
+            'email',
+            'email_verified_at',
+            'created_at',
+            'updated_at',
+        ]);
     }
 }

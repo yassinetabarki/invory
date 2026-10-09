@@ -19,6 +19,8 @@ use App\Mock\PreviewProducts;
 use App\Models\Material;
 use App\Services\Inventory\InventorySummary;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -34,30 +36,43 @@ final class MaterialController extends Controller
         Gate::authorize('viewAny', Material::class);
 
         $filters = $request->filters();
-        $totals = $inventory->summarize();
 
-        $materials = Material::query()
-            ->search($filters['search'])
-            ->category($request->category())
-            ->when($filters['low_stock'], fn ($query) => $query->needsRestock())
-            ->sortedBy($filters['sort'])
-            ->paginate(config('invory.per_page'))
-            ->withQueryString();
+        // Every prop that costs a query or a computation is a closure: Inertia runs it only when the response includes it
+        // (a full visit, or a partial reload that lists it). The page is shared by `materials` and `recent_history`.
+        /** @var LengthAwarePaginator<int, Material>|null $page */
+        $page = null;
+        $materials = function () use (&$page, $request, $filters): LengthAwarePaginator {
+            if ($page === null) {
+                $page = Material::query()
+                    ->search($filters['search'])
+                    ->category($request->category())
+                    ->when($filters['low_stock'], fn ($query) => $query->needsRestock())
+                    ->sortedBy($filters['sort'])
+                    ->paginate(config('invory.per_page'))
+                    ->withQueryString();
 
-        // MOCK (ADR-0006): used_in_count and photo_url have no source yet.
-        PreviewMaterials::decorate($materials);
+                // MOCK (ADR-0006): used_in_count and photo_url have no source yet.
+                PreviewMaterials::decorate($page);
+            }
+
+            return $page;
+        };
 
         return Inertia::render('materials/index', [
-            'materials' => MaterialResource::collection($materials),
+            'materials' => fn (): AnonymousResourceCollection => MaterialResource::collection($materials()),
             'filters' => $filters,
             'categories' => MaterialCategory::options(),
-            // Over all non-deleted materials, not just this page.
-            'summary' => [
-                'materials_count' => $totals['materials_count'],
-                'inventory_value' => $totals['inventory_value'],
-            ],
+            // Over all non-deleted materials, not just this page: a full scan, so it must stay lazy.
+            'summary' => function () use ($inventory): array {
+                $totals = $inventory->summarize();
+
+                return [
+                    'materials_count' => $totals['materials_count'],
+                    'inventory_value' => $totals['inventory_value'],
+                ];
+            },
             // MOCK (ADR-0006): the newest 5 movements of each material on this page, loaded after the first paint.
-            'recent_history' => Inertia::defer(fn (): array => PreviewHistory::recent($materials->items())),
+            'recent_history' => Inertia::defer(fn (): array => PreviewHistory::recent($materials()->items())),
         ]);
     }
 
@@ -90,8 +105,8 @@ final class MaterialController extends Controller
 
         return Inertia::render('materials/show', [
             'material' => MaterialResource::make($material),
-            'usage' => PreviewProducts::load()->usageOf($material),
-            'history' => PreviewHistory::byMaterial([$material])[$material->id] ?? [],
+            'usage' => fn (): array => PreviewProducts::load()->usageOf($material),
+            'history' => fn (): array => PreviewHistory::byMaterial([$material])[$material->id] ?? [],
         ]);
     }
 

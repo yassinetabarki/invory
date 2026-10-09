@@ -7,7 +7,9 @@ use Database\Seeders\DemoCatalogSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Response;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Testing\TestResponse;
+use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
 
 /*
@@ -40,6 +42,21 @@ pest()->extend(TestCase::class)
 
 expect()->extend('toBeOne', function () {
     return $this->toBe(1);
+});
+
+/*
+ * Query budget: `expect(fn () => $this->get($url))->toRunAtMostQueries(10)` runs the closure and fails when it runs more SQL
+ * queries than the budget (every query counts, including those of the session, the policies and the Resources).
+ */
+expect()->extend('toRunAtMostQueries', function (int $budget) {
+    $queries = queryLog($this->value);
+
+    expect(count($queries))->toBeLessThanOrEqual(
+        $budget,
+        'Query budget of '.$budget.' exceeded ('.count($queries).' queries): '.PHP_EOL.implode(PHP_EOL, $queries),
+    );
+
+    return $this;
 });
 
 /*
@@ -211,4 +228,62 @@ function realUpload(string $name, string $content, string $clientMimeType): Uplo
     file_put_contents($path, $content);
 
     return new UploadedFile($path, $name, $clientMimeType, null, true);
+}
+
+/*
+|--------------------------------------------------------------------------
+| Query budgets and partial reloads (ADR-0009, S-20)
+|--------------------------------------------------------------------------
+*/
+
+/**
+ * The SQL of every query the callback runs, in order.
+ *
+ * @return list<string>
+ */
+function queryLog(Closure $callback): array
+{
+    DB::flushQueryLog();
+    DB::enableQueryLog();
+
+    try {
+        $callback();
+
+        return array_map(static fn (array $entry): string => $entry['query'], DB::getQueryLog());
+    } finally {
+        DB::disableQueryLog();
+        DB::flushQueryLog();
+    }
+}
+
+/** How many SQL queries the callback runs. */
+function countQueries(Closure $callback): int
+{
+    return count(queryLog($callback));
+}
+
+/**
+ * The SQL run by one partial reload of a page (`X-Inertia-Partial-Data: <only>`), sent through Inertia's own testing API.
+ * The first visit (the response you pass in) is not counted. `$assertions` receives the partial response's props.
+ *
+ * @param  TestResponse<Response>  $firstVisit
+ * @param  list<string>  $only
+ * @return list<string>
+ */
+function partialReloadQueries(TestResponse $firstVisit, array $only, Closure $assertions): array
+{
+    return queryLog(fn () => $firstVisit->assertInertia(
+        fn (AssertableInertia $page) => $page->reloadOnly($only, $assertions),
+    ));
+}
+
+/**
+ * The queries whose SQL matches the pattern (case-insensitive regex, without delimiters).
+ *
+ * @param  list<string>  $queries
+ * @return list<string>
+ */
+function queriesMatching(array $queries, string $pattern): array
+{
+    return array_values(array_filter($queries, static fn (string $sql): bool => preg_match('/'.$pattern.'/i', $sql) === 1));
 }
