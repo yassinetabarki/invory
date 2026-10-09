@@ -1,6 +1,7 @@
 import { Link } from '@inertiajs/react';
 import { ArrowRight } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { prefetchPropsForUrl } from '@/lib/cache-tags';
 import { cn } from '@/lib/utils';
 
 type StatTone = 'default' | 'warning' | 'danger';
@@ -66,9 +67,12 @@ export function StatCard({
         'flex flex-col gap-1.5 rounded-xl border bg-card px-5 py-[18px] text-card-foreground';
 
     if (href) {
+        const url = typeof href === 'string' ? href : href.url;
+
         return (
             <Link
-                href={typeof href === 'string' ? href : href.url}
+                href={url}
+                {...prefetchPropsForUrl(url)}
                 data-slot="stat-card"
                 className={cn(
                     base,

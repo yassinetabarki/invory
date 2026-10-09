@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import type { ComponentProps } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { SaleForm } from '@/components/sales/sale-form';
+import { invalidatedBy } from '@/lib/cache-tags';
 import {
     productRefs,
     recentSales,
@@ -361,6 +362,20 @@ describe('<SaleForm>', () => {
             });
         });
 
+        it('invalidates the cached pages a sale touches when it records one', async () => {
+            const { user } = renderForm();
+
+            await pickProduct(user, 'Denim Jacket · PRD-JKT-001');
+            await user.type(field.quantity(), '6');
+            await user.click(screen.getByRole('button', { name: 'Save sale' }));
+
+            expect(invalidatedBy('sale').length).toBeGreaterThan(0);
+            expect(inertiaMock.submissions[0]).toMatchObject({
+                method: 'post',
+                options: { invalidateCacheTags: invalidatedBy('sale') },
+            });
+        });
+
         it('sends a changed date', async () => {
             const { user } = renderForm({ initialProductId: 1 });
 
@@ -465,6 +480,19 @@ describe('<SaleForm>', () => {
                     note: 'Web shop',
                 },
                 options: { preserveScroll: true },
+            });
+        });
+
+        it('invalidates the cached pages a sale touches when it edits one', async () => {
+            const { user } = renderForm({ sale: recentSales[3] });
+
+            await user.clear(field.quantity());
+            await user.type(field.quantity(), '5');
+            await user.click(screen.getByRole('button', { name: 'Save sale' }));
+
+            expect(inertiaMock.submissions[0]).toMatchObject({
+                method: 'put',
+                options: { invalidateCacheTags: invalidatedBy('sale') },
             });
         });
 

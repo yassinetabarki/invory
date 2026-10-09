@@ -13,6 +13,7 @@ import { ProductPhoto } from '@/components/products/product-photo';
 import { RecentSalesCard } from '@/components/products/recent-sales-card';
 import { ConfirmDeleteDialog } from '@/components/shared/confirm-delete-dialog';
 import { Button } from '@/components/ui/button';
+import { CACHE_TAGS, invalidatedBy, prefetchProps } from '@/lib/cache-tags';
 import type { MaterialRef, ProductShowProps } from '@/types/domain';
 
 const materialHref = (material: MaterialRef) =>
@@ -38,6 +39,7 @@ export default function ProductsShow({
 
     function destroy() {
         router.delete(ProductController.destroy.url(product.id), {
+            invalidateCacheTags: invalidatedBy('product'),
             onStart: () => setProcessing(true),
             onFinish: () => {
                 setProcessing(false);
@@ -57,7 +59,10 @@ export default function ProductsShow({
                         <>
                             {recordHref !== null ? (
                                 <Button asChild variant="outline">
-                                    <Link href={recordHref}>
+                                    <Link
+                                        href={recordHref}
+                                        {...prefetchProps(CACHE_TAGS.sales)}
+                                    >
                                         <ReceiptText aria-hidden="true" />
                                         Record sale
                                     </Link>
@@ -80,7 +85,10 @@ export default function ProductsShow({
                                 </span>
                             )}
                             <Button asChild variant="outline">
-                                <Link href={editHref}>
+                                <Link
+                                    href={editHref}
+                                    {...prefetchProps(CACHE_TAGS.products)}
+                                >
                                     <Pencil aria-hidden="true" />
                                     Edit
                                 </Link>

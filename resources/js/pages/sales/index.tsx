@@ -13,6 +13,7 @@ import { EmptyState } from '@/components/shared/empty-state';
 import { PageHeader } from '@/components/shared/page-header';
 import { Pagination } from '@/components/shared/pagination';
 import { Button } from '@/components/ui/button';
+import { invalidatedBy } from '@/lib/cache-tags';
 import { cn } from '@/lib/utils';
 import type { Sale, SalesFilters, SalesIndexProps } from '@/types/domain';
 
@@ -51,6 +52,13 @@ function filtersKey(filters: SalesFilters): string {
 function hasActiveFilters(filters: SalesFilters): boolean {
     return filtersKey(filters) !== filtersKey(NO_FILTERS);
 }
+
+/**
+ * A filter, sort or page change reloads the log, the filters and the totals
+ * (which follow the filters). `record` is not asked for: the "Record a sale"
+ * panel keeps its state, as the form someone is filling in must not close.
+ */
+const LIST_PROPS = ['sales', 'filters', 'totals'];
 
 /** What the form panel is doing: recording a sale or editing one. */
 type Panel =
@@ -122,6 +130,7 @@ export default function SalesIndex({
         setSentKey(filtersKey(next));
 
         router.get(SaleController.index.url(), toQuery(next), {
+            only: LIST_PROPS,
             preserveState: true,
             preserveScroll: true,
             replace: true,
@@ -155,6 +164,7 @@ export default function SalesIndex({
         const deleted = deleting;
 
         router.delete(SaleController.destroy.url(deleted.id), {
+            invalidateCacheTags: invalidatedBy('sale'),
             preserveScroll: true,
             onStart: () => setDeleteProcessing(true),
             // A form open on the sale that just went has nothing left to save.
@@ -255,7 +265,10 @@ export default function SalesIndex({
                                 />
                                 {sales.meta.last_page > 1 && (
                                     <div className="border-t px-4 py-3">
-                                        <Pagination meta={sales.meta} />
+                                        <Pagination
+                                            meta={sales.meta}
+                                            only={['sales']}
+                                        />
                                     </div>
                                 )}
                             </>

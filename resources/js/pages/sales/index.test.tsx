@@ -38,6 +38,7 @@ vi.mock('@inertiajs/react', async (importOriginal) => {
 });
 
 const VISIT_OPTIONS = {
+    only: ['sales', 'filters', 'totals'],
     preserveState: true,
     preserveScroll: true,
     replace: true,
@@ -204,6 +205,14 @@ describe('sales/index page', () => {
             ).toHaveAttribute('href', '/sales?page=2');
         });
 
+        it('reloads only the log when the page changes', () => {
+            renderPage();
+
+            expect(
+                screen.getByRole('link', { name: 'Next page' }),
+            ).toHaveAttribute('data-only', 'sales');
+        });
+
         it('has no pagination for a single page', () => {
             renderPage({
                 sales: paginate(recentSales, {
@@ -278,6 +287,23 @@ describe('sales/index page', () => {
             expect(
                 screen.getByRole('combobox', { name: 'Period' }),
             ).toHaveTextContent('This year');
+        });
+
+        it('reloads only the log, the filters and the totals, never the record panel', async () => {
+            const { user } = renderPage();
+
+            await user.click(screen.getByRole('combobox', { name: 'Period' }));
+            await user.click(screen.getByRole('option', { name: 'This year' }));
+
+            // `record` and the picker lists are not requested: the form
+            // someone is filling in keeps its state.
+            expect(inertiaMock.router.get).toHaveBeenCalledWith(
+                '/sales',
+                expect.anything(),
+                expect.objectContaining({
+                    only: ['sales', 'filters', 'totals'],
+                }),
+            );
         });
 
         it('omits the default period from the query', async () => {
@@ -580,7 +606,10 @@ describe('sales/index page', () => {
                     sold_on: '2026-10-08',
                     note: '',
                 },
-                options: { preserveScroll: true },
+                options: {
+                    preserveScroll: true,
+                    invalidateCacheTags: ['sales', 'products', 'dashboard'],
+                },
             });
 
             const options = inertiaMock.submissions[0].options as {
@@ -662,7 +691,10 @@ describe('sales/index page', () => {
                 action: '/sales/57',
                 method: 'put',
                 data: { product_id: 1, quantity: '5' },
-                options: { preserveScroll: true },
+                options: {
+                    preserveScroll: true,
+                    invalidateCacheTags: ['sales', 'products', 'dashboard'],
+                },
             });
         });
 
@@ -787,6 +819,26 @@ describe('sales/index page', () => {
             expect(inertiaMock.router.delete).toHaveBeenCalledWith(
                 '/sales/57',
                 expect.objectContaining({ preserveScroll: true }),
+            );
+        });
+
+        it('invalidates the sales, products and dashboard caches', async () => {
+            const { user } = renderPage();
+
+            await user.click(
+                within(table()).getByRole('button', {
+                    name: deleteDenimJacket,
+                }),
+            );
+            await user.click(
+                screen.getByRole('button', { name: 'Delete sale' }),
+            );
+
+            expect(inertiaMock.router.delete).toHaveBeenCalledWith(
+                '/sales/57',
+                expect.objectContaining({
+                    invalidateCacheTags: ['sales', 'products', 'dashboard'],
+                }),
             );
         });
 

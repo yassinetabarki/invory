@@ -9,6 +9,7 @@ import { PageHeader } from '@/components/shared/page-header';
 import { Pagination } from '@/components/shared/pagination';
 import { Button } from '@/components/ui/button';
 import { useAppSettings } from '@/hooks/use-app-settings';
+import { CACHE_TAGS, prefetchProps } from '@/lib/cache-tags';
 import { formatCount, formatMoney } from '@/lib/format';
 import type {
     Material,
@@ -62,6 +63,13 @@ function hasActiveFilters(filters: MaterialFilters): boolean {
     );
 }
 
+/**
+ * A filter, sort or page change reloads only what it changes. `summary` covers
+ * every material, so filters don't touch it; `recent_history` is deferred and
+ * has to be asked for again because it belongs to the rows of the new page.
+ */
+const LIST_PROPS = ['materials', 'filters', 'recent_history'];
+
 const hrefs = {
     show: (material: Material) => MaterialController.show.url(material),
     edit: (material: Material) => MaterialController.edit.url(material),
@@ -112,6 +120,7 @@ export default function MaterialsIndex({
         setSentKey(filtersKey(next));
 
         router.get(MaterialController.index.url(), toQuery(next), {
+            only: LIST_PROPS,
             preserveState: true,
             preserveScroll: true,
             replace: true,
@@ -131,7 +140,10 @@ export default function MaterialsIndex({
                     description={describeSummary(summary, currency, locale)}
                     actions={
                         <Button asChild>
-                            <Link href={MaterialController.create()}>
+                            <Link
+                                href={MaterialController.create()}
+                                {...prefetchProps(CACHE_TAGS.materials)}
+                            >
                                 <Plus aria-hidden="true" />
                                 Add material
                             </Link>
@@ -155,7 +167,10 @@ export default function MaterialsIndex({
                         description="Add the fabrics, trims and other primary materials you keep in stock."
                         action={
                             <Button asChild>
-                                <Link href={MaterialController.create()}>
+                                <Link
+                                    href={MaterialController.create()}
+                                    {...prefetchProps(CACHE_TAGS.materials)}
+                                >
                                     <Plus aria-hidden="true" />
                                     Add your first material
                                 </Link>
@@ -190,7 +205,10 @@ export default function MaterialsIndex({
                             hrefs={hrefs}
                             recentHistory={recent_history}
                         />
-                        <Pagination meta={materials.meta} />
+                        <Pagination
+                            meta={materials.meta}
+                            only={['materials', 'recent_history']}
+                        />
                     </>
                 )}
             </div>

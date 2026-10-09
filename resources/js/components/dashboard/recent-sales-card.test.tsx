@@ -131,6 +131,20 @@ describe('<RecentSalesCard>', () => {
         ).toHaveAttribute('href', '/sales');
     });
 
+    it('prefetches the sales log under the sales tag and a product under the products tag', () => {
+        render(<RecentSalesCard sales={recentSales} />);
+
+        const viewAll = screen.getByRole('link', { name: 'View all sales' });
+        const [product] = screen.getAllByRole('link', {
+            name: 'Denim Jeans 5-pocket',
+        });
+
+        expect(viewAll).toHaveAttribute('data-prefetch', 'true');
+        expect(viewAll).toHaveAttribute('data-cache-tags', 'sales');
+        expect(product).toHaveAttribute('data-prefetch', 'true');
+        expect(product).toHaveAttribute('data-cache-tags', 'products');
+    });
+
     it('explains an empty log instead of showing an empty table', () => {
         render(<RecentSalesCard sales={[]} />);
 

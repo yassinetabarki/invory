@@ -64,6 +64,28 @@ describe('<NavMain>', () => {
         );
     });
 
+    it('prefetches every item under the tag of its section', () => {
+        renderNavAt('/dashboard');
+
+        const tags = Object.fromEntries(
+            screen
+                .getAllByRole('link')
+                .map((link) => [
+                    link.textContent,
+                    [
+                        link.getAttribute('data-prefetch'),
+                        link.getAttribute('data-cache-tags'),
+                    ],
+                ]),
+        );
+
+        expect(tags).toEqual({
+            Dashboard: ['true', 'dashboard'],
+            Materials: ['true', 'materials'],
+            Products: ['true', 'products'],
+        });
+    });
+
     it('marks Dashboard as the current page on /dashboard, and only it', () => {
         renderNavAt('/dashboard');
 

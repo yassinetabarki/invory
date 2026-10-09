@@ -30,6 +30,7 @@ vi.mock('@inertiajs/react', async (importOriginal) => {
 });
 
 const VISIT_OPTIONS = {
+    only: ['products', 'filters'],
     preserveState: true,
     preserveScroll: true,
     replace: true,
@@ -127,6 +128,30 @@ describe('products/index page', () => {
                     name: 'Metal shank button 17mm',
                 }),
             ).toHaveAttribute('href', '/materials/5');
+        });
+
+        it('prefetches Add product and the row links, each under the tag of its page', () => {
+            render(<ProductsIndex {...props()} />);
+
+            const table = screen.getByRole('table');
+            const row = within(table).getByRole('row', {
+                name: /Denim Jacket/,
+            });
+
+            for (const link of [
+                screen.getByRole('link', { name: 'Add product' }),
+                within(table).getByRole('link', { name: 'Denim Jacket' }),
+                within(table).getByRole('link', { name: 'Edit Denim Jacket' }),
+            ]) {
+                expect(link).toHaveAttribute('data-prefetch', 'true');
+                expect(link).toHaveAttribute('data-cache-tags', 'products');
+            }
+
+            expect(
+                within(row).getByRole('link', {
+                    name: 'Metal shank button 17mm',
+                }),
+            ).toHaveAttribute('data-cache-tags', 'materials');
         });
 
         it('shows the stacked cards too (swapped with the table by CSS below md)', () => {
@@ -317,6 +342,23 @@ describe('products/index page', () => {
                 '/products',
                 { cant_produce: 1 },
                 VISIT_OPTIONS,
+            );
+        });
+
+        it('reloads only the rows and the filters on a filter change', async () => {
+            const user = userEvent.setup();
+
+            render(<ProductsIndex {...props()} />);
+
+            await user.click(
+                screen.getByRole('checkbox', { name: "Can't produce" }),
+            );
+
+            // The category and status options are not requested again.
+            expect(inertiaMock.router.get).toHaveBeenCalledWith(
+                '/products',
+                expect.anything(),
+                expect.objectContaining({ only: ['products', 'filters'] }),
             );
         });
 

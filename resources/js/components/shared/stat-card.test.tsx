@@ -78,6 +78,29 @@ describe('<StatCard>', () => {
             expect(link).toHaveAttribute('href', '/materials?needs_restock=1');
         });
 
+        it('prefetches the page it leads to under the tag of that page', () => {
+            render(
+                <StatCard
+                    label="Needs restock"
+                    value="4"
+                    href="/materials?low_stock=1"
+                />,
+            );
+
+            const link = screen.getByRole('link');
+
+            expect(link).toHaveAttribute('data-prefetch', 'true');
+            expect(link).toHaveAttribute('data-cache-tags', 'materials');
+        });
+
+        it('does not prefetch a page that has no cache tag', () => {
+            render(<StatCard label="Reports" value="1" href="/reports" />);
+
+            expect(screen.getByRole('link')).not.toHaveAttribute(
+                'data-prefetch',
+            );
+        });
+
         it('accepts a Wayfinder route object', () => {
             render(
                 <StatCard

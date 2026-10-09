@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { isNegativeDecimal } from '@/components/products/decimals';
 import { Money } from '@/components/shared/money';
 import { useAppSettings } from '@/hooks/use-app-settings';
+import { CACHE_TAGS, prefetchProps } from '@/lib/cache-tags';
 import { formatPercent } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { CostBreakdown, Decimal, Margin } from '@/types/domain';
@@ -90,6 +91,7 @@ export function CostBreakdownCard({
                         <dd className="text-right">
                             No selling price set.{' '}
                             <Link
+                                {...prefetchProps(CACHE_TAGS.products)}
                                 href={editHref}
                                 className="font-semibold text-primary underline underline-offset-2"
                             >

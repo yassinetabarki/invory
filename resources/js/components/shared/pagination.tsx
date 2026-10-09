@@ -9,6 +9,11 @@ type PaginationProps = {
     meta: Paginated<unknown>['meta'];
     /** Show "Showing 1–25 of 120" next to the controls. Defaults to true. */
     showSummary?: boolean;
+    /**
+     * Props the list page reloads when the page changes (a partial reload).
+     * Leave out to reload everything.
+     */
+    only?: string[];
 };
 
 const itemClass = cn(buttonVariants({ variant: 'outline', size: 'sm' }));
@@ -17,10 +22,12 @@ function StepItem({
     link,
     children,
     label,
+    only,
 }: {
     link: PaginationLink | undefined;
     children: ReactNode;
     label: string;
+    only?: string[];
 }) {
     if (!link?.url) {
         return (
@@ -37,6 +44,7 @@ function StepItem({
     return (
         <Link
             href={link.url}
+            only={only}
             preserveScroll
             aria-label={label}
             className={itemClass}
@@ -52,7 +60,11 @@ function StepItem({
  * by our own accessible labels and icons; page entries are "1", "2"… or "..."
  * for gaps.
  */
-export function Pagination({ meta, showSummary = true }: PaginationProps) {
+export function Pagination({
+    meta,
+    showSummary = true,
+    only,
+}: PaginationProps) {
     if (meta.last_page <= 1) {
         return null;
     }
@@ -73,7 +85,11 @@ export function Pagination({ meta, showSummary = true }: PaginationProps) {
             <nav aria-label="Pagination">
                 <ul className="flex items-center gap-1">
                     <li>
-                        <StepItem link={previous} label="Previous page">
+                        <StepItem
+                            link={previous}
+                            label="Previous page"
+                            only={only}
+                        >
                             <ChevronLeft aria-hidden="true" />
                             <span className="hidden sm:inline">Previous</span>
                         </StepItem>
@@ -112,6 +128,7 @@ export function Pagination({ meta, showSummary = true }: PaginationProps) {
                             ) : (
                                 <Link
                                     href={link.url}
+                                    only={only}
                                     preserveScroll
                                     aria-label={`Page ${link.label}`}
                                     aria-current={
@@ -132,7 +149,7 @@ export function Pagination({ meta, showSummary = true }: PaginationProps) {
                         </li>
                     ))}
                     <li>
-                        <StepItem link={next} label="Next page">
+                        <StepItem link={next} label="Next page" only={only}>
                             <span className="hidden sm:inline">Next</span>
                             <ChevronRight aria-hidden="true" />
                         </StepItem>

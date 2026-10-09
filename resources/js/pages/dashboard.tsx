@@ -10,8 +10,12 @@ import { UnproducibleAlerts } from '@/components/dashboard/unproducible-alerts';
 import { PageHeader } from '@/components/shared/page-header';
 import { DEFAULT_PERIOD, PeriodSelect } from '@/components/sales/period-select';
 import { Button } from '@/components/ui/button';
+import { CACHE_TAGS, prefetchProps } from '@/lib/cache-tags';
 import { dashboard } from '@/routes';
 import type { DashboardProps, SalesPeriod } from '@/types/domain';
+
+/** Only the figures that follow the period; restock, recent sales and alerts don't. */
+const PERIOD_PROPS = ['period', 'stats', 'top_products'];
 
 export default function Dashboard({
     period,
@@ -38,7 +42,12 @@ export default function Dashboard({
         router.get(
             dashboard.url(),
             next === DEFAULT_PERIOD ? {} : { period: next },
-            { preserveState: true, preserveScroll: true, replace: true },
+            {
+                only: PERIOD_PROPS,
+                preserveState: true,
+                preserveScroll: true,
+                replace: true,
+            },
         );
     }
 
@@ -67,6 +76,7 @@ export default function Dashboard({
                                     href={SaleController.index({
                                         query: { record: 1 },
                                     })}
+                                    {...prefetchProps(CACHE_TAGS.sales)}
                                 >
                                     <Plus aria-hidden="true" />
                                     Record sale

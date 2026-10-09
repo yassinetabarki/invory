@@ -51,6 +51,25 @@ describe('<Pagination>', () => {
         expect(container).toBeEmptyDOMElement();
     });
 
+    it('reloads everything unless the page names the props to reload', () => {
+        render(<Pagination meta={buildMeta()} />);
+
+        expect(
+            screen.getByRole('link', { name: 'Next page' }),
+        ).not.toHaveAttribute('data-only');
+    });
+
+    it('passes the props to reload to every step and page link', () => {
+        render(<Pagination meta={buildMeta()} only={['sales']} />);
+
+        for (const name of ['Previous page', 'Page 1', 'Page 3', 'Next page']) {
+            expect(screen.getByRole('link', { name })).toHaveAttribute(
+                'data-only',
+                'sales',
+            );
+        }
+    });
+
     it('renders a labelled pagination nav with links built from meta.links', () => {
         render(<Pagination meta={buildMeta()} />);
 

@@ -34,6 +34,7 @@ vi.mock('@inertiajs/react', async (importOriginal) => {
 });
 
 const VISIT_OPTIONS = {
+    only: ['materials', 'filters', 'recent_history'],
     preserveState: true,
     preserveScroll: true,
     replace: true,
@@ -151,6 +152,24 @@ describe('materials/index page', () => {
                     name: 'Edit Denim 12oz Indigo',
                 }),
             ).toHaveAttribute('href', '/materials/1/edit');
+        });
+
+        it('prefetches Add material and the row links under the materials tag', () => {
+            render(<MaterialsIndex {...props()} />);
+
+            const table = screen.getByRole('table');
+            const links = [
+                screen.getByRole('link', { name: 'Add material' }),
+                within(table).getByRole('link', { name: 'Denim 12oz Indigo' }),
+                within(table).getByRole('link', {
+                    name: 'Edit Denim 12oz Indigo',
+                }),
+            ];
+
+            for (const link of links) {
+                expect(link).toHaveAttribute('data-prefetch', 'true');
+                expect(link).toHaveAttribute('data-cache-tags', 'materials');
+            }
         });
 
         it('shows the pagination summary only when there are several pages', () => {
@@ -341,6 +360,65 @@ describe('materials/index page', () => {
                 { low_stock: 1 },
                 VISIT_OPTIONS,
             );
+        });
+
+        it('reloads only the rows, the filters and the history on a filter change', async () => {
+            const user = userEvent.setup();
+
+            render(<MaterialsIndex {...props()} />);
+
+            await user.click(
+                screen.getByRole('checkbox', { name: 'Needs restock' }),
+            );
+
+            // `summary` (all materials) and the option lists are not requested.
+            expect(inertiaMock.router.get).toHaveBeenCalledWith(
+                '/materials',
+                expect.anything(),
+                expect.objectContaining({
+                    only: ['materials', 'filters', 'recent_history'],
+                }),
+            );
+        });
+
+        it('reloads only the rows and their history when the page changes', () => {
+            render(
+                <MaterialsIndex
+                    {...props({
+                        materials: paginate([denim, thread], {
+                            last_page: 2,
+                            total: 30,
+                            from: 1,
+                            to: 25,
+                            links: [
+                                {
+                                    url: null,
+                                    label: '« Previous',
+                                    active: false,
+                                },
+                                { url: null, label: '1', active: true },
+                                {
+                                    url: '/materials?page=2',
+                                    label: '2',
+                                    active: false,
+                                },
+                                {
+                                    url: '/materials?page=2',
+                                    label: 'Next »',
+                                    active: false,
+                                },
+                            ],
+                        }),
+                    })}
+                />,
+            );
+
+            expect(
+                screen.getByRole('link', { name: 'Page 2' }),
+            ).toHaveAttribute('data-only', 'materials,recent_history');
+            expect(
+                screen.getByRole('link', { name: 'Next page' }),
+            ).toHaveAttribute('data-only', 'materials,recent_history');
         });
 
         it('removes low_stock from the query when Needs restock is switched off', async () => {
@@ -593,6 +671,13 @@ describe('materials/index page', () => {
                         received_on: '2026-10-08',
                         reference: '',
                         update_unit_cost: '1',
+                    },
+                    options: {
+                        invalidateCacheTags: [
+                            'materials',
+                            'products',
+                            'dashboard',
+                        ],
                     },
                 },
             ]);

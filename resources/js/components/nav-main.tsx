@@ -7,6 +7,7 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { useCurrentUrl } from '@/hooks/use-current-url';
+import { prefetchPropsForUrl } from '@/lib/cache-tags';
 import { toUrl } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import type { NavItem } from '@/types';
@@ -61,7 +62,7 @@ export function NavMain({ items }: { items: NavItem[] }) {
                             >
                                 <Link
                                     href={item.href}
-                                    prefetch
+                                    {...prefetchPropsForUrl(item.href)}
                                     aria-current={
                                         match === 'exact'
                                             ? 'page'

@@ -1,6 +1,7 @@
 import { Link } from '@inertiajs/react';
 import ProductController from '@/actions/App/Http/Controllers/ProductController';
 import { Callout } from '@/components/shared/callout';
+import { CACHE_TAGS, prefetchProps } from '@/lib/cache-tags';
 import type { UnproducibleAlert } from '@/types/domain';
 
 type UnproducibleAlertsProps = {
@@ -26,7 +27,10 @@ export function UnproducibleAlerts({ alerts }: UnproducibleAlertsProps) {
                     role="alert"
                     title={`${product.name} can't be produced.`}
                     action={
-                        <Link href={ProductController.show(product.id)}>
+                        <Link
+                            {...prefetchProps(CACHE_TAGS.products)}
+                            href={ProductController.show(product.id)}
+                        >
                             See product{' '}
                             <span className="sr-only">{product.name}</span>
                         </Link>

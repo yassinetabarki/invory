@@ -18,6 +18,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { useAppSettings } from '@/hooks/use-app-settings';
+import { CACHE_TAGS, prefetchProps } from '@/lib/cache-tags';
 import { formatCount, formatQuantity } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { Material, MaterialUsage } from '@/types/domain';
@@ -46,6 +47,7 @@ function ProductCell({ row }: { row: MaterialUsage }) {
             <div className="flex min-w-0 flex-col">
                 <span className="flex flex-wrap items-center gap-2">
                     <Link
+                        {...prefetchProps(CACHE_TAGS.products)}
                         href={ProductController.show(product.id)}
                         className="font-semibold hover:underline focus-visible:underline"
                     >
@@ -83,6 +85,7 @@ function LimitedBy({ row }: { row: MaterialUsage }) {
 
     return (
         <Link
+            {...prefetchProps(CACHE_TAGS.materials)}
             href={MaterialController.show(row.bottleneck.id)}
             className="font-semibold hover:underline focus-visible:underline"
         >

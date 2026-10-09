@@ -3,6 +3,7 @@ import MaterialController from '@/actions/App/Http/Controllers/MaterialControlle
 import { MaterialForm } from '@/components/materials/material-form';
 import { MaterialFormActions } from '@/components/materials/material-form-actions';
 import { PageHeader } from '@/components/shared/page-header';
+import { invalidatedBy } from '@/lib/cache-tags';
 import type { MaterialCreateProps, MaterialFormData } from '@/types/domain';
 
 const EMPTY_MATERIAL: MaterialFormData = {
@@ -37,6 +38,7 @@ export default function MaterialsCreate({
             {/* The header is inside the form so its Save button submits it. */}
             <Form
                 {...MaterialController.store.form()}
+                invalidateCacheTags={invalidatedBy('material')}
                 className="flex flex-1 flex-col gap-6 p-4 md:p-6"
             >
                 {({ errors, processing }) => (

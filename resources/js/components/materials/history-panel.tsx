@@ -2,6 +2,7 @@ import { Deferred, Link } from '@inertiajs/react';
 import { HistoryList } from '@/components/materials/history-list';
 import { InlinePanel } from '@/components/materials/inline-panel';
 import { Skeleton } from '@/components/ui/skeleton';
+import { CACHE_TAGS, prefetchProps } from '@/lib/cache-tags';
 import type { Material, StockMovement } from '@/types/domain';
 
 type HistoryPanelProps = {
@@ -57,6 +58,7 @@ export function HistoryPanel({
                 <HistoryList entries={entries} unit={material.unit} />
             </Deferred>
             <Link
+                {...prefetchProps(CACHE_TAGS.materials)}
                 href={showHref}
                 className="w-fit text-sm font-semibold text-primary underline-offset-4 hover:underline"
             >

@@ -5,6 +5,7 @@ import MaterialController from '@/actions/App/Http/Controllers/MaterialControlle
 import { StockBadge } from '@/components/materials/stock-badge';
 import { PhotoThumb } from '@/components/shared/photo-thumb';
 import { Quantity } from '@/components/shared/quantity';
+import { CACHE_TAGS, prefetchProps } from '@/lib/cache-tags';
 import type { Material } from '@/types/domain';
 
 type NeedsRestockCardProps = {
@@ -26,6 +27,7 @@ export function NeedsRestockCard({ materials }: NeedsRestockCardProps) {
                     Needs restock
                 </h2>
                 <Link
+                    {...prefetchProps(CACHE_TAGS.materials)}
                     href={MaterialController.index({
                         query: { low_stock: 1 },
                     })}
@@ -57,6 +59,7 @@ export function NeedsRestockCard({ materials }: NeedsRestockCardProps) {
                             />
                             <span className="flex min-w-0 flex-1 flex-col">
                                 <Link
+                                    {...prefetchProps(CACHE_TAGS.materials)}
                                     href={MaterialController.show(material.id)}
                                     className="font-semibold hover:underline focus-visible:underline"
                                 >

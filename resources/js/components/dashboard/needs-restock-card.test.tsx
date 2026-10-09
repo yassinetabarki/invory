@@ -73,6 +73,17 @@ describe('<NeedsRestockCard>', () => {
         );
     });
 
+    it('prefetches the material and the restock list under the materials tag', () => {
+        render(<NeedsRestockCard materials={needsRestock} />);
+
+        for (const name of ['Rubber cupsole 42', 'View all']) {
+            const link = screen.getByRole('link', { name });
+
+            expect(link).toHaveAttribute('data-prefetch', 'true');
+            expect(link).toHaveAttribute('data-cache-tags', 'materials');
+        }
+    });
+
     it('shows stock alone when the material has no reorder level', () => {
         render(
             <NeedsRestockCard

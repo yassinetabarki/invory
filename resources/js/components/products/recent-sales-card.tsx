@@ -10,6 +10,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { useAppSettings } from '@/hooks/use-app-settings';
+import { CACHE_TAGS, prefetchProps } from '@/lib/cache-tags';
 import { EMPTY_VALUE, formatCount, formatDate } from '@/lib/format';
 import type { Sale } from '@/types/domain';
 
@@ -39,6 +40,7 @@ export function RecentSalesCard({
                     Recent sales
                 </h2>
                 <Link
+                    {...prefetchProps(CACHE_TAGS.sales)}
                     href={viewAllHref}
                     className="text-sm font-semibold text-primary underline-offset-4 hover:underline"
                 >
@@ -51,6 +53,7 @@ export function RecentSalesCard({
                     No sales recorded for this product yet.{' '}
                     {recordHref !== null && (
                         <Link
+                            {...prefetchProps(CACHE_TAGS.sales)}
                             href={recordHref}
                             className="font-semibold text-primary underline underline-offset-2"
                         >

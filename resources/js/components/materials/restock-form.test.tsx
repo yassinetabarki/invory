@@ -220,6 +220,13 @@ describe('<RestockForm>', () => {
                         reference: 'PO-2300',
                         update_unit_cost: '1',
                     },
+                    options: {
+                        invalidateCacheTags: [
+                            'materials',
+                            'products',
+                            'dashboard',
+                        ],
+                    },
                 },
             ]);
         });

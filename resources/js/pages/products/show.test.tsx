@@ -66,6 +66,15 @@ describe('products/show page', () => {
             expect(screen.getByText('Active')).toBeInTheDocument();
         });
 
+        it('prefetches the Record sale page under the sales tag', () => {
+            render(<ProductsShow {...props()} />);
+
+            const link = screen.getByRole('link', { name: 'Record sale' });
+
+            expect(link).toHaveAttribute('data-prefetch', 'true');
+            expect(link).toHaveAttribute('data-cache-tags', 'sales');
+        });
+
         it('links Record sale to the sales page with this product pre-selected', () => {
             render(<ProductsShow {...props()} />);
 
@@ -84,6 +93,14 @@ describe('products/show page', () => {
                 'href',
                 '/products/1/edit',
             );
+        });
+
+        it('prefetches the edit page under the products tag', () => {
+            render(<ProductsShow {...props()} />);
+
+            const link = screen.getByRole('link', { name: 'Edit' });
+            expect(link).toHaveAttribute('data-prefetch', 'true');
+            expect(link).toHaveAttribute('data-cache-tags', 'products');
         });
 
         it('disables Record sale, with the reason, for a product that is not active', () => {
@@ -366,6 +383,29 @@ describe('products/show page', () => {
 
             expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
             expect(inertiaMock.router.delete).not.toHaveBeenCalled();
+        });
+
+        it('flushes the product, material, sales and dashboard caches when it deletes', async () => {
+            const user = userEvent.setup();
+
+            render(<ProductsShow {...props()} />);
+
+            await user.click(screen.getByRole('button', { name: 'Delete' }));
+            await user.click(
+                screen.getByRole('button', { name: 'Delete product' }),
+            );
+
+            expect(inertiaMock.router.delete).toHaveBeenCalledWith(
+                '/products/1',
+                expect.objectContaining({
+                    invalidateCacheTags: [
+                        'products',
+                        'materials',
+                        'sales',
+                        'dashboard',
+                    ],
+                }),
+            );
         });
 
         it('deletes through the destroy URL, shows progress, then closes', async () => {

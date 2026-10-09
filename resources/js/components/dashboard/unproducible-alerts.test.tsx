@@ -55,6 +55,15 @@ describe('<UnproducibleAlerts>', () => {
         expect(link).toHaveTextContent('See product');
     });
 
+    it('prefetches See product under the products tag', () => {
+        render(<UnproducibleAlerts alerts={[sneakerAlert]} />);
+
+        const [link] = screen.getAllByRole('link');
+
+        expect(link).toHaveAttribute('data-prefetch', 'true');
+        expect(link).toHaveAttribute('data-cache-tags', 'products');
+    });
+
     it('shows one alert per product, each with its own link', () => {
         render(<UnproducibleAlerts alerts={[sneakerAlert, choreAlert]} />);
 

@@ -6,6 +6,7 @@ import { RestockDialog } from '@/components/materials/restock-dialog';
 import { ConfirmDeleteDialog } from '@/components/shared/confirm-delete-dialog';
 import { Button } from '@/components/ui/button';
 import { useAppSettings } from '@/hooks/use-app-settings';
+import { CACHE_TAGS, invalidatedBy, prefetchProps } from '@/lib/cache-tags';
 import { formatCount } from '@/lib/format';
 import type { Material } from '@/types/domain';
 
@@ -27,6 +28,7 @@ export function MaterialActions({ material }: { material: Material }) {
 
     function destroy() {
         router.delete(MaterialController.destroy.url(material), {
+            invalidateCacheTags: invalidatedBy('material'),
             onStart: () => setProcessing(true),
             onFinish: () => {
                 setProcessing(false);
@@ -47,7 +49,10 @@ export function MaterialActions({ material }: { material: Material }) {
                     Restock
                 </Button>
                 <Button asChild variant="outline">
-                    <Link href={MaterialController.edit(material)}>
+                    <Link
+                        {...prefetchProps(CACHE_TAGS.materials)}
+                        href={MaterialController.edit(material)}
+                    >
                         <Pencil aria-hidden="true" />
                         Edit
                     </Link>

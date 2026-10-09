@@ -9,6 +9,7 @@ import { EmptyState } from '@/components/shared/empty-state';
 import { PageHeader } from '@/components/shared/page-header';
 import { Pagination } from '@/components/shared/pagination';
 import { Button } from '@/components/ui/button';
+import { CACHE_TAGS, prefetchProps } from '@/lib/cache-tags';
 import type {
     MaterialRef,
     ProductFilters,
@@ -62,6 +63,9 @@ function hasActiveFilters(filters: ProductFilters): boolean {
     );
 }
 
+/** A filter, sort or page change reloads the list and its filters only. */
+const LIST_PROPS = ['products', 'filters'];
+
 const hrefs = {
     show: (product: ProductListItem) => ProductController.show.url(product.id),
     edit: (product: ProductListItem) => ProductController.edit.url(product.id),
@@ -99,6 +103,7 @@ export default function ProductsIndex({
         setSentKey(filtersKey(next));
 
         router.get(ProductController.index.url(), toQuery(next), {
+            only: LIST_PROPS,
             preserveState: true,
             preserveScroll: true,
             replace: true,
@@ -118,7 +123,10 @@ export default function ProductsIndex({
                     description="Final items you make. Cost and capacity update from current material stock."
                     actions={
                         <Button asChild>
-                            <Link href={ProductController.create()}>
+                            <Link
+                                href={ProductController.create()}
+                                {...prefetchProps(CACHE_TAGS.products)}
+                            >
                                 <Plus aria-hidden="true" />
                                 Add product
                             </Link>
@@ -143,7 +151,10 @@ export default function ProductsIndex({
                         description="Add the items you make and the materials that go into one unit. Cost and capacity are worked out for you."
                         action={
                             <Button asChild>
-                                <Link href={ProductController.create()}>
+                                <Link
+                                    href={ProductController.create()}
+                                    {...prefetchProps(CACHE_TAGS.products)}
+                                >
                                     <Plus aria-hidden="true" />
                                     Add your first product
                                 </Link>
@@ -172,7 +183,7 @@ export default function ProductsIndex({
                 {!isEmpty && (
                     <>
                         <ProductsTable products={products.data} hrefs={hrefs} />
-                        <Pagination meta={products.meta} />
+                        <Pagination meta={products.meta} only={['products']} />
                     </>
                 )}
             </div>

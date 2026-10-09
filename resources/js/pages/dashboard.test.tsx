@@ -19,6 +19,7 @@ vi.mock('@inertiajs/react', async (importOriginal) => {
 });
 
 const VISIT_OPTIONS = {
+    only: ['period', 'stats', 'top_products'],
     preserveState: true,
     preserveScroll: true,
     replace: true,
@@ -203,6 +204,25 @@ describe('dashboard page', () => {
             ).toHaveTextContent('This year');
         });
 
+        it('reloads only the period figures: restock, recent sales and alerts stay', async () => {
+            const user = userEvent.setup();
+
+            render(<Dashboard {...dashboardProps()} />);
+
+            await user.click(screen.getByRole('combobox', { name: 'Period' }));
+            await user.click(
+                screen.getByRole('option', { name: 'This month' }),
+            );
+
+            expect(inertiaMock.router.get).toHaveBeenCalledWith(
+                '/dashboard',
+                { period: 'this_month' },
+                expect.objectContaining({
+                    only: ['period', 'stats', 'top_products'],
+                }),
+            );
+        });
+
         it('omits the default period from the query', async () => {
             const user = userEvent.setup();
 
@@ -236,6 +256,15 @@ describe('dashboard page', () => {
     });
 
     describe('Record sale', () => {
+        it('prefetches the sales page under the sales tag', () => {
+            render(<Dashboard {...dashboardProps()} />);
+
+            const link = screen.getByRole('link', { name: 'Record sale' });
+
+            expect(link).toHaveAttribute('data-prefetch', 'true');
+            expect(link).toHaveAttribute('data-cache-tags', 'sales');
+        });
+
         it('links to the sales page with the form open', () => {
             render(<Dashboard {...dashboardProps()} />);
 

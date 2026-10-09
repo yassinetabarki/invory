@@ -12,6 +12,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { useAppSettings } from '@/hooks/use-app-settings';
+import { CACHE_TAGS, prefetchProps } from '@/lib/cache-tags';
 import { formatCount, formatDate } from '@/lib/format';
 import type { Sale } from '@/types/domain';
 
@@ -38,6 +39,7 @@ export function RecentSalesCard({ sales }: RecentSalesCardProps) {
                     Recent sales
                 </h2>
                 <Link
+                    {...prefetchProps(CACHE_TAGS.sales)}
                     href={SaleController.index()}
                     className="text-[0.8125rem] font-semibold text-primary hover:underline focus-visible:underline"
                 >
@@ -87,6 +89,9 @@ export function RecentSalesCard({ sales }: RecentSalesCardProps) {
                                         </TableCell>
                                         <TableCell className="font-semibold">
                                             <Link
+                                                {...prefetchProps(
+                                                    CACHE_TAGS.products,
+                                                )}
                                                 href={ProductController.show(
                                                     sale.product.id,
                                                 )}
@@ -122,6 +127,7 @@ export function RecentSalesCard({ sales }: RecentSalesCardProps) {
                             >
                                 <div className="flex items-start justify-between gap-3">
                                     <Link
+                                        {...prefetchProps(CACHE_TAGS.products)}
                                         href={ProductController.show(
                                             sale.product.id,
                                         )}

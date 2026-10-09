@@ -412,6 +412,23 @@ describe('<ProductForm>', () => {
             expect(submission().data).toMatchObject({ selling_price: '' });
         });
 
+        it('flushes the product, material, sales and dashboard caches on create', async () => {
+            const { user } = setup();
+
+            await user.click(
+                screen.getAllByRole('button', { name: 'Save product' })[0],
+            );
+
+            expect(submission().options).toMatchObject({
+                invalidateCacheTags: [
+                    'products',
+                    'materials',
+                    'sales',
+                    'dashboard',
+                ],
+            });
+        });
+
         it('submits from the header button too', async () => {
             const { user } = setup();
 
@@ -566,6 +583,41 @@ describe('<ProductForm>', () => {
             expect(
                 screen.getByRole('option', { name: /Brass rivet 9mm/ }),
             ).not.toHaveAttribute('aria-disabled', 'true');
+        });
+
+        it('flushes the product, material, sales and dashboard caches on update', async () => {
+            const { user } = setup({ product: denimJacket });
+
+            await user.click(
+                screen.getAllByRole('button', { name: 'Save product' })[0],
+            );
+
+            expect(submission().options).toMatchObject({
+                invalidateCacheTags: [
+                    'products',
+                    'materials',
+                    'sales',
+                    'dashboard',
+                ],
+            });
+        });
+
+        it('flushes the same caches on update with a file (POST with _method)', async () => {
+            const { user } = setup({ product: denimJacket });
+
+            await user.upload(screen.getByLabelText('Photo'), photo);
+            await user.click(
+                screen.getAllByRole('button', { name: 'Save product' })[0],
+            );
+
+            expect(submission().options).toMatchObject({
+                invalidateCacheTags: [
+                    'products',
+                    'materials',
+                    'sales',
+                    'dashboard',
+                ],
+            });
         });
 
         it('sends PUT to the product URL when no file is attached', async () => {

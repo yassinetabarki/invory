@@ -39,6 +39,15 @@ describe('<MaterialActions>', () => {
     });
 
     describe('Edit', () => {
+        it('prefetches the edit page under the materials tag', () => {
+            render(<MaterialActions material={denim} />);
+
+            const link = screen.getByRole('link', { name: 'Edit' });
+
+            expect(link).toHaveAttribute('data-prefetch', 'true');
+            expect(link).toHaveAttribute('data-cache-tags', 'materials');
+        });
+
         it('links to the edit page', () => {
             render(<MaterialActions material={denim} />);
 
@@ -187,6 +196,24 @@ describe('<MaterialActions>', () => {
                 expect(
                     screen.getByRole('button', { name: 'Delete' }),
                 ).toHaveFocus(),
+            );
+        });
+
+        it('flushes the material, product and dashboard caches when it deletes', async () => {
+            const user = userEvent.setup();
+
+            render(<MaterialActions material={denim} />);
+
+            await user.click(screen.getByRole('button', { name: 'Delete' }));
+            await user.click(
+                screen.getByRole('button', { name: 'Delete material' }),
+            );
+
+            expect(inertiaMock.router.delete).toHaveBeenCalledWith(
+                '/materials/1',
+                expect.objectContaining({
+                    invalidateCacheTags: ['materials', 'products', 'dashboard'],
+                }),
             );
         });
 
