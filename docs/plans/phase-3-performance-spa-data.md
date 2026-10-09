@@ -701,6 +701,28 @@ Phase 4                                         S-27 (perf dataset + budgets) �
 - 2026-10-09: S-22b committed (6161e9e); the main session applied its migration to `laravel`. The human asked for F-33 now (F-31 q3 "Manage
   units" link: not now). F-33 approved after one fix round: the guard moved from `app/Rules` to `app/Services/Reference`, and a restore whose
   clashing row vanished gets the generic `name` error. Gates: Pest 1 917, PostgreSQL parity 1 917, Vitest 1 119, check, types, build.
+- 2026-10-09: F-33 committed (30e48d6). S-04 approved by the human. Tech-lead split, each part a green commit, dispatched in sequence (one
+  backend developer at a time; the frontend contract is unchanged per ADR-0006):
+  - **S-04a foundation** (no page changes):
+    - schema: `products`, `product_components`, `created_by`/`updated_by` on materials and products, PostgreSQL CHECKs, `pg_trgm` GIN
+      indexes on the name and SKU of both
+    - models, factories, `ProductPolicy`
+    - `ProductCostingService` (Eloquent → `BomLine[]` → domain)
+    - Actions `CreateProduct`, `UpdateProduct`, `DeleteProduct`, `SyncProductComponents`; the material Actions record the actor
+    - the `DeleteMaterial` in-use guard (`MaterialInUseException` + error toast)
+  - **S-04b switch:**
+    - `ProductController` on Eloquent + Resources (props unchanged), real FormRequest rules, route model binding
+    - the demo products move from `App\Mock` to `DemoCatalogSeeder` (idempotent by SKU)
+    - the remaining preview fixtures (sales, history) reference products **by SKU**, resolved against real rows
+    - preview consumers (dashboard alerts and counts, material usage, sale product options) read real products through
+      `ProductCostingService`; S-06-BE/S-07-BE later replace them with their final services
+    - F-29: Q7 lock, used-in counts and product-category usage on real data
+  - Q4: bigint keys, consistent with every existing table.
+- 2026-10-09: S-04a approved (gates green; parity 2 029). S-04b approved. Props for 64 pages were dumped before and after the switch: 50
+  are byte-identical, and the other 14 differ only in component line ids and timestamps, which are now real rows. Gates: Pest 2 089 (18
+  PostgreSQL-only tests skipped on SQLite), PostgreSQL parity 2 089, Vitest 1 119, check, types, build. The run was cut off by the rate limit
+  during the review and resumed; no handoff was lost. S-04a and S-04b share files (MaterialController, Material, tests/Pest.php, ArchTest,
+  UpdateProduct, ProductActionsTest), so they ship as **one commit**. Dev database: 3 migrations + `DemoProductsSeeder` for the human (not run).
 
 ---
 

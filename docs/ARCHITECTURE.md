@@ -85,7 +85,8 @@ code testable and ready to scale.
  │     Sale     │  (does not change material stock)
  └──────────────┘
 ```
-Status (2026-10-08): `materials` is real. `products`, `product_components`, `sales`, `stock_movements` and the `photo_path` columns are
+Status (2026-10-09): `materials`, `products` and `product_components` are real (S-04; demo products from `DemoProductsSeeder`).
+Earlier status (2026-10-08): `materials` is real. `products`, `product_components`, `sales`, `stock_movements` and the `photo_path` columns are
 **designed here and served from preview fixtures** (`App\Mock`, [ADR-0006](adr/0006-ui-first-preview-data.md)) until their Phase 3 stories
 (S-04, S-14-BE, S-16-BE, S-15-BE) create them.
 
@@ -125,7 +126,7 @@ Defaults are inserted by the migration (frozen snapshot, `insertOrIgnore` by cod
 | id | bigint PK | |
 | sku | string(64) | required, unique among non-deleted rows |
 | name | string(150) | required |
-| category_id | FK → product_categories | `restrictOnDelete` (S-04; preview products use the category code) |
+| category_id | FK → product_categories | `restrictOnDelete`; forms and filters use the category **code** |
 | status | string(16) | `ProductStatus` enum: draft, active, archived (default active) |
 | description | text nullable | |
 | labor_cost | decimal(12,4) | ≥ 0, cost per unit, default 0 (cut-make-trim) |

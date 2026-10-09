@@ -139,7 +139,7 @@ writes to preview data validate for real, persist nothing and say so in an `info
 
 ## Phase 3 — Real backend (replaces the preview data; pages, routes and props do not change)
 
-## S-04 · Products + composition — backend — `todo`
+## S-04 · Products + composition — backend — `review` (approved by the tech-lead 2026-10-09; S-04a foundation + S-04b switch)
 **Owner:** BE · **Depends on:** S-01, S-03, S-13
 
 - [ ] Migrations `products` (incl. `selling_price decimal(12,4) null`, `photo_path`), `product_components` (FKs, unique pair); models + factories (`withComponents()`); `ProductPolicy`
@@ -338,3 +338,14 @@ From the S-22b review (2026-10-09):
   500 instead of a `name` error. Catch `UniqueConstraintViolationException` in the reference Actions/controllers and map it to a validation error.
 - **F-34 (note)**: PostgreSQL's `lower()` folds non-ASCII letters and SQLite's doesn't, so "Étiquette" and "étiquette" clash on PostgreSQL only.
   Tests stay ASCII; production (PostgreSQL) behaves as intended.
+
+From the S-04 review (2026-10-09, MINOR/NIT, none blocking):
+- **F-35 (MINOR, BE)**: two simultaneous creates with the same product (or material) SKU both pass validation and the second hits the partial
+  unique index → 500. Add an F-33-style fallback that maps it to a `sku` validation error.
+- **F-36 (S-15-BE note)**: a multipart update (photo attached) can't carry an empty `components` list, so clearing the composition while
+  uploading a photo leaves it unchanged. S-15-BE must send `components` explicitly (form side) or use a sentinel.
+- **F-37 (NIT, seed)**: `DemoProductsSeeder` recreates a demo product whose SKU exists only soft-deleted, and demo products are dated "now"
+  (the fixture said 37 days ago). Fine for demo data; revisit with S-08.
+- **F-38 (perf note)**: the dashboard and material show sit exactly at the 10-query budget (preview adapters over real products) until
+  S-06-BE/S-07-BE replace the adapters; the products index costs the whole filtered set when `cant_produce` is on (interim until S-23).
+
