@@ -9,7 +9,9 @@ import { EmptyState } from '@/components/shared/empty-state';
 import { PageHeader } from '@/components/shared/page-header';
 import { Pagination } from '@/components/shared/pagination';
 import { Button } from '@/components/ui/button';
+import { useReference } from '@/hooks/use-reference';
 import { CACHE_TAGS, prefetchProps } from '@/lib/cache-tags';
+import { categoryOptions } from '@/lib/reference';
 import type {
     MaterialRef,
     ProductFilters,
@@ -76,9 +78,9 @@ const hrefs = {
 export default function ProductsIndex({
     products,
     filters: serverFilters,
-    categories,
     statuses,
 }: ProductsIndexProps) {
+    const reference = useReference();
     // The filter controls own their state (seeded from the server) so a slow
     // response can never overwrite what the user typed or picked meanwhile.
     const [filters, setFilters] = useState(serverFilters);
@@ -138,7 +140,10 @@ export default function ProductsIndex({
                 {(!isEmpty || filtered) && (
                     <ProductsFilters
                         filters={filters}
-                        categories={categories}
+                        categories={categoryOptions(
+                            reference.product_categories,
+                            filters.category,
+                        )}
                         statuses={statuses}
                         onChange={applyFilters}
                     />

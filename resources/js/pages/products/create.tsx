@@ -1,13 +1,16 @@
 import { Head } from '@inertiajs/react';
 import ProductController from '@/actions/App/Http/Controllers/ProductController';
 import { ProductForm } from '@/components/products/product-form';
+import { useReference } from '@/hooks/use-reference';
+import { categoryOptions } from '@/lib/reference';
 import type { ProductCreateProps } from '@/types/domain';
 
 export default function ProductsCreate({
-    categories,
     statuses,
     materials,
 }: ProductCreateProps) {
+    const reference = useReference();
+
     return (
         <>
             <Head title="Add product" />
@@ -16,7 +19,7 @@ export default function ProductsCreate({
                 <ProductForm
                     title="Add product"
                     description="Details, photo and the materials that make one unit."
-                    categories={categories}
+                    categories={categoryOptions(reference.product_categories)}
                     statuses={statuses}
                     materials={materials}
                     action={{

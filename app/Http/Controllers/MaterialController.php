@@ -16,7 +16,6 @@ use App\Mock\PreviewMaterials;
 use App\Mock\PreviewProducts;
 use App\Models\Material;
 use App\Services\Inventory\InventorySummary;
-use App\Services\Reference\ReferenceOptions;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -30,7 +29,7 @@ use Inertia\Response;
  */
 final class MaterialController extends Controller
 {
-    public function index(IndexMaterialRequest $request, InventorySummary $inventory, ReferenceOptions $options): Response
+    public function index(IndexMaterialRequest $request, InventorySummary $inventory): Response
     {
         Gate::authorize('viewAny', Material::class);
 
@@ -60,8 +59,6 @@ final class MaterialController extends Controller
         return Inertia::render('materials/index', [
             'materials' => fn (): AnonymousResourceCollection => MaterialResource::collection($materials()),
             'filters' => $filters,
-            // Active categories, plus the filtered one even when it is archived.
-            'categories' => fn (): array => $options->materialCategories($filters['category']),
             // Over all non-deleted materials, not just this page: a full scan, so it must stay lazy.
             'summary' => function () use ($inventory): array {
                 $totals = $inventory->summarize();
@@ -76,14 +73,12 @@ final class MaterialController extends Controller
         ]);
     }
 
-    public function create(ReferenceOptions $options): Response
+    public function create(): Response
     {
         Gate::authorize('create', Material::class);
 
-        return Inertia::render('materials/create', [
-            'categories' => fn (): array => $options->materialCategories(),
-            'units' => fn (): array => $options->units(),
-        ]);
+        // Category and unit options come from the shared `reference` prop (ADR-0008).
+        return Inertia::render('materials/create');
     }
 
     public function store(StoreMaterialRequest $request, CreateMaterial $createMaterial): RedirectResponse
@@ -110,16 +105,13 @@ final class MaterialController extends Controller
         ]);
     }
 
-    public function edit(Material $material, ReferenceOptions $options): Response
+    public function edit(Material $material): Response
     {
         Gate::authorize('update', $material);
 
         PreviewMaterials::decorate([$material]);
 
         return Inertia::render('materials/edit', [
-            // Active rows, plus the material's own category and unit when they have been archived since.
-            'categories' => fn (): array => $options->materialCategories($material->category->code),
-            'units' => fn (): array => $options->units($material->unit->code),
             'material' => MaterialResource::make($material),
         ]);
     }

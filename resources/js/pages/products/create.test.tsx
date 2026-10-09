@@ -8,6 +8,11 @@ import {
     productStatuses,
 } from '@/test/fixtures/products';
 import {
+    archived,
+    referenceData,
+    referenceProductCategories,
+} from '@/test/fixtures/reference';
+import {
     inertiaMock,
     resetInertiaMock,
     setFormState,
@@ -24,7 +29,6 @@ vi.mock('@inertiajs/react', async (importOriginal) => {
 });
 
 const props: ProductCreateProps = {
-    categories: productCategories,
     statuses: productStatuses,
     materials: materialOptions,
 };
@@ -117,5 +121,40 @@ describe('products/create page', () => {
                 href: { url: '/products/create', method: 'get' },
             }),
         ]);
+    });
+});
+
+describe('products/create page categories', () => {
+    beforeEach(() => {
+        resetInertiaMock();
+    });
+
+    it('lists the active product categories from the shared reference prop', async () => {
+        const user = userEvent.setup();
+
+        setPageProps({
+            reference: referenceData({
+                product_categories: [
+                    referenceProductCategories[0],
+                    archived(referenceProductCategories[1]),
+                    {
+                        id: 70,
+                        code: 'hat',
+                        name: 'Hat',
+                        position: 7,
+                        archived: false,
+                    },
+                ],
+            }),
+        });
+        render(<ProductsCreate {...props} />);
+
+        await user.click(screen.getByLabelText(/^Category/));
+
+        expect(
+            within(screen.getByRole('listbox'))
+                .getAllByRole('option')
+                .map((option) => option.textContent),
+        ).toEqual(['Apparel', 'Hat']);
     });
 });

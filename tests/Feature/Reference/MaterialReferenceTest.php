@@ -6,7 +6,6 @@ use App\Models\MaterialCategory;
 use App\Models\ProductCategory;
 use App\Models\Unit;
 use App\Models\User;
-use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia as Assert;
 
 use function Pest\Laravel\actingAs;
@@ -24,105 +23,42 @@ beforeEach(function () {
     $this->user = preparePreview($this);
 });
 
-/** The `Option[]` of a page prop as [value => label]. */
-function optionsOf(TestResponse $response, string $prop): array
-{
-    return collect($response->inertiaProps($prop))->pluck('label', 'value')->all();
-}
+describe('the option lists moved to the shared reference prop (S-22)', function () {
+    it('sends no categories or units prop on any materials or products page', function (string $route, array $parameters, array $absent) {
+        $this->preview = Material::factory()->create();
+        $parameters = array_map(fn ($value) => $value === '{material}' ? $this->preview : $value, $parameters);
 
-describe('the option props', function () {
-    it('lists the active categories and units by position then name, as value/label pairs', function () {
+        actingAs($this->user)->get(route($route, $parameters))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->missingAll($absent));
+    })->with([
+        'materials index' => ['materials.index', [], ['categories', 'units']],
+        'materials create' => ['materials.create', [], ['categories', 'units']],
+        'materials edit' => ['materials.edit', ['{material}'], ['categories', 'units']],
+        'products index' => ['products.index', [], ['categories', 'units']],
+        'products create' => ['products.create', [], ['categories', 'units']],
+        // MOCK (ADR-0006): product 1 is the Denim Jacket.
+        'products edit' => ['products.edit', [1], ['categories', 'units']],
+    ]);
+
+    it('still sends the free enum lists that stay per page', function () {
+        actingAs($this->user)->get(route('products.create'))
+            ->assertInertia(fn (Assert $page) => $page->has('statuses', 3));
+    });
+
+    it('lets the pages read the lists from the shared prop: archived rows come with the flag, by position then name', function () {
         MaterialCategory::factory()->create(['code' => 'elastic', 'name' => 'Elastic', 'position' => 5]);
-        Unit::factory()->create(['code' => 'inch', 'name' => 'Inch', 'position' => 5]);
-
-        $response = actingAs($this->user)->get(route('materials.create'));
-
-        expect($response->inertiaProps('categories.0'))->toBe(['value' => 'fabric', 'label' => 'Fabric'])
-            ->and($response->inertiaProps('units.0'))->toBe(['value' => 'm', 'label' => 'Metre (m)'])
-            ->and(array_keys(optionsOf($response, 'categories')))->toBe(['fabric', 'lining', 'interlining', 'leather', 'thread', 'elastic', 'trim', 'fastener', 'label', 'sole', 'hardware', 'packaging', 'other'])
-            ->and(array_keys(optionsOf($response, 'units')))->toBe(['m', 'cm', 'yd', 'sqm', 'sqft', 'inch', 'kg', 'g', 'l', 'ml', 'pc', 'pair', 'roll', 'cone'])
-            ->and(optionsOf($response, 'units')['inch'])->toBe('Inch (inch)')
-            ->and(optionsOf($response, 'categories')['elastic'])->toBe('Elastic');
-    });
-
-    it('sends the same labels as before the reference tables', function () {
-        $response = actingAs($this->user)->get(route('materials.create'));
-
-        expect(optionsOf($response, 'units'))->toBe([
-            'm' => 'Metre (m)', 'cm' => 'Centimetre (cm)', 'yd' => 'Yard (yd)', 'sqm' => 'Square metre (sqm)', 'sqft' => 'Square foot (sqft)',
-            'kg' => 'Kilogram (kg)', 'g' => 'Gram (g)', 'l' => 'Litre (l)', 'ml' => 'Millilitre (ml)', 'pc' => 'Piece (pc)',
-            'pair' => 'Pair (pair)', 'roll' => 'Roll (roll)', 'cone' => 'Cone (cone)',
-        ])->and(optionsOf($response, 'categories'))->toBe([
-            'fabric' => 'Fabric', 'lining' => 'Lining', 'interlining' => 'Interlining', 'leather' => 'Leather', 'thread' => 'Thread',
-            'trim' => 'Trim', 'fastener' => 'Fastener', 'label' => 'Label', 'sole' => 'Sole', 'hardware' => 'Hardware',
-            'packaging' => 'Packaging', 'other' => 'Other',
-        ]);
-    });
-
-    it('hides archived categories and units on the create pages', function () {
-        MaterialCategory::query()->where('code', 'lining')->update(['archived_at' => now()]);
         Unit::query()->where('code', 'cm')->update(['archived_at' => now()]);
-        ProductCategory::query()->where('code', 'bag')->update(['archived_at' => now()]);
 
-        $materials = actingAs($this->user)->get(route('materials.create'));
-        $products = actingAs($this->user)->get(route('products.create'));
+        $response = actingAs($this->user)->get(route('materials.create'));
 
-        expect(optionsOf($materials, 'categories'))->not->toHaveKey('lining')->toHaveCount(11)
-            ->and(optionsOf($materials, 'units'))->not->toHaveKey('cm')->toHaveCount(12)
-            ->and(optionsOf($products, 'categories'))->not->toHaveKey('bag')->toHaveCount(5);
-    });
+        $categories = collect($response->inertiaProps('reference.material_categories'));
+        $units = collect($response->inertiaProps('reference.units'))->keyBy('code');
 
-    it('keeps the archived category and unit of the material being edited, and only those', function () {
-        $material = Material::factory()->create(['category' => 'thread', 'unit' => 'cone']);
-        MaterialCategory::query()->whereIn('code', ['thread', 'lining'])->update(['archived_at' => now()]);
-        Unit::query()->whereIn('code', ['cone', 'cm'])->update(['archived_at' => now()]);
-
-        $response = actingAs($this->user)->get(route('materials.edit', $material));
-
-        expect(optionsOf($response, 'categories'))->toHaveKey('thread')->not->toHaveKey('lining')->toHaveCount(11)
-            ->and(optionsOf($response, 'units'))->toHaveKey('cone')->not->toHaveKey('cm')->toHaveCount(12)
-            // The archived value is in its place by position, not appended.
-            ->and(array_search('thread', array_keys(optionsOf($response, 'categories'))))->toBe(3);
-    });
-
-    it('does not repeat a current value that is active', function () {
-        $material = Material::factory()->create(['category' => 'thread', 'unit' => 'cone']);
-
-        $response = actingAs($this->user)->get(route('materials.edit', $material));
-
-        expect($response->inertiaProps('categories'))->toHaveCount(12)
-            ->and($response->inertiaProps('units'))->toHaveCount(13);
-    });
-
-    it('keeps the filtered category on the materials list even when it is archived', function () {
-        MaterialCategory::query()->whereIn('code', ['thread', 'lining'])->update(['archived_at' => now()]);
-
-        $filtered = actingAs($this->user)->get(route('materials.index', ['category' => 'thread']));
-        $unfiltered = actingAs($this->user)->get(route('materials.index'));
-
-        expect(optionsOf($filtered, 'categories'))->toHaveKey('thread')->not->toHaveKey('lining')
-            ->and(optionsOf($unfiltered, 'categories'))->not->toHaveKey('thread')->not->toHaveKey('lining');
-    });
-
-    it('keeps the filtered product category on the products list, and the current one on the edit page, when archived', function () {
-        ProductCategory::query()->whereIn('code', ['apparel', 'bag'])->update(['archived_at' => now()]);
-
-        $filtered = actingAs($this->user)->get(route('products.index', ['category' => 'apparel']));
-        $unfiltered = actingAs($this->user)->get(route('products.index'));
-        // MOCK (ADR-0006): product 1, the Denim Jacket, is in apparel.
-        $edit = actingAs($this->user)->get(route('products.edit', 1));
-        $create = actingAs($this->user)->get(route('products.create'));
-
-        expect(optionsOf($filtered, 'categories'))->toHaveKey('apparel')->not->toHaveKey('bag')
-            ->and(optionsOf($unfiltered, 'categories'))->not->toHaveKey('apparel')
-            ->and(optionsOf($edit, 'categories'))->toHaveKey('apparel')->not->toHaveKey('bag')
-            ->and(optionsOf($create, 'categories'))->not->toHaveKey('apparel');
-    });
-
-    it('sends the option lists as props that a partial reload can skip', function () {
-        $first = actingAs($this->user)->get(route('materials.create'))->assertOk();
-
-        $first->assertInertia(fn (Assert $page) => $page->reloadOnly(['units'], fn (Assert $partial) => $partial->has('units', 13)->missing('categories')));
+        expect($categories->pluck('code')->all())->toBe(['fabric', 'lining', 'interlining', 'leather', 'thread', 'elastic', 'trim', 'fastener', 'label', 'sole', 'hardware', 'packaging', 'other'])
+            ->and($units->get('m')['name'])->toBe('Metre')
+            ->and($units->get('cm')['archived'])->toBeTrue()
+            ->and($units->get('m')['archived'])->toBeFalse();
     });
 });
 
@@ -305,8 +241,9 @@ describe('the product forms', function () {
 
         expect($labels['apparel'])->toBe('Clothing')
             ->and($labels['footwear'])->toBe('Footwear')
-            // The option list, the names of the products (once, not per product) and the shared reference lists of a full load.
-            ->and(queriesMatching($queries, 'from "product_categories"'))->toHaveCount(3)
+            // The names of the products (once, not per product) and the shared reference lists of a full load. The option list's
+            // own query is gone since S-22: 3 reads became 2.
+            ->and(queriesMatching($queries, 'from "product_categories"'))->toHaveCount(2)
             ->and(actingAs($this->user)->get(route('products.show', 1))->inertiaProps('product.category_label'))->toBe('Clothing');
     });
 

@@ -33,8 +33,8 @@ it('lists materials with the agreed contract shape', function () {
                 ->hasAll(['current_page', 'from', 'last_page', 'links', 'path', 'per_page', 'to', 'total']))
             ->where('materials.meta.total', 3)
             ->where('materials.meta.per_page', config('invory.per_page'))
-            ->has('categories', 12, fn (Assert $option) => $option->hasAll(['value', 'label']))
-            ->where('categories.0', ['value' => 'fabric', 'label' => 'Fabric']));
+            // The category options come from the shared `reference` prop (S-22): the page no longer sends them.
+            ->missing('categories'));
 });
 
 it('sends the inventory summary over all materials, not just the current page', function () {

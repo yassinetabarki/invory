@@ -14,10 +14,14 @@ import {
     denimJacketItem,
     noProductFilters,
     paginateProducts,
-    productCategories,
     productStatuses,
     sneakerItem,
 } from '@/test/fixtures/products';
+import {
+    archived,
+    referenceData,
+    referenceProductCategories,
+} from '@/test/fixtures/reference';
 import { inertiaMock, resetInertiaMock, setPageProps } from '@/test/inertia';
 import type { ProductFilters, ProductsIndexProps } from '@/types/domain';
 
@@ -42,7 +46,6 @@ function props(
     return {
         products: paginateProducts(allProductItems),
         filters: noProductFilters,
-        categories: productCategories,
         statuses: productStatuses,
         ...overrides,
     };
@@ -567,5 +570,63 @@ describe('products/index page', () => {
                 screen.getByRole('combobox', { name: 'Status' }),
             ).toHaveTextContent('Draft');
         });
+    });
+});
+
+describe('products/index page category filter', () => {
+    beforeEach(() => {
+        resetInertiaMock();
+        setPageProps({}, { url: '/products', component: 'products/index' });
+    });
+
+    function filterOptions() {
+        return within(screen.getByRole('listbox'))
+            .getAllByRole('option')
+            .map((option) => option.textContent);
+    }
+
+    it('offers the categories from the shared reference prop, archived ones hidden', async () => {
+        const user = userEvent.setup();
+
+        setPageProps({
+            reference: referenceData({
+                product_categories: [
+                    referenceProductCategories[0],
+                    archived(referenceProductCategories[1]),
+                    referenceProductCategories[2],
+                ],
+            }),
+        });
+        render(<ProductsIndex {...props()} />);
+
+        await user.click(screen.getByRole('combobox', { name: 'Category' }));
+
+        expect(filterOptions()).toEqual(['All categories', 'Apparel', 'Bag']);
+    });
+
+    it('keeps an archived category that is the active filter', async () => {
+        const user = userEvent.setup();
+
+        setPageProps({
+            reference: referenceData({
+                product_categories: [
+                    referenceProductCategories[0],
+                    archived(referenceProductCategories[1]),
+                ],
+            }),
+        });
+        render(
+            <ProductsIndex
+                {...props({ filters: filtersWith({ category: 'footwear' }) })}
+            />,
+        );
+
+        await user.click(screen.getByRole('combobox', { name: 'Category' }));
+
+        expect(filterOptions()).toEqual([
+            'All categories',
+            'Apparel',
+            'Footwear',
+        ]);
     });
 });

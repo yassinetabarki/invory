@@ -23,7 +23,7 @@ export const CACHE_TAGS = {
 export type CacheTag = (typeof CACHE_TAGS)[keyof typeof CACHE_TAGS];
 
 /** The kinds of write the app makes. */
-export type CacheWrite = 'material' | 'product' | 'sale';
+export type CacheWrite = 'material' | 'product' | 'sale' | 'reference';
 
 const INVALIDATED_BY: Record<CacheWrite, readonly CacheTag[]> = {
     // Material create / update / delete / restock: costs, capacity, stock alerts.
@@ -38,6 +38,14 @@ const INVALIDATED_BY: Record<CacheWrite, readonly CacheTag[]> = {
     ],
     // Sale record / edit / delete: sales log, "sold (30 d)" and the dashboard.
     sale: [CACHE_TAGS.sales, CACHE_TAGS.products, CACHE_TAGS.dashboard],
+    // Unit / category create / rename / archive / restore / delete: the labels
+    // shown on materials, products, sales and the dashboard.
+    reference: [
+        CACHE_TAGS.materials,
+        CACHE_TAGS.products,
+        CACHE_TAGS.sales,
+        CACHE_TAGS.dashboard,
+    ],
 };
 
 /** The tags a write has to flush: pass them as `invalidateCacheTags`. */

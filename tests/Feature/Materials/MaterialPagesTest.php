@@ -10,26 +10,24 @@ beforeEach(function () {
     $this->user = User::factory()->create();
 });
 
-it('exposes category and unit options on the create page', function () {
+it('sends no props of its own on the create page: the options come from the shared reference prop', function () {
     actingAs($this->user)->get(route('materials.create'))
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('materials/create')
-            ->has('categories', 12, fn (Assert $option) => $option->hasAll(['value', 'label']))
-            ->has('units', 13, fn (Assert $option) => $option->hasAll(['value', 'label']))
-            ->where('units.0', ['value' => 'm', 'label' => 'Metre (m)'])
-            ->where('categories.0', ['value' => 'fabric', 'label' => 'Fabric']));
+            ->missingAll(['categories', 'units'])
+            ->has('reference.units')
+            ->has('reference.material_categories'));
 });
 
-it('exposes the flat material and options on the edit page', function () {
+it('exposes the flat material, and no option lists, on the edit page', function () {
     $material = Material::factory()->create(['unit_cost' => '8.5', 'quantity_on_hand' => '250']);
 
     actingAs($this->user)->get(route('materials.edit', $material))
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('materials/edit')
-            ->has('categories', 12)
-            ->has('units', 13)
+            ->missingAll(['categories', 'units'])
             ->has('material', fn (Assert $m) => $m->hasAll(materialContractKeys()))
             ->where('material.id', $material->id)
             ->where('material.unit_cost', '8.5000')

@@ -4,14 +4,11 @@
  */
 import type {
     Material,
-    MaterialCategory,
     MaterialFilters,
     MaterialRef,
     MaterialUsage,
-    Option,
     Paginated,
     StockMovement,
-    UnitOfMeasure,
 } from '@/types/domain';
 
 export const denim: Material = {
@@ -224,18 +221,6 @@ export const buttonHistory: StockMovement[] = [
         quantity_after: '600.0000',
         unit_price: '0.3200',
     }),
-];
-
-export const categories: Option<MaterialCategory>[] = [
-    { value: 'fabric', label: 'Fabric' },
-    { value: 'thread', label: 'Thread' },
-    { value: 'trim', label: 'Trim' },
-    { value: 'fastener', label: 'Fastener' },
-];
-
-export const units: Option<UnitOfMeasure>[] = [
-    { value: 'm', label: 'Metre (m)' },
-    { value: 'pc', label: 'Piece (pc)' },
 ];
 
 export const defaultFilters: MaterialFilters = {

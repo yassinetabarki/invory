@@ -121,8 +121,9 @@ describe('index', function () {
         // 12 more rows on the same page: still no query per row (strict mode would also throw on a lazy load).
         Material::factory()->count(12)->create();
 
-        // Count, rows, their categories and units (eager), the inventory scan, and the reference lists of a full load.
-        expect($baseline)->toBeLessThanOrEqual(5 + 2 + REFERENCE_QUERIES)
+        // Count, rows, their categories and units (eager), the inventory scan, and the reference lists of a full load
+        // (the category option query is gone since S-22).
+        expect($baseline)->toBeLessThanOrEqual(5 + REFERENCE_QUERIES)
             ->and($queries())->toBe($baseline);
     });
 

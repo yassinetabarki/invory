@@ -6,9 +6,13 @@ import {
     choreJacket,
     denimJacket,
     materialOptions,
-    productCategories,
     productStatuses,
 } from '@/test/fixtures/products';
+import {
+    archived,
+    referenceData,
+    referenceProductCategories,
+} from '@/test/fixtures/reference';
 import {
     inertiaMock,
     resetInertiaMock,
@@ -28,7 +32,6 @@ vi.mock('@inertiajs/react', async (importOriginal) => {
 function props(product: Product = denimJacket): ProductEditProps {
     return {
         product,
-        categories: productCategories,
         statuses: productStatuses,
         materials: materialOptions,
     };
@@ -140,5 +143,36 @@ describe('products/edit page', () => {
                 href: { url: '/products/1/edit', method: 'get' },
             }),
         ]);
+    });
+});
+
+describe('products/edit page categories', () => {
+    beforeEach(() => {
+        resetInertiaMock();
+    });
+
+    it('keeps the archived category the product uses and hides other archived ones', async () => {
+        const user = userEvent.setup();
+
+        setPageProps({
+            reference: referenceData({
+                product_categories: [
+                    archived(referenceProductCategories[0]),
+                    archived(referenceProductCategories[1]),
+                    referenceProductCategories[2],
+                ],
+            }),
+        });
+        render(<ProductsEdit {...props()} />); // Denim Jacket: 'apparel'
+
+        expect(screen.getByLabelText(/^Category/)).toHaveTextContent('Apparel');
+
+        await user.click(screen.getByLabelText(/^Category/));
+
+        expect(
+            within(screen.getByRole('listbox'))
+                .getAllByRole('option')
+                .map((option) => option.textContent),
+        ).toEqual(['Apparel', 'Bag']);
     });
 });

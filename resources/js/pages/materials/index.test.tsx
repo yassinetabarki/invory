@@ -13,12 +13,16 @@ import { inertiaMock, resetInertiaMock, setPageProps } from '@/test/inertia';
 import {
     button,
     buttonHistory,
-    categories,
     defaultFilters,
     denim,
     paginate,
     thread,
 } from '@/test/fixtures';
+import {
+    archived,
+    referenceData,
+    referenceMaterialCategories,
+} from '@/test/fixtures/reference';
 import type {
     MaterialFilters,
     MaterialsIndexProps,
@@ -44,7 +48,6 @@ function props(overrides: Partial<MaterialsIndexProps> = {}) {
     return {
         materials: paginate([denim, thread]),
         filters: defaultFilters,
-        categories,
         summary: { materials_count: 2, inventory_value: '2125.0000' },
         ...overrides,
     } satisfies MaterialsIndexProps;
@@ -782,5 +785,68 @@ describe('materials/index page', () => {
                 '/mock/photos/mat-btn-017.svg',
             );
         });
+    });
+});
+
+describe('materials/index page category filter', () => {
+    beforeEach(() => {
+        resetInertiaMock();
+        setPageProps({}, { url: '/materials', component: 'materials/index' });
+    });
+
+    function filterOptions() {
+        return within(screen.getByRole('listbox'))
+            .getAllByRole('option')
+            .map((option) => option.textContent);
+    }
+
+    it('offers the categories from the shared reference prop, archived ones hidden', async () => {
+        const user = userEvent.setup();
+
+        setPageProps({
+            reference: referenceData({
+                material_categories: [
+                    referenceMaterialCategories[0],
+                    archived(referenceMaterialCategories[1]),
+                    referenceMaterialCategories[2],
+                ],
+            }),
+        });
+        render(<MaterialsIndex {...props()} />);
+
+        await user.click(screen.getByRole('combobox', { name: 'Category' }));
+
+        expect(filterOptions()).toEqual([
+            'All categories',
+            'Fabric',
+            'Interlining',
+        ]);
+    });
+
+    it('keeps an archived category that is the active filter', async () => {
+        const user = userEvent.setup();
+
+        setPageProps({
+            reference: referenceData({
+                material_categories: [
+                    referenceMaterialCategories[0],
+                    archived(referenceMaterialCategories[1]),
+                    archived(referenceMaterialCategories[2]),
+                ],
+            }),
+        });
+        render(
+            <MaterialsIndex
+                {...props({ filters: filtersWith({ category: 'lining' }) })}
+            />,
+        );
+
+        expect(
+            screen.getByRole('combobox', { name: 'Category' }),
+        ).toHaveTextContent('Lining');
+
+        await user.click(screen.getByRole('combobox', { name: 'Category' }));
+
+        expect(filterOptions()).toEqual(['All categories', 'Fabric', 'Lining']);
     });
 });

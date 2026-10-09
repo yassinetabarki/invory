@@ -1,8 +1,14 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import MaterialsEdit from '@/pages/materials/edit';
-import { button, categories, denim, thread, units } from '@/test/fixtures';
+import { button, denim, thread } from '@/test/fixtures';
+import {
+    archived,
+    referenceData,
+    referenceMaterialCategories,
+    referenceUnits,
+} from '@/test/fixtures/reference';
 import {
     inertiaMock,
     resetInertiaMock,
@@ -22,13 +28,7 @@ vi.mock('@inertiajs/react', async (importOriginal) => {
 });
 
 function renderEdit(material: Material) {
-    return render(
-        <MaterialsEdit
-            categories={categories}
-            units={units}
-            material={material}
-        />,
-    );
+    return render(<MaterialsEdit material={material} />);
 }
 
 /** The header and the bottom of the form both carry Cancel and Save. */
@@ -245,23 +245,13 @@ describe('materials/edit page', () => {
     it('shows another material when navigated to (keyed by id)', () => {
         const { rerender } = renderEdit(denim);
 
-        rerender(
-            <MaterialsEdit
-                categories={categories}
-                units={units}
-                material={thread}
-            />,
-        );
+        rerender(<MaterialsEdit material={thread} />);
 
         expect(screen.getByLabelText(/^SKU/)).toHaveValue('THR-001');
     });
 
     it('defines the Materials > name > Edit breadcrumbs', () => {
-        const { breadcrumbs } = MaterialsEdit.layout({
-            categories,
-            units,
-            material: denim,
-        });
+        const { breadcrumbs } = MaterialsEdit.layout({ material: denim });
 
         expect(breadcrumbs.map((c) => c.title)).toEqual([
             'Materials',
@@ -269,5 +259,53 @@ describe('materials/edit page', () => {
             'Edit',
         ]);
         expect(breadcrumbs[1].href).toMatchObject({ url: '/materials/1' });
+    });
+});
+
+describe('materials/edit page options', () => {
+    beforeEach(() => {
+        resetInertiaMock();
+    });
+
+    function optionNames() {
+        return within(screen.getByRole('listbox'))
+            .getAllByRole('option')
+            .map((option) => option.textContent);
+    }
+
+    it('keeps the archived category and unit the material uses, and hides other archived ones', async () => {
+        const user = userEvent.setup();
+
+        setPageProps({
+            reference: referenceData({
+                material_categories: [
+                    archived(referenceMaterialCategories[0]),
+                    archived(referenceMaterialCategories[1]),
+                    referenceMaterialCategories[2],
+                ],
+                units: [
+                    archived(referenceUnits[0]),
+                    archived(referenceUnits[1]),
+                    referenceUnits[2],
+                ],
+            }),
+        });
+        renderEdit(denim); // category 'fabric', unit 'm'
+
+        expect(
+            screen.getByRole('combobox', { name: /Category/ }),
+        ).toHaveTextContent('Fabric');
+        expect(
+            screen.getByRole('combobox', { name: /Unit of measure/ }),
+        ).toHaveTextContent('Metre (m)');
+
+        await user.click(screen.getByRole('combobox', { name: /Category/ }));
+        expect(optionNames()).toEqual(['Fabric', 'Interlining']);
+        await user.keyboard('{Escape}');
+
+        await user.click(
+            screen.getByRole('combobox', { name: /Unit of measure/ }),
+        );
+        expect(optionNames()).toEqual(['Metre (m)', 'Yard (yd)']);
     });
 });

@@ -109,6 +109,7 @@ import { act } from '@testing-library/react';
 import { useRef, useState, useSyncExternalStore } from 'react';
 import type { AnchorHTMLAttributes, FormEvent, ReactNode } from 'react';
 import { vi } from 'vite-plus/test';
+import { referenceData } from '@/test/fixtures/reference';
 
 export type TestPageProps = Record<string, unknown>;
 
@@ -126,6 +127,8 @@ export const defaultPageProps: TestPageProps = {
     },
     sidebarOpen: true,
     app: { currency: 'EUR', locale: 'en', today: '2026-10-08' },
+    // The shared once-prop: the seeded units and categories (override it with setPageProps).
+    reference: referenceData(),
 };
 
 function createRouterMock() {

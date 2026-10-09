@@ -35,6 +35,15 @@ describe('invalidatedBy', () => {
         ]);
     });
 
+    it('flushes materials, products, sales and the dashboard after a unit or category write', () => {
+        expect(invalidatedBy('reference')).toEqual([
+            'materials',
+            'products',
+            'sales',
+            'dashboard',
+        ]);
+    });
+
     it('hands out a copy, so a caller cannot change the sets', () => {
         invalidatedBy('sale').push('materials');
 

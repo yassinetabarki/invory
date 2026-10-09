@@ -97,15 +97,11 @@ export type MaterialFormData = {
 export type MaterialsIndexProps = {
     materials: Paginated<Material>;
     filters: MaterialFilters;
-    categories: Option<MaterialCategory>[];
     summary: { materials_count: number; inventory_value: Decimal }; // over all non-deleted materials, not just this page
     recent_history?: StockMovement[]; // deferred prop: newest 5 movements of each material on this page
 };
-export type MaterialCreateProps = {
-    categories: Option<MaterialCategory>[];
-    units: Option<UnitOfMeasure>[];
-};
-export type MaterialEditProps = MaterialCreateProps & { material: Material };
+export type MaterialCreateProps = Record<string, never>; // categories and units come from the shared `reference` prop
+export type MaterialEditProps = { material: Material };
 export type MaterialShowProps = {
     material: Material;
     usage: MaterialUsage[]; // bottleneck rows first, then by product name
@@ -362,11 +358,9 @@ export type DashboardStats = {
 export type ProductsIndexProps = {
     products: Paginated<ProductListItem>; // by name
     filters: ProductFilters;
-    categories: Option<ProductCategory>[];
     statuses: Option<ProductStatus>[];
 };
 export type ProductCreateProps = {
-    categories: Option<ProductCategory>[];
     statuses: Option<ProductStatus>[];
     materials: MaterialOption[]; // every non-deleted material, by name
 };

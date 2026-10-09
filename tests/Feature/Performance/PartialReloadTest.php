@@ -32,7 +32,8 @@ describe('materials index', function () {
         $queries = queryLog(function () {
             $this->get(route('materials.index'))
                 ->assertInertia(fn (Assert $page) => $page
-                    ->hasAll(['materials', 'filters', 'categories', 'summary'])
+                    ->hasAll(['materials', 'filters', 'summary'])
+                    ->missing('categories')
                     ->where('summary.materials_count', 12));
         });
 
@@ -46,7 +47,7 @@ describe('materials index', function () {
             $firstVisit,
             ['materials', 'filters', 'recent_history'],
             fn (Assert $partial) => $partial
-                ->missingAll(['summary', 'categories'])
+                ->missing('summary')
                 ->where('filters.search', 'denim')
                 ->has('materials.data', 1)
                 ->has('recent_history'),
@@ -54,6 +55,7 @@ describe('materials index', function () {
 
         expect(queriesMatching($queries, SUMMARY_SCAN))->toBeEmpty()
             // The page itself: the count, the rows, and the categories and units of those rows (eager-loaded, two constant queries).
+            // (The category option query is gone: S-22 moved the options to the shared reference prop.)
             ->and($queries)->toHaveCount(4);
     });
 
@@ -64,7 +66,7 @@ describe('materials index', function () {
             $firstVisit,
             ['summary'],
             fn (Assert $partial) => $partial
-                ->missingAll(['materials', 'filters', 'categories', 'recent_history'])
+                ->missingAll(['materials', 'filters', 'recent_history'])
                 ->where('summary.materials_count', 12),
         );
 
@@ -87,7 +89,7 @@ describe('materials index', function () {
 });
 
 describe('products index', function () {
-    it('skips the option lists when only the list and the filters are requested', function () {
+    it('skips the status list when only the list and the filters are requested', function () {
         $firstVisit = $this->get(route('products.index', ['status' => 'active']))->assertOk();
         $full = $firstVisit->inertiaProps();
 
@@ -95,7 +97,7 @@ describe('products index', function () {
             $firstVisit,
             ['products', 'filters'],
             fn (Assert $partial) => $partial
-                ->missingAll(['categories', 'statuses'])
+                ->missing('statuses')
                 ->where('products', $full['products'])
                 ->where('filters.status', 'active'),
         );
@@ -106,14 +108,12 @@ describe('products index', function () {
 
         $queries = partialReloadQueries(
             $firstVisit,
-            ['categories', 'statuses', 'filters'],
-            fn (Assert $partial) => $partial->missing('products')->has('categories')->has('statuses'),
+            ['statuses', 'filters'],
+            fn (Assert $partial) => $partial->missing('products')->missing('categories')->has('statuses'),
         );
 
-        // The category options are the only query: no product is costed (no materials read).
-        expect(queriesMatching($queries, 'materials'))->toBeEmpty()
-            ->and(queriesMatching($queries, 'product_categories'))->toHaveCount(1)
-            ->and($queries)->toHaveCount(1);
+        // No query at all: the status list is a free enum list, and no product is costed (no materials read).
+        expect($queries)->toBeEmpty();
     });
 });
 
@@ -123,13 +123,12 @@ describe('products create and edit', function () {
 
         $queries = partialReloadQueries(
             $firstVisit,
-            ['categories', 'statuses'],
-            fn (Assert $partial) => $partial->missing('materials')->has('categories')->has('statuses'),
+            ['statuses'],
+            fn (Assert $partial) => $partial->missing('materials')->missing('categories')->has('statuses'),
         );
 
-        // Only the category options: the picker's materials are not read.
-        expect(queriesMatching($queries, 'materials'))->toBeEmpty()
-            ->and($queries)->toHaveCount(1);
+        // No query: the status list is a free enum list and the picker's materials are not read.
+        expect($queries)->toBeEmpty();
     });
 
     it('sends the picker on a full visit and when it is requested', function () {
@@ -158,18 +157,17 @@ describe('products create and edit', function () {
             ->and($queries)->toHaveCount(3);
     });
 
-    it('loads nothing on the edit page when only the option lists are requested', function () {
+    it('loads nothing on the edit page when only the status list is requested', function () {
         $firstVisit = $this->get(route('products.edit', 1))->assertOk();
 
         $queries = partialReloadQueries(
             $firstVisit,
-            ['categories', 'statuses'],
-            fn (Assert $partial) => $partial->missingAll(['materials', 'product']),
+            ['statuses'],
+            fn (Assert $partial) => $partial->missingAll(['materials', 'product', 'categories']),
         );
 
-        // Only the category options: neither the materials nor the product are loaded.
-        expect(queriesMatching($queries, 'materials'))->toBeEmpty()
-            ->and($queries)->toHaveCount(1);
+        // No query: neither the materials nor the product are loaded.
+        expect($queries)->toBeEmpty();
     });
 });
 

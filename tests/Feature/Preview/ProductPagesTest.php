@@ -44,7 +44,8 @@ describe('index', function () {
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('products/index')
-                ->hasAll(['products', 'filters', 'categories', 'statuses'])
+                ->hasAll(['products', 'filters', 'statuses'])
+                ->missing('categories')
                 ->has('products.data', 7)
                 ->has('products.links', fn (Assert $links) => $links->hasAll(['first', 'last', 'prev', 'next']))
                 ->has('products.meta', fn (Assert $meta) => $meta
@@ -53,8 +54,6 @@ describe('index', function () {
                 ->where('products.meta.per_page', 25)
                 ->where('products.meta.path', route('products.index'))
                 ->where('filters', ['search' => null, 'category' => null, 'status' => null, 'cant_produce' => false])
-                ->where('categories.0', ['value' => 'apparel', 'label' => 'Apparel'])
-                ->has('categories', 6)
                 ->where('statuses', [
                     ['value' => 'draft', 'label' => 'Draft'],
                     ['value' => 'active', 'label' => 'Active'],
@@ -468,7 +467,7 @@ describe('create and edit', function () {
             ->assertInertia(fn (Assert $page) => $page
                 ->component('products/create')
                 ->missing('product')
-                ->has('categories', 6)
+                ->missing('categories')
                 ->has('statuses', 3)
                 ->has('materials', 12)
                 ->where('materials.0.name', 'Brass rivet 9mm')
@@ -502,7 +501,7 @@ describe('create and edit', function () {
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('products/edit')
-                ->has('categories', 6)
+                ->missing('categories')
                 ->has('statuses', 3)
                 ->has('materials', 12)
                 ->where('product.id', 4)
@@ -538,10 +537,10 @@ it('reads the materials table once per page and answers within a bounded number 
     Material::factory()->count(40)->create();
 
     foreach ($urls as $page => $url) {
-        // One read of the materials (by SKU for the fixture, or every material for the pickers), their units (eager), the product
-        // categories of the option list, the category names of a product, and the reference lists of a full load.
+        // One read of the materials (by SKU for the fixture, or every material for the pickers), their units (eager), the category
+        // names of the products, and the reference lists of a full load (the option list's own query is gone since S-22).
         expect($baseline[$page]['materials'])->toBe(1, "the {$page} page reads the materials table once")
-            ->and($baseline[$page]['all'])->toBeLessThanOrEqual(4 + REFERENCE_QUERIES)
+            ->and($baseline[$page]['all'])->toBeLessThanOrEqual(3 + REFERENCE_QUERIES)
             // 40 more materials: not one more query.
             ->and($count($url))->toBe($baseline[$page]);
     }

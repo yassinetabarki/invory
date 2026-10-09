@@ -1,14 +1,17 @@
 import { Head } from '@inertiajs/react';
 import ProductController from '@/actions/App/Http/Controllers/ProductController';
 import { ProductForm } from '@/components/products/product-form';
+import { useReference } from '@/hooks/use-reference';
+import { categoryOptions } from '@/lib/reference';
 import type { ProductEditProps } from '@/types/domain';
 
 export default function ProductsEdit({
     product,
-    categories,
     statuses,
     materials,
 }: ProductEditProps) {
+    const reference = useReference();
+
     return (
         <>
             <Head title={`Edit ${product.name}`} />
@@ -20,7 +23,11 @@ export default function ProductsEdit({
                     product={product}
                     title={`Edit ${product.name}`}
                     description="Details, photo and the materials that make one unit."
-                    categories={categories}
+                    // An archived category the product already uses stays listed.
+                    categories={categoryOptions(
+                        reference.product_categories,
+                        product.category,
+                    )}
                     statuses={statuses}
                     materials={materials}
                     action={{

@@ -15,7 +15,6 @@ use App\Mock\PreviewPage;
 use App\Mock\PreviewProducts;
 use App\Mock\PreviewSales;
 use App\Models\Material;
-use App\Services\Reference\ReferenceOptions;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -31,7 +30,7 @@ use Inertia\Response;
  */
 final class ProductController extends Controller
 {
-    public function index(IndexProductRequest $request, ReferenceOptions $options): Response
+    public function index(IndexProductRequest $request): Response
     {
         Gate::authorize('access-preview');
 
@@ -52,17 +51,15 @@ final class ProductController extends Controller
                 return PreviewPage::paginate($catalog->listItems($products), $request, route('products.index'));
             },
             'filters' => $filters,
-            'categories' => fn (): array => $options->productCategories($filters['category']),
             'statuses' => ProductStatus::options(),
         ]);
     }
 
-    public function create(ReferenceOptions $options): Response
+    public function create(): Response
     {
         Gate::authorize('access-preview');
 
         return Inertia::render('products/create', [
-            'categories' => fn (): array => $options->productCategories(),
             'statuses' => ProductStatus::options(),
             'materials' => fn (): array => PreviewMaterials::options(PreviewMaterials::byName()),
         ]);
@@ -100,7 +97,7 @@ final class ProductController extends Controller
         ]);
     }
 
-    public function edit(int $product, ReferenceOptions $options): Response
+    public function edit(int $product): Response
     {
         Gate::authorize('access-preview');
         $this->ensureExists($product);
@@ -114,8 +111,6 @@ final class ProductController extends Controller
         };
 
         return Inertia::render('products/edit', [
-            // Active categories, plus the product's own when it has been archived since (MOCK: its category comes from the fixture).
-            'categories' => fn (): array => $options->productCategories(PreviewFixture::product($product)['category'] ?? null),
             'statuses' => ProductStatus::options(),
             'materials' => fn (): array => PreviewMaterials::options($materials()),
             'product' => function () use ($materials, $product): array {

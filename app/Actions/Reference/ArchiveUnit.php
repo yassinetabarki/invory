@@ -8,7 +8,7 @@ use App\Models\Unit;
 use App\Services\Reference\ReferenceVersion;
 
 /**
- * Hides the item from pickers and filters; records that already use it keep showing it. Allowed any time.
+ * Hides the item from pickers and filters; records that already use it keep showing it. Allowed any time, and a no-op on an archived row.
  */
 final readonly class ArchiveUnit
 {
@@ -16,6 +16,11 @@ final readonly class ArchiveUnit
 
     public function handle(Unit $item): Unit
     {
+        // Archiving an archived row changes nothing: no new timestamp, no version bump (F-27).
+        if ($item->archived_at !== null) {
+            return $item;
+        }
+
         $item->update(['archived_at' => now()]);
 
         $this->version->bump();

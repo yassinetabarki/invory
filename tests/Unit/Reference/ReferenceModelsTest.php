@@ -6,7 +6,6 @@ use App\Models\Material;
 use App\Models\MaterialCategory;
 use App\Models\ProductCategory;
 use App\Models\Unit;
-use App\Services\Reference\ReferenceOptions;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\MassAssignmentException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -118,45 +117,6 @@ describe('mass assignment', function () {
 describe('labels', function () {
     it('labels a unit "name (code)"', function () {
         expect(Unit::factory()->make(['name' => 'Metre', 'code' => 'm'])->label())->toBe('Metre (m)');
-    });
-});
-
-describe('ReferenceOptions', function () {
-    it('lists active rows by position then name and appends nothing without a kept code', function () {
-        MaterialCategory::query()->where('code', 'lining')->update(['archived_at' => now()]);
-
-        $options = (new ReferenceOptions)->materialCategories();
-
-        expect($options)->toHaveCount(11)
-            ->and($options[0])->toBe(['value' => 'fabric', 'label' => 'Fabric'])
-            ->and(array_column($options, 'value'))->not->toContain('lining');
-    });
-
-    it('keeps the given code even when archived, in its position, and ignores a code that does not exist', function () {
-        MaterialCategory::query()->where('code', 'lining')->update(['archived_at' => now()]);
-
-        $kept = array_column((new ReferenceOptions)->materialCategories('lining'), 'value');
-        $unknown = array_column((new ReferenceOptions)->materialCategories('nope'), 'value');
-
-        expect($kept)->toHaveCount(12)
-            ->and($kept[1])->toBe('lining')
-            ->and($unknown)->toHaveCount(11);
-    });
-
-    it('labels units "name (code)" and product categories by name', function () {
-        $units = (new ReferenceOptions)->units();
-        $categories = (new ReferenceOptions)->productCategories();
-
-        expect($units[0])->toBe(['value' => 'm', 'label' => 'Metre (m)'])
-            ->and($categories[2])->toBe(['value' => 'bag', 'label' => 'Bag']);
-    });
-
-    it('never lets the kept code widen the query to other archived rows', function () {
-        Unit::query()->whereIn('code', ['cm', 'yd'])->update(['archived_at' => now()]);
-
-        $values = array_column((new ReferenceOptions)->units('cm'), 'value');
-
-        expect($values)->toContain('cm')->not->toContain('yd');
     });
 });
 

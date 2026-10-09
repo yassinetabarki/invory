@@ -9,8 +9,10 @@ import { PageHeader } from '@/components/shared/page-header';
 import { Pagination } from '@/components/shared/pagination';
 import { Button } from '@/components/ui/button';
 import { useAppSettings } from '@/hooks/use-app-settings';
+import { useReference } from '@/hooks/use-reference';
 import { CACHE_TAGS, prefetchProps } from '@/lib/cache-tags';
 import { formatCount, formatMoney } from '@/lib/format';
+import { categoryOptions } from '@/lib/reference';
 import type {
     Material,
     MaterialFilters,
@@ -91,11 +93,11 @@ function describeSummary(
 export default function MaterialsIndex({
     materials,
     filters: serverFilters,
-    categories,
     summary,
     recent_history,
 }: MaterialsIndexProps) {
     const { currency, locale } = useAppSettings();
+    const reference = useReference();
     // The filter controls own their state (seeded from the server) so a slow
     // response can never overwrite what the user typed or picked meanwhile.
     const [filters, setFilters] = useState(serverFilters);
@@ -155,7 +157,10 @@ export default function MaterialsIndex({
                 {(!isEmpty || filtered) && (
                     <FiltersBar
                         filters={filters}
-                        categories={categories}
+                        categories={categoryOptions(
+                            reference.material_categories,
+                            filters.category,
+                        )}
                         onChange={applyFilters}
                     />
                 )}

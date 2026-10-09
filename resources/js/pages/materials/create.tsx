@@ -3,8 +3,10 @@ import MaterialController from '@/actions/App/Http/Controllers/MaterialControlle
 import { MaterialForm } from '@/components/materials/material-form';
 import { MaterialFormActions } from '@/components/materials/material-form-actions';
 import { PageHeader } from '@/components/shared/page-header';
+import { useReference } from '@/hooks/use-reference';
 import { invalidatedBy } from '@/lib/cache-tags';
-import type { MaterialCreateProps, MaterialFormData } from '@/types/domain';
+import { categoryOptions, unitOptions } from '@/lib/reference';
+import type { MaterialFormData } from '@/types/domain';
 
 const EMPTY_MATERIAL: MaterialFormData = {
     sku: '',
@@ -25,10 +27,8 @@ const EMPTY_MATERIAL: MaterialFormData = {
 
 const SUBMIT_LABEL = 'Save material';
 
-export default function MaterialsCreate({
-    categories,
-    units,
-}: MaterialCreateProps) {
+export default function MaterialsCreate() {
+    const reference = useReference();
     const cancelHref = MaterialController.index.url();
 
     return (
@@ -56,8 +56,10 @@ export default function MaterialsCreate({
                         />
                         <MaterialForm
                             initial={EMPTY_MATERIAL}
-                            categories={categories}
-                            units={units}
+                            categories={categoryOptions(
+                                reference.material_categories,
+                            )}
+                            units={unitOptions(reference.units)}
                             errors={errors}
                             processing={processing}
                             submitLabel={SUBMIT_LABEL}

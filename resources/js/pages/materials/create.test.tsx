@@ -1,8 +1,13 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import MaterialsCreate from '@/pages/materials/create';
-import { categories, units } from '@/test/fixtures';
+import {
+    archived,
+    referenceData,
+    referenceMaterialCategories,
+    referenceUnits,
+} from '@/test/fixtures/reference';
 import {
     inertiaMock,
     resetInertiaMock,
@@ -32,9 +37,7 @@ describe('materials/create page', () => {
     });
 
     it('renders an empty form that posts to the store route', () => {
-        const { container } = render(
-            <MaterialsCreate categories={categories} units={units} />,
-        );
+        const { container } = render(<MaterialsCreate />);
 
         expect(
             screen.getByRole('heading', { level: 1, name: 'Add material' }),
@@ -66,7 +69,7 @@ describe('materials/create page', () => {
     });
 
     it('has the mockup sections, including the optional photo', () => {
-        render(<MaterialsCreate categories={categories} units={units} />);
+        render(<MaterialsCreate />);
 
         for (const name of [
             'Identity',
@@ -94,7 +97,7 @@ describe('materials/create page', () => {
             },
         });
 
-        render(<MaterialsCreate categories={categories} units={units} />);
+        render(<MaterialsCreate />);
 
         const sku = screen.getByLabelText(/^SKU/);
 
@@ -120,7 +123,7 @@ describe('materials/create page', () => {
     it('disables both Save buttons while the request is in flight', () => {
         setFormState({ processing: true });
 
-        render(<MaterialsCreate categories={categories} units={units} />);
+        render(<MaterialsCreate />);
 
         for (const save of saveButtons()) {
             expect(save).toBeDisabled();
@@ -130,7 +133,7 @@ describe('materials/create page', () => {
     it('submits from the Save button in the header', async () => {
         const user = userEvent.setup();
 
-        render(<MaterialsCreate categories={categories} units={units} />);
+        render(<MaterialsCreate />);
 
         await user.type(screen.getByLabelText(/^SKU/), 'FAB-009');
         await user.click(saveButtons()[0]);
@@ -146,7 +149,7 @@ describe('materials/create page', () => {
     it('flushes the material, product and dashboard caches when it saves', async () => {
         const user = userEvent.setup();
 
-        render(<MaterialsCreate categories={categories} units={units} />);
+        render(<MaterialsCreate />);
 
         await user.type(screen.getByLabelText(/^SKU/), 'FAB-009');
         await user.click(saveButtons()[0]);
@@ -159,7 +162,7 @@ describe('materials/create page', () => {
     it('submits the typed values with keyboard and mouse', async () => {
         const user = userEvent.setup();
 
-        render(<MaterialsCreate categories={categories} units={units} />);
+        render(<MaterialsCreate />);
 
         await user.type(screen.getByLabelText(/^SKU/), 'FAB-009');
         await user.type(screen.getByLabelText(/^Name/), 'Denim 12oz Indigo');
@@ -199,7 +202,7 @@ describe('materials/create page', () => {
         const user = userEvent.setup();
         const photo = new File(['png'], 'button.png', { type: 'image/png' });
 
-        render(<MaterialsCreate categories={categories} units={units} />);
+        render(<MaterialsCreate />);
 
         await user.type(screen.getByLabelText(/^SKU/), 'TRM-100');
         await user.upload(screen.getByLabelText('Photo'), photo);
@@ -219,7 +222,7 @@ describe('materials/create page', () => {
     it('sends no file when no photo was chosen', async () => {
         const user = userEvent.setup();
 
-        render(<MaterialsCreate categories={categories} units={units} />);
+        render(<MaterialsCreate />);
 
         await user.click(saveButtons()[0]);
 
@@ -234,5 +237,81 @@ describe('materials/create page', () => {
             'Materials',
             'Add material',
         ]);
+    });
+});
+
+describe('materials/create page options', () => {
+    beforeEach(() => {
+        resetInertiaMock();
+    });
+
+    function optionNames() {
+        return within(screen.getByRole('listbox'))
+            .getAllByRole('option')
+            .map((option) => option.textContent);
+    }
+
+    it('lists the active categories from the shared reference prop, new ones included', async () => {
+        const user = userEvent.setup();
+
+        setPageProps({
+            reference: referenceData({
+                material_categories: [
+                    ...referenceMaterialCategories.slice(0, 2),
+                    archived(referenceMaterialCategories[2]),
+                    {
+                        id: 50,
+                        code: 'elastic',
+                        name: 'Elastic',
+                        position: 13,
+                        archived: false,
+                    },
+                ],
+            }),
+        });
+        render(<MaterialsCreate />);
+
+        await user.click(screen.getByRole('combobox', { name: /Category/ }));
+
+        expect(optionNames()).toEqual(['Fabric', 'Lining', 'Elastic']);
+    });
+
+    it('lists the active units as "Name (code)" and hides archived ones', async () => {
+        const user = userEvent.setup();
+
+        setPageProps({
+            reference: referenceData({
+                units: [
+                    referenceUnits[0],
+                    archived(referenceUnits[1]),
+                    {
+                        ...referenceUnits[2],
+                        id: 60,
+                        code: 'in',
+                        name: 'Inch',
+                        is_system: false,
+                        factor_to_base: '0.025400000000',
+                    },
+                ],
+            }),
+        });
+        render(<MaterialsCreate />);
+
+        await user.click(
+            screen.getByRole('combobox', { name: /Unit of measure/ }),
+        );
+
+        expect(optionNames()).toEqual(['Metre (m)', 'Inch (in)']);
+    });
+
+    it('offers nothing to pick when the server sent no reference data', async () => {
+        const user = userEvent.setup();
+
+        setPageProps({ reference: undefined });
+        render(<MaterialsCreate />);
+
+        await user.click(screen.getByRole('combobox', { name: /Category/ }));
+
+        expect(screen.queryAllByRole('option')).toHaveLength(0);
     });
 });

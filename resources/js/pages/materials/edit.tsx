@@ -3,7 +3,9 @@ import MaterialController from '@/actions/App/Http/Controllers/MaterialControlle
 import { MaterialForm } from '@/components/materials/material-form';
 import { MaterialFormActions } from '@/components/materials/material-form-actions';
 import { PageHeader } from '@/components/shared/page-header';
+import { useReference } from '@/hooks/use-reference';
 import { invalidatedBy } from '@/lib/cache-tags';
+import { categoryOptions, unitOptions } from '@/lib/reference';
 import type {
     Material,
     MaterialEditProps,
@@ -32,11 +34,8 @@ function toFormData(material: Material): MaterialFormData {
 
 const SUBMIT_LABEL = 'Save material';
 
-export default function MaterialsEdit({
-    categories,
-    units,
-    material,
-}: MaterialEditProps) {
+export default function MaterialsEdit({ material }: MaterialEditProps) {
+    const reference = useReference();
     const cancelHref = MaterialController.show.url(material);
 
     return (
@@ -66,8 +65,12 @@ export default function MaterialsEdit({
                         />
                         <MaterialForm
                             initial={toFormData(material)}
-                            categories={categories}
-                            units={units}
+                            // An archived category or unit the material already uses stays listed.
+                            categories={categoryOptions(
+                                reference.material_categories,
+                                material.category,
+                            )}
+                            units={unitOptions(reference.units, material.unit)}
                             errors={errors}
                             processing={processing}
                             submitLabel={SUBMIT_LABEL}
