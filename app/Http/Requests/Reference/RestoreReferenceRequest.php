@@ -45,10 +45,7 @@ abstract class RestoreReferenceRequest extends FormRequest
         return [
             // Restoring a row that is already active changes nothing, so it must not collide with itself. Same rule as create and
             // update, so the case folding can't drift; the message names the active row in the way, as stored.
-            'name' => [new UniqueActiveName($this->table(), $this->item(), __('An active :noun is already named ":name". Rename one of them first.', [
-                'noun' => __($this->noun()),
-                'name' => ':name',
-            ]))],
+            'name' => [new UniqueActiveName($this->table(), $this->item(), UniqueActiveName::restoreTemplate($this->noun()))],
         ];
     }
 

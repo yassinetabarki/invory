@@ -6,29 +6,34 @@ namespace App\Actions\Reference;
 
 use App\Enums\UnitDimension;
 use App\Models\Unit;
+use App\Services\Reference\ReferenceNameGuard;
 use App\Services\Reference\ReferenceVersion;
+use Illuminate\Validation\ValidationException;
 
 final readonly class CreateUnit
 {
     public function __construct(private ReferenceVersion $version) {}
 
     /**
-     * A user-made unit is never a system unit. A `package` unit has no factor.
+     * A user-made unit is never a system unit. A `package` unit has no factor. A name or code taken a moment ago by someone else
+     * (a lost race, F-33) comes back as a validation error on `name` or `code`.
      *
      * @param  array<string, mixed>  $data  validated input: `code`, `name`, `dimension`, `factor_to_base`, optional `position` (empty = last)
+     *
+     * @throws ValidationException
      */
     public function handle(array $data): Unit
     {
         $dimension = UnitDimension::from($data['dimension']);
 
-        $unit = Unit::create([
+        $unit = ReferenceNameGuard::saving('units', fn (): Unit => Unit::create([
             'code' => $data['code'],
             'name' => $data['name'],
             'dimension' => $dimension,
             'factor_to_base' => $dimension->hasFactor() ? $data['factor_to_base'] : null,
             'is_system' => false,
             'position' => isset($data['position']) ? (int) $data['position'] : $this->nextPosition(),
-        ]);
+        ]));
 
         $this->version->bump();
 

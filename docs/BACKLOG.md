@@ -325,7 +325,7 @@ From the S-21 review (2026-10-09, MINOR/NIT, none blocking):
 From the S-22 review (2026-10-09, MINOR/NIT, none blocking):
 - ~~**F-30**~~ **Done in S-22b (2026-10-09)**: restoring an already-active row still writes `archived_at = null` and bumps the reference version (one needless client
   refetch). Add the same early return as archive.
-- **F-31 (UX)** — human 2026-10-09: q1 keep cards below `xl` (no change); q2 the "(archived)" suffix, **done in S-22b**; q3 the "Manage units" link is **unanswered and stays open**. Original note: the settings tables switch from cards to a table only at `xl` (the sidebar plus the settings menu
+- **F-31 (UX)** — human 2026-10-09: q1 keep cards below `xl` (no change); q2 the "(archived)" suffix, **done in S-22b**; q3 the "Manage units" link: **not now** (human, 2026-10-09), stays in the backlog. Original note: the settings tables switch from cards to a table only at `xl` (the sidebar plus the settings menu
   leave ~500 px at `md`/`lg`); a kept archived option shows its plain name, with no "(archived)" suffix; there's no "Manage units" link in the
   material form yet (needs `FormField.hint` to accept a node). Restoring a deleted-in-error item needs archive → delete, by design.
 - ~~**F-32**~~ **Done in S-22b (2026-10-09)**: names are unique case-insensitively among active rows (rule `UniqueActiveName`, folded in SQL,
@@ -333,7 +333,8 @@ From the S-22 review (2026-10-09, MINOR/NIT, none blocking):
   case-insensitive in all three places if the human wants.
 
 From the S-22b review (2026-10-09):
-- **F-33 (NIT, BE)**: two simultaneous creates of the same name both pass validation; the second hits the new `lower(name)` index and returns a
+- ~~**F-33**~~ **Done (2026-10-09)**: a unique-index clash on a reference name or code during create, update or restore now returns the
+  rule's own validation error (`App\Services\Reference\ReferenceNameGuard`). Original note: two simultaneous creates of the same name both pass validation; the second hits the new `lower(name)` index and returns a
   500 instead of a `name` error. Catch `UniqueConstraintViolationException` in the reference Actions/controllers and map it to a validation error.
 - **F-34 (note)**: PostgreSQL's `lower()` folds non-ASCII letters and SQLite's doesn't, so "Étiquette" and "étiquette" clash on PostgreSQL only.
   Tests stay ASCII; production (PostgreSQL) behaves as intended.

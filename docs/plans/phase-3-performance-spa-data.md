@@ -698,6 +698,9 @@ Phase 4                                         S-27 (perf dataset + budgets) âˆ
 - 2026-10-09: S-22b approved in one round. Gates: Pest 1 861, PostgreSQL parity 1 861, Vitest 1 119, check, types, build. New migration
   `2026_10_09_200000_add_active_name_unique_indexes_to_reference_tables` is **not applied to the dev database**. A read-only check found no
   active case-insensitive duplicates there, so it can't fail. The human applies it.
+- 2026-10-09: S-22b committed (6161e9e); the main session applied its migration to `laravel`. The human asked for F-33 now (F-31 q3 "Manage
+  units" link: not now). F-33 approved after one fix round: the guard moved from `app/Rules` to `app/Services/Reference`, and a restore whose
+  clashing row vanished gets the generic `name` error. Gates: Pest 1 917, PostgreSQL parity 1 917, Vitest 1 119, check, types, build.
 
 ---
 
