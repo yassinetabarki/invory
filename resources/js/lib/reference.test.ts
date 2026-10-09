@@ -61,9 +61,32 @@ describe('categoryOptions', () => {
 
         expect(categoryOptions(list, 'lining')).toEqual([
             { value: 'fabric', label: 'Fabric' },
-            { value: 'lining', label: 'Lining' },
+            { value: 'lining', label: 'Lining (archived)' },
             { value: 'interlining', label: 'Interlining' },
         ]);
+    });
+
+    it('suffixes only the kept archived option; the value stays the code', () => {
+        const list = [
+            archived(
+                referenceMaterialCategories[3], // leather
+            ),
+            referenceMaterialCategories[0],
+        ];
+
+        expect(categoryOptions(list, 'leather')).toEqual([
+            { value: 'leather', label: 'Leather (archived)' },
+            { value: 'fabric', label: 'Fabric' },
+        ]);
+    });
+
+    it('adds no suffix to an active row, even when it is the kept code', () => {
+        expect(
+            categoryOptions(referenceMaterialCategories, 'fabric')[0],
+        ).toEqual({
+            value: 'fabric',
+            label: 'Fabric',
+        });
     });
 
     it('keeps only the archived row that was asked for', () => {
@@ -98,6 +121,16 @@ describe('unitOptions', () => {
             'm',
             'yd',
         ]);
+    });
+
+    it('puts "(archived)" after the usual label of the kept archived unit only', () => {
+        const list = [unit('m'), archived(unit('cone')), archived(unit('yd'))];
+
+        expect(unitOptions(list, 'cone')).toEqual([
+            { value: 'm', label: 'Metre (m)' },
+            { value: 'cone', label: 'Cone (cone) (archived)' },
+        ]);
+        expect(unitLabel(archived(unit('cone')))).toBe('Cone (cone)');
     });
 });
 

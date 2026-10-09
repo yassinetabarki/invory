@@ -294,18 +294,18 @@ describe('materials/edit page options', () => {
 
         expect(
             screen.getByRole('combobox', { name: /Category/ }),
-        ).toHaveTextContent('Fabric');
+        ).toHaveTextContent('Fabric (archived)');
         expect(
             screen.getByRole('combobox', { name: /Unit of measure/ }),
-        ).toHaveTextContent('Metre (m)');
+        ).toHaveTextContent('Metre (m) (archived)');
 
         await user.click(screen.getByRole('combobox', { name: /Category/ }));
-        expect(optionNames()).toEqual(['Fabric', 'Interlining']);
+        expect(optionNames()).toEqual(['Fabric (archived)', 'Interlining']);
         await user.keyboard('{Escape}');
 
         await user.click(
             screen.getByRole('combobox', { name: /Unit of measure/ }),
         );
-        expect(optionNames()).toEqual(['Metre (m)', 'Yard (yd)']);
+        expect(optionNames()).toEqual(['Metre (m) (archived)', 'Yard (yd)']);
     });
 });

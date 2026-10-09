@@ -13,10 +13,14 @@ import type {
  * does arithmetic: decimals stay strings.
  */
 
+/** Plain text, so screen readers announce it too (never a colour-only cue). */
+export const ARCHIVED_SUFFIX = ' (archived)';
+
 /**
  * The rows a picker or filter offers: every active row, plus the archived row
  * whose code is `keepCode` (the record's current value, or the active filter),
- * so an existing value never disappears. Server order is kept.
+ * so an existing value never disappears. Server order is kept. The option
+ * labels below add the "(archived)" suffix to that kept archived row.
  */
 function visibleRows<T extends ReferenceOption>(
     rows: readonly T[],
@@ -32,7 +36,9 @@ export function categoryOptions(
 ): Option[] {
     return visibleRows(categories, keepCode).map((category) => ({
         value: category.code,
-        label: category.name,
+        label: category.archived
+            ? `${category.name}${ARCHIVED_SUFFIX}`
+            : category.name,
     }));
 }
 
@@ -48,7 +54,9 @@ export function unitOptions(
 ): Option[] {
     return visibleRows(units, keepCode).map((unit) => ({
         value: unit.code,
-        label: unitLabel(unit),
+        label: unit.archived
+            ? `${unitLabel(unit)}${ARCHIVED_SUFFIX}`
+            : unitLabel(unit),
     }));
 }
 

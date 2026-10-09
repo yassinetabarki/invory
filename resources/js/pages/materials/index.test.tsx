@@ -275,7 +275,9 @@ describe('materials/index page', () => {
             await user.click(
                 within(heading.parentElement as HTMLElement).getByRole(
                     'button',
-                    { name: 'Clear filters' },
+                    {
+                        name: 'Clear filters',
+                    },
                 ),
             );
 
@@ -309,7 +311,9 @@ describe('materials/index page', () => {
             await user.click(
                 within(heading.parentElement as HTMLElement).getByRole(
                     'button',
-                    { name: 'Clear filters' },
+                    {
+                        name: 'Clear filters',
+                    },
                 ),
             );
 
@@ -778,7 +782,9 @@ describe('materials/index page', () => {
 
             const row = within(
                 screen.getByRole('table', { name: 'Materials' }),
-            ).getByRole('row', { name: /Metal shank button 17mm/ });
+            ).getByRole('row', {
+                name: /Metal shank button 17mm/,
+            });
 
             expect(row.querySelector('img')).toHaveAttribute(
                 'src',
@@ -843,10 +849,14 @@ describe('materials/index page category filter', () => {
 
         expect(
             screen.getByRole('combobox', { name: 'Category' }),
-        ).toHaveTextContent('Lining');
+        ).toHaveTextContent('Lining (archived)');
 
         await user.click(screen.getByRole('combobox', { name: 'Category' }));
 
-        expect(filterOptions()).toEqual(['All categories', 'Fabric', 'Lining']);
+        expect(filterOptions()).toEqual([
+            'All categories',
+            'Fabric',
+            'Lining (archived)',
+        ]);
     });
 });

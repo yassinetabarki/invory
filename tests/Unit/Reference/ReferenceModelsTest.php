@@ -54,8 +54,9 @@ describe('scopes', function () {
     it('ordered sorts by position, then name, then id', function (string $model) {
         $model::query()->delete();
 
-        $model::factory()->create(['code' => 'c', 'name' => 'Same', 'position' => 1]);
-        $model::factory()->create(['code' => 'b', 'name' => 'Same', 'position' => 1]);
+        // Archived: two ACTIVE rows can't share a name (F-32), and the order doesn't depend on the archive.
+        $model::factory()->archived()->create(['code' => 'c', 'name' => 'Same', 'position' => 1]);
+        $model::factory()->archived()->create(['code' => 'b', 'name' => 'Same', 'position' => 1]);
         $model::factory()->create(['code' => 'a', 'name' => 'Zed', 'position' => 0]);
         $model::factory()->create(['code' => 'd', 'name' => 'Alpha', 'position' => 1]);
 

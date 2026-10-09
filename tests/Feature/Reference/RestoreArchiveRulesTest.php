@@ -139,21 +139,45 @@ describe('restore', function () {
         $kind['model']::factory()->create(['name' => 'PLASTIC']);
         $archived = $kind['model']::factory()->archived()->create(['name' => 'Plastic']);
 
-        // Whatever the database says about "ELASTIC" vs "Elastic", creating a row named "Elastic" is refused exactly when restoring
-        // an archived "Plastic" is refused (the same casing pattern, against an active upper-case namesake).
+        // Names are unique ignoring case (F-32): creating "Elastic" is refused (an active "ELASTIC" exists), and so is restoring
+        // an archived "Plastic" (an active "PLASTIC" exists). ReferenceNameCaseTest covers the cases one by one.
         $createRefused = refusesName(actingAs($this->user)->post(route("{$kind['route']}.store"), $kind['store']('Elastic')));
         $restoreRefused = refusesName(actingAs($this->user)->patch(route("{$kind['route']}.restore", $archived->id)));
 
-        expect($restoreRefused)->toBe($createRefused);
+        expect($createRefused)->toBeTrue()
+            ->and($restoreRefused)->toBeTrue();
     })->with('referenceKinds');
 
-    it('restoring an active row is a harmless no-op, not a clash with itself', function (array $kind) {
-        $active = $kind['model']::factory()->create(['name' => 'Elastic']);
+    it('restoring an active row is a no-op: no error, no write, no new reference version, the success toast as usual (F-30)', function (array $kind) {
+        Carbon::setTestNow('2026-10-09 12:00:00');
+        $active = $kind['model']::factory()->create(['name' => 'Elastic', 'updated_at' => '2026-01-02 03:04:05']);
+        $version = app(ReferenceVersion::class)->current();
 
         actingAs($this->user)->patch(route("{$kind['route']}.restore", $active->id))
-            ->assertSessionHasNoErrors();
+            ->assertRedirect()
+            ->assertSessionHasNoErrors()
+            ->assertInertiaFlash('toast', ['type' => 'success', 'message' => $kind['restored']]);
 
-        expect($active->refresh()->archived_at)->toBeNull();
+        expect($active->refresh()->archived_at)->toBeNull()
+            ->and($active->updated_at?->toDateTimeString())->toBe('2026-01-02 03:04:05')
+            ->and(app(ReferenceVersion::class)->current())->toBe($version);
+    })->with('referenceKinds');
+
+    it('restoring a restored row twice changes nothing the second time', function (array $kind) {
+        Carbon::setTestNow('2026-10-09 10:00:00');
+        $row = $kind['model']::factory()->archived()->create();
+
+        actingAs($this->user)->patch(route("{$kind['route']}.restore", $row->id))->assertSessionHasNoErrors();
+
+        $version = app(ReferenceVersion::class)->current();
+        Carbon::setTestNow('2026-10-09 11:30:00');
+
+        actingAs($this->user)->patch(route("{$kind['route']}.restore", $row->id))
+            ->assertSessionHasNoErrors()
+            ->assertInertiaFlash('toast', ['type' => 'success', 'message' => $kind['restored']]);
+
+        expect($row->refresh()->updated_at?->toDateTimeString())->toBe('2026-10-09 10:00:00')
+            ->and(app(ReferenceVersion::class)->current())->toBe($version);
     })->with('referenceKinds');
 
     it('still answers 404 for an unknown row', function (array $kind) {

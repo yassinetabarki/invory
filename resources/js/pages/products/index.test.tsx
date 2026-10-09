@@ -271,7 +271,9 @@ describe('products/index page', () => {
             await user.click(
                 within(heading.parentElement as HTMLElement).getByRole(
                     'button',
-                    { name: 'Clear filters' },
+                    {
+                        name: 'Clear filters',
+                    },
                 ),
             );
 
@@ -626,7 +628,7 @@ describe('products/index page category filter', () => {
         expect(filterOptions()).toEqual([
             'All categories',
             'Apparel',
-            'Footwear',
+            'Footwear (archived)',
         ]);
     });
 });

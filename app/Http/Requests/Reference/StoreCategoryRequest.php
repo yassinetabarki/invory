@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Reference;
 
+use App\Rules\UniqueActiveName;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -33,7 +34,8 @@ abstract class StoreCategoryRequest extends FormRequest
         return [
             // Immutable and unique among ALL rows, archived ones included (a code is never reused).
             'code' => ['required', 'string', 'max:'.self::CODE_MAX, 'regex:/^[a-z0-9_]+$/', Rule::unique($this->table(), 'code')],
-            'name' => ['required', 'string', 'max:64', Rule::unique($this->table(), 'name')->whereNull('archived_at')],
+            // Unique among the ACTIVE rows, ignoring case (F-32).
+            'name' => ['required', 'string', 'max:64', new UniqueActiveName($this->table())],
             'position' => ['nullable', 'integer', 'min:0', 'max:32767'],
         ];
     }

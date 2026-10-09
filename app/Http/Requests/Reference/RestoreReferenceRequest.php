@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Reference;
 
+use App\Rules\UniqueActiveName;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 /**
  * Restore an archived unit or category (ADR-0008, F-27). Names are unique among the ACTIVE rows, so a restore is refused with
- * an error on `name` while another active row holds the name. The row's own name is validated with the same
- * `Rule::unique` the create and update requests use, so the case rule can't drift.
+ * an error on `name` while another active row holds the name, ignoring case (F-32). The row's own name is validated with the same
+ * `UniqueActiveName` rule the create and update requests use, so the case rule can't drift.
  */
 abstract class RestoreReferenceRequest extends FormRequest
 {
@@ -43,19 +43,12 @@ abstract class RestoreReferenceRequest extends FormRequest
     public function rules(): array
     {
         return [
-            // Restoring a row that is already active changes nothing, so it must not collide with itself.
-            'name' => [Rule::unique($this->table(), 'name')->whereNull('archived_at')->ignore($this->item())],
-        ];
-    }
-
-    /** @return array<string, string> */
-    public function messages(): array
-    {
-        return [
-            'name.unique' => __('An active :noun is already named ":name". Rename one of them first.', [
+            // Restoring a row that is already active changes nothing, so it must not collide with itself. Same rule as create and
+            // update, so the case folding can't drift; the message names the active row in the way, as stored.
+            'name' => [new UniqueActiveName($this->table(), $this->item(), __('An active :noun is already named ":name". Rename one of them first.', [
                 'noun' => __($this->noun()),
-                'name' => (string) $this->item()->getAttribute('name'),
-            ]),
+                'name' => ':name',
+            ]))],
         ];
     }
 

@@ -165,7 +165,9 @@ describe('products/edit page categories', () => {
         });
         render(<ProductsEdit {...props()} />); // Denim Jacket: 'apparel'
 
-        expect(screen.getByLabelText(/^Category/)).toHaveTextContent('Apparel');
+        expect(screen.getByLabelText(/^Category/)).toHaveTextContent(
+            'Apparel (archived)',
+        );
 
         await user.click(screen.getByLabelText(/^Category/));
 
@@ -173,6 +175,6 @@ describe('products/edit page categories', () => {
             within(screen.getByRole('listbox'))
                 .getAllByRole('option')
                 .map((option) => option.textContent),
-        ).toEqual(['Apparel', 'Bag']);
+        ).toEqual(['Apparel (archived)', 'Bag']);
     });
 });

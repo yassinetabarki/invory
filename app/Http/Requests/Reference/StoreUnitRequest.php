@@ -6,6 +6,7 @@ namespace App\Http\Requests\Reference;
 
 use App\Enums\UnitDimension;
 use App\Models\Unit;
+use App\Rules\UniqueActiveName;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -22,7 +23,7 @@ class StoreUnitRequest extends FormRequest
         return [
             // Immutable and unique among ALL rows, archived ones included (a code is never reused).
             'code' => ['required', 'string', 'max:16', 'regex:/^[a-z0-9_]+$/', Rule::unique('units', 'code')],
-            'name' => ['required', 'string', 'max:64', Rule::unique('units', 'name')->whereNull('archived_at')],
+            'name' => ['required', 'string', 'max:64', new UniqueActiveName('units')],
             'dimension' => ['required', Rule::enum(UnitDimension::class)],
             'factor_to_base' => self::factorRules(UnitDimension::tryFrom((string) $this->input('dimension'))),
             'position' => ['nullable', 'integer', 'min:0', 'max:32767'],

@@ -6,6 +6,7 @@ namespace App\Http\Requests\Reference;
 
 use App\Enums\UnitDimension;
 use App\Models\Unit;
+use App\Rules\UniqueActiveName;
 use Brick\Math\BigDecimal;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -31,7 +32,7 @@ class UpdateUnitRequest extends FormRequest
 
         $rules = [
             'code' => ['prohibited'],
-            'name' => ['required', 'string', 'max:64', Rule::unique('units', 'name')->whereNull('archived_at')->ignore($unit)],
+            'name' => ['required', 'string', 'max:64', new UniqueActiveName('units', $unit)],
             'position' => ['nullable', 'integer', 'min:0', 'max:32767'],
         ];
 

@@ -686,6 +686,18 @@ Phase 4                                         S-27 (perf dataset + budgets) �
   enum lists). Dispatched FE (settings UI + consumers) ∥ BE (F-27 + dropping the props + contract).
 - 2026-10-09: S-22 approved in one round (BE and FE in parallel, no fixes needed). Gates: Pest 1 791, PostgreSQL parity 1 791, Vitest 1 116,
   check, types, build. Per-page `categories`/`units` props are gone; consumers read `reference`. The dev database wasn't touched.
+- 2026-10-09: S-22 committed (cd5fbd1, 601f4a2). The human's UX answers start a follow-up round (S-22b):
+  - F-32: names unique **case-insensitively** among active rows, on create, update and restore. The tech-lead adds a database guard: partial
+    unique indexes on `lower(name) WHERE archived_at IS NULL`, in a migration that refuses to run when active duplicates exist. Validation
+    compares `lower(name) = lower(?)` in SQL, the same folding as the index.
+  - F-31 q2: a kept archived option is labelled "{label} (archived)".
+  - F-31 q1: cards below `xl` stay.
+  - F-31 q3 ("Manage units" link): unanswered, stays in the backlog.
+  - F-30: restore of an active row is a no-op.
+  - Dispatched BE ∥ FE.
+- 2026-10-09: S-22b approved in one round. Gates: Pest 1 861, PostgreSQL parity 1 861, Vitest 1 119, check, types, build. New migration
+  `2026_10_09_200000_add_active_name_unique_indexes_to_reference_tables` is **not applied to the dev database**. A read-only check found no
+  active case-insensitive duplicates there, so it can't fail. The human applies it.
 
 ---
 
