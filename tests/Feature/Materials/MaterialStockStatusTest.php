@@ -59,11 +59,13 @@ it('serialises the stock status on the resource', function () {
 });
 
 it('enforces a unique sku among non-deleted rows at database level', function () {
+    $categoryId = DB::table('material_categories')->where('code', 'fabric')->value('id');
+    $unitId = DB::table('units')->where('code', 'm')->value('id');
     $row = fn (string $sku, ?string $deletedAt = null): array => [
         'sku' => $sku,
         'name' => 'Raw row',
-        'category' => 'fabric',
-        'unit' => 'm',
+        'category_id' => $categoryId,
+        'unit_id' => $unitId,
         'unit_cost' => '1.0000',
         'quantity_on_hand' => '1.0000',
         'deleted_at' => $deletedAt,

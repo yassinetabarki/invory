@@ -42,7 +42,7 @@ final class PreviewMaterials
             'id' => $material->id,
             'sku' => $material->sku,
             'name' => $material->name,
-            'unit' => $material->unit->value,
+            'unit' => $material->unit->code,
         ];
     }
 
@@ -53,7 +53,8 @@ final class PreviewMaterials
      */
     public static function byName(): Collection
     {
-        return Material::query()->orderBy('name')->orderBy('id')->get();
+        // The picker shows the unit (always eager-loaded) and never the category: skip that query.
+        return Material::query()->without('category')->orderBy('name')->orderBy('id')->get();
     }
 
     /**

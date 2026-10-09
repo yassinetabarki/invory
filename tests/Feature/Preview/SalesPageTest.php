@@ -314,6 +314,6 @@ it('answers within a bounded number of queries', function () {
     DB::enableQueryLog();
     actingAs($this->user)->get(salesUrl(['period' => 'this_year', 'page' => 2]))->assertOk();
 
-    // Only the signed-in user: the sales and the products come from the fixture.
-    expect(count(DB::getQueryLog()))->toBeLessThanOrEqual(2);
+    // Only the reference lists of a full load: the sales and the products come from the fixture.
+    expect(count(DB::getQueryLog()))->toBeLessThanOrEqual(REFERENCE_QUERIES);
 });

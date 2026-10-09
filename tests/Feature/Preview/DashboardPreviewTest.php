@@ -29,7 +29,7 @@ function materialRef(string $sku): array
 {
     $material = previewMaterial($sku);
 
-    return ['id' => $material->id, 'sku' => $sku, 'name' => $material->name, 'unit' => $material->unit->value];
+    return ['id' => $material->id, 'sku' => $sku, 'name' => $material->name, 'unit' => $material->unit->code];
 }
 
 /** A product reference as the contract sends it (`photo` is null for the draft Chore Jacket only). */
@@ -345,7 +345,8 @@ it('answers within a bounded number of queries, whatever the number of materials
 
     Material::factory()->count(40)->create();
 
-    // The signed-in user, the inventory totals, the restock list and the one materials query by SKU.
-    expect($baseline)->toBeLessThanOrEqual(5)
+    // The inventory totals, the restock list with its categories and units, the one materials query by SKU with its units, and
+    // the reference lists of a full load.
+    expect($baseline)->toBeLessThanOrEqual(6 + REFERENCE_QUERIES)
         ->and($queries())->toBe($baseline);
 });

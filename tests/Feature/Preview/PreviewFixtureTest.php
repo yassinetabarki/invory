@@ -40,8 +40,8 @@ describe('DemoCatalogSeeder', function () {
         $material = previewMaterial($sku);
 
         expect($material->name)->toBe($name)
-            ->and($material->category->value)->toBe($category)
-            ->and($material->unit->value)->toBe($unit)
+            ->and($material->category->code)->toBe($category)
+            ->and($material->unit->code)->toBe($unit)
             ->and($material->unit_cost)->toBe($cost)
             ->and($material->quantity_on_hand)->toBe($stock)
             ->and($material->reorder_level)->toBe($reorder)

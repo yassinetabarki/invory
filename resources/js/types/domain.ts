@@ -27,33 +27,9 @@ export type Paginated<T> = {
     };
 };
 
-export type MaterialCategory =
-    | 'fabric'
-    | 'lining'
-    | 'interlining'
-    | 'leather'
-    | 'thread'
-    | 'trim'
-    | 'fastener'
-    | 'label'
-    | 'sole'
-    | 'hardware'
-    | 'packaging'
-    | 'other';
-export type UnitOfMeasure =
-    | 'm'
-    | 'cm'
-    | 'yd'
-    | 'sqm'
-    | 'sqft'
-    | 'kg'
-    | 'g'
-    | 'l'
-    | 'ml'
-    | 'pc'
-    | 'pair'
-    | 'roll'
-    | 'cone';
+// Codes from the reference tables (ADR-0008): units and categories are company-managed data, not a fixed list.
+export type MaterialCategory = string;
+export type UnitOfMeasure = string; // a `units.code`, for example 'm'
 export type StockStatus = 'in_stock' | 'low' | 'out';
 
 export type Material = {
@@ -103,8 +79,8 @@ export type MaterialFilters = {
 export type MaterialFormData = {
     sku: string;
     name: string;
-    category: MaterialCategory | '';
-    unit: UnitOfMeasure | '';
+    category: MaterialCategory; // '' until chosen
+    unit: UnitOfMeasure; // '' until chosen
     unit_cost: string;
     quantity_on_hand: string;
     reorder_level: string;
@@ -141,13 +117,8 @@ export type MaterialShowProps = {
 // Decimals: scale-4 strings · percents: scale-2 strings · dates: 'YYYY-MM-DD'.
 // ---------------------------------------------------------------------------
 
-export type ProductCategory =
-    | 'apparel'
-    | 'footwear'
-    | 'bag'
-    | 'accessory'
-    | 'jewelry'
-    | 'other';
+// A `product_categories.code` (ADR-0008), for example 'apparel'.
+export type ProductCategory = string;
 export type ProductStatus = 'draft' | 'active' | 'archived';
 export type SalesPeriod =
     | 'last_7_days'
@@ -273,7 +244,7 @@ export type ProductComponentFormRow = {
 export type ProductFormData = {
     sku: string;
     name: string;
-    category: ProductCategory | '';
+    category: ProductCategory; // '' until chosen
     status: ProductStatus | '';
     description: string;
     labor_cost: string;
@@ -421,4 +392,65 @@ export type DashboardProps = {
     needs_restock: Material[]; // max 5: out first, then low; by name
     recent_sales: Sale[]; // newest 5, any period
     alerts: UnproducibleAlert[]; // every product that can't be produced, by name
+};
+
+// ---------------------------------------------------------------------------
+// Reference data in the database (ADR-0008, S-21): units and categories are company-managed.
+// Forms and filters keep sending CODES (`category: 'fabric'`, `unit: 'm'`); `id` is for the settings screens.
+// ---------------------------------------------------------------------------
+
+export type UnitDimension =
+    | 'length'
+    | 'area'
+    | 'mass'
+    | 'volume'
+    | 'count'
+    | 'package';
+
+export type ReferenceOption = {
+    id: number;
+    code: string; // immutable, [a-z0-9_]+
+    name: string;
+    position: number;
+    archived: boolean;
+};
+export type UnitOption = ReferenceOption & {
+    dimension: UnitDimension;
+    dimension_label: string;
+    factor_to_base: Decimal | null; // scale 12; null for `package` units. Display only, never do maths on it.
+    is_system: boolean; // seeded units: dimension and factor are fixed, and they can't be deleted (only archived)
+};
+// The shared once-prop `reference` (`usePage().props.reference`): present only for signed-in users. Lists include archived
+// rows (flagged `archived`), ordered by position then name.
+export type ReferenceData = {
+    units: UnitOption[];
+    material_categories: ReferenceOption[];
+    product_categories: ReferenceOption[];
+    product_statuses: Option<ProductStatus>[];
+    sales_periods: Option<SalesPeriod>[];
+    stock_statuses: Option<StockStatus>[];
+};
+
+// Settings tables: usage_count = non-deleted materials that use the unit/category (product categories: preview products).
+export type ReferenceRow = ReferenceOption & { usage_count: number };
+export type UnitRow = UnitOption & { usage_count: number };
+export type UnitsSettingsProps = {
+    units: UnitRow[];
+    dimensions: Option<UnitDimension>[];
+};
+export type MaterialCategoriesSettingsProps = { categories: ReferenceRow[] };
+export type ProductCategoriesSettingsProps = { categories: ReferenceRow[] };
+
+// Settings forms. `code` is sent on create only. `position` empty = last. System units: only name and position change.
+export type UnitFormData = {
+    code: string;
+    name: string;
+    dimension: UnitDimension | '';
+    factor_to_base: string; // decimal string; empty for `package`
+    position: string;
+};
+export type ReferenceFormData = {
+    code: string;
+    name: string;
+    position: string;
 };

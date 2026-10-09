@@ -1,6 +1,5 @@
 <?php
 
-use App\Enums\ProductCategory;
 use App\Enums\ProductStatus;
 use App\Enums\SalesPeriod;
 use App\Enums\StockMovementType;
@@ -11,7 +10,6 @@ use Tests\TestCase;
 uses(TestCase::class);
 
 dataset('uiFirstEnums', [
-    'ProductCategory' => [ProductCategory::class],
     'ProductStatus' => [ProductStatus::class],
     'SalesPeriod' => [SalesPeriod::class],
     'StockMovementType' => [StockMovementType::class],
@@ -44,9 +42,7 @@ it('gives every case a non-empty label and a unique value', function (string $en
 })->with('uiFirstEnums');
 
 it('matches the domain skill values and the TypeScript unions, in order', function () {
-    expect(array_column(ProductCategory::options(), 'value'))
-        ->toBe(['apparel', 'footwear', 'bag', 'accessory', 'jewelry', 'other'])
-        ->and(array_column(ProductStatus::options(), 'value'))
+    expect(array_column(ProductStatus::options(), 'value'))
         ->toBe(['draft', 'active', 'archived'])
         ->and(array_column(SalesPeriod::options(), 'value'))
         ->toBe(['last_7_days', 'last_30_days', 'this_month', 'this_year'])
@@ -55,9 +51,7 @@ it('matches the domain skill values and the TypeScript unions, in order', functi
 });
 
 it('uses the decided labels', function () {
-    expect(array_column(ProductCategory::options(), 'label'))
-        ->toBe(['Apparel', 'Footwear', 'Bag', 'Accessory', 'Jewelry', 'Other'])
-        ->and(array_column(ProductStatus::options(), 'label'))
+    expect(array_column(ProductStatus::options(), 'label'))
         ->toBe(['Draft', 'Active', 'Archived'])
         ->and(array_column(SalesPeriod::options(), 'label'))
         ->toBe(['Last 7 days', 'Last 30 days', 'This month', 'This year'])
@@ -66,8 +60,7 @@ it('uses the decided labels', function () {
 });
 
 it('can be created from its backing value', function () {
-    expect(ProductCategory::from('footwear'))->toBe(ProductCategory::Footwear)
-        ->and(ProductStatus::from('archived'))->toBe(ProductStatus::Archived)
+    expect(ProductStatus::from('archived'))->toBe(ProductStatus::Archived)
         ->and(SalesPeriod::from('this_year'))->toBe(SalesPeriod::ThisYear)
         ->and(StockMovementType::from('price_change'))->toBe(StockMovementType::PriceChange)
         ->and(SalesPeriod::tryFrom('last_90_days'))->toBeNull()

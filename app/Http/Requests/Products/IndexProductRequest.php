@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Products;
 
-use App\Enums\ProductCategory;
 use App\Enums\ProductStatus;
+use App\Services\Reference\ReferenceCode;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -24,7 +24,8 @@ class IndexProductRequest extends FormRequest
     {
         return [
             'search' => ['nullable', 'string', 'max:100'],
-            'category' => ['nullable', Rule::enum(ProductCategory::class)],
+            // Any code in the table, archived or not: a bookmarked filter on a category that was archived since still works.
+            'category' => ['nullable', 'string', ReferenceCode::any('product_categories')],
             'status' => ['nullable', Rule::enum(ProductStatus::class)],
             'cant_produce' => ['nullable', 'boolean'],
             'page' => ['nullable', 'integer', 'min:1'],
@@ -39,10 +40,11 @@ class IndexProductRequest extends FormRequest
     public function filters(): array
     {
         $search = trim((string) $this->input('search'));
+        $category = $this->input('category');
 
         return [
             'search' => $search === '' ? null : $search,
-            'category' => $this->enum('category', ProductCategory::class)?->value,
+            'category' => is_string($category) && $category !== '' ? $category : null,
             'status' => $this->enum('status', ProductStatus::class)?->value,
             'cant_produce' => $this->boolean('cant_produce'),
         ];

@@ -596,9 +596,32 @@ Phase 4                                         S-27 (perf dataset + budgets) �
 | Q4 | bigint identity keys | **provisional** (recommended option) |
 | Q5 | keep `App\Mock` until each real story replaces its part | **provisional** |
 | Q6 | currency and locale stay in config | **provisional** |
-| Q7 | block a material's unit change while a BOM uses it | **provisional**; S-21 needs it confirmed before it starts |
-| Q8 | hard-delete sales | **provisional**; S-14-BE needs it confirmed before it starts |
+| Q7 | block changing a material's unit while any non-deleted product's BOM uses it: a validation error on `unit`, tested now against the preview usage and built so S-04 only swaps the usage source | **confirmed 2026-10-09** |
+| Q8 | sales are hard-deleted; "the stock they used is restored through a ledger entry" (the human's words) | **confirmed 2026-10-09 for S-14-BE**. ⚠️ Conflicts with the costing skill ("recording, editing or deleting a sale never changes material stock"), so there is no stock to restore. Clarify with the human before S-14-BE |
 | Q9 | production runs not urgent | **provisional** |
+
+### S-21 design (tech-lead, 2026-10-09; the story's scope as approved by the human)
+- **Scope:** the tables `units`, `material_categories` and `product_categories` with defaults in a migration; materials move to FKs; settings
+  routes, Actions, policies and FormRequests; the shared once-prop `reference`; the Q7 unit lock.
+- **Moved to S-04** (outside the approved scope, and S-04 touches the same tables with a PostgreSQL parity run anyway): `pg_trgm` indexes,
+  PostgreSQL `CHECK` constraints, and `created_by`/`updated_by` on materials.
+- **Contract kept on codes (changes §C.6).**
+  - Forms and filters keep submitting the **code** (`category: 'fabric'`, `unit: 'm'`). FormRequests validate the code against non-archived rows
+    (or the record's current value) and the Action resolves it to an id.
+  - `Material` keeps `category`/`category_label`/`unit`/`unit_label` with the same strings as today (the unit label stays "Metre (m)", built as
+    `name (code)`).
+  - The per-page option props (`categories`, `units`) stay, now read from the database (active rows plus the record's current value), until S-22
+    moves their consumers to `reference`.
+  - In `domain.ts`, `MaterialCategory`, `UnitOfMeasure` and `ProductCategory` become `string` aliases, so no frontend code changes in S-21.
+  - Additive types: `UnitDimension`, `ReferenceOption`, `UnitOption`, `ReferenceData`, and the settings page props. `global.d.ts`
+    `sharedPageProps.reference?: ReferenceData`, which is shared only to signed-in users.
+- **Once-prop version:** a cache key `invory.reference.version` holding a ULID. The reference-data Actions write a new ULID; a cache miss creates
+  one (clients then refetch once). The prop key is `reference:{version}`.
+- **Settings routes** (auth + verified, digit-constrained ids, names `settings.units.*`, `settings.material-categories.*`,
+  `settings.product-categories.*`): `GET` index, `POST` store, `PUT` update, `DELETE` destroy, `PATCH {id}/archive` and `PATCH {id}/restore`.
+  Writes redirect back with a toast. Page stubs `settings/units`, `settings/material-categories` and `settings/product-categories` exist for
+  Inertia's page check; **S-22 builds the UI and the nav entries.**
+- **S-22 can start** once S-21 is committed: its contract (the props and `ReferenceData`) is frozen by S-21. It is not approved yet.
 
 ### S-18 repo-side design (decided by the tech-lead under Q1)
 - The native app keeps http://localhost:8000: a Laragon Apache virtual host with `Listen 8000` and `DocumentRoot "G:/Projects/Invory/public"`
@@ -650,6 +673,12 @@ Phase 4                                         S-27 (perf dataset + budgets) �
   invalidation tests, product Edit CTA prefetch). The tech-lead wrote SETUP.md §4 (native serving) and the CI step override. All gates green:
   Pest 1 323, Vitest 1 023, check, types, build (no test chunks). PG parity not run: Docker Desktop was down. S-18 timing to be verified by the
   human after the machine steps.
+- 2026-10-09: S-21 approved by the human (S-22 not yet). Q7 and Q8 confirmed (the Q8 wording conflicts with the costing skill: flagged).
+  Design recorded above; dispatched backend-developer (single BE, no FE needed: the contract stays on codes).
+- 2026-10-09: S-21 approved after one BE round plus a one-line FE type-compat fix (`material-form.tsx`, the redundant `| ''` union).
+  Gates: Pest 1 759 (SQLite), PostgreSQL parity 1 759, Vitest 1 023, check, types, build. The BE developer also migrated the **dev database**
+  (`laravel`) with migrate → rollback → migrate (data preserved, verified row for row). The costing skill §"Units and categories" and
+  ARCHITECTURE §4/§5 are updated. **S-22 can start** (its contract is frozen in `domain.ts`), once the human approves it.
 
 ---
 

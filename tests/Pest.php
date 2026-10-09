@@ -44,6 +44,9 @@ expect()->extend('toBeOne', function () {
     return $this->toBe(1);
 });
 
+/** Queries of the shared `reference` once-prop on a full load (units, material categories, product categories). A client that already holds it skips them. */
+const REFERENCE_QUERIES = 3;
+
 /*
  * Query budget: `expect(fn () => $this->get($url))->toRunAtMostQueries(10)` runs the closure and fails when it runs more SQL
  * queries than the budget (every query counts, including those of the session, the policies and the Resources).

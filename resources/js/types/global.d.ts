@@ -1,4 +1,5 @@
 import type { Auth } from '@/types/auth';
+import type { ReferenceData } from '@/types/domain';
 
 declare module 'react' {
     interface InputHTMLAttributes<T> {
@@ -13,6 +14,8 @@ declare module '@inertiajs/core' {
             auth: Auth;
             sidebarOpen: boolean;
             app: { currency: string; locale: string; today: string };
+            // Once-prop (ADR-0008): signed-in users only, resent when a reference list changes.
+            reference?: ReferenceData;
             [key: string]: unknown;
         };
     }

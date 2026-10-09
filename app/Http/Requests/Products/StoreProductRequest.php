@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Products;
 
-use App\Enums\ProductCategory;
 use App\Enums\ProductStatus;
 use App\Mock\PreviewFixture;
+use App\Services\Reference\ReferenceCode;
 use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -32,15 +32,18 @@ class StoreProductRequest extends FormRequest
      * Rules shared with UpdateProductRequest. Decimal bounds match the columns: `decimal(12,4)` for costs and prices,
      * `decimal(14,4)` for quantities, `decimal(5,2)` for the waste percentage.
      *
+     * `category` is the code of a non-archived product category; on update the product's current code stays valid too.
+     *
      * @param  int|null  $ignoreProductId  The product being updated, whose own SKU stays valid.
+     * @param  string|null  $currentCategory  The category code the product being updated already has.
      * @return array<string, mixed>
      */
-    public static function fieldRules(?int $ignoreProductId): array
+    public static function fieldRules(?int $ignoreProductId, ?string $currentCategory = null): array
     {
         return [
             'sku' => ['required', 'string', 'max:64', self::uniqueSku($ignoreProductId)],
             'name' => ['required', 'string', 'max:150'],
-            'category' => ['required', Rule::enum(ProductCategory::class)],
+            'category' => ['required', 'string', ReferenceCode::active('product_categories', $currentCategory)],
             'status' => ['required', Rule::enum(ProductStatus::class)],
             'description' => ['nullable', 'string', 'max:2000'],
             'labor_cost' => ['required', 'decimal:0,4', 'min:0', 'max:99999999.9999'],

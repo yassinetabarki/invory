@@ -8,11 +8,14 @@ use App\Models\Material;
 
 final readonly class UpdateMaterial
 {
-    /** @param array<string, mixed> $data validated input */
+    public function __construct(private ResolveReferenceCodes $resolveCodes) {}
+
+    /** @param array<string, mixed> $data validated input, with `category` and `unit` as codes */
     public function handle(Material $material, array $data): Material
     {
-        $material->update($data);
+        $material->update($this->resolveCodes->handle($data));
 
-        return $material;
+        // The category and unit relations were loaded before the change.
+        return $material->load(['category', 'unit']);
     }
 }

@@ -1,7 +1,16 @@
 <?php
 
+use App\Http\Controllers\Settings\ArchiveMaterialCategoryController;
+use App\Http\Controllers\Settings\ArchiveProductCategoryController;
+use App\Http\Controllers\Settings\ArchiveUnitController;
+use App\Http\Controllers\Settings\MaterialCategoryController;
+use App\Http\Controllers\Settings\ProductCategoryController;
 use App\Http\Controllers\Settings\ProfileController;
+use App\Http\Controllers\Settings\RestoreMaterialCategoryController;
+use App\Http\Controllers\Settings\RestoreProductCategoryController;
+use App\Http\Controllers\Settings\RestoreUnitController;
 use App\Http\Controllers\Settings\SecurityController;
+use App\Http\Controllers\Settings\UnitController;
 use Illuminate\Auth\Middleware\RequirePassword;
 use Illuminate\Support\Facades\Route;
 
@@ -26,6 +35,23 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('user-password.update');
 
     Route::inertia('settings/appearance', 'settings/appearance')->name('appearance.edit');
+
+    // Reference data (ADR-0008): units and the two category lists, each with the same six routes. Any verified user may
+    // manage them (decision Q3; the policies check it). Ids are 1 to 18 digits, like every other route.
+    foreach ([
+        'units' => [UnitController::class, 'unit', ArchiveUnitController::class, RestoreUnitController::class],
+        'material-categories' => [MaterialCategoryController::class, 'material_category', ArchiveMaterialCategoryController::class, RestoreMaterialCategoryController::class],
+        'product-categories' => [ProductCategoryController::class, 'product_category', ArchiveProductCategoryController::class, RestoreProductCategoryController::class],
+    ] as $uri => [$controller, $parameter, $archive, $restore]) {
+        $name = "settings.{$uri}";
+
+        Route::get("settings/{$uri}", [$controller, 'index'])->name("{$name}.index");
+        Route::post("settings/{$uri}", [$controller, 'store'])->name("{$name}.store");
+        Route::put("settings/{$uri}/{{$parameter}}", [$controller, 'update'])->where($parameter, '[0-9]{1,18}')->name("{$name}.update");
+        Route::delete("settings/{$uri}/{{$parameter}}", [$controller, 'destroy'])->where($parameter, '[0-9]{1,18}')->name("{$name}.destroy");
+        Route::patch("settings/{$uri}/{{$parameter}}/archive", $archive)->where($parameter, '[0-9]{1,18}')->name("{$name}.archive");
+        Route::patch("settings/{$uri}/{{$parameter}}/restore", $restore)->where($parameter, '[0-9]{1,18}')->name("{$name}.restore");
+    }
 });
 
 Route::get('.well-known/passkey-endpoints', function () {

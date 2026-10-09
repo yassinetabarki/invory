@@ -31,14 +31,22 @@ If a rule here is wrong or incomplete, stop and ask the tech-lead to update it (
 
 ## Units and categories
 
-- `UnitOfMeasure`: `m, cm, yd, sqm, sqft, kg, g, l, ml, pc, pair, roll, cone`.
-  A BOM quantity is **always expressed in the material's own unit**. There are no conversions in the MVP.
-- `MaterialCategory`: `fabric, lining, interlining, leather, thread, trim, fastener, label, sole, hardware, packaging, other`.
-- `ProductCategory`: `apparel, footwear, bag, accessory, jewelry, other`.
+Units and categories are **database tables** managed in Settings by any signed-in user (ADR-0008, S-21). Each row has an immutable `code`
+(used in forms, filters and URLs), an editable `name`, a `position` and `archived_at`. Archived rows are hidden from pickers but still show on
+existing records. A row can be deleted only when nothing references it.
+- `units` (seeded defaults, `is_system`): `m, cm, yd, sqm, sqft, kg, g, l, ml, pc, pair, roll, cone`. Users may add, rename and archive units.
+  Each unit has a `dimension` (`UnitDimension` enum: length, area, mass, volume, count, package) and a `factor_to_base` (decimal string,
+  scale 12; `null` for `package`). Seeded units keep a fixed dimension and factor.
+  A BOM quantity is **always expressed in the material's own unit**. There are **no conversions** in Phase 3. The factor exists for a later
+  conversion story, which needs its own ADR and rules here.
+- **A material's unit can't change while any non-deleted product's BOM uses it** (validation error on `unit`; decided 2026-10-09, Q7).
+- `material_categories` (defaults): `fabric, lining, interlining, leather, thread, trim, fastener, label, sole, hardware, packaging, other`.
+- `product_categories` (defaults): `apparel, footwear, bag, accessory, jewelry, other`.
 - `ProductStatus`: `draft, active, archived`. Only `active` products can be sold (mockup copy "Only active products can be sold").
 - `SalesPeriod`: `last_7_days, last_30_days, this_month, this_year` (default `last_30_days`).
 - `StockMovementType`: `created, restock, correction, price_change`.
-- Each PHP enum exposes `label(): string` and `static options(): array<array{value:string,label:string}>`. The frontend gets options as props and never hard-codes labels.
+- Each PHP enum exposes `label(): string` and `static options(): array<array{value:string,label:string}>`. The frontend gets options as props
+  (or from the shared `reference` prop) and never hard-codes labels.
 
 ## Formulas
 

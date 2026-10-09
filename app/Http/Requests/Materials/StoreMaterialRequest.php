@@ -4,9 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Materials;
 
-use App\Enums\MaterialCategory;
-use App\Enums\UnitOfMeasure;
 use App\Models\Material;
+use App\Services\Reference\ReferenceCode;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\File;
@@ -28,15 +27,18 @@ class StoreMaterialRequest extends FormRequest
     /**
      * Rules shared with UpdateMaterialRequest.
      *
+     * `category` and `unit` are codes of non-archived rows (ADR-0008). On update, the material's own current code stays
+     * valid even when it has been archived since.
+     *
      * @return array<string, mixed>
      */
-    public static function fieldRules(Unique $uniqueSku): array
+    public static function fieldRules(Unique $uniqueSku, ?string $currentCategory = null, ?string $currentUnit = null): array
     {
         return [
             'sku' => ['required', 'string', 'max:64', $uniqueSku],
             'name' => ['required', 'string', 'max:150'],
-            'category' => ['required', Rule::enum(MaterialCategory::class)],
-            'unit' => ['required', Rule::enum(UnitOfMeasure::class)],
+            'category' => ['required', 'string', ReferenceCode::active('material_categories', $currentCategory)],
+            'unit' => ['required', 'string', ReferenceCode::active('units', $currentUnit)],
             'unit_cost' => ['required', 'decimal:0,4', 'min:0', 'max:99999999.9999'],
             'quantity_on_hand' => ['required', 'decimal:0,4', 'min:0', 'max:9999999999.9999'],
             'reorder_level' => ['nullable', 'decimal:0,4', 'min:0', 'max:9999999999.9999'],

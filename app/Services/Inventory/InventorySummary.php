@@ -44,8 +44,10 @@ final class InventorySummary
         $out = 0;
         $value = BigDecimal::zero();
 
-        // Only the columns stockStatus() and stockValue() read: strict models would throw on any other attribute.
+        // Only the columns stockStatus() and stockValue() read: strict models would throw on any other attribute (and the
+        // always-eager category and unit would need their `*_id` columns).
         $materials = Material::query()
+            ->without(['category', 'unit'])
             ->select(['id', 'quantity_on_hand', 'unit_cost', 'reorder_level'])
             ->lazyById(self::CHUNK_SIZE);
 

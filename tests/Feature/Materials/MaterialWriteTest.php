@@ -21,8 +21,8 @@ it('creates a material, redirects to show and flashes a success toast', function
         ->assertInertiaFlash('toast', ['type' => 'success', 'message' => 'Material created.']);
 
     expect($material->name)->toBe('Denim 12oz Indigo')
-        ->and($material->category->value)->toBe('fabric')
-        ->and($material->unit->value)->toBe('m')
+        ->and($material->category->code)->toBe('fabric')
+        ->and($material->unit->code)->toBe('m')
         ->and($material->unit_cost)->toBe('8.5000')
         ->and($material->quantity_on_hand)->toBe('250.0000')
         ->and($material->reorder_level)->toBe('50.0000')
@@ -127,8 +127,8 @@ it('updates a material, redirects to show and flashes a success toast', function
 
     expect($material->sku)->toBe('NEW-1')
         ->and($material->name)->toBe('Renamed')
-        ->and($material->category->value)->toBe('thread')
-        ->and($material->unit->value)->toBe('cone')
+        ->and($material->category->code)->toBe('thread')
+        ->and($material->unit->code)->toBe('cone')
         ->and($material->unit_cost)->toBe('1.2500')
         ->and($material->quantity_on_hand)->toBe('10.5000')
         ->and($material->reorder_level)->toBeNull();

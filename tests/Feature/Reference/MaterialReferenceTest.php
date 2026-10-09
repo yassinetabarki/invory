@@ -1,0 +1,463 @@
+<?php
+
+use App\Mock\PreviewFixture;
+use App\Models\Material;
+use App\Models\MaterialCategory;
+use App\Models\ProductCategory;
+use App\Models\Unit;
+use App\Models\User;
+use Illuminate\Testing\TestResponse;
+use Inertia\Testing\AssertableInertia as Assert;
+
+use function Pest\Laravel\actingAs;
+
+/*
+|--------------------------------------------------------------------------
+| Materials and products on the reference tables (ADR-0008, S-21)
+|--------------------------------------------------------------------------
+|
+| Forms and filters keep sending CODES; the validation reads the tables, hides archived rows from the option props (except the
+| value the record already has), and a material's unit is locked while a product's composition uses it (decision Q7).
+*/
+
+beforeEach(function () {
+    $this->user = preparePreview($this);
+});
+
+/** The `Option[]` of a page prop as [value => label]. */
+function optionsOf(TestResponse $response, string $prop): array
+{
+    return collect($response->inertiaProps($prop))->pluck('label', 'value')->all();
+}
+
+describe('the option props', function () {
+    it('lists the active categories and units by position then name, as value/label pairs', function () {
+        MaterialCategory::factory()->create(['code' => 'elastic', 'name' => 'Elastic', 'position' => 5]);
+        Unit::factory()->create(['code' => 'inch', 'name' => 'Inch', 'position' => 5]);
+
+        $response = actingAs($this->user)->get(route('materials.create'));
+
+        expect($response->inertiaProps('categories.0'))->toBe(['value' => 'fabric', 'label' => 'Fabric'])
+            ->and($response->inertiaProps('units.0'))->toBe(['value' => 'm', 'label' => 'Metre (m)'])
+            ->and(array_keys(optionsOf($response, 'categories')))->toBe(['fabric', 'lining', 'interlining', 'leather', 'thread', 'elastic', 'trim', 'fastener', 'label', 'sole', 'hardware', 'packaging', 'other'])
+            ->and(array_keys(optionsOf($response, 'units')))->toBe(['m', 'cm', 'yd', 'sqm', 'sqft', 'inch', 'kg', 'g', 'l', 'ml', 'pc', 'pair', 'roll', 'cone'])
+            ->and(optionsOf($response, 'units')['inch'])->toBe('Inch (inch)')
+            ->and(optionsOf($response, 'categories')['elastic'])->toBe('Elastic');
+    });
+
+    it('sends the same labels as before the reference tables', function () {
+        $response = actingAs($this->user)->get(route('materials.create'));
+
+        expect(optionsOf($response, 'units'))->toBe([
+            'm' => 'Metre (m)', 'cm' => 'Centimetre (cm)', 'yd' => 'Yard (yd)', 'sqm' => 'Square metre (sqm)', 'sqft' => 'Square foot (sqft)',
+            'kg' => 'Kilogram (kg)', 'g' => 'Gram (g)', 'l' => 'Litre (l)', 'ml' => 'Millilitre (ml)', 'pc' => 'Piece (pc)',
+            'pair' => 'Pair (pair)', 'roll' => 'Roll (roll)', 'cone' => 'Cone (cone)',
+        ])->and(optionsOf($response, 'categories'))->toBe([
+            'fabric' => 'Fabric', 'lining' => 'Lining', 'interlining' => 'Interlining', 'leather' => 'Leather', 'thread' => 'Thread',
+            'trim' => 'Trim', 'fastener' => 'Fastener', 'label' => 'Label', 'sole' => 'Sole', 'hardware' => 'Hardware',
+            'packaging' => 'Packaging', 'other' => 'Other',
+        ]);
+    });
+
+    it('hides archived categories and units on the create pages', function () {
+        MaterialCategory::query()->where('code', 'lining')->update(['archived_at' => now()]);
+        Unit::query()->where('code', 'cm')->update(['archived_at' => now()]);
+        ProductCategory::query()->where('code', 'bag')->update(['archived_at' => now()]);
+
+        $materials = actingAs($this->user)->get(route('materials.create'));
+        $products = actingAs($this->user)->get(route('products.create'));
+
+        expect(optionsOf($materials, 'categories'))->not->toHaveKey('lining')->toHaveCount(11)
+            ->and(optionsOf($materials, 'units'))->not->toHaveKey('cm')->toHaveCount(12)
+            ->and(optionsOf($products, 'categories'))->not->toHaveKey('bag')->toHaveCount(5);
+    });
+
+    it('keeps the archived category and unit of the material being edited, and only those', function () {
+        $material = Material::factory()->create(['category' => 'thread', 'unit' => 'cone']);
+        MaterialCategory::query()->whereIn('code', ['thread', 'lining'])->update(['archived_at' => now()]);
+        Unit::query()->whereIn('code', ['cone', 'cm'])->update(['archived_at' => now()]);
+
+        $response = actingAs($this->user)->get(route('materials.edit', $material));
+
+        expect(optionsOf($response, 'categories'))->toHaveKey('thread')->not->toHaveKey('lining')->toHaveCount(11)
+            ->and(optionsOf($response, 'units'))->toHaveKey('cone')->not->toHaveKey('cm')->toHaveCount(12)
+            // The archived value is in its place by position, not appended.
+            ->and(array_search('thread', array_keys(optionsOf($response, 'categories'))))->toBe(3);
+    });
+
+    it('does not repeat a current value that is active', function () {
+        $material = Material::factory()->create(['category' => 'thread', 'unit' => 'cone']);
+
+        $response = actingAs($this->user)->get(route('materials.edit', $material));
+
+        expect($response->inertiaProps('categories'))->toHaveCount(12)
+            ->and($response->inertiaProps('units'))->toHaveCount(13);
+    });
+
+    it('keeps the filtered category on the materials list even when it is archived', function () {
+        MaterialCategory::query()->whereIn('code', ['thread', 'lining'])->update(['archived_at' => now()]);
+
+        $filtered = actingAs($this->user)->get(route('materials.index', ['category' => 'thread']));
+        $unfiltered = actingAs($this->user)->get(route('materials.index'));
+
+        expect(optionsOf($filtered, 'categories'))->toHaveKey('thread')->not->toHaveKey('lining')
+            ->and(optionsOf($unfiltered, 'categories'))->not->toHaveKey('thread')->not->toHaveKey('lining');
+    });
+
+    it('keeps the filtered product category on the products list, and the current one on the edit page, when archived', function () {
+        ProductCategory::query()->whereIn('code', ['apparel', 'bag'])->update(['archived_at' => now()]);
+
+        $filtered = actingAs($this->user)->get(route('products.index', ['category' => 'apparel']));
+        $unfiltered = actingAs($this->user)->get(route('products.index'));
+        // MOCK (ADR-0006): product 1, the Denim Jacket, is in apparel.
+        $edit = actingAs($this->user)->get(route('products.edit', 1));
+        $create = actingAs($this->user)->get(route('products.create'));
+
+        expect(optionsOf($filtered, 'categories'))->toHaveKey('apparel')->not->toHaveKey('bag')
+            ->and(optionsOf($unfiltered, 'categories'))->not->toHaveKey('apparel')
+            ->and(optionsOf($edit, 'categories'))->toHaveKey('apparel')->not->toHaveKey('bag')
+            ->and(optionsOf($create, 'categories'))->not->toHaveKey('apparel');
+    });
+
+    it('sends the option lists as props that a partial reload can skip', function () {
+        $first = actingAs($this->user)->get(route('materials.create'))->assertOk();
+
+        $first->assertInertia(fn (Assert $page) => $page->reloadOnly(['units'], fn (Assert $partial) => $partial->has('units', 13)->missing('categories')));
+    });
+});
+
+describe('the Material resource', function () {
+    it('shows the category name and "name (code)" for the unit, and follows a rename', function () {
+        $material = Material::factory()->create(['category' => 'sole', 'unit' => 'pair']);
+
+        $props = actingAs($this->user)->get(route('materials.show', $material))->inertiaProps('material');
+
+        expect($props)->toMatchArray(['category' => 'sole', 'category_label' => 'Sole', 'unit' => 'pair', 'unit_label' => 'Pair (pair)']);
+
+        MaterialCategory::query()->where('code', 'sole')->update(['name' => 'Outsole']);
+        Unit::query()->where('code', 'pair')->update(['name' => 'Couple']);
+
+        $props = actingAs($this->user)->get(route('materials.show', $material))->inertiaProps('material');
+
+        expect($props)->toMatchArray(['category' => 'sole', 'category_label' => 'Outsole', 'unit' => 'pair', 'unit_label' => 'Couple (pair)']);
+    });
+
+    it('still shows an archived category and unit on the materials that use them', function () {
+        $material = Material::factory()->create(['category' => 'thread', 'unit' => 'cone']);
+        MaterialCategory::query()->where('code', 'thread')->update(['archived_at' => now()]);
+        Unit::query()->where('code', 'cone')->update(['archived_at' => now()]);
+
+        $row = collect(actingAs($this->user)->get(route('materials.index', ['search' => $material->sku]))->inertiaProps('materials.data'))->first();
+
+        expect($row)->toMatchArray(['category' => 'thread', 'category_label' => 'Thread', 'unit' => 'cone', 'unit_label' => 'Cone (cone)']);
+    });
+});
+
+describe('creating and updating a material', function () {
+    it('rejects an archived category or unit, and an unknown one, on create', function (string $field, string $code, bool $archive) {
+        if ($archive) {
+            ($field === 'category' ? MaterialCategory::class : Unit::class)::query()->where('code', $code)->update(['archived_at' => now()]);
+        }
+
+        actingAs($this->user)->post(route('materials.store'), validMaterialPayload([$field => $code]))->assertSessionHasErrors($field);
+
+        expect(Material::query()->where('sku', 'FAB-DEN-001')->exists())->toBeFalse();
+    })->with([
+        'archived category' => ['category', 'fabric', true],
+        'archived unit' => ['unit', 'm', true],
+        'unknown category' => ['category', 'elastic', false],
+        'unknown unit' => ['unit', 'inch', false],
+        'upper case code' => ['category', 'Fabric', false],
+        'code of the name' => ['unit', 'Metre', false],
+    ]);
+
+    it('accepts a custom category and unit on create, resolved to their ids', function () {
+        $category = MaterialCategory::factory()->create(['code' => 'elastic', 'name' => 'Elastic']);
+        $unit = Unit::factory()->create(['code' => 'inch', 'name' => 'Inch']);
+
+        actingAs($this->user)->post(route('materials.store'), validMaterialPayload(['category' => 'elastic', 'unit' => 'inch']))->assertSessionHasNoErrors();
+
+        $material = Material::query()->where('sku', 'FAB-DEN-001')->firstOrFail();
+
+        expect($material->category_id)->toBe($category->id)
+            ->and($material->unit_id)->toBe($unit->id)
+            ->and($material->category->code)->toBe('elastic')
+            ->and($material->unit->code)->toBe('inch');
+    });
+
+    it('rejects a category or unit sent as an array', function (string $field) {
+        actingAs($this->user)->post(route('materials.store'), validMaterialPayload([$field => ['fabric']]))->assertSessionHasErrors($field);
+    })->with(['category', 'unit']);
+
+    it('does not accept an id where the code goes', function (string $field) {
+        actingAs($this->user)->post(route('materials.store'), validMaterialPayload([$field => (string) Unit::query()->value('id')]))->assertSessionHasErrors($field);
+    })->with(['category', 'unit']);
+
+    it('keeps an archived category or unit on update when the material already has it, and can switch to an active one', function () {
+        $material = Material::factory()->create(['sku' => 'KEEP-1', 'category' => 'thread', 'unit' => 'cone']);
+        MaterialCategory::query()->where('code', 'thread')->update(['archived_at' => now()]);
+        Unit::query()->where('code', 'cone')->update(['archived_at' => now()]);
+
+        // The same archived values: fine (the unit lock does not apply, the unit does not change).
+        actingAs($this->user)->put(route('materials.update', $material), validMaterialPayload(['sku' => 'KEEP-1', 'category' => 'thread', 'unit' => 'cone', 'name' => 'Renamed']))
+            ->assertSessionHasNoErrors();
+
+        expect($material->refresh()->name)->toBe('Renamed')
+            ->and($material->category->code)->toBe('thread')
+            ->and($material->unit->code)->toBe('cone');
+
+        // Leaving the archived values for active ones: fine.
+        actingAs($this->user)->put(route('materials.update', $material), validMaterialPayload(['sku' => 'KEEP-1', 'category' => 'fabric', 'unit' => 'm']))->assertSessionHasNoErrors();
+
+        expect($material->refresh()->category->code)->toBe('fabric')
+            ->and($material->unit->code)->toBe('m');
+    });
+
+    it('does not let an update move a material to another archived category or unit', function (string $field, string $code) {
+        $material = Material::factory()->create(['sku' => 'KEEP-1', 'category' => 'fabric', 'unit' => 'm']);
+        MaterialCategory::query()->where('code', 'lining')->update(['archived_at' => now()]);
+        Unit::query()->where('code', 'cm')->update(['archived_at' => now()]);
+
+        actingAs($this->user)->put(route('materials.update', $material), validMaterialPayload(['sku' => 'KEEP-1', $field => $code]))->assertSessionHasErrors($field);
+
+        expect($material->refresh()->category->code)->toBe('fabric')
+            ->and($material->unit->code)->toBe('m');
+    })->with([
+        'archived category' => ['category', 'lining'],
+        'archived unit' => ['unit', 'cm'],
+    ]);
+
+    it('exposes the new category and unit right after an update', function () {
+        $material = Material::factory()->create(['sku' => 'KEEP-1', 'category' => 'fabric', 'unit' => 'm']);
+
+        actingAs($this->user)->put(route('materials.update', $material), validMaterialPayload(['sku' => 'KEEP-1', 'category' => 'leather', 'unit' => 'sqft']))->assertSessionHasNoErrors();
+
+        $props = actingAs($this->user)->get(route('materials.show', $material))->inertiaProps('material');
+
+        expect($props)->toMatchArray(['category' => 'leather', 'category_label' => 'Leather', 'unit' => 'sqft', 'unit_label' => 'Square foot (sqft)']);
+    });
+
+    it('filters the list by a category code, archived or not, and 422s on an unknown one', function () {
+        Material::factory()->create(['name' => 'Zq thread', 'category' => 'thread']);
+        Material::factory()->create(['name' => 'Zq fabric', 'category' => 'fabric']);
+        MaterialCategory::query()->where('code', 'thread')->update(['archived_at' => now()]);
+
+        $names = fn (array $query): array => collect(actingAs($this->user)->get(route('materials.index', ['search' => 'zq', ...$query]))->inertiaProps('materials.data'))->pluck('name')->all();
+
+        expect($names(['category' => 'thread']))->toBe(['Zq thread'])
+            ->and($names(['category' => 'fabric']))->toBe(['Zq fabric'])
+            ->and($names([]))->toHaveCount(2);
+
+        actingAs($this->user)->get(route('materials.index', ['category' => 'elastic']))->assertSessionHasErrors('category');
+    });
+
+    it('filters by a custom category too', function () {
+        MaterialCategory::factory()->create(['code' => 'elastic', 'name' => 'Elastic']);
+        Material::factory()->create(['name' => 'Waistband', 'category' => 'elastic']);
+        Material::factory()->create(['name' => 'Denim', 'category' => 'fabric']);
+
+        $rows = actingAs($this->user)->get(route('materials.index', ['category' => 'elastic']))->inertiaProps('materials.data');
+
+        expect(collect($rows)->pluck('name')->all())->toBe(['Waistband'])
+            ->and($rows[0]['category_label'])->toBe('Elastic');
+    });
+});
+
+describe('the product forms', function () {
+    it('rejects an archived or unknown product category on create', function (string $code, bool $archive) {
+        if ($archive) {
+            ProductCategory::query()->where('code', $code)->update(['archived_at' => now()]);
+        }
+
+        actingAs($this->user)->post(route('products.store'), validProductPayload(['category' => $code]))->assertSessionHasErrors('category');
+    })->with(['archived' => ['apparel', true], 'unknown' => ['hats', false]]);
+
+    it('accepts a custom product category on create', function () {
+        ProductCategory::factory()->create(['code' => 'hats', 'name' => 'Hats']);
+
+        actingAs($this->user)->post(route('products.store'), validProductPayload(['category' => 'hats']))->assertSessionHasNoErrors();
+    });
+
+    it('keeps the current archived category valid on update, and refuses another archived one', function () {
+        ProductCategory::query()->whereIn('code', ['apparel', 'bag'])->update(['archived_at' => now()]);
+
+        // MOCK (ADR-0006): product 1 is in apparel.
+        actingAs($this->user)->put(route('products.update', 1), validProductPayload(['sku' => 'PRD-001', 'category' => 'apparel']))->assertSessionHasNoErrors();
+        actingAs($this->user)->put(route('products.update', 1), validProductPayload(['sku' => 'PRD-001', 'category' => 'bag']))->assertSessionHasErrors('category');
+    });
+
+    it('filters the products list by an archived category code and 422s on an unknown one', function () {
+        ProductCategory::query()->where('code', 'footwear')->update(['archived_at' => now()]);
+
+        actingAs($this->user)->get(route('products.index', ['category' => 'footwear']))->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->where('products.data.0.category', 'footwear')->where('products.data.0.category_label', 'Footwear'));
+
+        actingAs($this->user)->get(route('products.index', ['category' => 'hats']))->assertSessionHasErrors('category');
+    });
+
+    it('labels the preview products from the product_categories table, read once', function () {
+        ProductCategory::query()->where('code', 'apparel')->update(['name' => 'Clothing']);
+
+        $queries = queryLog(fn () => $response = actingAs($this->user)->get(route('products.index')));
+        $response = actingAs($this->user)->get(route('products.index'));
+
+        $labels = collect($response->inertiaProps('products.data'))->pluck('category_label', 'category')->all();
+
+        expect($labels['apparel'])->toBe('Clothing')
+            ->and($labels['footwear'])->toBe('Footwear')
+            // The option list, the names of the products (once, not per product) and the shared reference lists of a full load.
+            ->and(queriesMatching($queries, 'from "product_categories"'))->toHaveCount(3)
+            ->and(actingAs($this->user)->get(route('products.show', 1))->inertiaProps('product.category_label'))->toBe('Clothing');
+    });
+
+    it('shows a product category with no row as its code, not a crash', function () {
+        // The defaults can't be deleted while a product uses them, but a database edited by hand could be missing one.
+        ProductCategory::query()->where('code', 'jewelry')->delete();
+        ProductCategory::query()->where('code', 'bag')->delete();
+
+        actingAs($this->user)->get(route('products.show', 4))->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->where('product.category', 'bag')->where('product.category_label', 'bag'));
+    });
+});
+
+describe('the unit lock while a product uses the material (decision Q7)', function () {
+    /** [sku, how many fixture products use it] for the first material used by exactly one product, and the first used by several. */
+    $usage = function (): array {
+        $counts = collect(PreviewFixture::materialSkus())->mapWithKeys(fn (string $sku): array => [$sku => PreviewFixture::usedInCount($sku)]);
+
+        return [
+            [$counts->filter(fn (int $count): bool => $count === 1)->keys()->first(), 1],
+            [$counts->filter(fn (int $count): bool => $count > 1)->keys()->first(), $counts->filter(fn (int $count): bool => $count > 1)->first()],
+        ];
+    };
+
+    /** The payload that updates a material to another unit, everything else unchanged. */
+    $payload = fn (Material $material, array $overrides = []): array => validMaterialPayload([
+        'sku' => $material->sku,
+        'name' => $material->name,
+        'category' => $material->category->code,
+        'unit' => $material->unit->code,
+        'unit_cost' => $material->unit_cost,
+        'quantity_on_hand' => $material->quantity_on_hand,
+        'reorder_level' => $material->reorder_level,
+        ...$overrides,
+    ]);
+
+    it('refuses a unit change on a material that compositions use, naming how many', function (int $which) use ($usage, $payload) {
+        [$sku, $count] = $usage()[$which];
+        $material = previewMaterial($sku);
+        $other = $material->unit->code === 'kg' ? 'g' : 'kg';
+
+        $noun = $count === 1 ? 'composition' : 'compositions';
+
+        actingAs($this->user)->put(route('materials.update', $material), $payload($material, ['unit' => $other]))
+            ->assertSessionHasErrors(['unit' => "This material is used in {$count} product {$noun}, so its unit can't change."]);
+
+        expect($material->refresh()->unit->code)->not->toBe($other);
+    })->with(['a material in one product' => [0], 'a material in several products' => [1]]);
+
+    it('refuses even when other fields change in the same request', function () use ($usage, $payload) {
+        [$sku] = $usage()[0];
+        $material = previewMaterial($sku);
+        $name = $material->name;
+
+        actingAs($this->user)->put(route('materials.update', $material), $payload($material, ['unit' => 'kg', 'name' => 'Renamed', 'unit_cost' => '99']))
+            ->assertSessionHasErrors('unit');
+
+        // Nothing was saved, not even the other fields.
+        expect($material->refresh()->name)->toBe($name);
+    });
+
+    it('lets an unused material change its unit', function () use ($payload) {
+        $material = Material::factory()->create(['sku' => 'ZZZ-OTHER', 'name' => 'Zzz other', 'unit' => 'm']);
+
+        actingAs($this->user)->put(route('materials.update', $material), $payload($material, ['unit' => 'kg']))->assertSessionHasNoErrors();
+
+        expect($material->refresh()->unit->code)->toBe('kg')
+            ->and($material->unit->label())->toBe('Kilogram (kg)');
+    });
+
+    it('lets a used material keep its unit while other fields change', function () use ($usage, $payload) {
+        [$sku] = $usage()[1];
+        $material = previewMaterial($sku);
+
+        actingAs($this->user)->put(route('materials.update', $material), $payload($material, ['name' => 'Renamed', 'unit_cost' => '1.25', 'category' => 'other', 'supplier_name' => 'New supplier']))
+            ->assertSessionHasNoErrors();
+
+        expect($material->refresh()->name)->toBe('Renamed')
+            ->and($material->unit_cost)->toBe('1.2500')
+            ->and($material->category->code)->toBe('other')
+            ->and($material->unit->code)->toBe($payload($material)['unit']);
+    });
+
+    it('does not run the lock on a unit that failed validation, so only the validation error shows', function () use ($usage, $payload) {
+        [$sku] = $usage()[0];
+        $material = previewMaterial($sku);
+
+        $response = actingAs($this->user)->put(route('materials.update', $material), $payload($material, ['unit' => 'bananas']));
+
+        $response->assertSessionHasErrors('unit');
+        expect(session('errors')->get('unit'))->toHaveCount(1)
+            ->and(session('errors')->first('unit'))->not->toContain('product composition');
+    });
+
+    it('does not lock the create form', function () {
+        actingAs($this->user)->post(route('materials.store'), validMaterialPayload(['sku' => 'NEW-1', 'unit' => 'kg']))->assertSessionHasNoErrors();
+    });
+
+    it('counts the products of the preview fixture in one place', function () {
+        // Denim Jacket, Jeans, Chore Jacket... all use the denim; the lock reads PreviewFixture::usedInCount.
+        $material = previewMaterial('MAT-DEN-012');
+
+        expect(PreviewFixture::usedInCount($material->sku))->toBeGreaterThan(0);
+
+        actingAs($this->user)->put(route('materials.update', $material), validMaterialPayload([
+            'sku' => $material->sku, 'name' => $material->name, 'unit' => 'cm',
+        ]))->assertSessionHasErrors('unit');
+    });
+});
+
+describe('the material factory', function () {
+    it('takes category and unit as codes, models or ids, and resolves them to ids', function () {
+        $category = MaterialCategory::query()->where('code', 'leather')->firstOrFail();
+        $unit = Unit::query()->where('code', 'sqft')->firstOrFail();
+
+        $byCode = Material::factory()->create(['category' => 'thread', 'unit' => 'cone']);
+        $byModel = Material::factory()->create(['category' => $category, 'unit' => $unit]);
+        $byId = Material::factory()->create(['category' => $category->id, 'unit' => $unit->id]);
+        $byColumn = Material::factory()->create(['category_id' => $category->id, 'unit_id' => $unit->id]);
+
+        expect($byCode->category->code)->toBe('thread')
+            ->and($byCode->unit->code)->toBe('cone')
+            ->and($byModel->category_id)->toBe($category->id)
+            ->and($byModel->unit_id)->toBe($unit->id)
+            ->and($byId->category_id)->toBe($category->id)
+            ->and($byColumn->unit_id)->toBe($unit->id);
+    });
+
+    it('makes a realistic default material with a default category and unit', function () {
+        $material = Material::factory()->create();
+
+        expect($material->category)->toBeInstanceOf(MaterialCategory::class)
+            ->and($material->unit)->toBeInstanceOf(Unit::class)
+            ->and(MaterialCategory::query()->where('code', $material->category->code)->exists())->toBeTrue();
+    });
+
+    it('fails with a clear message for a code that has no row', function () {
+        expect(fn () => Material::factory()->create(['unit' => 'bananas']))->toThrow(InvalidArgumentException::class, 'No unit with code [bananas].')
+            ->and(fn () => Material::factory()->create(['category' => 'bananas']))->toThrow(InvalidArgumentException::class, 'No category with code [bananas].');
+    });
+
+    it('builds an unsaved material without touching its relations', function () {
+        $material = Material::factory()->make(['category' => 'thread']);
+
+        expect($material->category_id)->toBe(MaterialCategory::query()->where('code', 'thread')->value('id'));
+    });
+});
+
+it('refuses a request from a guest or an unverified user as before', function () {
+    $material = Material::factory()->create();
+
+    $this->put(route('materials.update', $material), validMaterialPayload())->assertRedirect(route('login'));
+    actingAs(User::factory()->unverified()->create())->put(route('materials.update', $material), validMaterialPayload())->assertRedirect(route('verification.notice'));
+});

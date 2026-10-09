@@ -102,7 +102,7 @@ describe('index', function () {
                 ->where('margin', $marginAmount === null ? null : ['amount' => $marginAmount, 'percent' => $marginPercent])
                 ->where('capacity', [
                     'max_producible' => $maxProducible,
-                    'bottleneck' => ['id' => $bottleneck->id, 'sku' => $bottleneckSku, 'name' => $bottleneck->name, 'unit' => $bottleneck->unit->value],
+                    'bottleneck' => ['id' => $bottleneck->id, 'sku' => $bottleneckSku, 'name' => $bottleneck->name, 'unit' => $bottleneck->unit->code],
                 ])
                 ->where('units_sold_last_30_days', $sold)
                 ->etc()));
@@ -538,9 +538,10 @@ it('reads the materials table once per page and answers within a bounded number 
     Material::factory()->count(40)->create();
 
     foreach ($urls as $page => $url) {
-        // One read of the materials (by SKU for the fixture, or every material for the pickers) plus the signed-in user.
+        // One read of the materials (by SKU for the fixture, or every material for the pickers), their units (eager), the product
+        // categories of the option list, the category names of a product, and the reference lists of a full load.
         expect($baseline[$page]['materials'])->toBe(1, "the {$page} page reads the materials table once")
-            ->and($baseline[$page]['all'])->toBeLessThanOrEqual(3)
+            ->and($baseline[$page]['all'])->toBeLessThanOrEqual(4 + REFERENCE_QUERIES)
             // 40 more materials: not one more query.
             ->and($count($url))->toBe($baseline[$page]);
     }

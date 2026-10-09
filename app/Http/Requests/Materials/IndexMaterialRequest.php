@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Materials;
 
-use App\Enums\MaterialCategory;
 use App\Models\Material;
+use App\Services\Reference\ReferenceCode;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -39,16 +39,20 @@ class IndexMaterialRequest extends FormRequest
     {
         return [
             'search' => ['nullable', 'string', 'max:100'],
-            'category' => ['nullable', Rule::enum(MaterialCategory::class)],
+            // Any code in the table, archived or not: a bookmarked filter on a category that was archived since still works.
+            'category' => ['nullable', 'string', ReferenceCode::any('material_categories')],
             'low_stock' => ['nullable', 'boolean'],
             'sort' => ['nullable', Rule::in(self::sorts())],
             'page' => ['nullable', 'integer', 'min:1'],
         ];
     }
 
-    public function category(): ?MaterialCategory
+    /** The category code to filter by, or null. */
+    public function category(): ?string
     {
-        return $this->enum('category', MaterialCategory::class);
+        $code = $this->input('category');
+
+        return is_string($code) && $code !== '' ? $code : null;
     }
 
     /**
@@ -62,7 +66,7 @@ class IndexMaterialRequest extends FormRequest
 
         return [
             'search' => $search === '' ? null : $search,
-            'category' => $this->category()?->value,
+            'category' => $this->category(),
             'low_stock' => $this->boolean('low_stock'),
             'sort' => $this->input('sort') ?: self::DEFAULT_SORT,
         ];

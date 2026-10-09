@@ -219,7 +219,7 @@ The plan's §F.3 lists the amendments to S-04, S-14-BE, S-15-BE, S-16-BE, S-06-B
 - [ ] Closures for non-trivial props (no contract change); F-03 explicit `auth.user`; `expectQueryBudget()` Pest helper + one test per page; partial-reload tests
 - **Acceptance:** a filter-only partial reload of `/materials` doesn't run the inventory summary; every page ≤ 10 queries
 
-## S-21 · Reference data in the database — backend — `Proposed` · size L
+## S-21 · Reference data in the database — backend — `review` (approved by the tech-lead 2026-10-09) · size L
 **Owner:** BE · **Depends on:** decisions Q2, Q3, Q7 · **Blocks:** S-04 (products are created with `category_id`)
 - [ ] S-21a contract wave: `ReferenceData` types, `reference` shared once-prop, settings routes, page stubs, FE type-compat edits
 - [ ] S-21b: `units` / `material_categories` / `product_categories` with defaults in migrations; `UnitDimension`; materials backfilled to FKs (reversible); Actions with in-use guard and version bump; policies; unit locked while used; `App\Mock` + `DemoCatalogSeeder` on codes; old enums deleted; PG `pg_trgm` + CHECKs
@@ -309,3 +309,15 @@ From the Phase 3P review (2026-10-09, MINOR/NIT, none blocking):
   budget until S-23 caches the summary.
 - **F-25 (docs, main session)**: `CLAUDE.md` and the agent definitions still describe Sail as the runtime and give the parity command without
   `--profile app`. Update them to match SETUP.md §4–§5 (ADR-0007).
+
+From the S-21 review (2026-10-09, MINOR/NIT, none blocking):
+- **F-26 (MINOR, BE perf)**: `Material::$with = ['category','unit']` adds 2 queries to every page that loads materials, and the `reference`
+  once-prop adds 3 queries on full loads (SPA visits that hold the key skip them). All pages are within the ≤ 10 budget. Option: resolve the labels
+  from a version-keyed cached `ReferenceData` payload (0 queries on a hit). Revisit with S-23 / S-27.
+- **F-27 (NIT, BE)**: restore doesn't re-check name uniqueness against active rows (codes stay unique); archiving an archived row re-stamps
+  `archived_at`. Decide during S-22 (refuse with a toast?).
+- **F-28 (S-22 note)**: system units only accept `name` and `position` on update (`dimension`/`factor_to_base` are `prohibited`, even unchanged);
+  `factor_to_base` arrives as a scale-12 string (`"0.010000000000"`), so S-22 trims it for display.
+- **F-29 (S-04 note)**: S-04 swaps the MOCK usage sources: `UpdateMaterialRequest::compositionsUsing()` (Q7 lock),
+  `PreviewFixture::productCountsByCategory()` (product-category usage and delete guard, passed into `DeleteProductCategory`). S-04 also takes
+  over `pg_trgm`, PostgreSQL CHECKs and `created_by`/`updated_by` (moved out of S-21).

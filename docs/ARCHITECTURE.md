@@ -1,7 +1,7 @@
 # Invory — Architecture
 
 > Owner: **tech-lead** agent. Any change to this document goes through an ADR in [`docs/adr/`](adr/).
-> Last updated: 2026-10-08 (UI-first track: sales, photos, stock history, selling price, material usage; [ADR-0006](adr/0006-ui-first-preview-data.md))
+> Last updated: 2026-10-09 (reference data in the database, S-21, [ADR-0008](adr/0008-reference-data-in-database.md); earlier: UI-first track, [ADR-0006](adr/0006-ui-first-preview-data.md))
 
 ## 1. Product in one paragraph
 
@@ -95,8 +95,8 @@ Status (2026-10-08): `materials` is real. `products`, `product_components`, `sal
 | id | bigint PK | |
 | sku | string(64) | required, unique among non-deleted rows |
 | name | string(150) | required |
-| category | string(32) | `MaterialCategory` enum: fabric, lining, interlining, leather, thread, trim, fastener, label, sole, hardware, packaging, other |
-| unit | string(16) | `UnitOfMeasure` enum: m, cm, yd, sqm, sqft, kg, g, l, ml, pc, pair, roll, cone |
+| category_id | FK → material_categories | `restrictOnDelete`; forms and filters use the category **code** (S-21, ADR-0008) |
+| unit_id | FK → units | `restrictOnDelete`; forms use the unit **code**; can't change while a BOM uses the material |
 | unit_cost | decimal(12,4) | ≥ 0, cost per 1 `unit` |
 | quantity_on_hand | decimal(14,4) | ≥ 0, in `unit` |
 | reorder_level | decimal(14,4) nullable | low-stock threshold |
@@ -108,7 +108,16 @@ Status (2026-10-08): `materials` is real. `products`, `product_components`, `sal
 | photo_path | string(255) nullable | S-15-BE: public-disk path of the one photo (JPG/PNG/WebP, ≤ 4 MB); `photo_url` derived |
 | timestamps, deleted_at | | soft deletes |
 
-Indexes: `unique(sku)` (PostgreSQL: partial unique `WHERE deleted_at IS NULL`; elsewhere enforce in validation), `index(category)`, `index(name)`.
+Indexes: `unique(sku)` (partial unique `WHERE deleted_at IS NULL`, on PostgreSQL and SQLite), `index(category_id)`, `index(unit_id)`, `index(name)`.
+
+### Reference tables (S-21, [ADR-0008](adr/0008-reference-data-in-database.md))
+| Table | Columns |
+|---|---|
+| `units` | id, `code` string(16) unique (immutable), `name` string(64), `dimension` (`UnitDimension`), `factor_to_base` decimal(24,12) nullable, `is_system` bool, `position`, `archived_at`, timestamps |
+| `material_categories` / `product_categories` | id, `code` string(32) unique (immutable), `name` string(64), `position`, `archived_at`, timestamps |
+
+Defaults are inserted by the migration (frozen snapshot, `insertOrIgnore` by code). Writes go through `App\Actions\Reference\*`, which bump the
+`reference` once-prop version (shared with signed-in users; [ADR-0009](adr/0009-spa-data-loading-on-inertia.md)).
 
 ### `products` (final items)
 | Column | Type | Rules |
@@ -116,7 +125,7 @@ Indexes: `unique(sku)` (PostgreSQL: partial unique `WHERE deleted_at IS NULL`; e
 | id | bigint PK | |
 | sku | string(64) | required, unique among non-deleted rows |
 | name | string(150) | required |
-| category | string(32) | `ProductCategory` enum: apparel, footwear, bag, accessory, jewelry, other |
+| category_id | FK → product_categories | `restrictOnDelete` (S-04; preview products use the category code) |
 | status | string(16) | `ProductStatus` enum: draft, active, archived (default active) |
 | description | text nullable | |
 | labor_cost | decimal(12,4) | ≥ 0, cost per unit, default 0 (cut-make-trim) |
@@ -202,7 +211,7 @@ app/
 │   └── Products/   CreateProduct · UpdateProduct · DeleteProduct · SyncProductComponents
 ├── Domain/
 │   └── Costing/    BomLine · LineCost · CostBreakdown · ProductionCapacity · CostingCalculator
-├── Enums/          MaterialCategory · UnitOfMeasure · ProductCategory · ProductStatus   (each has label() + options())
+├── Enums/          ProductStatus · StockStatus · StockMovementType · SalesPeriod · UnitDimension   (each has label() + options())
 ├── Exceptions/     MaterialInUseException
 ├── Http/
 │   ├── Controllers/  DashboardController · MaterialController · ProductController

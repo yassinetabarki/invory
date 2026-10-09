@@ -6,7 +6,6 @@ declare(strict_types=1);
 
 namespace App\Mock;
 
-use App\Enums\ProductCategory;
 use App\Enums\ProductStatus;
 use App\Enums\StockMovementType;
 
@@ -23,7 +22,7 @@ use App\Enums\StockMovementType;
  *     id: int,
  *     sku: string,
  *     name: string,
- *     category: ProductCategory,
+ *     category: string,
  *     status: ProductStatus,
  *     labor_cost: string,
  *     overhead_cost: string,
@@ -93,7 +92,7 @@ final class PreviewFixture
                 'id' => 1,
                 'sku' => 'PRD-JKT-001',
                 'name' => 'Denim Jacket',
-                'category' => ProductCategory::Apparel,
+                'category' => 'apparel',
                 'status' => ProductStatus::Active,
                 'labor_cost' => '12.0000',
                 'overhead_cost' => '3.5000',
@@ -110,7 +109,7 @@ final class PreviewFixture
                 'id' => 2,
                 'sku' => 'PRD-TSH-002',
                 'name' => 'Classic White T-shirt',
-                'category' => ProductCategory::Apparel,
+                'category' => 'apparel',
                 'status' => ProductStatus::Active,
                 'labor_cost' => '3.2000',
                 'overhead_cost' => '0.7500',
@@ -126,7 +125,7 @@ final class PreviewFixture
                 'id' => 3,
                 'sku' => 'PRD-SNK-003',
                 'name' => 'Canvas Low Sneaker',
-                'category' => ProductCategory::Footwear,
+                'category' => 'footwear',
                 'status' => ProductStatus::Active,
                 'labor_cost' => '9.3000',
                 'overhead_cost' => '2.0000',
@@ -144,7 +143,7 @@ final class PreviewFixture
                 'id' => 4,
                 'sku' => 'PRD-TOT-004',
                 'name' => 'Leather Tote',
-                'category' => ProductCategory::Bag,
+                'category' => 'bag',
                 'status' => ProductStatus::Active,
                 'labor_cost' => '22.5000',
                 'overhead_cost' => '4.7700',
@@ -163,7 +162,7 @@ final class PreviewFixture
                 'id' => 5,
                 'sku' => 'PRD-JNS-005',
                 'name' => 'Denim Jeans 5-pocket',
-                'category' => ProductCategory::Apparel,
+                'category' => 'apparel',
                 'status' => ProductStatus::Active,
                 'labor_cost' => '11.0000',
                 'overhead_cost' => '2.9700',
@@ -182,7 +181,7 @@ final class PreviewFixture
                 'id' => 6,
                 'sku' => 'PRD-JKT-006',
                 'name' => 'Canvas Chore Jacket',
-                'category' => ProductCategory::Apparel,
+                'category' => 'apparel',
                 'status' => ProductStatus::Draft,
                 'labor_cost' => '14.5000',
                 'overhead_cost' => '3.0400',
@@ -199,7 +198,7 @@ final class PreviewFixture
                 'id' => 7,
                 'sku' => 'PRD-BLT-007',
                 'name' => 'Leather Belt',
-                'category' => ProductCategory::Accessory,
+                'category' => 'accessory',
                 'status' => ProductStatus::Active,
                 'labor_cost' => '6.0000',
                 'overhead_cost' => '1.3400',
@@ -381,6 +380,23 @@ final class PreviewFixture
         }
 
         return $count;
+    }
+
+    /**
+     * MOCK (ADR-0006, S-04 swaps to a count on `products.category_id`): how many fixture products each product category
+     * code has. It is the only source of the "usage" of a product category until the products table exists.
+     *
+     * @return array<string, int> category code => number of products
+     */
+    public static function productCountsByCategory(): array
+    {
+        $counts = [];
+
+        foreach (self::products() as $product) {
+            $counts[$product['category']] = ($counts[$product['category']] ?? 0) + 1;
+        }
+
+        return $counts;
     }
 
     /** URL of the static swatch of a SKU, or null when it has no photo. */

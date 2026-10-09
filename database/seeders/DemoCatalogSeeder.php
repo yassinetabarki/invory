@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
-use App\Enums\MaterialCategory;
-use App\Enums\UnitOfMeasure;
 use App\Models\Material;
+use App\Models\MaterialCategory;
+use App\Models\Unit;
 use Illuminate\Database\Seeder;
 
 /**
@@ -23,8 +23,8 @@ class DemoCatalogSeeder extends Seeder
      * @var list<array{
      *     sku: string,
      *     name: string,
-     *     category: MaterialCategory,
-     *     unit: UnitOfMeasure,
+     *     category: string,
+     *     unit: string,
      *     unit_cost: string,
      *     quantity_on_hand: string,
      *     reorder_level: string,
@@ -39,8 +39,8 @@ class DemoCatalogSeeder extends Seeder
         [
             'sku' => 'MAT-RVT-009',
             'name' => 'Brass rivet 9mm',
-            'category' => MaterialCategory::Hardware,
-            'unit' => UnitOfMeasure::Piece,
+            'category' => 'hardware',
+            'unit' => 'pc',
             'unit_cost' => '0.0800',
             'quantity_on_hand' => '5000',
             'reorder_level' => '1000',
@@ -53,8 +53,8 @@ class DemoCatalogSeeder extends Seeder
         [
             'sku' => 'MAT-CAN-010',
             'name' => 'Cotton canvas 10oz Natural',
-            'category' => MaterialCategory::Fabric,
-            'unit' => UnitOfMeasure::Metre,
+            'category' => 'fabric',
+            'unit' => 'm',
             'unit_cost' => '5.4000',
             'quantity_on_hand' => '300',
             'reorder_level' => '60',
@@ -67,8 +67,8 @@ class DemoCatalogSeeder extends Seeder
         [
             'sku' => 'MAT-JRS-180',
             'name' => 'Cotton jersey 180gsm White',
-            'category' => MaterialCategory::Fabric,
-            'unit' => UnitOfMeasure::Metre,
+            'category' => 'fabric',
+            'unit' => 'm',
             'unit_cost' => '4.2000',
             'quantity_on_hand' => '64',
             'reorder_level' => '80',
@@ -81,8 +81,8 @@ class DemoCatalogSeeder extends Seeder
         [
             'sku' => 'MAT-DEN-012',
             'name' => 'Denim 12oz Indigo',
-            'category' => MaterialCategory::Fabric,
-            'unit' => UnitOfMeasure::Metre,
+            'category' => 'fabric',
+            'unit' => 'm',
             'unit_cost' => '8.5000',
             'quantity_on_hand' => '250',
             'reorder_level' => '100',
@@ -95,8 +95,8 @@ class DemoCatalogSeeder extends Seeder
         [
             'sku' => 'MAT-BTN-017',
             'name' => 'Metal shank button 17mm',
-            'category' => MaterialCategory::Fastener,
-            'unit' => UnitOfMeasure::Piece,
+            'category' => 'fastener',
+            'unit' => 'pc',
             'unit_cost' => '0.3500',
             'quantity_on_hand' => '900',
             'reorder_level' => '1000',
@@ -109,8 +109,8 @@ class DemoCatalogSeeder extends Seeder
         [
             'sku' => 'MAT-ZIP-018',
             'name' => 'Metal zipper 18cm',
-            'category' => MaterialCategory::Fastener,
-            'unit' => UnitOfMeasure::Piece,
+            'category' => 'fastener',
+            'unit' => 'pc',
             'unit_cost' => '0.9500',
             'quantity_on_hand' => '1250',
             'reorder_level' => '300',
@@ -123,8 +123,8 @@ class DemoCatalogSeeder extends Seeder
         [
             'sku' => 'MAT-LTH-NAP',
             'name' => 'Nappa leather Cognac',
-            'category' => MaterialCategory::Leather,
-            'unit' => UnitOfMeasure::SquareFoot,
+            'category' => 'leather',
+            'unit' => 'sqft',
             'unit_cost' => '6.8000',
             'quantity_on_hand' => '540',
             'reorder_level' => '150',
@@ -137,8 +137,8 @@ class DemoCatalogSeeder extends Seeder
         [
             'sku' => 'MAT-THR-PES',
             'name' => 'Polyester thread',
-            'category' => MaterialCategory::Thread,
-            'unit' => UnitOfMeasure::Metre,
+            'category' => 'thread',
+            'unit' => 'm',
             'unit_cost' => '0.0040',
             'quantity_on_hand' => '20000',
             'reorder_level' => '5000',
@@ -151,8 +151,8 @@ class DemoCatalogSeeder extends Seeder
         [
             'sku' => 'MAT-SOL-042',
             'name' => 'Rubber cupsole 42',
-            'category' => MaterialCategory::Sole,
-            'unit' => UnitOfMeasure::Pair,
+            'category' => 'sole',
+            'unit' => 'pair',
             'unit_cost' => '5.9000',
             'quantity_on_hand' => '0',
             'reorder_level' => '40',
@@ -165,8 +165,8 @@ class DemoCatalogSeeder extends Seeder
         [
             'sku' => 'MAT-LIN-VIS',
             'name' => 'Viscose lining Black',
-            'category' => MaterialCategory::Lining,
-            'unit' => UnitOfMeasure::Metre,
+            'category' => 'lining',
+            'unit' => 'm',
             'unit_cost' => '3.1000',
             'quantity_on_hand' => '180',
             'reorder_level' => '50',
@@ -179,8 +179,8 @@ class DemoCatalogSeeder extends Seeder
         [
             'sku' => 'MAT-LAC-120',
             'name' => 'Waxed cotton laces 120cm',
-            'category' => MaterialCategory::Trim,
-            'unit' => UnitOfMeasure::Pair,
+            'category' => 'trim',
+            'unit' => 'pair',
             'unit_cost' => '0.4500',
             'quantity_on_hand' => '600',
             'reorder_level' => '200',
@@ -193,8 +193,8 @@ class DemoCatalogSeeder extends Seeder
         [
             'sku' => 'MAT-LBL-WOV',
             'name' => 'Woven brand label',
-            'category' => MaterialCategory::Label,
-            'unit' => UnitOfMeasure::Piece,
+            'category' => 'label',
+            'unit' => 'pc',
             'unit_cost' => '0.1200',
             'quantity_on_hand' => '400',
             'reorder_level' => '500',
@@ -208,10 +208,18 @@ class DemoCatalogSeeder extends Seeder
 
     public function run(): void
     {
+        // The defaults these codes point at come from the reference-data migration, so they exist in every environment.
+        $categories = MaterialCategory::query()->pluck('id', 'code');
+        $units = Unit::query()->pluck('id', 'code');
+
         foreach (self::MATERIALS as $material) {
             Material::query()->updateOrCreate(
                 ['sku' => $material['sku']],
-                array_diff_key($material, ['sku' => true]),
+                [
+                    ...array_diff_key($material, ['sku' => true, 'category' => true, 'unit' => true]),
+                    'category_id' => $categories[$material['category']],
+                    'unit_id' => $units[$material['unit']],
+                ],
             );
         }
     }

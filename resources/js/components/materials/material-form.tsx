@@ -208,7 +208,7 @@ export function MaterialForm({
     const containerRef = useRef<HTMLDivElement>(null);
     // Local state only so the suffixes can follow the selected unit; the
     // Radix Select also renders a hidden native <select name="unit">.
-    const [unit, setUnit] = useState<UnitOfMeasure | ''>(initial.unit);
+    const [unit, setUnit] = useState<UnitOfMeasure>(initial.unit);
 
     useFocusFirstInvalid(containerRef, errors, processing);
 

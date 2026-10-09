@@ -7,8 +7,6 @@ namespace App\Http\Controllers;
 use App\Actions\Materials\CreateMaterial;
 use App\Actions\Materials\DeleteMaterial;
 use App\Actions\Materials\UpdateMaterial;
-use App\Enums\MaterialCategory;
-use App\Enums\UnitOfMeasure;
 use App\Http\Requests\Materials\IndexMaterialRequest;
 use App\Http\Requests\Materials\StoreMaterialRequest;
 use App\Http\Requests\Materials\UpdateMaterialRequest;
@@ -18,6 +16,7 @@ use App\Mock\PreviewMaterials;
 use App\Mock\PreviewProducts;
 use App\Models\Material;
 use App\Services\Inventory\InventorySummary;
+use App\Services\Reference\ReferenceOptions;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -31,7 +30,7 @@ use Inertia\Response;
  */
 final class MaterialController extends Controller
 {
-    public function index(IndexMaterialRequest $request, InventorySummary $inventory): Response
+    public function index(IndexMaterialRequest $request, InventorySummary $inventory, ReferenceOptions $options): Response
     {
         Gate::authorize('viewAny', Material::class);
 
@@ -45,7 +44,7 @@ final class MaterialController extends Controller
             if ($page === null) {
                 $page = Material::query()
                     ->search($filters['search'])
-                    ->category($request->category())
+                    ->inCategory($request->category())
                     ->when($filters['low_stock'], fn ($query) => $query->needsRestock())
                     ->sortedBy($filters['sort'])
                     ->paginate(config('invory.per_page'))
@@ -61,7 +60,8 @@ final class MaterialController extends Controller
         return Inertia::render('materials/index', [
             'materials' => fn (): AnonymousResourceCollection => MaterialResource::collection($materials()),
             'filters' => $filters,
-            'categories' => MaterialCategory::options(),
+            // Active categories, plus the filtered one even when it is archived.
+            'categories' => fn (): array => $options->materialCategories($filters['category']),
             // Over all non-deleted materials, not just this page: a full scan, so it must stay lazy.
             'summary' => function () use ($inventory): array {
                 $totals = $inventory->summarize();
@@ -76,13 +76,13 @@ final class MaterialController extends Controller
         ]);
     }
 
-    public function create(): Response
+    public function create(ReferenceOptions $options): Response
     {
         Gate::authorize('create', Material::class);
 
         return Inertia::render('materials/create', [
-            'categories' => MaterialCategory::options(),
-            'units' => UnitOfMeasure::options(),
+            'categories' => fn (): array => $options->materialCategories(),
+            'units' => fn (): array => $options->units(),
         ]);
     }
 
@@ -110,15 +110,16 @@ final class MaterialController extends Controller
         ]);
     }
 
-    public function edit(Material $material): Response
+    public function edit(Material $material, ReferenceOptions $options): Response
     {
         Gate::authorize('update', $material);
 
         PreviewMaterials::decorate([$material]);
 
         return Inertia::render('materials/edit', [
-            'categories' => MaterialCategory::options(),
-            'units' => UnitOfMeasure::options(),
+            // Active rows, plus the material's own category and unit when they have been archived since.
+            'categories' => fn (): array => $options->materialCategories($material->category->code),
+            'units' => fn (): array => $options->units($material->unit->code),
             'material' => MaterialResource::make($material),
         ]);
     }

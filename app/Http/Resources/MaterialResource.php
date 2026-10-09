@@ -18,9 +18,10 @@ final class MaterialResource extends JsonResource
             'id' => $this->id,
             'sku' => $this->sku,
             'name' => $this->name,
-            'category' => $this->category->value,
-            'category_label' => $this->category->label(),
-            'unit' => $this->unit->value,
+            // Codes, as before the reference tables (ADR-0008); the labels are the row's name ("Metre (m)" for units).
+            'category' => $this->category->code,
+            'category_label' => $this->category->name,
+            'unit' => $this->unit->code,
             'unit_label' => $this->unit->label(),
             'unit_cost' => $this->unit_cost,
             'quantity_on_hand' => $this->quantity_on_hand,

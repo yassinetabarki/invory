@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Enums\MaterialCategory;
 use App\Enums\StockStatus;
-use App\Enums\UnitOfMeasure;
 use Brick\Math\BigDecimal;
 use Brick\Math\RoundingMode;
 use Carbon\CarbonInterface;
@@ -16,6 +14,7 @@ use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use InvalidArgumentException;
 
@@ -23,8 +22,10 @@ use InvalidArgumentException;
  * @property int $id
  * @property string $sku
  * @property string $name
- * @property MaterialCategory $category
- * @property UnitOfMeasure $unit
+ * @property int $category_id
+ * @property int $unit_id
+ * @property MaterialCategory $category Always eager-loaded ({@see self::$with}); narrow selects must `without()` it.
+ * @property Unit $unit Always eager-loaded ({@see self::$with}); narrow selects must `without()` it.
  * @property string $unit_cost
  * @property string $quantity_on_hand
  * @property string|null $reorder_level
@@ -40,13 +41,21 @@ use InvalidArgumentException;
  * @property CarbonInterface|null $deleted_at
  */
 #[Fillable([
-    'sku', 'name', 'category', 'unit', 'unit_cost', 'quantity_on_hand', 'reorder_level',
+    'sku', 'name', 'category_id', 'unit_id', 'unit_cost', 'quantity_on_hand', 'reorder_level',
     'supplier_name', 'supplier_reference', 'color', 'composition', 'notes',
 ])]
 class Material extends Model
 {
     /** @use HasFactory<MaterialFactory> */
     use HasFactory, SoftDeletes;
+
+    /**
+     * Every Resource, option and costing line shows the category and the unit, so they are always loaded (two constant
+     * queries per query, never one per row). A query that selects a few columns only must call `without(['category', 'unit'])`.
+     *
+     * @var list<string>
+     */
+    protected $with = ['category', 'unit'];
 
     /**
      * Columns the index may be sorted by: the single source of truth for `sortedBy()` and IndexMaterialRequest.
@@ -59,12 +68,22 @@ class Material extends Model
     protected function casts(): array
     {
         return [
-            'category' => MaterialCategory::class,
-            'unit' => UnitOfMeasure::class,
             'unit_cost' => 'decimal:4',
             'quantity_on_hand' => 'decimal:4',
             'reorder_level' => 'decimal:4',
         ];
+    }
+
+    /** @return BelongsTo<MaterialCategory, $this> */
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(MaterialCategory::class, 'category_id');
+    }
+
+    /** @return BelongsTo<Unit, $this> */
+    public function unit(): BelongsTo
+    {
+        return $this->belongsTo(Unit::class, 'unit_id');
     }
 
     /**
@@ -113,13 +132,15 @@ class Material extends Model
     }
 
     /**
+     * Materials of the category with this code (no filter for null). Renamed from `category`, which is now the relation.
+     *
      * @param  Builder<Material>  $query
      */
     #[Scope]
-    protected function category(Builder $query, ?MaterialCategory $category): void
+    protected function inCategory(Builder $query, ?string $categoryCode): void
     {
-        if ($category !== null) {
-            $query->where('category', $category->value);
+        if ($categoryCode !== null) {
+            $query->whereIn('category_id', MaterialCategory::query()->where('code', $categoryCode)->select('id'));
         }
     }
 

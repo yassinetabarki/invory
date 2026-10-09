@@ -27,7 +27,10 @@ class UpdateProductRequest extends FormRequest
     /** @return array<string, mixed> */
     public function rules(): array
     {
-        return StoreProductRequest::fieldRules(ignoreProductId: $this->productId());
+        // MOCK (ADR-0006): the current category of the fixture product (S-04 reads it from the products table).
+        $current = PreviewFixture::product($this->productId())['category'] ?? null;
+
+        return StoreProductRequest::fieldRules(ignoreProductId: $this->productId(), currentCategory: $current);
     }
 
     /** The `{product}` route parameter (a plain integer id until the products table exists). */

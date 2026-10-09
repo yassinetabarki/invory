@@ -3,8 +3,11 @@
 namespace App\Http\Middleware;
 
 use App\Models\User;
+use App\Services\Reference\ReferenceData;
+use App\Services\Reference\ReferenceVersion;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
+use Inertia\Inertia;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -39,6 +42,7 @@ class HandleInertiaRequests extends Middleware
     {
         return [
             ...parent::share($request),
+            ...$this->reference($request),
             'name' => config('app.name'),
             'auth' => [
                 'user' => $this->authUser($request),
@@ -50,6 +54,26 @@ class HandleInertiaRequests extends Middleware
                 // 'YYYY-MM-DD' in the app timezone: default and max for date inputs.
                 'today' => now()->toDateString(),
             ],
+        ];
+    }
+
+    /**
+     * The managed reference lists (units, categories) and the fixed enum options, shared with signed-in users only (a guest has
+     * no key, so the login visit loads them fresh). A once-prop: its key carries the cache version that the reference-data
+     * Actions bump, so a client that already holds the current key sends `X-Inertia-Except-Once-Props` and the server skips the
+     * work, and any write makes the next visit send the lists again (ADR-0008, ADR-0009).
+     *
+     * @return array<string, mixed>
+     */
+    private function reference(Request $request): array
+    {
+        if (! $request->user() instanceof User) {
+            return [];
+        }
+
+        return [
+            'reference' => Inertia::once(fn (): array => app(ReferenceData::class)->all())
+                ->as(app(ReferenceVersion::class)->propKey()),
         ];
     }
 

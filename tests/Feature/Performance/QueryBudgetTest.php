@@ -42,6 +42,9 @@ dataset('pages', [
     'products show' => [fn (Material $material): string => route('products.show', 1)],
     'products edit' => [fn (Material $material): string => route('products.edit', 1)],
     'sales index' => [fn (Material $material): string => route('sales.index')],
+    'settings units' => [fn (Material $material): string => route('settings.units.index')],
+    'settings material categories' => [fn (Material $material): string => route('settings.material-categories.index')],
+    'settings product categories' => [fn (Material $material): string => route('settings.product-categories.index')],
 ]);
 
 it('stays within the query budget and runs the same queries however many materials there are', function (Closure $url) {
@@ -50,6 +53,10 @@ it('stays within the query budget and runs the same queries however many materia
 
     // Warm up: the first request of a process may run one-off queries (schema introspection, the framework's own caches).
     $this->get($uri)->assertOk();
+
+    // 26 materials in all, so even the second page of the list has a row. The category and unit of the rows are eager-loaded
+    // (two queries), and an empty page loads no row, so an empty baseline would run two queries fewer.
+    Material::factory()->count(14)->create();
 
     $few = queryLog(fn () => $this->get($uri)->assertOk());
 

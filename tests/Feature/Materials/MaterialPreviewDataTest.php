@@ -23,7 +23,7 @@ function usageMaterialRef(string $sku): array
 {
     $material = previewMaterial($sku);
 
-    return ['id' => $material->id, 'sku' => $sku, 'name' => $material->name, 'unit' => $material->unit->value];
+    return ['id' => $material->id, 'sku' => $sku, 'name' => $material->name, 'unit' => $material->unit->code];
 }
 
 /** The product of a usage row: a product reference with its status. */
@@ -121,7 +121,8 @@ describe('index', function () {
         // 12 more rows on the same page: still no query per row (strict mode would also throw on a lazy load).
         Material::factory()->count(12)->create();
 
-        expect($baseline)->toBeLessThanOrEqual(5)
+        // Count, rows, their categories and units (eager), the inventory scan, and the reference lists of a full load.
+        expect($baseline)->toBeLessThanOrEqual(5 + 2 + REFERENCE_QUERIES)
             ->and($queries())->toBe($baseline);
     });
 

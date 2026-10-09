@@ -14,6 +14,7 @@ use App\Domain\Sales\SalesCalculator;
 use App\Enums\ProductStatus;
 use App\Enums\SalesPeriod;
 use App\Models\Material;
+use App\Models\ProductCategory;
 use Brick\Math\BigDecimal;
 use Carbon\CarbonImmutable;
 use LogicException;
@@ -35,6 +36,9 @@ final class PreviewProducts
     /** @var list<PreviewProduct>|null */
     private ?array $products = null;
 
+    /** @var array<string, string>|null Product category code => name, read once per request (see `categoryName()`). */
+    private ?array $categoryNames = null;
+
     /** @param array<string, Material> $materialsBySku */
     private function __construct(private readonly array $materialsBySku)
     {
@@ -46,7 +50,8 @@ final class PreviewProducts
     /** Runs the single materials query of the request. */
     public static function load(): self
     {
-        return self::from(Material::query()->whereIn('sku', PreviewFixture::materialSkus())->get());
+        // The costing reads the unit (always eager-loaded), never the category: skip that query.
+        return self::from(Material::query()->without('category')->whereIn('sku', PreviewFixture::materialSkus())->get());
     }
 
     /**
@@ -117,7 +122,7 @@ final class PreviewProducts
                 || mb_stripos($product->fixture['sku'], $search) !== false;
 
             return $matchesSearch
-                && ($category === null || $product->fixture['category']->value === $category)
+                && ($category === null || $product->fixture['category'] === $category)
                 && ($status === null || $product->fixture['status']->value === $status)
                 && (! $cantProduce || $product->maxProducible() === 0);
         }));
@@ -189,8 +194,8 @@ final class PreviewProducts
                 'id' => $product->id(),
                 'sku' => $product->fixture['sku'],
                 'name' => $product->name(),
-                'category' => $product->fixture['category']->value,
-                'category_label' => $product->fixture['category']->label(),
+                'category' => $product->fixture['category'],
+                'category_label' => $this->categoryName($product->fixture['category']),
                 'status' => $product->fixture['status']->value,
                 'status_label' => $product->fixture['status']->label(),
                 'photo_url' => PreviewFixture::photoUrl($product->fixture['sku']),
@@ -221,8 +226,8 @@ final class PreviewProducts
             'id' => $product->id(),
             'sku' => $product->fixture['sku'],
             'name' => $product->name(),
-            'category' => $product->fixture['category']->value,
-            'category_label' => $product->fixture['category']->label(),
+            'category' => $product->fixture['category'],
+            'category_label' => $this->categoryName($product->fixture['category']),
             'status' => $product->fixture['status']->value,
             'status_label' => $product->fixture['status']->label(),
             'description' => $product->fixture['description'],
@@ -353,7 +358,7 @@ final class PreviewProducts
             $bom[] = new BomLine(
                 materialId: $material->id,
                 materialName: $material->name,
-                unit: $material->unit->value,
+                unit: $material->unit->code,
                 quantity: $line['quantity'],
                 wastePercent: $line['waste_percent'],
                 unitCost: $material->unit_cost,
@@ -395,6 +400,17 @@ final class PreviewProducts
             'max_producible' => $capacity->maxProducible,
             'bottleneck' => $bottleneck === null ? null : PreviewMaterials::ref($bottleneck),
         ];
+    }
+
+    /**
+     * The name of a product category code, from the `product_categories` table. The whole table is read once per request,
+     * not once per product. A code with no row (impossible for the fixture: the defaults can't be deleted while used) shows as is.
+     */
+    private function categoryName(string $code): string
+    {
+        $this->categoryNames ??= ProductCategory::query()->pluck('name', 'code')->all();
+
+        return $this->categoryNames[$code] ?? $code;
     }
 
     /**

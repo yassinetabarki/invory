@@ -53,8 +53,8 @@ describe('materials index', function () {
         );
 
         expect(queriesMatching($queries, SUMMARY_SCAN))->toBeEmpty()
-            // The page itself: the count and the rows.
-            ->and($queries)->toHaveCount(2);
+            // The page itself: the count, the rows, and the categories and units of those rows (eager-loaded, two constant queries).
+            ->and($queries)->toHaveCount(4);
     });
 
     it('runs the summary scan and nothing else when only the summary is requested', function () {
@@ -110,7 +110,10 @@ describe('products index', function () {
             fn (Assert $partial) => $partial->missing('products')->has('categories')->has('statuses'),
         );
 
-        expect($queries)->toBeEmpty();
+        // The category options are the only query: no product is costed (no materials read).
+        expect(queriesMatching($queries, 'materials'))->toBeEmpty()
+            ->and(queriesMatching($queries, 'product_categories'))->toHaveCount(1)
+            ->and($queries)->toHaveCount(1);
     });
 });
 
@@ -124,7 +127,9 @@ describe('products create and edit', function () {
             fn (Assert $partial) => $partial->missing('materials')->has('categories')->has('statuses'),
         );
 
-        expect($queries)->toBeEmpty();
+        // Only the category options: the picker's materials are not read.
+        expect(queriesMatching($queries, 'materials'))->toBeEmpty()
+            ->and($queries)->toHaveCount(1);
     });
 
     it('sends the picker on a full visit and when it is requested', function () {
@@ -133,7 +138,9 @@ describe('products create and edit', function () {
 
         $queries = partialReloadQueries($firstVisit, ['materials'], fn (Assert $partial) => $partial->has('materials', 12));
 
-        expect($queries)->toHaveCount(1);
+        // One read of the materials plus their units (eager-loaded, never the categories).
+        expect(queriesMatching($queries, 'from "materials"'))->toHaveCount(1)
+            ->and($queries)->toHaveCount(2);
     });
 
     it('reads the materials once for the picker and the costing of the product on the edit page', function () {
@@ -145,7 +152,10 @@ describe('products create and edit', function () {
             fn (Assert $partial) => $partial->has('materials', 12)->has('product.components'),
         );
 
-        expect($queries)->toHaveCount(1);
+        // One read of the materials (however many of the two props are sent), their units (eager-loaded) and the category names
+        // of the product.
+        expect(queriesMatching($queries, 'from "materials"'))->toHaveCount(1)
+            ->and($queries)->toHaveCount(3);
     });
 
     it('loads nothing on the edit page when only the option lists are requested', function () {
@@ -157,7 +167,9 @@ describe('products create and edit', function () {
             fn (Assert $partial) => $partial->missingAll(['materials', 'product']),
         );
 
-        expect($queries)->toBeEmpty();
+        // Only the category options: neither the materials nor the product are loaded.
+        expect(queriesMatching($queries, 'materials'))->toBeEmpty()
+            ->and($queries)->toHaveCount(1);
     });
 });
 
@@ -219,9 +231,9 @@ describe('dashboard', function () {
         );
 
         expect(queriesMatching($queries, NEEDS_RESTOCK_QUERY))->toBeEmpty()
-            // The stats still need the inventory summary and the costed products, once each.
+            // The stats still need the inventory summary and the costed products (and their units), once each.
             ->and(queriesMatching($queries, SUMMARY_SCAN))->toHaveCount(1)
-            ->and($queries)->toHaveCount(2);
+            ->and($queries)->toHaveCount(3);
     });
 
     it('builds the costed products once when several sections need them', function () {
@@ -241,7 +253,8 @@ describe('dashboard', function () {
 
         expect(queriesMatching($queries, SUMMARY_SCAN))->toBeEmpty()
             ->and(queriesMatching($queries, NEEDS_RESTOCK_QUERY))->toHaveCount(1)
-            ->and($queries)->toHaveCount(1);
+            // The list itself plus the categories and units of its rows (eager-loaded).
+            ->and($queries)->toHaveCount(3);
     });
 });
 

@@ -8,9 +8,11 @@ use App\Models\Material;
 
 final readonly class CreateMaterial
 {
-    /** @param array<string, mixed> $data validated input */
+    public function __construct(private ResolveReferenceCodes $resolveCodes) {}
+
+    /** @param array<string, mixed> $data validated input, with `category` and `unit` as codes */
     public function handle(array $data): Material
     {
-        return Material::create($data);
+        return Material::create($this->resolveCodes->handle($data));
     }
 }
