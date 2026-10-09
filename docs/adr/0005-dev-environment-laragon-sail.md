@@ -1,6 +1,7 @@
 # ADR-0005 — Dev environment: Laragon for tooling, Laravel Sail (Docker) for the runtime
 
-- **Status:** Accepted · 2026-10-07 (decided by the product owner)
+- **Status:** Accepted · 2026-10-07 (decided by the product owner) · **runtime part amended by [ADR-0007](0007-dev-runtime-native-serving.md) on 2026-10-08**:
+  the app is served natively by Laragon; Docker runs PostgreSQL and Mailpit, and the `laravel.test` container only for parity runs
 
 ## Context
 The team works on Windows and wants a dockerized project. Laravel Sail is Laravel's official Docker Compose environment. On Windows it

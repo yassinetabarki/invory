@@ -6,10 +6,12 @@ services:
             args:
                 WWWGROUP: '${WWWGROUP}'
         image: 'sail-8.5/app'
+        # Parity runs only (PostgreSQL suite, PHP 8.5): `docker compose --profile app up -d laravel.test`. ADR-0007.
+        profiles: ['app']
         extra_hosts:
             - 'host.docker.internal:host-gateway'
         ports:
-            - '${APP_PORT:-80}:80'
+            - '${APP_PORT:-8080}:80'
             - '${VITE_PORT:-5173}:${VITE_PORT:-5173}'
         environment:
             WWWUSER: '${WWWUSER}'
@@ -17,6 +19,12 @@ services:
             XDEBUG_MODE: '${SAIL_XDEBUG_MODE:-off}'
             XDEBUG_CONFIG: '${SAIL_XDEBUG_CONFIG:-client_host=host.docker.internal}'
             IGNITION_LOCAL_SITES_PATH: '${PWD}'
+            # Real environment variables win over .env (Dotenv is immutable), so the container reaches the other services by name
+            # while the same .env points the native app at 127.0.0.1.
+            DB_HOST: pgsql
+            DB_PORT: 5432
+            MAIL_HOST: mailpit
+            MAIL_PORT: 1025
         volumes:
             - '.:/var/www/html'
         networks:

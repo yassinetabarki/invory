@@ -5,7 +5,8 @@ How the pieces fit ([ADR-0005](adr/0005-dev-environment-laragon-sail.md)):
 | Tool | Used for |
 |---|---|
 | **Laragon** (native PHP ≥ 8.3 + Composer on PATH; this machine: PHP 8.3.33) | `composer`, `php artisan` tooling, Pint, Larastan, the fast Pest suite, Wayfinder, Boost MCP, Claude Code agents |
-| **Laravel Sail** (Docker Desktop + WSL2) | Running the app: `laravel.test` (PHP 8.5, see `compose.yaml`), **PostgreSQL 18**, **Mailpit** → http://localhost |
+| **Laragon Apache** (mod_php + OPcache) | Serving the app natively → http://localhost:8000 (ADR-0007) |
+| **Docker Compose** (Docker Desktop + WSL2) | **PostgreSQL 18** and **Mailpit**; the Sail app container `laravel.test` (PHP 8.5) only for parity runs (`--profile app`) |
 | **Node** (24 system, or Laragon's 22) | `npm run dev` / `build`, Vite+, Vitest |
 
 ## 1. One-time prerequisites
@@ -18,7 +19,7 @@ On a new machine:
 3. Make sure Composer is in `C:\laragon\bin\composer` (download `composer.phar` from https://getcomposer.org/download/ if the folder is empty).
 4. Laragon → *Menu › Tools › Path › Add Laragon to Path*. Restart the terminal **and Claude Code**. Laragon's PHP and Composer are not on the PATH until you do this.
 5. `composer global require laravel/installer` (and put `%APPDATA%\Composer\vendor\bin` on the PATH).
-6. **Don't** start Laragon's Apache/Nginx/MySQL for this project. Sail uses ports 80 and 5432.
+6. Laragon's **Apache** serves the app (§4.1, ADR-0007). Don't start Laragon's MySQL; PostgreSQL runs in Docker on 5432.
 
 Keep the native PHP and the Sail container PHP on the same minor version when you can. Today they differ (8.3 native, 8.5 in the container). Both are supported
 by Laravel 13, and the PostgreSQL parity run (§5) exercises the container's PHP. To align, either add PHP 8.5 to Laragon or point `compose.yaml` at
@@ -63,41 +64,95 @@ The starter kit's `.gitignore` ignored `/.claude` and `/CLAUDE.md` entirely, whi
 To let Boost's database tools reach the Sail PostgreSQL from Windows, add `"env": { "DB_HOST": "127.0.0.1" }` to the `laravel-boost`
 entry in `.mcp.json`. Real environment variables take precedence over `.env`.
 
-## 4. Run it
+## 4. Run it (native app + Docker services, ADR-0007)
+The app is served **natively by Laragon's Apache** (mod_php + OPcache). Docker runs only **PostgreSQL** and **Mailpit**.
+Before 2026-10-09, Sail served the app from the Windows drive through the WSL2 9p bind mount. That cost ~2 s per request after 2 s idle
+(measurements in [plans/phase-3-performance-spa-data.md](plans/phase-3-performance-spa-data.md) §A).
+
+### 4.1 One-time machine setup (the human does this; agents never change system config)
+1. **OPcache in Laragon's PHP.** Edit `C:\laragon\bin\php\php-8.3.33-Win32-vs16-x64\php.ini` (back it up first):
+   ```ini
+   zend_extension=opcache          ; was ";zend_extension=opcache" (line ~833)
+   [opcache]
+   opcache.enable=1
+   opcache.enable_cli=0            ; keep the CLI (tests, tooling) as it is
+   opcache.memory_consumption=256
+   opcache.interned_strings_buffer=16
+   opcache.max_accelerated_files=20000
+   opcache.validate_timestamps=1   ; code edits show up immediately...
+   opcache.revalidate_freq=0       ; ...and native NTFS stats are cheap
+   realpath_cache_size=4096K
+   realpath_cache_ttl=600
+   ```
+   Check: `php -d opcache.enable_cli=1 -r "var_dump(function_exists('opcache_get_status'));"` prints `bool(true)`.
+2. **Apache virtual host on port 8000.** Create `C:\laragon\etc\apache2\sites-enabled\invory.conf`. Laragon's `httpd.conf` already has
+   `IncludeOptional "C:/laragon/etc/apache2/sites-enabled/*.conf"` and loads `mod_rewrite` and `mod_php`.
+   ```apache
+   Listen 8000
+   <VirtualHost *:8000>
+       ServerName localhost
+       DocumentRoot "G:/Projects/Invory/public"
+       <Directory "G:/Projects/Invory/public">
+           Options -Indexes +FollowSymLinks
+           AllowOverride All
+           Require all granted
+       </Directory>
+   </VirtualHost>
+   ```
+   In Laragon, select PHP 8.3.33 (*Menu › PHP › Version*) and Apache (*Menu › Apache*). Don't start Laragon's MySQL.
+3. **`.env`** (git-ignored). Point the app at the Docker services on localhost, and move the optional Sail app container off port 8000:
+   ```
+   APP_URL=http://localhost:8000
+   APP_PORT=8080
+   DB_HOST=127.0.0.1
+   MAIL_HOST=127.0.0.1
+   MAIL_PORT=1026
+   ```
+   Keep `DB_CONNECTION=pgsql`, `DB_PORT=5432`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`, `FORWARD_MAILPIT_*`, `WWWUSER` and `WWWGROUP` as they are.
+   The Sail container ignores these hosts: `compose.yaml` gives it `DB_HOST=pgsql` and `MAIL_HOST=mailpit` as real environment variables, which win
+   over `.env`. Then run `php artisan config:clear`.
+4. **Switch over** (from the repo root):
+   ```powershell
+   docker compose stop laravel.test   # frees port 8000; only the invory app container
+   docker compose up -d               # now starts only pgsql + mailpit (laravel.test is behind the "app" profile)
+   ```
+   Then start Laragon (*Start All*, or just Apache).
+
+### 4.2 Daily use
 ```powershell
-.\sail up -d                 # app + PostgreSQL + Mailpit (first run builds the image, ~5 min)
-.\sail artisan migrate       # or: .\sail artisan migrate:fresh --seed  (after S-08)
-npm run dev                  # Vite natively on Windows (fast HMR)
+docker compose up -d          # PostgreSQL + Mailpit
+# Laragon: Start Apache
+php artisan migrate           # native now: .env points at 127.0.0.1
+npm run dev                   # Vite natively (fast HMR); or `npm run build` once
 ```
-- App: http://localhost · Mailpit (password-reset and verification emails): http://localhost:8025
-- DB from Windows tools (HeidiSQL in Laragon, DBeaver…): `127.0.0.1:5432`, user `sail`, password `password`, db `laravel`
-- `.\sail` works from PowerShell or cmd. It forwards everything to `vendor/bin/sail` inside WSL2.
-  Common commands: `.\sail artisan …`, `.\sail composer …`, `.\sail shell`, `.\sail psql`, `.\sail down`.
+- App: http://localhost:8000 · Mailpit: http://localhost:8026 · DB from Windows tools: `127.0.0.1:5432`, user `sail`, password `password`, db `laravel`.
+- Database commands (`migrate`, `tinker`, `db:seed`) now run **natively**. The Sail app container is only for the PostgreSQL parity suite
+  and PHP 8.5 checks (§5).
+- Xdebug isn't loaded in Laragon's PHP. Add it only while debugging.
 
-Rule of thumb: **anything that touches the database runs through `.\sail`**. Code tooling (composer, Pint, Larastan, the fast test suite, npm) runs natively.
+### 4.3 Check the speed
+```powershell
+# 1. HTTP, 3 s between requests (how people click). Before: ~2.1 s each. Target: < 0.15 s each.
+curl.exe -s --rate 20/m -o NUL -o NUL -o NUL -o NUL -w "%{time_total}\n" http://localhost:8000/login http://localhost:8000/login http://localhost:8000/login http://localhost:8000/login
+# 2. App work per page as a signed-in user (read-only; uses the first verified user, an array session, writes nothing):
+php scripts/perf-probe.php /dashboard /materials /materials/create /products /products/create /sales json
+```
+In the browser, open DevTools › Network, then click Materials, Products and New product with a pause between clicks. Each XHR's "Waiting for
+server response" should be under ~150 ms (it was ~2 s). The first request after Apache starts is slower while OPcache fills.
 
-### If `.\sail` fails ("docker could not be found in this WSL 2 distro")
-Docker Desktop's WSL integration is off for your distro. Either enable it (*Settings › Resources › WSL integration › Ubuntu-24.04*), or skip WSL entirely:
-Sail is a thin wrapper around Docker Compose, so the Windows `docker` CLI can do the same thing. Put `WWWUSER=1000` and `WWWGROUP=1000` in `.env` (the image build needs them), then:
-
-| Sail | Docker Compose equivalent (PowerShell, from the repo root) |
+### Docker Compose commands (`.\sail` needs WSL integration, which is off on this machine)
+| Task | Command (PowerShell, repo root) |
 |---|---|
-| `.\sail up -d` | `docker compose up -d` |
-| `.\sail artisan migrate` | `docker compose exec -u sail laravel.test php artisan migrate` |
-| `.\sail shell` | `docker compose exec -u sail laravel.test bash` |
-| `.\sail psql` | `docker compose exec pgsql psql -U sail laravel` |
-| `.\sail down` | `docker compose down` |
+| Start the services | `docker compose up -d` (pgsql + mailpit) |
+| Start the Sail app container (parity runs) | `docker compose --profile app up -d laravel.test` |
+| Shell / artisan in the container | `docker compose --profile app exec -u sail laravel.test bash` |
+| psql | `docker compose exec pgsql psql -U sail laravel` |
+| Stop everything | `docker compose --profile app stop` |
 
 ### If a port is already taken
-Laragon's Apache (80) and Mailpit (1025, 8025) commonly collide with Sail. Override the ports in `.env` (git-ignored) and keep `APP_URL` in sync. The first dev machine uses:
-```
-APP_URL=http://localhost:8000
-APP_PORT=8000
-FORWARD_MAILPIT_PORT=1026
-FORWARD_MAILPIT_DASHBOARD_PORT=8026
-```
-That gives the app at http://localhost:8000 and Mailpit at http://localhost:8026. Sail also publishes Vite's port 5173 from the container. Since Vite runs natively here,
-it automatically falls back to 5174, and `public/hot` points the page at it, so nothing needs changing.
+Laragon's own Mailpit (1025, 8025) collides with Sail's, so this machine forwards Mailpit to 1026/8026 (`FORWARD_MAILPIT_PORT`,
+`FORWARD_MAILPIT_DASHBOARD_PORT`). PostgreSQL: set `FORWARD_DB_PORT=5433` and `DB_PORT=5433` if 5432 is taken. Vite runs natively; if 5173 is
+taken it falls back to 5174, and `public/hot` points the page at it.
 
 ## 5. Quality gates
 ```powershell
@@ -107,9 +162,10 @@ npm run check           # Oxfmt + Oxlint
 npm run types:check     # TypeScript
 npm run build
 ```
-PostgreSQL parity run (Docker up). Environment variables override `phpunit.xml`, and Sail creates the `testing` database:
+PostgreSQL parity run (Docker up). Environment variables override `phpunit.xml`, and Sail creates the `testing` database. Start the app container first:
 ```powershell
-docker compose exec -u sail -e DB_CONNECTION=pgsql -e DB_DATABASE=testing laravel.test php artisan test --compact
+docker compose --profile app up -d laravel.test
+docker compose --profile app exec -u sail -e DB_CONNECTION=pgsql -e DB_DATABASE=testing laravel.test php artisan test --compact
 ```
 CI runs the same suite against a PostgreSQL service.
 
@@ -123,7 +179,8 @@ npx playwright install
 ## Troubleshooting
 - **Port 80/5432 already in use**: stop Laragon services, or set `APP_PORT=8080` / `FORWARD_DB_PORT=5433` in `.env` (then update `APP_URL`).
 - **`.\sail` says Docker isn't running**: start Docker Desktop and check the WSL integration (step 1).
-- **Slow page loads under Sail**: the repo is on a Windows drive and bind-mounted through WSL2. This is acceptable for the MVP. See ADR-0005.
+- **Slow page loads (~2 s per click)**: you're serving through the Sail container (9p bind mount). Serve natively with Laragon (§4.1, ADR-0007).
+- **`service "laravel.test" is not enabled`** or no container: add `--profile app` (§4).
 
 ## Production notes
 - PostgreSQL 16+. `APP_ENV=production`, `APP_DEBUG=false`, queue worker + scheduler running.

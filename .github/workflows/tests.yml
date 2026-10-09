@@ -40,6 +40,11 @@ jobs:
       # composer install, .env, key, migrate (SQLite), npm install and `npm run build` (also regenerates Wayfinder).
       - name: Setup Application
         run: composer setup
+        # .env.example is the native-dev template (PostgreSQL on 127.0.0.1, ADR-0007). This job has no database service, so the setup
+        # migration runs on a SQLite file. Step-level only: the Pest suite keeps phpunit.xml's in-memory SQLite.
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ${{ github.workspace }}/database/database.sqlite
 
       - name: Frontend tests (Vitest)
         run: npx vp test
