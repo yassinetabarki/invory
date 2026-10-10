@@ -2,7 +2,10 @@ import { Link, useForm } from '@inertiajs/react';
 import { useEffect, useId, useRef, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { BomEditor } from '@/components/products/bom-editor';
-import { createRowUid } from '@/components/products/bom-rows';
+import {
+    createRowUid,
+    materialOptionFromLine,
+} from '@/components/products/bom-rows';
 import type { BomRow } from '@/components/products/bom-rows';
 import { toSubmittedRow } from '@/components/products/bom-rows';
 import { DecimalInput } from '@/components/products/decimal-input';
@@ -21,10 +24,11 @@ import {
 import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 import { useAppSettings } from '@/hooks/use-app-settings';
+import { useReference } from '@/hooks/use-reference';
 import { invalidatedBy } from '@/lib/cache-tags';
+import { unitLabel } from '@/lib/reference';
 import { cn } from '@/lib/utils';
 import type {
-    MaterialOption,
     Option,
     Product,
     ProductCategory,
@@ -44,7 +48,6 @@ type ProductFormProps = {
     description: string;
     categories: Option<ProductCategory>[];
     statuses: Option<ProductStatus>[];
-    materials: MaterialOption[];
     /** Where to send the form (Wayfinder in the page). */
     action: { url: string; method: 'post' | 'put' };
     cancelHref: string;
@@ -175,17 +178,28 @@ export function ProductForm({
     description,
     categories,
     statuses,
-    materials,
     action,
     cancelHref,
     submitLabel,
 }: ProductFormProps) {
     const uid = useId();
     const { currency, locale } = useAppSettings();
+    const { units } = useReference();
     const formRef = useRef<HTMLFormElement>(null);
     // Only seeds the form; computed once so composition rows keep their keys.
     const [initial] = useState(() => toFormState(product));
     const form = useForm<ProductFormState>(initial);
+    // The materials of the saved lines, so the editor shows them without a request.
+    const [knownMaterials] = useState(() =>
+        (product?.components ?? []).map((line) => {
+            const unit = units.find((row) => row.code === line.material.unit);
+
+            return materialOptionFromLine(
+                line,
+                unit ? unitLabel(unit) : line.material.unit,
+            );
+        }),
+    );
     const { errors, processing } = form;
 
     const symbol = currencySymbol(currency, locale);
@@ -507,7 +521,7 @@ export function ProductForm({
 
             <BomEditor
                 rows={form.data.components}
-                materials={materials}
+                knownMaterials={knownMaterials}
                 errors={errors}
                 onChange={(rows) => form.setData('components', rows)}
             />

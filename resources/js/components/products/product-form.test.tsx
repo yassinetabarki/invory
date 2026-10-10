@@ -3,15 +3,16 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { ProductForm } from '@/components/products/product-form';
 import {
+    answerMaterialOptions,
     choreJacket,
     denimJacket,
-    materialOptions,
     productCategories,
     productStatuses,
 } from '@/test/fixtures/products';
 import {
     inertiaMock,
     resetInertiaMock,
+    respondToHttp,
     setFormState,
     setPageProps,
 } from '@/test/inertia';
@@ -44,7 +45,6 @@ function setup({
             description="Details, photo and the materials that make one unit."
             categories={productCategories}
             statuses={productStatuses}
-            materials={materialOptions}
             action={{ url, method }}
             cancelHref={product ? `/products/${product.id}` : '/products'}
             submitLabel="Save product"
@@ -82,7 +82,7 @@ async function pickMaterial(
     name: RegExp,
 ) {
     await user.click(screen.getByRole('button', { name: 'Add material' }));
-    await user.click(screen.getByRole('option', { name }));
+    await user.click(await screen.findByRole('option', { name }));
 }
 
 const photo = new File(['png'], 'jacket.png', { type: 'image/png' });
@@ -90,6 +90,7 @@ const photo = new File(['png'], 'jacket.png', { type: 'image/png' });
 describe('<ProductForm>', () => {
     beforeEach(() => {
         resetInertiaMock();
+        respondToHttp(({ params }) => answerMaterialOptions(params));
     });
 
     describe('a new product', () => {
@@ -578,7 +579,7 @@ describe('<ProductForm>', () => {
             );
 
             expect(
-                screen.getByRole('option', { name: /Polyester thread/ }),
+                await screen.findByRole('option', { name: /Polyester thread/ }),
             ).toHaveAttribute('aria-disabled', 'true');
             expect(
                 screen.getByRole('option', { name: /Brass rivet 9mm/ }),

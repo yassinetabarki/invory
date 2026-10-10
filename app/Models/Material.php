@@ -100,6 +100,16 @@ class Material extends Model
     }
 
     /**
+     * The stock ledger of this material (append-only, see {@see StockMovement}).
+     *
+     * @return HasMany<StockMovement, $this>
+     */
+    public function stockMovements(): HasMany
+    {
+        return $this->hasMany(StockMovement::class);
+    }
+
+    /**
      * A route-bound material carries `used_in_count` too (a sub-select in the one query that finds it), so the show and edit pages
      * don't pay a query of their own for it. A soft-deleted material is not found.
      *

@@ -1,11 +1,15 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { BomEditor } from '@/components/products/bom-editor';
 import type { BomRow } from '@/components/products/bom-rows';
-import { resetInertiaMock } from '@/test/inertia';
-import { materialOptions } from '@/test/fixtures/products';
+import type { MaterialOption } from '@/types/domain';
+import { inertiaMock, resetInertiaMock, respondToHttp } from '@/test/inertia';
+import {
+    answerMaterialOptions,
+    materialOptions,
+} from '@/test/fixtures/products';
 
 vi.mock('@inertiajs/react', async (importOriginal) => {
     const { createInertiaModule } = await import('@/test/inertia');
@@ -18,6 +22,11 @@ vi.mock('@inertiajs/react', async (importOriginal) => {
 const DENIM = 4;
 const BUTTON = 5;
 const THREAD = 8;
+
+/** What the form knows of its saved rows: the picker is not asked for these. */
+const knownMaterials = materialOptions.filter((material) =>
+    [DENIM, BUTTON, THREAD].includes(material.id),
+);
 
 function row(
     uid: string,
@@ -58,7 +67,7 @@ function Harness({
     return (
         <BomEditor
             rows={rows}
-            materials={materialOptions}
+            knownMaterials={knownMaterials}
             errors={errors}
             onChange={(next) => {
                 setRows(next);
@@ -102,9 +111,15 @@ function searchBox(): HTMLElement {
     return screen.getByRole('combobox', { name: 'Search materials' });
 }
 
+/** Waits for the server's first answer to show in the open picker. */
+async function optionsShown(): Promise<HTMLElement[]> {
+    return screen.findAllByRole('option');
+}
+
 describe('<BomEditor>', () => {
     beforeEach(() => {
         resetInertiaMock();
+        respondToHttp(({ params }) => answerMaterialOptions(params));
     });
 
     describe('layout', () => {
@@ -234,7 +249,7 @@ describe('<BomEditor>', () => {
                 screen.getByRole('button', { name: 'Add material' }),
             );
             await user.click(
-                screen.getByRole('option', { name: /Metal zipper 18cm/ }),
+                await screen.findByRole('option', { name: /Metal zipper 18cm/ }),
             );
 
             const picker = within(rowGroup(1)).getByRole('combobox', {
@@ -254,6 +269,7 @@ describe('<BomEditor>', () => {
                 screen.getByRole('button', { name: 'Add material' }),
             );
             // Focus is already in the search box.
+            await optionsShown();
             await user.keyboard('thread{Enter}');
 
             expect(
@@ -273,12 +289,15 @@ describe('<BomEditor>', () => {
 
             expect(searchBox()).toBeInTheDocument();
 
+            await optionsShown();
             await user.keyboard('LBL-WOV');
 
-            const options = screen.getAllByRole('option');
-
-            expect(options).toHaveLength(1);
-            expect(options[0]).toHaveTextContent('Woven brand label');
+            await waitFor(() =>
+                expect(screen.getAllByRole('option')).toHaveLength(1),
+            );
+            expect(screen.getByRole('option')).toHaveTextContent(
+                'Woven brand label',
+            );
         });
 
         it('shows each option with its SKU, stock and unit cost', async () => {
@@ -288,7 +307,7 @@ describe('<BomEditor>', () => {
                 screen.getByRole('button', { name: 'Add material' }),
             );
 
-            const option = screen.getByRole('option', {
+            const option = await screen.findByRole('option', {
                 name: /Polyester thread/,
             });
 
@@ -307,8 +326,10 @@ describe('<BomEditor>', () => {
             );
             await user.keyboard('zzzz');
 
+            expect(
+                await screen.findByText('No material found.'),
+            ).toBeInTheDocument();
             expect(screen.queryByRole('option')).not.toBeInTheDocument();
-            expect(screen.getByText('No material found.')).toBeInTheDocument();
         });
 
         it('closes the picker with Escape and keeps the row blank', async () => {
@@ -341,7 +362,7 @@ describe('<BomEditor>', () => {
                 }),
             );
             await user.click(
-                screen.getByRole('option', { name: /Cotton canvas 10oz/ }),
+                await screen.findByRole('option', { name: /Cotton canvas 10oz/ }),
             );
 
             expect(quantity().parentElement).toHaveTextContent('m');
@@ -358,7 +379,7 @@ describe('<BomEditor>', () => {
                 screen.getByRole('button', { name: 'Add material' }),
             );
 
-            const denim = screen.getByRole('option', {
+            const denim = await screen.findByRole('option', {
                 name: /Denim 12oz Indigo/,
             });
 
@@ -386,6 +407,7 @@ describe('<BomEditor>', () => {
             await user.click(
                 screen.getByRole('button', { name: 'Add material' }),
             );
+            await optionsShown();
             await user.keyboard('denim{Enter}');
 
             expect(
@@ -405,7 +427,7 @@ describe('<BomEditor>', () => {
             );
 
             expect(
-                screen.getByRole('option', { name: /Denim 12oz Indigo/ }),
+                await screen.findByRole('option', { name: /Denim 12oz Indigo/ }),
             ).not.toHaveAttribute('aria-disabled', 'true');
             expect(
                 screen.getByRole('option', { name: /Polyester thread/ }),
@@ -425,7 +447,7 @@ describe('<BomEditor>', () => {
             );
 
             expect(
-                screen.getByRole('option', { name: /Metal shank button/ }),
+                await screen.findByRole('option', { name: /Metal shank button/ }),
             ).not.toHaveAttribute('aria-disabled', 'true');
         });
     });
@@ -463,7 +485,7 @@ describe('<BomEditor>', () => {
                 }),
             );
             await user.click(
-                screen.getByRole('option', { name: /Rubber cupsole 42/ }),
+                await screen.findByRole('option', { name: /Rubber cupsole 42/ }),
             );
 
             expect(
@@ -735,6 +757,149 @@ describe('<BomEditor>', () => {
                     name: 'Move Metal shank button 17mm down',
                 }),
             ).toHaveFocus();
+        });
+    });
+
+    describe('server search', () => {
+        it('shows rows it already knows without any request, and asks only when a picker opens', async () => {
+            const { user } = setup();
+
+            expect(inertiaMock.http.requests).toHaveLength(0);
+
+            await user.click(
+                within(rowGroup(1)).getByRole('combobox', {
+                    name: /Denim 12oz Indigo/,
+                }),
+            );
+            await optionsShown();
+
+            expect(inertiaMock.http.requests).toHaveLength(1);
+            expect(inertiaMock.http.requests[0].params).toEqual({
+                limit: '20',
+                include: ['4', '5', '8'],
+            });
+        });
+
+        it('remembers a material found by the search: the row shows its name and unit', async () => {
+            const onRows = vi.fn();
+            const { user } = setup({ initial: [], onRows });
+
+            await user.click(
+                screen.getByRole('button', { name: 'Add material' }),
+            );
+            await user.keyboard('cupsole');
+            await user.click(
+                await screen.findByRole('option', { name: /Rubber cupsole 42/ }),
+            );
+
+            const group = within(rowGroup(1));
+
+            expect(
+                group.getByRole('combobox', { name: /Rubber cupsole 42/ }),
+            ).toHaveTextContent('MAT-SOL-042');
+            expect(
+                group.getByLabelText('Quantity per unit for Rubber cupsole 42')
+                    .parentElement,
+            ).toHaveTextContent('pair');
+            expect(lastRows(onRows)).toMatchObject([{ material_id: 9 }]);
+            // The request carried the search text, the page size and no picked ids.
+            expect(inertiaMock.http.requests.at(-1)?.params).toEqual({
+                search: 'cupsole',
+                limit: '20',
+            });
+        });
+
+        it('keeps a picked material shown when a later search does not find it', async () => {
+            const { user } = setup({ initial: [] });
+
+            await user.click(
+                screen.getByRole('button', { name: 'Add material' }),
+            );
+            await user.click(
+                await screen.findByRole('option', { name: /Brass rivet 9mm/ }),
+            );
+            await user.click(
+                screen.getByRole('button', { name: 'Add material' }),
+            );
+            await user.keyboard('canvas');
+            await user.click(
+                await screen.findByRole('option', {
+                    name: /Cotton canvas 10oz/,
+                }),
+            );
+
+            expect(
+                within(rowGroup(1)).getByRole('combobox', {
+                    name: /Brass rivet 9mm/,
+                }),
+            ).toBeInTheDocument();
+            expect(
+                within(rowGroup(2)).getByRole('combobox', {
+                    name: /Cotton canvas 10oz/,
+                }),
+            ).toBeInTheDocument();
+        });
+
+        it('shows an unknown material by its id until the picker has loaded it', () => {
+            setup({ initial: [row('a', 9, '1')] });
+
+            expect(
+                within(rowGroup(1)).getByRole('combobox', {
+                    name: /Material #9/,
+                }),
+            ).toBeInTheDocument();
+            expect(
+                within(rowGroup(1)).getByLabelText(
+                    'Quantity per unit for material 9',
+                ).parentElement,
+            ).toHaveTextContent('—');
+        });
+
+        it('stays light with 50 rows and 2000 materials: one request, 20 matches plus the picked ones', async () => {
+            const catalogue: MaterialOption[] = Array.from(
+                { length: 2000 },
+                (_, index) => ({
+                    id: 1000 + index,
+                    sku: `SKU-${String(index).padStart(4, '0')}`,
+                    name: `Material ${String(index).padStart(4, '0')}`,
+                    unit: 'm',
+                    unit_label: 'Metre (m)',
+                    unit_cost: '1.0000',
+                    quantity_on_hand: '10.0000',
+                    stock_status: 'in_stock',
+                }),
+            );
+            // The 50 picked ones are the last 50, far from the first page.
+            const picked = catalogue.slice(-50);
+
+            respondToHttp(({ params }) =>
+                answerMaterialOptions(params, catalogue),
+            );
+
+            const { user } = setup({
+                initial: picked.map((material, index) =>
+                    row(`r${index}`, material.id, '1'),
+                ),
+            });
+
+            // The 50 rows are on screen without a single request.
+            expect(screen.getByText('50 materials')).toBeInTheDocument();
+
+            await user.click(
+                within(rowGroup(1)).getByRole('combobox', {
+                    name: /Material 1950/,
+                }),
+            );
+            await optionsShown();
+
+            expect(inertiaMock.http.requests).toHaveLength(1);
+
+            const { params } = inertiaMock.http.requests[0];
+
+            expect(params.limit).toBe('20');
+            expect(params.include).toHaveLength(50);
+            // 20 matches + 50 picked, never the 2000.
+            expect(screen.getAllByRole('option')).toHaveLength(70);
         });
     });
 

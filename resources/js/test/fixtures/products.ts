@@ -217,6 +217,39 @@ export const materialOptions: MaterialOption[] = Object.values(catalogue).map(
     (item) => item.option,
 );
 
+/**
+ * What `GET /materials/options` answers for `params` (the request's query),
+ * like the server does: the first `limit` (default 20) materials whose name or
+ * SKU contains the search text (case-insensitive), by name then id, followed
+ * by the `include`d ones that were not among them.
+ */
+export function answerMaterialOptions(
+    params: Record<string, string | string[]>,
+    catalogueRows: readonly MaterialOption[] = materialOptions,
+): MaterialOption[] {
+    const search = typeof params.search === 'string' ? params.search : '';
+    const limit = typeof params.limit === 'string' ? Number(params.limit) : 20;
+    const include = (Array.isArray(params.include) ? params.include : []).map(
+        Number,
+    );
+
+    const byName = [...catalogueRows].sort(
+        (a, b) => a.name.localeCompare(b.name) || a.id - b.id,
+    );
+    const matches = byName
+        .filter(
+            (row) =>
+                row.name.toLowerCase().includes(search.toLowerCase()) ||
+                row.sku.toLowerCase().includes(search.toLowerCase()),
+        )
+        .slice(0, limit);
+    const extra = byName.filter(
+        (row) => include.includes(row.id) && !matches.includes(row),
+    );
+
+    return [...matches, ...extra];
+}
+
 /** The reference the capacity block carries for a material. */
 export function materialRef(key: CatalogueKey): MaterialRef {
     const { id, sku, name, unit } = catalogue[key].option;

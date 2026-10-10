@@ -6,7 +6,7 @@ import {
     toSubmittedRow,
 } from '@/components/products/bom-rows';
 import type { BomRow } from '@/components/products/bom-rows';
-import { matchesSearch } from '@/components/products/material-combobox';
+import { matchesSearch } from '@/components/products/material-search';
 
 describe('createRowUid / newBomRow', () => {
     it('gives every row its own key, never an index', () => {

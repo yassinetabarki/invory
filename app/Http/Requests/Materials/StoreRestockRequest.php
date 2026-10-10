@@ -9,19 +9,24 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class StoreRestockRequest extends FormRequest
 {
-    /**
-     * MOCK (ADR-0006): the restock is a preview write, so it needs the preview ability (denied in production) on top of
-     * the right to update the material. S-16-BE drops the preview ability.
-     */
+    /** Books a receipt of stock: the right to update the material (MaterialPolicy). */
     public function authorize(): bool
     {
         $material = $this->route('material');
-        $user = $this->user();
 
         return $material instanceof Material
-            && $user !== null
-            && $user->can('access-preview')
-            && $user->can('update', $material);
+            && ($this->user()?->can('update', $material) ?? false);
+    }
+
+    /**
+     * `update_unit_cost` is optional and means true when omitted (F-20, costing skill "Restock"). A value that is sent must still be
+     * a boolean, so a typo can't silently keep the old cost.
+     */
+    protected function prepareForValidation(): void
+    {
+        if (! $this->has('update_unit_cost')) {
+            $this->merge(['update_unit_cost' => true]);
+        }
     }
 
     /**

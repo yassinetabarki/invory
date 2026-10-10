@@ -12,6 +12,7 @@ use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\DemoCatalogSeeder;
 use Database\Seeders\DemoProductsSeeder;
 use Illuminate\Support\Facades\Gate;
+use Tests\Support\DemoHistory;
 
 /*
 |--------------------------------------------------------------------------
@@ -303,7 +304,7 @@ describe('fixture inputs', function () {
         $referenced = array_unique(array_merge(...array_map(fn (array $product): array => array_column($product['lines'], 'sku'), DemoProductsSeeder::PRODUCTS)));
 
         expect($referenced)->each->toBeIn($seeded)
-            ->and(array_keys(PreviewFixture::history()))->each->toBeIn($seeded);
+            ->and(array_keys(DemoHistory::entries()))->each->toBeIn($seeded);
     });
 });
 

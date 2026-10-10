@@ -25,7 +25,7 @@
  * ```
  *
  * Real exports are kept; `router`, `usePage`, `Head`, `Link`, `Form`,
- * `Deferred` and `useForm` are stubbed.
+ * `Deferred`, `useForm` and `useHttp` are stubbed.
  *
  * ## `<Link>`
  *
@@ -104,6 +104,32 @@
  * and `processing` (nested keys such as `'components.0.quantity'` work as
  * keys). Errors set by the component (`setError`, `clearErrors`) take over from
  * then on.
+ *
+ * ## `useHttp`
+ *
+ * `useHttp` makes no network call either. `get()`, `post()`, `put()`,
+ * `patch()`, `delete()` and `submit()` record a request in
+ * `inertiaMock.http.requests` and return a promise for it. A request knows its
+ * `method`, `url` (with the query), `path` and `params` (the query as an
+ * object: `include[]=4&include[]=5` is `include: ['4', '5']`).
+ *
+ * Answer requests in one of two ways:
+ *
+ * ```tsx
+ * // 1. A handler answers every request on its own (data, a promise, or a throw):
+ * respondToHttp(({ params }) => materialsMatching(params.search));
+ *
+ * // 2. No handler: requests wait, and the test answers them (in any order):
+ * const [first, second] = inertiaMock.http.requests;
+ * second.resolve([…]);
+ * first.reject(); // a network failure; a later first.resolve(…) is ignored
+ * ```
+ *
+ * `cancel()` (called by the component) rejects the hook's pending requests
+ * with a "Request was cancelled" error and marks them `status: 'cancelled'`
+ * (`ignoreHttpAbort()` turns that off).
+ * `status` is `'pending' | 'resolved' | 'rejected' | 'cancelled'`. Of the
+ * request options only `onSuccess` and `onFinish` are called.
  */
 import { act } from '@testing-library/react';
 import { useRef, useState, useSyncExternalStore } from 'react';
@@ -170,6 +196,23 @@ export type MockFormSubmission = {
     options?: Record<string, unknown>;
 };
 
+/** One request made through the mocked `useHttp` (see "useHttp" above). */
+export type MockHttpRequest = {
+    method: string;
+    /** The URL as requested, query included. */
+    url: string;
+    path: string;
+    /** The query: `key[]` parameters are arrays. */
+    params: Record<string, string | string[]>;
+    status: 'pending' | 'resolved' | 'rejected' | 'cancelled';
+    /** Answer the request (ignored once it has been answered or cancelled). */
+    resolve: (data: unknown) => void;
+    /** Fail the request, like a network error (ignored once answered or cancelled). */
+    reject: (error?: Error) => void;
+};
+
+type HttpHandler = (request: MockHttpRequest) => unknown;
+
 type InertiaMockState = {
     props: TestPageProps;
     url: string;
@@ -177,6 +220,11 @@ type InertiaMockState = {
     router: ReturnType<typeof createRouterMock>;
     form: MockFormState;
     submissions: MockFormSubmission[];
+    http: {
+        requests: MockHttpRequest[];
+        handler: HttpHandler | null;
+        abortWorks: boolean;
+    };
 };
 
 /** Mutable state read by the mocked `usePage()`; reset it between tests. */
@@ -187,6 +235,7 @@ export const inertiaMock: InertiaMockState = {
     router: createRouterMock(),
     form: { errors: {}, processing: false },
     submissions: [],
+    http: { requests: [], handler: null, abortWorks: true },
 };
 
 // Components read the page and form state through `useSyncExternalStore`, so a
@@ -231,6 +280,23 @@ export function setFormState(state: Partial<MockFormState>): void {
     notify();
 }
 
+/**
+ * Make the mocked `useHttp` answer every request with what `handler` returns
+ * (data, a promise of it, or a throw to fail the request).
+ */
+export function respondToHttp(handler: HttpHandler): void {
+    inertiaMock.http.handler = handler;
+}
+
+/**
+ * Make `cancel()` of the mocked `useHttp` do nothing, so a test can check that
+ * a component also ignores the answer of a request it asked to abort (the
+ * real hook only aborts the request it started last).
+ */
+export function ignoreHttpAbort(): void {
+    inertiaMock.http.abortWorks = false;
+}
+
 /** Restore default props and clear every router spy. Call in `beforeEach`. */
 export function resetInertiaMock(): void {
     inertiaMock.props = { ...defaultPageProps };
@@ -238,6 +304,7 @@ export function resetInertiaMock(): void {
     inertiaMock.component = 'Test';
     inertiaMock.form = { errors: {}, processing: false };
     inertiaMock.submissions = [];
+    inertiaMock.http = { requests: [], handler: null, abortWorks: true };
 
     for (const spy of Object.values(inertiaMock.router)) {
         spy.mockClear();
@@ -801,6 +868,156 @@ export function useFormMock(...args: unknown[]) {
     return form;
 }
 
+// ---------------------------------------------------------------------------
+// useHttp
+// ---------------------------------------------------------------------------
+
+function queryParams(url: string): Record<string, string | string[]> {
+    const params: Record<string, string | string[]> = {};
+
+    for (const [name, value] of new URL(url, 'http://localhost').searchParams) {
+        if (name.endsWith('[]')) {
+            const key = name.slice(0, -2);
+            const list = params[key];
+
+            params[key] = [...(Array.isArray(list) ? list : []), value];
+        } else {
+            params[name] = value;
+        }
+    }
+
+    return params;
+}
+
+/** The overloads of `submit`: (method, url, options), (pair, options). */
+function parseHttpSubmitArgs(args: unknown[]): {
+    method: string;
+    url: string;
+    options: Fields;
+} {
+    const [first, second, third] = args;
+
+    if (typeof first === 'string' && typeof second === 'string') {
+        return {
+            method: first.toLowerCase(),
+            url: second,
+            options: isRecord(third) ? third : {},
+        };
+    }
+
+    const { method, url } = toTarget(first);
+
+    if (method === undefined || url === undefined) {
+        throw new Error('The mocked useHttp needs a method and a URL.');
+    }
+
+    return { method, url, options: isRecord(second) ? second : {} };
+}
+
+/**
+ * A stand-in for Inertia's `useHttp`: no network. Requests are recorded in
+ * `inertiaMock.http.requests` and answered by `respondToHttp` or by the test.
+ */
+export function useHttpMock() {
+    const [processing, setProcessing] = useState(false);
+    const [response, setResponse] = useState<unknown>(null);
+    // Created once, so the functions keep their identity across renders like the real ones.
+    const [api] = useState(() => {
+        // The pending requests of this hook, each with the way to cancel it.
+        const pending = new Map<MockHttpRequest, () => void>();
+
+        function submit(...args: unknown[]): Promise<unknown> {
+            const { method, url, options } = parseHttpSubmitArgs(args);
+
+            return new Promise((resolvePromise, rejectPromise) => {
+                function settle(
+                    status: 'resolved' | 'rejected' | 'cancelled',
+                    run: () => void,
+                ) {
+                    if (request.status !== 'pending') {
+                        return;
+                    }
+
+                    request.status = status;
+                    pending.delete(request);
+                    setProcessing(pending.size > 0);
+                    run();
+
+                    if (isFunction(options.onFinish)) {
+                        options.onFinish();
+                    }
+                }
+
+                const request: MockHttpRequest = {
+                    method,
+                    url,
+                    path: new URL(url, 'http://localhost').pathname,
+                    params: queryParams(url),
+                    status: 'pending',
+                    resolve: (data) =>
+                        settle('resolved', () => {
+                            setResponse(data);
+
+                            if (isFunction(options.onSuccess)) {
+                                options.onSuccess(data);
+                            }
+
+                            resolvePromise(data);
+                        }),
+                    reject: (error = new Error('Network error')) =>
+                        settle('rejected', () => rejectPromise(error)),
+                };
+
+                pending.set(request, () =>
+                    settle('cancelled', () =>
+                        rejectPromise(new Error('Request was cancelled')),
+                    ),
+                );
+                inertiaMock.http.requests.push(request);
+                setProcessing(true);
+
+                const { handler } = inertiaMock.http;
+
+                if (handler) {
+                    Promise.resolve()
+                        .then(() => handler(request))
+                        .then(request.resolve, (error: unknown) =>
+                            request.reject(
+                                error instanceof Error
+                                    ? error
+                                    : new Error('Request failed'),
+                            ),
+                        );
+                }
+            });
+        }
+
+        const shortcut =
+            (method: string) => (url: string, options?: unknown) =>
+                submit(method, url, options);
+
+        return {
+            submit,
+            get: shortcut('get'),
+            post: shortcut('post'),
+            put: shortcut('put'),
+            patch: shortcut('patch'),
+            delete: shortcut('delete'),
+            cancel: () => {
+                if (!inertiaMock.http.abortWorks) {
+                    return;
+                }
+
+                for (const cancelRequest of [...pending.values()]) {
+                    cancelRequest();
+                }
+            },
+        };
+    });
+
+    return { ...api, processing, response, data: {}, errors: {} };
+}
+
 /**
  * Factory for `vi.mock('@inertiajs/react', …)`: keeps the real exports and
  * stubs `router`, `usePage`, `Head`, `Link`, `Form`, `Deferred` and `useForm`.
@@ -815,5 +1032,6 @@ export function createInertiaModule<T extends object>(original: T) {
         Form: MockForm,
         Deferred: MockDeferred,
         useForm: useFormMock,
+        useHttp: useHttpMock,
     };
 }

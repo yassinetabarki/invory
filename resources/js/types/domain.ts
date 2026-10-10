@@ -221,6 +221,13 @@ export type ProductFilters = {
     cant_produce: boolean; // true → max_producible = 0
 };
 
+/**
+ * Query of `GET materials/options` (route `materials.options`), the picker's typeahead. The response is a bare `MaterialOption[]`:
+ * the first `limit` (default 20, max 50) non-deleted materials whose name or SKU contains `search` (case-insensitive), by name then
+ * id, followed by the `include`d ids (max 50) that were not among them. An `include`d id that is soft-deleted or unknown is skipped.
+ */
+export type MaterialOptionsQuery = { search?: string; limit?: number; include?: number[] };
+
 /** A material the composition editor can pick. */
 export type MaterialOption = MaterialRef & {
     unit_label: string;
@@ -362,7 +369,6 @@ export type ProductsIndexProps = {
 };
 export type ProductCreateProps = {
     statuses: Option<ProductStatus>[];
-    materials: MaterialOption[]; // every non-deleted material, by name
 };
 export type ProductEditProps = ProductCreateProps & { product: Product };
 export type ProductShowProps = {

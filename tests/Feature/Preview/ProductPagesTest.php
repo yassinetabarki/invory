@@ -472,58 +472,36 @@ describe('show', function () {
 });
 
 describe('create and edit', function () {
-    it('sends the ProductCreateProps contract with every material by name', function () {
-        $denim = previewMaterial('MAT-DEN-012');
-
-        $response = actingAs($this->user)->get(route('products.create'));
-
-        expect(pageProp($response, 'materials.*.name'))->toBe([
-            'Brass rivet 9mm', 'Cotton canvas 10oz Natural', 'Cotton jersey 180gsm White', 'Denim 12oz Indigo',
-            'Metal shank button 17mm', 'Metal zipper 18cm', 'Nappa leather Cognac', 'Polyester thread',
-            'Rubber cupsole 42', 'Viscose lining Black', 'Waxed cotton laces 120cm', 'Woven brand label',
-        ]);
-
-        $response->assertOk()
+    it('sends the ProductCreateProps contract: the statuses, and no materials (the picker searches them, S-25)', function () {
+        actingAs($this->user)->get(route('products.create'))
+            ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('products/create')
                 ->missing('product')
                 ->missing('categories')
-                ->has('statuses', 3)
-                ->has('materials', 12)
-                ->where('materials.0.name', 'Brass rivet 9mm')
-                ->where('materials.11.name', 'Woven brand label')
-                ->has('materials.0', fn (Assert $option) => $option->hasAll([
-                    'id', 'sku', 'name', 'unit', 'unit_label', 'unit_cost', 'quantity_on_hand', 'stock_status',
-                ]))
-                ->where('materials.3', [
-                    'id' => $denim->id,
-                    'sku' => 'MAT-DEN-012',
-                    'name' => 'Denim 12oz Indigo',
-                    'unit' => 'm',
-                    'unit_label' => 'Metre (m)',
-                    'unit_cost' => '8.5000',
-                    'quantity_on_hand' => '250.0000',
-                    'stock_status' => 'in_stock',
-                ]));
+                ->missing('materials')
+                ->has('statuses', 3));
     });
 
-    it('leaves soft-deleted materials out of the picker', function () {
-        previewMaterial('MAT-LAC-120')->delete();
+    it('sends a create page that does not grow with the catalogue (at most 5 KB)', function () {
+        $size = fn (): int => strlen(json_encode(actingAs($this->user)->get(route('products.create'))->assertOk()->inertiaPage(), JSON_THROW_ON_ERROR));
 
-        $response = actingAs($this->user)->get(route('products.create'));
+        $small = $size();
+        Material::factory()->count(200)->create();
+        $large = $size();
 
-        expect(pageProp($response, 'materials'))->toHaveCount(11)
-            ->and(pageProp($response, 'materials.*.sku'))->not->toContain('MAT-LAC-120');
+        expect($large)->toBe($small)
+            ->and($large)->toBeLessThanOrEqual(5 * 1024);
     });
 
-    it('sends the same props plus the product on the edit page', function () {
+    it('sends the statuses and the product, but no materials, on the edit page', function () {
         actingAs($this->user)->get(route('products.edit', pid(4)))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('products/edit')
                 ->missing('categories')
+                ->missing('materials')
                 ->has('statuses', 3)
-                ->has('materials', 12)
                 ->where('product.id', pid(4))
                 ->where('product.name', 'Leather Tote')
                 ->where('product.cost.unit_cost', '101.0300')
@@ -554,8 +532,10 @@ it('reads the materials table once per page and answers within a bounded number 
 
     // What each page runs besides the reference lists of a full load: the list is the count, the products, their categories, their
     // lines, the materials of the lines and the units of those (6); a product is the row, its category, its lines, their materials
-    // and the units of those (5); the form needs the picker's materials and units (2); the edit page shares the picker with the lines (5).
-    $budget = ['index' => 6, 'show' => 5, 'create' => 2, 'edit' => 5];
+    // and the units of those (5); the create form reads nothing (the picker searches the materials through `materials.options`, S-25)
+    // and the edit page costs the lines like the show page (5).
+    $budget = ['index' => 6, 'show' => 5, 'create' => 0, 'edit' => 5];
+    $materialReads = ['index' => 1, 'show' => 1, 'create' => 0, 'edit' => 1];
 
     $baseline = array_map($count, $urls);
 
@@ -563,8 +543,8 @@ it('reads the materials table once per page and answers within a bounded number 
     Product::factory()->count(30)->withComponents(4)->create();
 
     foreach ($urls as $page => $url) {
-        // One read of the materials (the lines' or the picker's), never one per row.
-        expect($baseline[$page]['materials'])->toBe(1, "the {$page} page reads the materials table once")
+        // One read of the materials of the lines (none on the create page), never one per row.
+        expect($baseline[$page]['materials'])->toBe($materialReads[$page], "the {$page} page reads the materials table {$materialReads[$page]} time(s)")
             ->and($baseline[$page]['all'])->toBeLessThanOrEqual($budget[$page] + REFERENCE_QUERIES)
             // 40 more materials and 30 more products: not one more query.
             ->and($count($url))->toBe($baseline[$page]);

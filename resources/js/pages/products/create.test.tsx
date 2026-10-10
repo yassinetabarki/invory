@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import ProductsCreate from '@/pages/products/create';
 import {
+    answerMaterialOptions,
     materialOptions,
     productCategories,
     productStatuses,
@@ -15,6 +16,7 @@ import {
 import {
     inertiaMock,
     resetInertiaMock,
+    respondToHttp,
     setFormState,
     setPageProps,
 } from '@/test/inertia';
@@ -30,12 +32,12 @@ vi.mock('@inertiajs/react', async (importOriginal) => {
 
 const props: ProductCreateProps = {
     statuses: productStatuses,
-    materials: materialOptions,
 };
 
 describe('products/create page', () => {
     beforeEach(() => {
         resetInertiaMock();
+        respondToHttp(({ params }) => answerMaterialOptions(params));
         setPageProps(
             {},
             { url: '/products/create', component: 'products/create' },
@@ -53,7 +55,7 @@ describe('products/create page', () => {
         expect(screen.getByText('0 materials')).toBeInTheDocument();
     });
 
-    it('offers the categories, statuses and materials the server sent', async () => {
+    it('offers the categories the shared reference sent', async () => {
         const user = userEvent.setup();
 
         render(<ProductsCreate {...props} />);
@@ -66,12 +68,26 @@ describe('products/create page', () => {
                 .map((option) => option.textContent),
         ).toEqual(productCategories.map((option) => option.label));
 
-        await user.keyboard('{Escape}');
+    });
+
+    it('asks the server for materials only when a picker opens', async () => {
+        const user = userEvent.setup();
+
+        render(<ProductsCreate {...props} />);
+
+        expect(inertiaMock.http.requests).toHaveLength(0);
+
         await user.click(screen.getByRole('button', { name: 'Add material' }));
 
-        expect(screen.getAllByRole('option')).toHaveLength(
-            materialOptions.length,
-        );
+        expect(
+            await screen.findAllByRole('option'),
+        ).toHaveLength(materialOptions.length);
+        expect(inertiaMock.http.requests).toHaveLength(1);
+        expect(inertiaMock.http.requests[0]).toMatchObject({
+            method: 'get',
+            path: '/materials/options',
+            params: { limit: '20' },
+        });
     });
 
     it('cancels back to the products list', () => {

@@ -12,12 +12,13 @@ use App\Http\Requests\Materials\IndexMaterialRequest;
 use App\Http\Requests\Materials\StoreMaterialRequest;
 use App\Http\Requests\Materials\UpdateMaterialRequest;
 use App\Http\Resources\MaterialResource;
-use App\Mock\PreviewHistory;
+use App\Http\Resources\StockMovementResource;
 use App\Mock\PreviewMaterials;
 use App\Mock\PreviewProducts;
 use App\Models\Material;
 use App\Models\User;
 use App\Services\Inventory\InventorySummary;
+use App\Services\Inventory\StockHistory;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -27,12 +28,12 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * Materials are real (CRUD on the database, used-in counts from the real compositions). The parts that depend on tables that
- * do not exist yet (photos, usage, stock history) come from App\Mock (ADR-0006, removed by S-17).
+ * Materials are real (CRUD on the database, used-in counts from the real compositions, the stock history from the ledger). The
+ * parts that depend on tables that do not exist yet (photos, usage) come from App\Mock (ADR-0006, removed by S-17).
  */
 final class MaterialController extends Controller
 {
-    public function index(IndexMaterialRequest $request, InventorySummary $inventory): Response
+    public function index(IndexMaterialRequest $request, InventorySummary $inventory, StockHistory $history): Response
     {
         Gate::authorize('viewAny', Material::class);
 
@@ -72,8 +73,10 @@ final class MaterialController extends Controller
                     'inventory_value' => $totals['inventory_value'],
                 ];
             },
-            // MOCK (ADR-0006): the newest 5 movements of each material on this page, loaded after the first paint.
-            'recent_history' => Inertia::defer(fn (): array => PreviewHistory::recent($materials()->items())),
+            // The newest 5 movements of each material on this page, in one query, loaded after the first paint.
+            'recent_history' => Inertia::defer(fn (): AnonymousResourceCollection => StockMovementResource::collection(
+                $history->recentFor(array_map(static fn (Material $material): int => $material->id, $materials()->items())),
+            )),
         ]);
     }
 
@@ -95,17 +98,17 @@ final class MaterialController extends Controller
         return to_route('materials.show', $material);
     }
 
-    public function show(Material $material): Response
+    public function show(Material $material, StockHistory $history): Response
     {
         Gate::authorize('view', $material);
 
-        // MOCK (ADR-0006): the photo, and the history, come from the fixture. The usage is real, costed by ProductCostingService.
+        // MOCK (ADR-0006): the photo comes from the fixture. The usage is real (costed by ProductCostingService) and so is the history.
         PreviewMaterials::decorate([$material]);
 
         return Inertia::render('materials/show', [
             'material' => MaterialResource::make($material),
             'usage' => fn (): array => PreviewProducts::load()->usageOf($material),
-            'history' => fn (): array => PreviewHistory::byMaterial([$material])[$material->id] ?? [],
+            'history' => fn (): AnonymousResourceCollection => StockMovementResource::collection($history->forMaterial($material)),
         ]);
     }
 

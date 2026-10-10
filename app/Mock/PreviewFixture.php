@@ -6,35 +6,18 @@ declare(strict_types=1);
 
 namespace App\Mock;
 
-use App\Enums\StockMovementType;
-
 /**
- * The raw INPUTS of the UI-first preview: everything that has no table yet (sales, stock history, photo swatches). Source:
+ * The raw INPUTS of the UI-first preview: everything that has no table yet (sales, photo swatches). Source:
  * docs/plans/phase-2-ui-first-preview.md, "Preview fixture".
  *
  * Nothing here is derived: totals and rankings are computed on the server by the production domain class (SalesCalculator).
  * Dates are `days_ago`, relative to today. The materials and the demo products are real rows seeded by DemoCatalogSeeder and
- * DemoProductsSeeder; the sales and the history reference them by SKU, and a SKU with no row is skipped.
+ * DemoProductsSeeder; the sales reference them by SKU, and a SKU with no row is skipped.
  *
  * @phpstan-type FixtureSale array{id: int, days_ago: int, product_sku: string, quantity: int, unit_price: string, note: string|null}
- * @phpstan-type FixtureMovement array{
- *     days_ago: int,
- *     type: StockMovementType,
- *     quantity?: string,
- *     quantity_before?: string,
- *     quantity_after?: string,
- *     unit_price?: string,
- *     unit_cost_before?: string,
- *     unit_cost_after?: string,
- *     reference?: string,
- *     note?: string,
- * }
  */
 final class PreviewFixture
 {
-    /** Who did every history entry. */
-    public const USER_NAME = 'Admin';
-
     /** Public folder of the static swatches, relative to `public/`. */
     public const PHOTO_DIRECTORY = 'mock/photos';
 
@@ -115,73 +98,6 @@ final class PreviewFixture
             ],
             $rows,
         ));
-    }
-
-    /**
-     * Stock history keyed by material SKU, in the order that gives the entries their ids (1, 2, 3 … across the whole
-     * fixture): within a day, a higher id is newer. Quantities and prices are inputs, exactly as the plan states them.
-     *
-     * @return array<string, list<FixtureMovement>>
-     */
-    public static function history(): array
-    {
-        $created = StockMovementType::Created;
-        $restock = StockMovementType::Restock;
-        $correction = StockMovementType::Correction;
-        $priceChange = StockMovementType::PriceChange;
-
-        return [
-            'MAT-RVT-009' => [
-                ['days_ago' => 37, 'type' => $created, 'quantity' => '3000', 'unit_price' => '0.0800'],
-                ['days_ago' => 20, 'type' => $restock, 'quantity' => '2000', 'quantity_after' => '5000', 'unit_price' => '0.0800', 'reference' => 'PO-2270'],
-            ],
-            'MAT-CAN-010' => [
-                ['days_ago' => 37, 'type' => $created, 'quantity' => '180', 'unit_price' => '5.4000'],
-                ['days_ago' => 16, 'type' => $restock, 'quantity' => '120', 'quantity_after' => '300', 'unit_price' => '5.4000'],
-            ],
-            'MAT-JRS-180' => [
-                ['days_ago' => 37, 'type' => $created, 'quantity' => '120', 'unit_price' => '4.2000'],
-                ['days_ago' => 13, 'type' => $correction, 'quantity_before' => '120', 'quantity_after' => '64', 'note' => 'Stock count'],
-            ],
-            'MAT-DEN-012' => [
-                ['days_ago' => 37, 'type' => $created, 'quantity' => '150', 'unit_price' => '8.5000'],
-                ['days_ago' => 18, 'type' => $restock, 'quantity' => '100', 'quantity_after' => '250', 'unit_price' => '8.5000', 'reference' => 'PO-2281'],
-            ],
-            'MAT-BTN-017' => [
-                ['days_ago' => 37, 'type' => $created, 'quantity' => '600', 'unit_price' => '0.3200'],
-                ['days_ago' => 24, 'type' => $correction, 'quantity_before' => '600', 'quantity_after' => '400', 'note' => 'Stock count'],
-                ['days_ago' => 6, 'type' => $restock, 'quantity' => '500', 'quantity_after' => '900', 'unit_price' => '0.3500', 'reference' => 'PO-2291'],
-                ['days_ago' => 6, 'type' => $priceChange, 'unit_cost_before' => '0.3200', 'unit_cost_after' => '0.3500'],
-            ],
-            'MAT-ZIP-018' => [
-                ['days_ago' => 37, 'type' => $created, 'quantity' => '750', 'unit_price' => '0.9500'],
-                ['days_ago' => 22, 'type' => $restock, 'quantity' => '500', 'quantity_after' => '1250', 'unit_price' => '0.9500'],
-            ],
-            'MAT-LTH-NAP' => [
-                ['days_ago' => 37, 'type' => $created, 'quantity' => '340', 'unit_price' => '6.8000'],
-                ['days_ago' => 10, 'type' => $restock, 'quantity' => '200', 'quantity_after' => '540', 'unit_price' => '6.8000', 'reference' => 'PO-2286'],
-            ],
-            'MAT-THR-PES' => [
-                ['days_ago' => 37, 'type' => $created, 'quantity' => '10000', 'unit_price' => '0.0040'],
-                ['days_ago' => 28, 'type' => $restock, 'quantity' => '10000', 'quantity_after' => '20000', 'unit_price' => '0.0040'],
-            ],
-            'MAT-SOL-042' => [
-                ['days_ago' => 37, 'type' => $created, 'quantity' => '60', 'unit_price' => '5.9000'],
-                ['days_ago' => 8, 'type' => $correction, 'quantity_before' => '60', 'quantity_after' => '0', 'note' => 'Used in production'],
-            ],
-            'MAT-LIN-VIS' => [
-                ['days_ago' => 37, 'type' => $created, 'quantity' => '180', 'unit_price' => '3.1000'],
-            ],
-            'MAT-LAC-120' => [
-                ['days_ago' => 37, 'type' => $created, 'quantity' => '400', 'unit_price' => '0.4500'],
-                ['days_ago' => 26, 'type' => $restock, 'quantity' => '200', 'quantity_after' => '600', 'unit_price' => '0.4500'],
-            ],
-            'MAT-LBL-WOV' => [
-                ['days_ago' => 37, 'type' => $created, 'quantity' => '250', 'unit_price' => '0.1000'],
-                ['days_ago' => 14, 'type' => $restock, 'quantity' => '150', 'quantity_after' => '400', 'unit_price' => '0.1200'],
-                ['days_ago' => 14, 'type' => $priceChange, 'unit_cost_before' => '0.1000', 'unit_cost_after' => '0.1200'],
-            ],
-        ];
     }
 
     /**

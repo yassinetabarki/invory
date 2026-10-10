@@ -21,13 +21,18 @@ type BomEditorRowProps = {
     isLast: boolean;
     /** Prefix that makes this editor's element ids unique on the page. */
     idPrefix: string;
-    materials: MaterialOption[];
+    /** The row's material, when known (picked rows are remembered by the editor). */
+    material: MaterialOption | undefined;
     /** Ids picked on the other rows. */
     usedIds: ReadonlySet<number>;
+    /** Every material id picked on the form. */
+    include: readonly number[];
     errors: RowErrors;
     pickerOpen: boolean;
     onPickerOpenChange: (open: boolean) => void;
     onChange: (patch: Partial<ProductComponentFormRow>) => void;
+    /** Every option the picker loads, for the editor to remember. */
+    onMaterialsLoaded: (options: MaterialOption[]) => void;
     onMove: (direction: 'up' | 'down') => void;
     onRemove: () => void;
 };
@@ -57,16 +62,17 @@ export function BomEditorRow({
     isFirst,
     isLast,
     idPrefix,
-    materials,
+    material,
     usedIds,
+    include,
     errors,
     pickerOpen,
     onPickerOpenChange,
     onChange,
+    onMaterialsLoaded,
     onMove,
     onRemove,
 }: BomEditorRowProps) {
-    const material = materials.find((option) => option.id === row.material_id);
     const label =
         row.material_id === ''
             ? 'new material'
@@ -112,11 +118,13 @@ export function BomEditorRow({
                     aria-describedby={
                         errors.material_id ? errorIds.material : undefined
                     }
-                    materials={materials}
+                    selected={material}
                     value={row.material_id}
                     usedIds={usedIds}
+                    include={include}
                     open={pickerOpen}
                     onOpenChange={onPickerOpenChange}
+                    onLoaded={onMaterialsLoaded}
                     onSelect={(picked) => {
                         onChange({ material_id: picked.id });
                         onPickerOpenChange(false);

@@ -8,7 +8,6 @@ import type { ProductEditProps } from '@/types/domain';
 export default function ProductsEdit({
     product,
     statuses,
-    materials,
 }: ProductEditProps) {
     const reference = useReference();
 
@@ -29,7 +28,6 @@ export default function ProductsEdit({
                         product.category,
                     )}
                     statuses={statuses}
-                    materials={materials}
                     action={{
                         url: ProductController.update.url(product.id),
                         method: 'put',

@@ -3,9 +3,9 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import ProductsEdit from '@/pages/products/edit';
 import {
+    answerMaterialOptions,
     choreJacket,
     denimJacket,
-    materialOptions,
     productStatuses,
 } from '@/test/fixtures/products';
 import {
@@ -16,6 +16,7 @@ import {
 import {
     inertiaMock,
     resetInertiaMock,
+    respondToHttp,
     setFormState,
     setPageProps,
 } from '@/test/inertia';
@@ -33,13 +34,13 @@ function props(product: Product = denimJacket): ProductEditProps {
     return {
         product,
         statuses: productStatuses,
-        materials: materialOptions,
     };
 }
 
 describe('products/edit page', () => {
     beforeEach(() => {
         resetInertiaMock();
+        respondToHttp(({ params }) => answerMaterialOptions(params));
         setPageProps(
             {},
             { url: '/products/1/edit', component: 'products/edit' },
@@ -66,6 +67,37 @@ describe('products/edit page', () => {
                 screen.getByRole('group', { name: /^Row 2:/ }),
             ).getByLabelText('Quantity per unit for Metal shank button 17mm'),
         ).toHaveValue('8');
+    });
+
+    it('shows the saved rows with their units without asking the server for materials', () => {
+        render(<ProductsEdit {...props()} />);
+
+        expect(
+            within(screen.getByRole('group', { name: /^Row 1:/ })).getByRole(
+                'combobox',
+                { name: /Denim 12oz Indigo/ },
+            ),
+        ).toHaveTextContent('MAT-DEN-012');
+        expect(
+            screen.getByLabelText(
+                'Quantity per unit for Metal shank button 17mm',
+            ).parentElement,
+        ).toHaveTextContent('pc');
+        expect(inertiaMock.http.requests).toHaveLength(0);
+    });
+
+    it('asks for the picked materials along with the first page when a picker opens', async () => {
+        const user = userEvent.setup();
+
+        render(<ProductsEdit {...props()} />);
+        await user.click(screen.getByRole('button', { name: 'Add material' }));
+        await screen.findAllByRole('option');
+
+        expect(inertiaMock.http.requests).toHaveLength(1);
+        expect(inertiaMock.http.requests[0].params).toEqual({
+            limit: '20',
+            include: ['4', '5', '8', '12'],
+        });
     });
 
     it('shows the current photo', () => {

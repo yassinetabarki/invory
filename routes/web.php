@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MaterialController;
+use App\Http\Controllers\MaterialOptionController;
 use App\Http\Controllers\MaterialRestockController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\SaleController;
@@ -11,6 +12,9 @@ Route::inertia('/', 'welcome')->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
+
+    // The BOM picker's typeahead (S-25). Registered before the resource, which would otherwise read `options` as a {material}.
+    Route::get('materials/options', [MaterialOptionController::class, 'index'])->name('materials.options');
 
     // 1 to 18 digits: anything else is a 404 instead of a type error (int $id overflow) or, on PostgreSQL, a bigint query error.
     Route::resource('materials', MaterialController::class)->where(['material' => '[0-9]{1,18}']);

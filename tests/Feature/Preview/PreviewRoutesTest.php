@@ -63,10 +63,10 @@ function previewRouteRows(): array
 
 dataset('previewRoutes', previewRouteRows());
 
-/** The routes that are still served from fixtures, so still behind the `access-preview` ability. */
+/** The routes that are still served from fixtures, so still behind the `access-preview` ability (restocks are real since S-16-BE). */
 dataset('previewOnlyRoutes', array_filter(
     previewRouteRows(),
-    static fn (string $name): bool => ! str_starts_with($name, 'products.'),
+    static fn (string $name): bool => ! str_starts_with($name, 'products.') && $name !== 'materials.restocks.store',
     ARRAY_FILTER_USE_KEY,
 ));
 
@@ -190,7 +190,7 @@ it('sends an invalid preview write back to where it came from, with its errors',
     'products.update' => ['put', 'products.update', 'product', ['sku', 'name', 'category', 'status', 'labor_cost', 'overhead_cost']],
     'sales.store' => ['post', 'sales.store', null, ['product_id', 'quantity', 'unit_price', 'sold_on']],
     'sales.update' => ['put', 'sales.update', 1, ['product_id', 'quantity', 'unit_price', 'sold_on']],
-    'restock' => ['post', 'materials.restocks.store', 'material', ['quantity', 'unit_price', 'received_on', 'update_unit_cost']],
+    'restock' => ['post', 'materials.restocks.store', 'material', ['quantity', 'unit_price', 'received_on']], // update_unit_cost is optional (F-20)
 ]);
 
 it('redirects a restock back to where it came from', function () {
@@ -203,12 +203,11 @@ it('redirects a restock back to where it came from', function () {
         ->assertSessionHasNoErrors();
 });
 
-it('persists nothing on valid preview writes (sales and restocks)', function () {
+it('persists nothing on valid preview writes (sales)', function () {
     $material = Material::factory()->create(['quantity_on_hand' => '10.0000', 'unit_cost' => '2.0000']);
     $rowsBefore = Material::withTrashed()->orderBy('id')->get()->toArray();
     $tablesBefore = Schema::getTableListing();
 
-    actingAs($this->user)->post(route('materials.restocks.store', $material), validRestockPayload())->assertSessionHasNoErrors();
     actingAs($this->user)->post(route('sales.store'), validSalePayload())->assertSessionHasNoErrors();
     actingAs($this->user)->put(route('sales.update', 1), validSalePayload())->assertSessionHasNoErrors();
     actingAs($this->user)->delete(route('sales.destroy', 1))->assertSessionHasNoErrors();
@@ -284,7 +283,7 @@ it('serves the last demo product and the last fixture sale', function () {
     actingAs($this->user)->delete('/sales/60')->assertRedirect();
 });
 
-it('asks the material policy before a restock, on top of the preview ability', function () {
+it('asks the material policy before a restock', function () {
     $material = Material::factory()->create();
     Gate::policy(Material::class, DenyMaterialUpdatePolicy::class);
 
@@ -352,5 +351,18 @@ describe('access-preview', function () {
 
         actingAs($this->user)->get(route('materials.index'))->assertOk();
         actingAs($this->user)->get(route('materials.show', $material))->assertOk();
+    });
+
+    it('books a restock in production: it is real since S-16-BE, so the preview lock does not apply', function () {
+        $material = Material::factory()->create(['quantity_on_hand' => '10.0000']);
+        $this->app->detectEnvironment(fn () => 'production');
+
+        // CSRF is only skipped in the testing environment, so the write carries a token.
+        actingAs($this->user)
+            ->withSession(['_token' => 'preview-test'])
+            ->post(route('materials.restocks.store', $material), [...validRestockPayload(['quantity' => '5']), '_token' => 'preview-test'])
+            ->assertSessionHasNoErrors();
+
+        expect($material->fresh()->quantity_on_hand)->toBe('15.0000');
     });
 });

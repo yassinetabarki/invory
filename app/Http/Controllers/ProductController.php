@@ -14,15 +14,12 @@ use App\Http\Requests\Products\StoreProductRequest;
 use App\Http\Requests\Products\UpdateProductRequest;
 use App\Http\Resources\ProductListResource;
 use App\Http\Resources\ProductResource;
-use App\Mock\PreviewMaterials;
 use App\Mock\PreviewProducts;
 use App\Mock\PreviewSales;
-use App\Models\Material;
 use App\Models\Product;
 use App\Models\User;
 use App\Services\Costing\ProductCostingService;
 use App\Services\Products\ProductIndexQuery;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -73,8 +70,6 @@ final class ProductController extends Controller
 
         return Inertia::render('products/create', [
             'statuses' => ProductStatus::options(),
-            // MOCK (ADR-0006): unchanged until S-25 searches the materials server-side.
-            'materials' => fn (): array => PreviewMaterials::options(PreviewMaterials::byName()),
         ]);
     }
 
@@ -117,30 +112,11 @@ final class ProductController extends Controller
     {
         Gate::authorize('update', $product);
 
-        // One query, however many of the two props below are sent: the picker lists every material and the lines of the product
-        // are costed against the same rows. A partial reload that lists neither runs no query.
-        /** @var Collection<int, Material>|null $loaded */
-        $loaded = null;
-        $materials = function () use (&$loaded): Collection {
-            return $loaded ??= PreviewMaterials::byName();
-        };
-
         return Inertia::render('products/edit', [
             'statuses' => ProductStatus::options(),
-            'materials' => fn (): array => PreviewMaterials::options($materials()),
-            'product' => function () use ($materials, $product, $costing): ProductResource {
-                $product->load(['category', 'components']);
-
-                // The lines point at materials the picker already holds. One that is not in it (soft-deleted) loads on its own.
-                $byId = $materials()->keyBy('id');
-
-                foreach ($product->components as $component) {
-                    $material = $byId->get($component->material_id);
-
-                    if ($material !== null) {
-                        $component->setRelation('material', $material);
-                    }
-                }
+            // The picker searches the materials itself (`materials.options`, S-25): only the materials of the lines are loaded here.
+            'product' => function () use ($product, $costing): ProductResource {
+                $product->load(['category', 'components.material' => fn ($materials) => $materials->without('category')]);
 
                 return $this->resource($product, $costing);
             },

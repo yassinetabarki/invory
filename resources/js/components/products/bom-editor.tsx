@@ -9,8 +9,12 @@ import type { MaterialOption, ProductComponentFormRow } from '@/types/domain';
 
 type BomEditorProps = {
     rows: BomRow[];
-    /** Every material that can be picked. */
-    materials: MaterialOption[];
+    /**
+     * The materials the rows already use (name, unit, cost and stock), so
+     * they show without a request. Only seeds the editor; the picker adds
+     * every option it loads.
+     */
+    knownMaterials?: readonly MaterialOption[];
     /**
      * The form's errors by key: `components` for the list as a whole and
      * `components.N.field` for a row's field (`N` is the row's position, from 0).
@@ -26,11 +30,15 @@ type BomEditorProps = {
  */
 export function BomEditor({
     rows,
-    materials,
+    knownMaterials = [],
     errors,
     onChange,
 }: BomEditorProps) {
     const idPrefix = useId();
+    // id → material for every material seen: seeded by the caller, then fed by the picker.
+    const [catalog, setCatalog] = useState<ReadonlyMap<number, MaterialOption>>(
+        () => new Map(knownMaterials.map((material) => [material.id, material])),
+    );
     const containerRef = useRef<HTMLElement>(null);
     // The picker that is open (one at a time), by row uid.
     const [openUid, setOpenUid] = useState<string | null>(null);
@@ -59,6 +67,18 @@ export function BomEditor({
         onChange(
             rows.map((row) => (row.uid === uid ? { ...row, ...patch } : row)),
         );
+    }
+
+    function rememberMaterials(options: MaterialOption[]) {
+        setCatalog((current) => {
+            const next = new Map(current);
+
+            for (const option of options) {
+                next.set(option.id, option);
+            }
+
+            return next;
+        });
     }
 
     function addRow() {
@@ -105,6 +125,10 @@ export function BomEditor({
         onChange(next);
     }
 
+    // Picked on any row: the picker asks the server to send these too.
+    const pickedIds = rows.flatMap((row) =>
+        row.material_id === '' ? [] : [row.material_id],
+    );
     const countLabel = `${rows.length} ${rows.length === 1 ? 'material' : 'materials'}`;
 
     return (
@@ -169,7 +193,12 @@ export function BomEditor({
                                     isFirst={index === 0}
                                     isLast={index === rows.length - 1}
                                     idPrefix={idPrefix}
-                                    materials={materials}
+                                    material={
+                                        row.material_id === ''
+                                            ? undefined
+                                            : catalog.get(row.material_id)
+                                    }
+                                    include={pickedIds}
                                     usedIds={
                                         new Set(
                                             rows.flatMap((other) =>
@@ -194,6 +223,7 @@ export function BomEditor({
                                     onChange={(patch) =>
                                         updateRow(row.uid, patch)
                                     }
+                                    onMaterialsLoaded={rememberMaterials}
                                     onMove={(direction) =>
                                         moveRow(index, direction)
                                     }

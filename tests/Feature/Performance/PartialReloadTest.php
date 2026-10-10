@@ -118,8 +118,9 @@ describe('products index', function () {
 });
 
 describe('products create and edit', function () {
-    it('does not load the materials picker when it is not requested', function () {
-        $firstVisit = $this->get(route('products.create'))->assertOk();
+    it('sends no materials on the create page: the picker searches them itself (S-25)', function () {
+        $firstVisit = $this->get(route('products.create'))->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->missing('materials')->has('statuses', 3));
 
         $queries = partialReloadQueries(
             $firstVisit,
@@ -127,32 +128,21 @@ describe('products create and edit', function () {
             fn (Assert $partial) => $partial->missing('materials')->missing('categories')->has('statuses'),
         );
 
-        // No query: the status list is a free enum list and the picker's materials are not read.
+        // No query: the status list is a free enum list, and there is no picker prop to read the materials for.
         expect($queries)->toBeEmpty();
     });
 
-    it('sends the picker on a full visit and when it is requested', function () {
-        $firstVisit = $this->get(route('products.create'))->assertOk()
-            ->assertInertia(fn (Assert $page) => $page->has('materials', 12));
-
-        $queries = partialReloadQueries($firstVisit, ['materials'], fn (Assert $partial) => $partial->has('materials', 12));
-
-        // One read of the materials plus their units (eager-loaded, never the categories).
-        expect(queriesMatching($queries, 'from "materials"'))->toHaveCount(1)
-            ->and($queries)->toHaveCount(2);
-    });
-
-    it('reads the materials once for the picker and the costing of the product on the edit page', function () {
+    it('reads only the materials of the lines to cost the product on the edit page', function () {
         $firstVisit = $this->get(route('products.edit', pid(1)))->assertOk();
 
         $queries = partialReloadQueries(
             $firstVisit,
-            ['materials', 'product'],
-            fn (Assert $partial) => $partial->has('materials', 12)->has('product.components'),
+            ['product'],
+            fn (Assert $partial) => $partial->missing('materials')->has('product.components'),
         );
 
-        // The route-model binding of the product, its category and lines, ONE read of the materials (the picker's, which the lines
-        // share, however many of the two props are sent) and their units (eager-loaded).
+        // The route-model binding of the product, its category and lines, ONE read of the materials (those of the lines) and their
+        // units (eager-loaded).
         expect(queriesMatching($queries, 'from "materials"'))->toHaveCount(1)
             ->and($queries)->toHaveCount(5);
     });

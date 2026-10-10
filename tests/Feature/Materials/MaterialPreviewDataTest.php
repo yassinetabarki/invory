@@ -5,6 +5,7 @@ use App\Models\Material;
 use App\Models\ProductComponent;
 use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
+use Tests\Support\DemoHistory;
 
 use function Pest\Laravel\actingAs;
 
@@ -14,8 +15,8 @@ use function Pest\Laravel\actingAs;
 |--------------------------------------------------------------------------
 |
 | The materials are real rows (DemoCatalogSeeder) and so are the products that use them: the used-in counts and "what you can
-| make with it" read the real compositions (costed by ProductCostingService). What has no table yet (photos, stock history) is
-| added from App\Mock. Time frozen at 2026-10-08.
+| make with it" read the real compositions (costed by ProductCostingService), and the history is the real ledger (StockHistoryPropsTest). What
+| has no table yet (photos) is added from App\Mock. Time frozen at 2026-10-08.
 */
 
 beforeEach(fn () => $this->user = preparePreview($this));
@@ -128,64 +129,12 @@ describe('index', function () {
         expect($baseline)->toBeLessThanOrEqual(5 + REFERENCE_QUERIES)
             ->and($queries())->toBe($baseline);
     });
-
-    describe('deferred recent history', function () {
-        it('is not part of the first response', function () {
-            actingAs($this->user)->get(route('materials.index'))
-                ->assertInertia(fn (Assert $page) => $page->missing('recent_history')->has('materials.data', 12));
-        });
-
-        it('loads the newest movements of every material on the page, material by material', function () {
-            actingAs($this->user)->get(route('materials.index'))
-                ->assertInertia(fn (Assert $page) => $page->loadDeferredProps(function (Assert $reloaded) {
-                    $reloaded->has('recent_history', 26, fn (Assert $movement) => $movement->hasAll([
-                        'id', 'material_id', 'type', 'type_label', 'occurred_on', 'quantity', 'quantity_before', 'quantity_after',
-                        'unit_price', 'unit_cost_before', 'unit_cost_after', 'reference', 'note', 'user_name',
-                    ]));
-                }));
-        });
-
-        it('keeps the order of the materials and puts the newest entry of each first', function () {
-            $response = actingAs($this->user)->get(route('materials.index'));
-
-            $response->assertInertia(fn (Assert $page) => $page->loadDeferredProps(function (Assert $reloaded) {
-                $props = $reloaded->toArray()['props'];
-
-                // The materials by name: rivet, canvas, jersey, denim, button, zipper, nappa, thread, cupsole, lining, laces, label.
-                expect(array_column($props['recent_history'], 'id'))->toBe([
-                    2, 1, 4, 3, 6, 5, 8, 7, 12, 11, 10, 9, 14, 13, 16, 15, 18, 17, 20, 19, 21, 23, 22, 26, 25, 24,
-                ])->and(array_column($props['recent_history'], 'material_id'))->toBe(array_map(
-                    fn (string $sku): int => previewMaterial($sku)->id,
-                    [
-                        'MAT-RVT-009', 'MAT-RVT-009', 'MAT-CAN-010', 'MAT-CAN-010', 'MAT-JRS-180', 'MAT-JRS-180', 'MAT-DEN-012', 'MAT-DEN-012',
-                        'MAT-BTN-017', 'MAT-BTN-017', 'MAT-BTN-017', 'MAT-BTN-017', 'MAT-ZIP-018', 'MAT-ZIP-018', 'MAT-LTH-NAP', 'MAT-LTH-NAP',
-                        'MAT-THR-PES', 'MAT-THR-PES', 'MAT-SOL-042', 'MAT-SOL-042', 'MAT-LIN-VIS', 'MAT-LAC-120', 'MAT-LAC-120',
-                        'MAT-LBL-WOV', 'MAT-LBL-WOV', 'MAT-LBL-WOV',
-                    ],
-                ));
-            }));
-        });
-
-        it('only covers the materials of the filtered page', function () {
-            actingAs($this->user)->get(route('materials.index', ['category' => 'thread']))
-                ->assertInertia(fn (Assert $page) => $page->loadDeferredProps(function (Assert $reloaded) {
-                    expect(array_column($reloaded->toArray()['props']['recent_history'], 'id'))->toBe([18, 17]);
-                }));
-        });
-
-        it('is empty for a page of materials with no history', function () {
-            Material::factory()->create(['sku' => 'ZZZ-NEW', 'name' => 'Zzz new']);
-
-            actingAs($this->user)->get(route('materials.index', ['search' => 'zzz new']))
-                ->assertInertia(fn (Assert $page) => $page->loadDeferredProps(function (Assert $reloaded) {
-                    expect($reloaded->toArray()['props']['recent_history'])->toBe([]);
-                }));
-        });
-    });
 });
 
 describe('show', function () {
     it('sends the MaterialShowProps contract', function () {
+        DemoHistory::seed();
+
         actingAs($this->user)->get(route('materials.show', previewMaterial('MAT-BTN-017')))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
@@ -318,138 +267,6 @@ describe('show', function () {
                 ->where('history', [])
                 ->where('material.used_in_count', 0)
                 ->where('material.photo_url', null));
-    });
-
-    it('sends the history of the button, newest first, with every value of the plan', function () {
-        $button = previewMaterial('MAT-BTN-017');
-        $response = actingAs($this->user)->get(route('materials.show', $button));
-
-        expect(pageProp($response, 'history'))->toBe([
-            [
-                'id' => 12,
-                'material_id' => $button->id,
-                'type' => 'price_change',
-                'type_label' => 'Price change',
-                'occurred_on' => '2026-10-02',
-                'quantity' => null,
-                'quantity_before' => null,
-                'quantity_after' => null,
-                'unit_price' => null,
-                'unit_cost_before' => '0.3200',
-                'unit_cost_after' => '0.3500',
-                'reference' => null,
-                'note' => null,
-                'user_name' => 'Admin',
-            ],
-            [
-                'id' => 11,
-                'material_id' => $button->id,
-                'type' => 'restock',
-                'type_label' => 'Restock',
-                'occurred_on' => '2026-10-02',
-                'quantity' => '500.0000',
-                'quantity_before' => null,
-                'quantity_after' => '900.0000',
-                'unit_price' => '0.3500',
-                'unit_cost_before' => null,
-                'unit_cost_after' => null,
-                'reference' => 'PO-2291',
-                'note' => null,
-                'user_name' => 'Admin',
-            ],
-            [
-                'id' => 10,
-                'material_id' => $button->id,
-                'type' => 'correction',
-                'type_label' => 'Correction',
-                'occurred_on' => '2026-09-14',
-                'quantity' => null,
-                'quantity_before' => '600.0000',
-                'quantity_after' => '400.0000',
-                'unit_price' => null,
-                'unit_cost_before' => null,
-                'unit_cost_after' => null,
-                'reference' => null,
-                'note' => 'Stock count',
-                'user_name' => 'Admin',
-            ],
-            [
-                'id' => 9,
-                'material_id' => $button->id,
-                'type' => 'created',
-                'type_label' => 'Created',
-                'occurred_on' => '2026-09-01',
-                'quantity' => '600.0000',
-                'quantity_before' => null,
-                'quantity_after' => '600.0000',
-                'unit_price' => '0.3200',
-                'unit_cost_before' => null,
-                'unit_cost_after' => null,
-                'reference' => null,
-                'note' => null,
-                'user_name' => 'Admin',
-            ],
-        ]);
-    });
-
-    it('lists a same-day restock and price change newest entry first (higher id)', function () {
-        $label = previewMaterial('MAT-LBL-WOV');
-        $response = actingAs($this->user)->get(route('materials.show', $label));
-
-        expect(pageProp($response, 'history.*.id'))->toBe([26, 25, 24])
-            ->and(pageProp($response, 'history.*.type'))->toBe(['price_change', 'restock', 'created'])
-            ->and(pageProp($response, 'history.*.occurred_on'))->toBe(['2026-09-24', '2026-09-24', '2026-09-01'])
-            ->and(pageProp($response, 'history.0'))->toMatchArray(['unit_cost_before' => '0.1000', 'unit_cost_after' => '0.1200'])
-            ->and(pageProp($response, 'history.1'))->toMatchArray(['quantity' => '150.0000', 'quantity_after' => '400.0000', 'unit_price' => '0.1200', 'reference' => null]);
-    });
-
-    it('has only the opening entry for a material that was never touched', function () {
-        $response = actingAs($this->user)->get(route('materials.show', previewMaterial('MAT-LIN-VIS')));
-
-        expect(pageProp($response, 'history'))->toHaveCount(1)
-            ->and(pageProp($response, 'history.0'))->toMatchArray([
-                'id' => 21,
-                'type' => 'created',
-                'quantity' => '180.0000',
-                'quantity_after' => '180.0000',
-                'unit_price' => '3.1000',
-                'occurred_on' => '2026-09-01',
-            ]);
-    });
-
-    it('sends every material\'s history by the plan\'s entry counts', function (string $sku, int $entries, array $types) {
-        $response = actingAs($this->user)->get(route('materials.show', previewMaterial($sku)));
-
-        expect(pageProp($response, 'history'))->toHaveCount($entries)
-            ->and(pageProp($response, 'history.*.type'))->toBe($types);
-    })->with([
-        'rivet' => ['MAT-RVT-009', 2, ['restock', 'created']],
-        'canvas' => ['MAT-CAN-010', 2, ['restock', 'created']],
-        'jersey' => ['MAT-JRS-180', 2, ['correction', 'created']],
-        'denim' => ['MAT-DEN-012', 2, ['restock', 'created']],
-        'button' => ['MAT-BTN-017', 4, ['price_change', 'restock', 'correction', 'created']],
-        'zipper' => ['MAT-ZIP-018', 2, ['restock', 'created']],
-        'nappa' => ['MAT-LTH-NAP', 2, ['restock', 'created']],
-        'thread' => ['MAT-THR-PES', 2, ['restock', 'created']],
-        'cupsole' => ['MAT-SOL-042', 2, ['correction', 'created']],
-        'lining' => ['MAT-LIN-VIS', 1, ['created']],
-        'laces' => ['MAT-LAC-120', 2, ['restock', 'created']],
-        'label' => ['MAT-LBL-WOV', 3, ['price_change', 'restock', 'created']],
-    ]);
-
-    it('serialises the seed values the history started from', function () {
-        // A correction records the quantities before and after, never a unit price.
-        $response = actingAs($this->user)->get(route('materials.show', previewMaterial('MAT-SOL-042')));
-
-        expect(pageProp($response, 'history.0'))->toMatchArray([
-            'id' => 20,
-            'type' => 'correction',
-            'quantity_before' => '60.0000',
-            'quantity_after' => '0.0000',
-            'unit_price' => null,
-            'note' => 'Used in production',
-            'occurred_on' => '2026-09-30',
-        ]);
     });
 
     it('answers 404 for an unknown or deleted material', function () {

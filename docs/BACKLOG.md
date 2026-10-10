@@ -245,6 +245,7 @@ The plan's §F.3 lists the amendments to S-04, S-14-BE, S-15-BE, S-16-BE, S-06-B
 - **Acceptance:** product create JSON ≤ 5 KB at any catalogue size; render test with 50 rows / 2 000 materials
 
 ## S-26 · Production runtime — `Proposed` · size M (Phase 4)
+**Requirement (recorded 2026-10-09):** the production PostgreSQL must be 13+ with the app role owning the database (so `pg_trgm` installs itself), or a superuser runs `CREATE EXTENSION pg_trgm;` once before the first migrate.
 **Owners:** TL (ADR) + BE
 - [ ] Production image (FrankenPHP or php-fpm + nginx), OPcache without timestamp checks, `artisan optimize`, classmap-authoritative autoload, immutable + Brotli static assets, sessions/cache store decision, health check
 
@@ -293,7 +294,7 @@ From the Phase 2 review (2026-10-08, all MINOR/NIT, none blocking):
 - **F-17 (NIT, FE)**: the sale form shows the server's unit price as `89.0000`, while the product form trims to `89` with the string-only `trimDecimal`. Reuse it for consistency.
 - **F-18 (NIT, FE)**: primary buttons hover lighter (shadcn `bg-primary/90`) instead of the mockup's darker `#1E2A66`. Add a `--primary-hover` token if the human wants the mockup's hover.
 - **F-19 (NIT, contract)**: Laravel's `meta.links` entries carry a `page` key that `PaginationLink` doesn't declare. Add `page?: number | null`.
-- **F-20 (decide before S-16-BE)**: `StoreRestockRequest` requires `update_unit_cost`; the skill says "boolean (default true)". Decide whether an omitted value means true. The UI always sends it.
+- **F-20 (decided 2026-10-09: optional, default true; done in S-16-BE)**: `StoreRestockRequest` requires `update_unit_cost`; the skill says "boolean (default true)". Decide whether an omitted value means true. The UI always sends it.
 - **F-21 (NIT, copy)**: when the next limit equals the current capacity (a tie at the bottleneck), the suggestion still reads "the next limit is X at N units". Consider a tie-specific sentence.
 
 From the Phase 3 performance planning (2026-10-08):

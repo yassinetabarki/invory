@@ -599,6 +599,10 @@ Phase 4                                         S-27 (perf dataset + budgets) âˆ
 | Q7 | block changing a material's unit while any non-deleted product's BOM uses it: a validation error on `unit`, tested now against the preview usage and built so S-04 only swaps the usage source | **confirmed 2026-10-09** |
 | Q8 | sales are **hard-deleted** and stay **stock-neutral**: recording, editing or deleting a sale never changes material stock and writes no ledger entry (costing skill, decision 1, 2026-10-08) | **confirmed 2026-10-09** (corrected the same day: an earlier note about restoring stock through a ledger entry was a relay mistake and is withdrawn) |
 | Q9 | production runs not urgent | **provisional** |
+| Prod DB | not chosen yet. **Requirement for S-26:** `pg_trgm` needs PostgreSQL 13+ with the app role owning the database, or a one-time `CREATE EXTENSION pg_trgm;` by a superuser before the first migrate | recorded 2026-10-09 |
+| Delete-guard toast | lists 5 product names, then "and N more" | accepted 2026-10-09 |
+| F-37 | `DemoProductsSeeder` never recreates a SKU that exists only soft-deleted: deletions stick | decided 2026-10-09 |
+| F-20 | restock `update_unit_cost` is optional and defaults to **true** when omitted (costing skill "boolean (default true)") | tech-lead 2026-10-09 |
 
 ### S-21 design (tech-lead, 2026-10-09; the story's scope as approved by the human)
 - **Scope:** the tables `units`, `material_categories` and `product_categories` with defaults in a migration; materials move to FKs; settings
@@ -723,6 +727,14 @@ Phase 4                                         S-27 (perf dataset + budgets) âˆ
   PostgreSQL-only tests skipped on SQLite), PostgreSQL parity 2 089, Vitest 1 119, check, types, build. The run was cut off by the rate limit
   during the review and resumed; no handoff was lost. S-04a and S-04b share files (MaterialController, Material, tests/Pest.php, ArchTest,
   UpdateProduct, ProductActionsTest), so they ship as **one commit**. Dev database: 3 migrations + `DemoProductsSeeder` for the human (not run).
+
+- 2026-10-09: S-04 committed (4e5b2ef, 11299a9). The human approved S-14-BE, S-16-BE, S-15-BE, S-25, F-35 and F-37. These stories share
+  controllers, Actions, `App\Mock` and the test helpers, so the tech-lead sequences them in three waves, each a green commit:
+  - **Wave A:** S-16-BE stock ledger (BE-1) âˆ¥ S-25 material search (BE-2 + FE-1). Their files are disjoint; `tests/Pest.php` is off-limits
+    and the performance tests take targeted edits only.
+  - **Wave B:** S-14-BE sales (+ demo sales and history wiring in `DemoCatalogSeeder`) + F-37 (BE).
+  - **Wave C:** S-15-BE photos and thumbnails + F-36 (BE + FE) + F-35 SKU-race guard, which generalises `ReferenceNameGuard` (BE, the same
+    Actions as S-15).
 
 ---
 
