@@ -153,3 +153,18 @@ it('runs a single query per chunk, never one per material (strict models)', func
     // 12 materials fit in one chunk, so a single query reads them all.
     expect($queries)->toBe(1);
 });
+
+it('reads the totals in one aggregate query on PostgreSQL, however many materials', function () {
+    Material::factory()->count(501)->create(['quantity_on_hand' => '2', 'unit_cost' => '0.5', 'reorder_level' => null]);
+
+    $queries = 0;
+    DB::listen(function () use (&$queries): void {
+        $queries++;
+    });
+
+    $totals = app(InventorySummary::class)->summarize();
+
+    expect($queries)->toBe(1)
+        ->and($totals['materials_count'])->toBe(501)
+        ->and($totals['inventory_value'])->toBe('501.0000');
+})->skip(fn () => DB::getDriverName() !== 'pgsql', 'PostgreSQL only');

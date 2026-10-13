@@ -15,9 +15,12 @@ use Brick\Math\RoundingMode;
  * The keys are the inventory half of `DashboardStats` and the `summary` prop of the materials list in
  * resources/js/types/domain.ts, so callers can use the result as is.
  *
- * Money stays exact: the value is a BigDecimal sum of each material's `stockValue()` (already a scale-4
- * string, so the total equals the sum of the stock values the materials table shows), serialised at
- * scale 4, half-up. Nothing is summed in SQL, because SQLite would do it in floats.
+ * Money stays exact on both paths and the two give identical figures (ADR-0011):
+ * - PostgreSQL: one aggregate query. The columns are exact NUMERIC, so `SUM(ROUND(quantity_on_hand * unit_cost, 4))` is the sum
+ *   of each material's scale-4 stock value, with no row hydrated.
+ * - Any other driver (SQLite in the fast test suite sums in floats): a BigDecimal sum of each material's `stockValue()` (already
+ *   a scale-4 string, so the total equals the sum of the stock values the materials table shows) over lazy chunks.
+ * Either way the value is serialised at scale 4, half-up.
  *
  * @phpstan-type InventoryTotals array{
  *     materials_count: int,
@@ -38,6 +41,46 @@ final class InventorySummary
      * @return InventoryTotals
      */
     public function summarize(): array
+    {
+        return (new Material)->getConnection()->getDriverName() === 'pgsql'
+            ? $this->summarizeInSql()
+            : $this->summarizeInPhp();
+    }
+
+    /**
+     * One aggregate query; `toBase()` keeps the SoftDeletes scope (`deleted_at IS NULL`) and skips hydration.
+     * `ROUND(numeric, 4)` rounds half away from zero, which is HalfUp for the non-negative values the CHECK constraints guarantee.
+     * The filters mirror `stockStatus()` and the `needsRestock` scope (stock is never negative).
+     *
+     * @return InventoryTotals
+     */
+    private function summarizeInSql(): array
+    {
+        $row = Material::query()
+            ->without(['category', 'unit'])
+            ->toBase()
+            ->selectRaw(
+                'COUNT(*) AS materials_count, '
+                .'COUNT(*) FILTER (WHERE quantity_on_hand <= 0) AS out_of_stock_count, '
+                .'COUNT(*) FILTER (WHERE reorder_level IS NOT NULL AND quantity_on_hand > 0 AND quantity_on_hand <= reorder_level) AS low_stock_count, '
+                .'COALESCE(SUM(ROUND(quantity_on_hand * unit_cost, 4)), 0) AS inventory_value'
+            )
+            ->first();
+
+        $low = (int) $row->low_stock_count;
+        $out = (int) $row->out_of_stock_count;
+
+        return [
+            'materials_count' => (int) $row->materials_count,
+            'inventory_value' => (string) BigDecimal::of((string) $row->inventory_value)->toScale(4, RoundingMode::HalfUp),
+            'needs_restock_count' => $low + $out,
+            'low_stock_count' => $low,
+            'out_of_stock_count' => $out,
+        ];
+    }
+
+    /** @return InventoryTotals */
+    private function summarizeInPhp(): array
     {
         $materialsCount = 0;
         $low = 0;

@@ -33,7 +33,7 @@ material page shows usage per product. Money must stay exact, and the fast test 
   - lets the product list and dashboard filter, sort and count in SQL
   - margin is computed on read
 - **Aggregates:** money sums in PHP with `BigDecimal` over narrow lazy cursors, cached under version keys bumped by the writing Actions. Integer
-  counts and sums in SQL.
+  counts and sums in SQL. (Narrowed by [ADR-0011](0011-exact-money-aggregates-in-postgresql.md): on PostgreSQL an exact `NUMERIC` money sum may run in SQL.)
 - **Search:** `pg_trgm` GIN indexes on `name` and `sku` of materials and products (PostgreSQL only; SQLite falls back to a LIKE scan).
 
 ## Consequences

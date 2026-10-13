@@ -15,8 +15,8 @@ use function Pest\Laravel\actingAs;
 | A full visit is the positive control: the same SQL must show up there, so the matcher really matches.
 */
 
-/** The inventory-summary scan of InventorySummary (every material, only the columns the stock maths reads). */
-const SUMMARY_SCAN = 'select\s+"id",\s*"quantity_on_hand",\s*"unit_cost",\s*"reorder_level"\s+from\s+"materials"';
+/** The inventory summary of InventorySummary: the PHP scan of the stock-maths columns (SQLite) or the SQL aggregate (PostgreSQL, ADR-0011). */
+const SUMMARY_SCAN = 'select\s+"id",\s*"quantity_on_hand",\s*"unit_cost",\s*"reorder_level"\s+from\s+"materials"|sum\(round\(quantity_on_hand \* unit_cost, 4\)\)';
 
 /** The "needs restock" list of the dashboard (out of stock first). */
 const NEEDS_RESTOCK_QUERY = 'case when quantity_on_hand';
