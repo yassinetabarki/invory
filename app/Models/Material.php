@@ -209,6 +209,9 @@ class Material extends Model
     /**
      * Materials whose stock status is `low` or `out`.
      *
+     * The predicate (with the soft-delete condition) is mirrored by the partial index `materials_restock_idx`
+     * (migration 2026_10_13_300000_add_restock_index_to_materials_table): change both together.
+     *
      * @param  Builder<Material>  $query
      */
     #[Scope]

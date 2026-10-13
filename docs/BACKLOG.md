@@ -253,6 +253,13 @@ The plan's §F.3 lists the amendments to S-04, S-14-BE, S-15-BE, S-16-BE, S-06-B
 **Owners:** BE + TL · **Depends on:** S-06-BE, S-23
 - [ ] Dev-only `PerformanceDatasetSeeder` (2 000 materials, 500 products, 50 000 sales, 20 000 movements); probe p50/p95 per page; record the results against the budgets in the plan §B.4
 
+## S-28 · Dashboard endpoint performance — backend — `review` (approved by the tech-lead 2026-10-13; plan [perf-dashboard-endpoint.md](plans/perf-dashboard-endpoint.md), ADR-0011)
+**Owners:** BE · backend only, no prop/type change
+- [x] Inventory totals in one exact `NUMERIC` aggregate on PostgreSQL; the PHP BigDecimal scan stays on SQLite (resolves F-24 on PostgreSQL)
+- [x] Partial index `materials_restock_idx (name, id) WHERE deleted_at IS NULL AND <needsRestock predicate>` (the brief's `(quantity_on_hand, reorder_level)` index is ignored by the planner, plan P-2)
+- [x] Baseline fix found at intake: SQLite-safe `down()` of the products migration, Pint on `StorageSetupTest`
+- [ ] Human: `docker compose --profile app exec -u sail laravel.test php artisan migrate` on the dev database
+
 ---
 
 ## Stretch (after MVP sign-off)
@@ -306,7 +313,7 @@ From the Phase 3P review (2026-10-09, MINOR/NIT, none blocking):
   heavy form tests a larger timeout or type less, and run the gates sequentially.
 - **F-23 (NIT, FE build)**: the `wayfinder-*.js` chunk is now 377 KB raw (118 KB gzip). That's chunk renaming, not growth: React DOM moved into it, and
   the entry closure is unchanged at ~565 KB raw / 176 KB gzip. Consider `manualChunks` naming (vendor-react, vendor-inertia) for readable reports.
-- **F-24 (NIT, BE)**: `InventorySummary` reads with `lazyById(500)`, so the materials-index query count grows by one per 500 materials. That's within
+- **F-24 (NIT, BE)** — _resolved on PostgreSQL by S-28 (one aggregate query); SQLite keeps the scan_: `InventorySummary` reads with `lazyById(500)`, so the materials-index query count grows by one per 500 materials. That's within
   budget until S-23 caches the summary.
 - **F-25 (docs, main session)**: `CLAUDE.md` and the agent definitions still describe Sail as the runtime and give the parity command without
   `--profile app`. Update them to match SETUP.md §4–§5 (ADR-0007).
