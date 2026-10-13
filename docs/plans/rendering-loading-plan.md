@@ -1,6 +1,6 @@
 # Rendering & Loading — Analysis & Plan
 
-> Status: **Draft — pending human approval**
+> Status: **Approved — W-01 done, remainder pending**
 > Date: 2026-10-13
 > Author: main session (discussion draft)
 
@@ -128,9 +128,9 @@ Requires updating `CLAUDE.md` and `docs/TEAM.md`.
 
 | ID | Task | Effort | Type |
 |---|---|---|---|
-| W-01 | Define plan-first protocol for tech-lead | Low | Docs only |
+| W-01 | Define plan-first protocol for tech-lead | Low | Docs only — ✅ done |
 
-Update `CLAUDE.md` and `docs/TEAM.md` with a mandatory planning step before agent dispatch. Define the plan document format (scope, subtasks, risks, file list, open questions). **Decision needed:** plan as a `docs/plans/<story>-plan.md` file, or as a conversation message the human approves inline?
+Updated `CLAUDE.md` and `docs/TEAM.md` with the two-phase dispatch protocol and plan document format. Q2 resolved: plans are committed `docs/plans/<story>-plan.md` files (consistent with existing plans, traceable in git history).
 
 ---
 
@@ -183,7 +183,7 @@ Update `CLAUDE.md` and `docs/TEAM.md` with a mandatory planning step before agen
 | # | Question | Needed before |
 |---|---|---|
 | Q1 | Should `cacheTags` survive after prefetch removal? `invalidateCacheTags` on writes is still useful if Inertia caches visited pages for the back-button. Decision: keep for write-invalidation only, or remove entirely? | P-02 |
-| Q2 | Plan document format for W-01: `docs/plans/<story>-plan.md` file committed before work, or inline conversation message the human approves? | W-01 |
+| Q2 | ✅ Resolved: committed `docs/plans/<story>-plan.md` file. | W-01 |
 | Q3 | Should `stats` (KPI cards) on the dashboard be deferred or kept eager? Deferring means the KPI row shows skeletons for ~200ms; keeping them eager means the page waits for them before painting anything. | S-01 |
 | Q4 | Skeleton animation: pulse (`animate-pulse`, simpler) or shimmer (moving gradient, more familiar)? | S-04 |
 
@@ -191,7 +191,7 @@ Update `CLAUDE.md` and `docs/TEAM.md` with a mandatory planning step before agen
 
 ## 6. Suggested Execution Order
 
-1. **W-01** — Agree on the plan-first workflow and write it into `CLAUDE.md` before anything else ships.
+1. **W-01** ✅ — Plan-first protocol is now in `CLAUDE.md` and `docs/TEAM.md`.
 2. **Q-01, Q-02** — Audit queries. Establish baselines before adding defer.
 3. **S-04** — Build skeleton components. Required by all S-0x tasks.
 4. **P-01, P-02** — Remove hover prefetch. Clean slate before adding defer (no interaction between the two caching systems).

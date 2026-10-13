@@ -17,17 +17,34 @@ Dev environment: **Laravel Sail** (Docker: app + PostgreSQL + Mailpit) runs the 
 The main session **does not write feature code and does not brief the developers directly**. The chain is:
 
 ```
-human ⇄ main session ──(story / phase)──► tech-lead ──(briefs)──► backend-developer  ┐ in parallel when
-                     ◄──(delivery report)──           ◄──(handoffs)── frontend-developer ┘ files are disjoint
+human ⇄ main session ──(story + decisions)──► tech-lead
+                                                  │
+                                            1. PLAN (docs/plans/<story>-plan.md)
+                                                  │
+                     ◄──(plan for review)─────────┘
+                                                  │  ← human approves
+                     ──(approved, execute)────────►
+                                                  │
+                                            2. DISPATCH ──► backend-developer  ┐ parallel when
+                                                      ──► frontend-developer ┘ files disjoint
+                                                  │
+                     ◄──(delivery report)──────────┘
 ```
 
-1. Pick the next stories (`docs/BACKLOG.md`, current plan in `docs/plans/`) or take the ones the human names, and hand them to the **tech-lead**
-   (`Agent`, `subagent_type: "tech-lead"`) with any decisions the human made. Run it in the background and tell the human what is happening.
-2. The tech-lead plans and splits the work, dispatches `backend-developer` / `frontend-developer`, reviews every handoff by running all gates,
-   loops fixes (max 3 rounds), and returns a **delivery report**.
-3. Relay the report to the human: verdicts, gates, questions. **Questions in the report are product decisions. Ask the human** (`AskUserQuestion`),
-   then send the answers back to the tech-lead (`SendMessage` to its agent id) to continue.
-4. When stories are approved: **ask the human before committing.** Then commit **per story**, staging only the files the report lists
+### Phase 1 — Planning (always first)
+1. Pick the next stories (`docs/BACKLOG.md`, current plan in `docs/plans/`) or take the ones the human names. Dispatch the **tech-lead**
+   (`Agent`, `subagent_type: "tech-lead"`) in **planning-only mode**: instruct it to write `docs/plans/<story>-plan.md` and return without dispatching developers.
+   Include any human decisions made so far. Run in the background and tell the human what is in flight.
+2. When the tech-lead returns, **present the plan to the human**: link the file, summarise scope, subtasks, risks and open questions.
+   Questions in the plan are product decisions — ask them with `AskUserQuestion`. Wait for approval (or amendment requests).
+3. If the human requests changes, `SendMessage` the feedback to the same tech-lead agent to revise the plan, then repeat step 2.
+
+### Phase 2 — Execution (only after human approval)
+4. `SendMessage` to the same tech-lead agent: "Plan approved. Execute it: dispatch backend and frontend developers."
+   The tech-lead dispatches, reviews every handoff by running all gates, loops fixes (max 3 rounds), and returns a **delivery report**.
+5. Relay the delivery report to the human: verdicts, gates, open questions. Ask remaining product questions with `AskUserQuestion`,
+   then send answers back to the tech-lead (`SendMessage`) to continue.
+6. When stories are approved: **ask the human before committing.** Then commit **per story**, staging only the files the report lists
    (Conventional Commits, branch per phase, e.g. `phase/1-materials`), and update the backlog status.
 
 Don't do the developers' or the tech-lead's work yourself, even if it looks quick. If an agent is blocked (environment, permissions), tell the human.

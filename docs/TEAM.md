@@ -34,8 +34,14 @@ Project skills live in `.claude/skills/invory-*` and are committed. `invory-cost
  human ⇄ main session (liaison)
               │ hands over a story / phase (+ human decisions)
               ▼
- tech-lead ── 1. PLAN: plan in docs/plans/, subtasks with disjoint file lists, frozen contract, waves
-          │
+ tech-lead ── 1. PLAN: writes docs/plans/<story>-plan.md (see format below), returns WITHOUT dispatching
+              │
+              ▼ plan ──► main session ──► human: scope, subtasks, risks, open questions
+                                                  │
+                                      human approves (or requests changes → back to 1)
+                                                  │
+              ◄─────────────────── "approved, execute" ───────────────────────────────
+              │
           ├── 2. DISPATCH (Agent tool, briefs) ──► backend-developer  ┐ same message = parallel
           │                                  ──► frontend-developer ┘ (also 2× backend on disjoint stories)
           │                                       │ handoff reports
@@ -44,6 +50,38 @@ Project skills live in `.claude/skills/invory-*` and are committed. `invory-cost
           ▼
  5. DELIVERY REPORT ──► main session ──► human: verdicts, questions, "commit S-xx?" ──► scoped commit per story
 ```
+
+### Plan document format (`docs/plans/<story>-plan.md`)
+
+The tech-lead writes this file in phase 1 and commits it only after the human approves (the main session commits it together with the first story).
+
+```markdown
+# Story Plan: <title>
+> Status: draft | approved | in-progress | done
+> Date: YYYY-MM-DD
+> Stories: S-xx, S-xx
+
+## Scope
+What is in / out of scope.
+
+## Subtasks
+| ID | Lane | Owner | Files | Lines est. | Commit label |
+|---|---|---|---|---|---|
+
+## Frozen contract
+Routes, props shape, `domain.ts` types the backend delivers and the frontend consumes.
+Settled before dispatch so both agents can build against a stable interface.
+
+## Execution order / waves
+Wave 1 (backend): …
+Wave 2 (frontend, unblocked after wave 1 types land): …
+
+## Risks & open questions
+- Risk: …
+- Q (for human): Should X be Y?
+```
+
+The main session presents a plan by linking the file and summarising the open questions. Execution does not start until the human says "approved" (or equivalent). Changes requested by the human go back to the tech-lead via `SendMessage`; the file is updated in-place before execution begins.
 
 ### Rules of engagement
 1. **Contract first.** The contract (routes, props, `domain.ts`, PHP APIs) is frozen in the plan, and the backend writes the types first, so the
