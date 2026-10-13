@@ -134,6 +134,31 @@ it('stays within the query budget when the deferred recent history of the materi
         ->toHaveCount(count($queries));
 });
 
+it('stays within the query budget when the deferred sales of the product page load, however many sales there are', function () {
+    actingAs($this->user);
+    $uri = route('products.show', pid(1));
+    // Only the deferred request is measured: the first visit happens outside the query log.
+    $deferredQueries = function () use ($uri): array {
+        $firstVisit = $this->get($uri)->assertOk();
+
+        return queryLog(fn () => $firstVisit->assertInertia(
+            fn (Assert $page) => $page->loadDeferredProps('default', fn (Assert $reloaded) => $reloaded->hasAll(['sales_last_30_days', 'recent_sales'])),
+        ));
+    };
+
+    // Warm up: the first request of a process may run one-off queries (schema introspection, the framework's own caches).
+    $deferredQueries();
+
+    $few = $deferredQueries();
+
+    Sale::factory()->for(demoProduct('PRD-JKT-001'))->count(30)->create();
+
+    $many = $deferredQueries();
+
+    expect(count($few))->toBeLessThanOrEqual(QUERY_BUDGET, implode(PHP_EOL, $few))
+        ->and(count($many))->toBe(count($few), implode(PHP_EOL, $many));
+});
+
 it('has a reusable query budget expectation', function () {
     actingAs($this->user);
 

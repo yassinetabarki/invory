@@ -1,4 +1,4 @@
-import { Head, Link, router } from '@inertiajs/react';
+import { Deferred, Head, Link, router } from '@inertiajs/react';
 import { Pencil, ReceiptText, Trash2 } from 'lucide-react';
 import { useRef, useState } from 'react';
 import MaterialController from '@/actions/App/Http/Controllers/MaterialController';
@@ -12,6 +12,7 @@ import { ProductHero } from '@/components/products/product-hero';
 import { ProductPhoto } from '@/components/products/product-photo';
 import { RecentSalesCard } from '@/components/products/recent-sales-card';
 import { ConfirmDeleteDialog } from '@/components/shared/confirm-delete-dialog';
+import { SkeletonCard } from '@/components/shared/skeletons';
 import { Button } from '@/components/ui/button';
 import type { MaterialRef, ProductShowProps } from '@/types/domain';
 
@@ -137,13 +138,25 @@ export default function ProductsShow({
                     editHref={editHref}
                 />
 
-                <RecentSalesCard
-                    sales={recentSales}
-                    recordHref={recordHref}
-                    viewAllHref={SaleController.index.url({
-                        query: { product_id: product.id },
-                    })}
-                />
+                <Deferred
+                    data="recent_sales"
+                    fallback={
+                        <SkeletonCard
+                            title="Recent sales"
+                            label="recent sales"
+                            rows={5}
+                            thumb={false}
+                        />
+                    }
+                >
+                    <RecentSalesCard
+                        sales={recentSales ?? []}
+                        recordHref={recordHref}
+                        viewAllHref={SaleController.index.url({
+                            query: { product_id: product.id },
+                        })}
+                    />
+                </Deferred>
             </div>
 
             <ConfirmDeleteDialog

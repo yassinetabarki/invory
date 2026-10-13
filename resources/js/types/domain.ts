@@ -377,8 +377,8 @@ export type ProductCreateProps = {
 export type ProductEditProps = ProductCreateProps & { product: Product };
 export type ProductShowProps = {
     product: Product;
-    sales_last_30_days: { units_sold: number; revenue: Decimal };
-    recent_sales: Sale[]; // newest 5
+    sales_last_30_days?: { units_sold: number; revenue: Decimal }; // deferred prop
+    recent_sales?: Sale[]; // deferred prop: newest 5
 };
 export type SalesIndexProps = {
     sales: Paginated<Sale>; // sold_on desc, then id desc

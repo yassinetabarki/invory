@@ -84,8 +84,9 @@ final class ProductController extends Controller
 
                 return $this->resource($product, $costing);
             },
-            'sales_last_30_days' => fn (): array => $sales->lastThirtyDays($product),
-            'recent_sales' => fn (): array => SaleResource::collection($sales->recentOf($product))->resolve(),
+            // RL-02: the two sales props are deferred in one group (one extra request after the first paint); `product` is not.
+            'sales_last_30_days' => Inertia::defer(fn (): array => $sales->lastThirtyDays($product)),
+            'recent_sales' => Inertia::defer(fn (): array => SaleResource::collection($sales->recentOf($product))->resolve()),
         ]);
     }
 

@@ -244,12 +244,20 @@ describe('index', function () {
 });
 
 describe('show', function () {
+    it('sends the product first, and the sales of the last 30 days and the recent sales in one deferred request', function () {
+        actingAs($this->user)->get(route('products.show', pid(1)))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('product')
+                ->missingAll(['sales_last_30_days', 'recent_sales'])
+                ->loadDeferredProps('default', fn (Assert $reloaded) => $reloaded->hasAll(['sales_last_30_days', 'recent_sales'])));
+    });
+
     it('sends the ProductShowProps contract', function () {
         actingAs($this->user)->get(route('products.show', pid(1)))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('products/show')
-                ->hasAll(['product', 'sales_last_30_days', 'recent_sales'])
                 ->has('product', fn (Assert $product) => $product->hasAll([
                     'id', 'sku', 'name', 'category', 'category_label', 'status', 'status_label', 'description', 'photo_url',
                     'labor_cost', 'overhead_cost', 'selling_price', 'cost', 'margin', 'capacity', 'components',
@@ -258,8 +266,9 @@ describe('show', function () {
                 ->has('product.cost', fn (Assert $cost) => $cost->hasAll(['material_cost', 'labor_cost', 'overhead_cost', 'unit_cost']))
                 ->has('product.margin', fn (Assert $margin) => $margin->hasAll(['amount', 'percent']))
                 ->has('product.capacity', fn (Assert $capacity) => $capacity->hasAll(['max_producible', 'bottleneck']))
-                ->has('sales_last_30_days', fn (Assert $sales) => $sales->hasAll(['units_sold', 'revenue']))
-                ->has('recent_sales', 5));
+                ->loadDeferredProps('default', fn (Assert $reloaded) => $reloaded
+                    ->has('sales_last_30_days', fn (Assert $sales) => $sales->hasAll(['units_sold', 'revenue']))
+                    ->has('recent_sales', 5)));
     });
 
     it('computes the plan\'s expected cost, capacity and margin of each product', function (
@@ -269,7 +278,9 @@ describe('show', function () {
     ) {
         $bottleneck = demoMaterial($bottleneckSku);
 
-        actingAs($this->user)->get(route('products.show', pid($id)))
+        $response = actingAs($this->user)->get(route('products.show', pid($id)));
+
+        $response
             ->assertInertia(fn (Assert $page) => $page
                 ->where('product.id', pid($id))
                 ->where('product.sku', $sku)
@@ -283,8 +294,9 @@ describe('show', function () {
                 ->where('product.capacity.bottleneck.sku', $bottleneckSku)
                 ->where('product.capacity.bottleneck.name', $bottleneck->name)
                 ->has('product.components', $components)
-                ->where('sales_last_30_days.units_sold', $sold)
                 ->etc());
+
+        expect(loadedPageProp($response, 'sales_last_30_days.units_sold'))->toBe($sold);
     })->with('expectedProducts');
 
     it('matches the worked example of the costing domain skill for the Denim Jacket', function () {
@@ -373,10 +385,10 @@ describe('show', function () {
 
         $response = actingAs($this->user)->get(route('products.show', pid(1)));
 
-        expect(pageProp($response, 'recent_sales.*.id'))->toBe(array_map(demoSaleId(...), [57, 52, 43, 40, 38]))
-            ->and(pageProp($response, 'recent_sales.*.sold_on'))->toBe(['2026-10-05', '2026-10-01', '2026-09-26', '2026-09-25', '2026-09-24']);
+        expect(loadedPageProp($response, 'recent_sales.*.id'))->toBe(array_map(demoSaleId(...), [57, 52, 43, 40, 38]))
+            ->and(loadedPageProp($response, 'recent_sales.*.sold_on'))->toBe(['2026-10-05', '2026-10-01', '2026-09-26', '2026-09-25', '2026-09-24']);
 
-        $response->assertInertia(fn (Assert $page) => $page
+        $response->assertInertia(fn (Assert $page) => $page->loadDeferredProps('default', fn (Assert $reloaded) => $reloaded
             ->where('sales_last_30_days', ['units_sold' => 38, 'revenue' => '3382.0000'])
             ->has('recent_sales.0', fn (Assert $sale) => $sale
                 ->where('id', demoSaleId(57))
@@ -390,17 +402,19 @@ describe('show', function () {
                     'sku' => 'PRD-JKT-001',
                     'name' => 'Denim Jacket',
                     'photo_url' => Storage::disk('public')->url('products/jacket.jpg'),
-                ])));
+                ]))));
     });
 
     it('sends no sales and no margin for the unpriced draft', function () {
-        actingAs($this->user)->get(route('products.show', pid(6)))
-            ->assertInertia(fn (Assert $page) => $page
-                ->where('product.selling_price', null)
-                ->where('product.margin', null)
-                ->where('product.photo_url', null)
-                ->where('sales_last_30_days', ['units_sold' => 0, 'revenue' => '0.0000'])
-                ->where('recent_sales', []));
+        $response = actingAs($this->user)->get(route('products.show', pid(6)));
+
+        $response->assertInertia(fn (Assert $page) => $page
+            ->where('product.selling_price', null)
+            ->where('product.margin', null)
+            ->where('product.photo_url', null));
+
+        expect(loadedPageProp($response, 'sales_last_30_days'))->toEqual(['units_sold' => 0, 'revenue' => '0.0000'])
+            ->and(loadedPageProp($response, 'recent_sales'))->toBe([]);
     });
 
     it('has no capacity and no bottleneck for a product without a composition', function () {

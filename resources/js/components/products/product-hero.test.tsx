@@ -2,7 +2,7 @@ import { render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { ProductHero } from '@/components/products/product-hero';
 import { denimJacket, denimSalesLast30Days } from '@/test/fixtures/products';
-import { resetInertiaMock, setPageProps } from '@/test/inertia';
+import { inertiaMock, resetInertiaMock, setPageProps } from '@/test/inertia';
 import type { Capacity } from '@/types/domain';
 
 vi.mock('@inertiajs/react', async (importOriginal) => {
@@ -17,6 +17,9 @@ function renderHero(
     capacity: Capacity = denimJacket.capacity,
     sales = denimSalesLast30Days,
 ) {
+    // The mocked `<Deferred>` reads the page props: the sales have "landed".
+    setPageProps({ ...inertiaMock.props, sales_last_30_days: sales });
+
     return render(
         <ProductHero
             capacity={capacity}

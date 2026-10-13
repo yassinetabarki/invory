@@ -238,7 +238,8 @@ The plan's §F.3 lists the amendments to S-04, S-14-BE, S-15-BE, S-16-BE, S-06-B
 ## S-24 · Deferred and on-demand data — `Proposed` · size M
 **Owners:** BE + FE (one vertical commit) · **Depends on:** S-06-BE, S-07-BE
 - [x] Dashboard secondary panels deferred: delivered by **RL-01** (2026-10-13, [plan](plans/s04-s01-skeleton-dashboard-plan.md)). `needs_restock`, `recent_sales` and `alerts` are deferred in one group, with skeleton fallbacks from RL-04
-- [ ] Material history deferred with "Load more"; product recent sales deferred / `WhenVisible` (rendering plan S-02 / S-03); optimistic delete for sales and archive for reference items
+- [x] Product page sales deferred: delivered by **RL-02** (2026-10-13, [plan](plans/s02-product-show-defer-plan.md)). `sales_last_30_days` and `recent_sales` are deferred in one group, behind `SkeletonStat` / `SkeletonCard` (`defer`, not `WhenVisible`)
+- [ ] Material history deferred with "Load more" (rendering plan S-03); optimistic delete for sales and archive for reference items
 
 ## S-25 · Material picker server-side search — `review` (approved by the tech-lead 2026-10-13; started in the `wip` commit 2240e7d) · size M
 **Owners:** BE + FE · **Depends on:** S-04
@@ -388,7 +389,7 @@ From the Phase 3 real-backend review (2026-10-13, MINOR/NIT, none blocking):
 From the RL-04 / RL-01 delivery (2026-10-13, skeletons + deferred dashboard panels):
 - **F-48 (MINOR, FE + BE)**: deferred panels have no error state. If the deferred request fails, the skeletons stay on screen. Use Inertia 3's
   `rescue` (server `Inertia::defer(..., rescue: true)` + `<Deferred rescue>`) with an inline "Couldn't load, retry". Decide it once and apply it to
-  `recent_history` (materials index), the dashboard (RL-01) and rendering-plan S-02 / S-03.
+  `recent_history` (materials index), the dashboard (RL-01), the product page (RL-02: sales stat + recent sales) and rendering-plan S-03.
 - **F-49 (NIT, BE)**: `DashboardController` relies on prop **order**: `alerts` must stay before `recent_sales` so that the `ProductCatalog` is built
   before `recent_sales` asks for its product refs. If that order flips, `PartialReloadTest` "builds the costed products once per request" fails.
   Consider an explicit `$catalog->warm()` (or similar) if the order becomes a trap.

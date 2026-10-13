@@ -1,15 +1,19 @@
+import { Deferred } from '@inertiajs/react';
 import type { ReactNode } from 'react';
 import { Money } from '@/components/shared/money';
+import { SkeletonStat } from '@/components/shared/skeletons';
 import { useAppSettings } from '@/hooks/use-app-settings';
 import { formatCount } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { Capacity, Decimal } from '@/types/domain';
 
+type SalesFigure = { units_sold: number; revenue: Decimal };
+
 type ProductHeroProps = {
     capacity: Capacity;
     unitCost: Decimal;
-    /** Sales of the last 30 days. */
-    sales: { units_sold: number; revenue: Decimal };
+    /** Sales of the last 30 days: a deferred prop, undefined until it lands. */
+    sales?: SalesFigure;
 };
 
 function HeroCard({
@@ -54,9 +58,26 @@ function unitsWord(count: number): string {
     return count === 1 ? 'unit' : 'units';
 }
 
+function SoldCard({ sales }: { sales: SalesFigure }) {
+    const { locale } = useAppSettings();
+
+    return (
+        <HeroCard label="Sold · last 30 days" ariaLabel="Sales, last 30 days">
+            <span className={BIG}>
+                {formatCount(sales.units_sold, locale)}
+                <span className={UNITS}>{unitsWord(sales.units_sold)}</span>
+            </span>
+            <span className="text-[0.8125rem] text-muted-foreground">
+                <Money value={sales.revenue} /> in sales
+            </span>
+        </HeroCard>
+    );
+}
+
 /**
  * The three numbers that matter on a product: how many can be produced now
- * (the primary card), what one unit costs, and what sold in the last 30 days.
+ * (the primary card), what one unit costs, and what sold in the last 30 days
+ * (a deferred prop: a placeholder shows until it lands).
  */
 export function ProductHero({ capacity, unitCost, sales }: ProductHeroProps) {
     const { locale } = useAppSettings();
@@ -109,18 +130,14 @@ export function ProductHero({ capacity, unitCost, sales }: ProductHeroProps) {
                 </span>
             </HeroCard>
 
-            <HeroCard
-                label="Sold · last 30 days"
-                ariaLabel="Sales, last 30 days"
+            {/* `<Deferred>` children are built eagerly: keep the guard, so
+                `sales` is never read while the deferred prop is missing. */}
+            <Deferred
+                data="sales_last_30_days"
+                fallback={<SkeletonStat label="Sold · last 30 days" />}
             >
-                <span className={BIG}>
-                    {formatCount(sales.units_sold, locale)}
-                    <span className={UNITS}>{unitsWord(sales.units_sold)}</span>
-                </span>
-                <span className="text-[0.8125rem] text-muted-foreground">
-                    <Money value={sales.revenue} /> in sales
-                </span>
-            </HeroCard>
+                {sales && <SoldCard sales={sales} />}
+            </Deferred>
         </div>
     );
 }

@@ -34,10 +34,10 @@ it('counts the last 30 days of a product on the list and the page, and sends its
 
     $show = actingAs($user)->get(route('products.show', $product));
 
-    expect(pageProp($show, 'sales_last_30_days'))->toBe(['revenue' => '53.2500', 'units_sold' => 9])
+    expect(loadedPageProp($show, 'sales_last_30_days'))->toBe(['revenue' => '53.2500', 'units_sold' => 9])
         // The newest 5, by day then id: the five of the last days, not the oldest ones.
-        ->and(pageProp($show, 'recent_sales.*.sold_on'))->toBe(['2026-10-08', '2026-10-07', '2026-10-06', '2026-10-05', '2026-10-04'])
-        ->and(pageProp($show, 'recent_sales.0.total'))->toBe('2.2500')
-        ->and(pageProp(actingAs($user)->get(route('products.show', $none)), 'sales_last_30_days'))->toBe(['revenue' => '0.0000', 'units_sold' => 0])
+        ->and(loadedPageProp($show, 'recent_sales.*.sold_on'))->toBe(['2026-10-08', '2026-10-07', '2026-10-06', '2026-10-05', '2026-10-04'])
+        ->and(loadedPageProp($show, 'recent_sales.0.total'))->toBe('2.2500')
+        ->and(loadedPageProp(actingAs($user)->get(route('products.show', $none)), 'sales_last_30_days'))->toBe(['revenue' => '0.0000', 'units_sold' => 0])
         ->and(pageProp(actingAs($user)->get(route('products.index')), 'products.data.*.units_sold_last_30_days'))->each->toBeInt();
 });

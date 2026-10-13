@@ -147,11 +147,11 @@ it('sends Product with its exact keys, order and types', function () {
 it('sends the other props of the show page as before', function () {
     $response = actingAs($this->user)->get(route('products.show', pid(1)));
 
-    expect(keysOf($response->inertiaProps('sales_last_30_days')))->toBe(['revenue', 'units_sold'])
-        ->and($response->inertiaProps('sales_last_30_days.units_sold'))->toBeInt()
-        ->and($response->inertiaProps('sales_last_30_days.revenue'))->toMatch(SCALE_4);
+    expect(keysOf(loadedPageProp($response, 'sales_last_30_days')))->toBe(['revenue', 'units_sold'])
+        ->and(loadedPageProp($response, 'sales_last_30_days.units_sold'))->toBeInt()
+        ->and(loadedPageProp($response, 'sales_last_30_days.revenue'))->toMatch(SCALE_4);
 
-    foreach ($response->inertiaProps('recent_sales') as $sale) {
+    foreach (loadedPageProp($response, 'recent_sales') as $sale) {
         expect(keysOf($sale))->toBe(['id', 'product', 'quantity', 'unit_price', 'total', 'sold_on', 'note'])
             ->and(keysOf($sale['product']))->toBe(['id', 'sku', 'name', 'photo_url'])
             ->and($sale['quantity'])->toBeInt()

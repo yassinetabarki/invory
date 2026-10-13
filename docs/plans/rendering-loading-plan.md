@@ -157,7 +157,7 @@ Updated `CLAUDE.md` and `docs/TEAM.md` with the two-phase dispatch protocol and 
 |---|---|---|---|
 | S-04 | Shared skeleton component library | Low | Frontend (foundation): ✅ delivered 2026-10-13 as **RL-04** ([plan](s04-s01-skeleton-dashboard-plan.md)) |
 | S-01 | Dashboard: defer secondary panels + skeleton cards | Medium | Backend + Frontend: ✅ delivered 2026-10-13 as **RL-01** ([plan](s04-s01-skeleton-dashboard-plan.md)) |
-| S-02 | Product show: defer sales panels | Low–Medium | Backend + Frontend |
+| S-02 | Product show: defer sales panels | Low–Medium | Backend + Frontend: ✅ delivered 2026-10-13 as **RL-02** ([plan](s02-product-show-defer-plan.md)) |
 | S-03 | Material show: defer history panel | Low | Backend + Frontend |
 | S-05 | Products index: loading indicator for the list | Low | Frontend (UX polish) |
 
