@@ -166,6 +166,36 @@ function pageProp(TestResponse $response, string $path): mixed
 }
 
 /**
+ * The page props once every deferred group has loaded: the first response merged with the deferred request(s), as the client ends up with them.
+ *
+ * @param  TestResponse<Response>  $response
+ * @return array<string, mixed>
+ */
+function loadedPageProps(TestResponse $response): array
+{
+    $deferred = [];
+
+    // A plain closure, not an arrow function: an arrow function captures `$deferred` by value.
+    $response->assertInertia(function (AssertableInertia $page) use (&$deferred) {
+        $page->loadDeferredProps(function (AssertableInertia $reloaded) use (&$deferred) {
+            $deferred = $reloaded->toArray()['props'];
+        });
+    });
+
+    return [...$response->inertiaProps(), ...$deferred];
+}
+
+/**
+ * Like pageProp(), on loadedPageProps(): a prop that arrives deferred, by dot path (supports `a.*.b` via data_get).
+ *
+ * @param  TestResponse<Response>  $response
+ */
+function loadedPageProp(TestResponse $response, string $path): mixed
+{
+    return data_get(loadedPageProps($response), $path);
+}
+
+/**
  * The SKU of each demo product by the number the plan and the fixtures give it (1 = Denim Jacket ... 7 = Leather Belt).
  * Database ids are not those numbers (a PostgreSQL sequence never goes back), so tests resolve them with `pid()`.
  */

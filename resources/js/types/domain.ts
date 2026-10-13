@@ -393,9 +393,9 @@ export type DashboardProps = {
     periods: Option<SalesPeriod>[];
     stats: DashboardStats;
     top_products: { by_units: TopProduct[]; by_revenue: TopProduct[] }; // max 5 each, for the period
-    needs_restock: Material[]; // max 5: out first, then low; by name
-    recent_sales: Sale[]; // newest 5, any period
-    alerts: UnproducibleAlert[]; // every product that can't be produced, by name
+    needs_restock?: Material[]; // deferred prop: max 5, out first, then low; by name
+    recent_sales?: Sale[]; // deferred prop: newest 5, any period
+    alerts?: UnproducibleAlert[]; // deferred prop: every product that can't be produced, by name
 };
 
 // ---------------------------------------------------------------------------

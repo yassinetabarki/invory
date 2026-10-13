@@ -155,8 +155,8 @@ Updated `CLAUDE.md` and `docs/TEAM.md` with the two-phase dispatch protocol and 
 
 | ID | Task | Effort | Type |
 |---|---|---|---|
-| S-04 | Shared skeleton component library | Low | Frontend (foundation) |
-| S-01 | Dashboard: defer secondary panels + skeleton cards | Medium | Backend + Frontend |
+| S-04 | Shared skeleton component library | Low | Frontend (foundation): ✅ delivered 2026-10-13 as **RL-04** ([plan](s04-s01-skeleton-dashboard-plan.md)) |
+| S-01 | Dashboard: defer secondary panels + skeleton cards | Medium | Backend + Frontend: ✅ delivered 2026-10-13 as **RL-01** ([plan](s04-s01-skeleton-dashboard-plan.md)) |
 | S-02 | Product show: defer sales panels | Low–Medium | Backend + Frontend |
 | S-03 | Material show: defer history panel | Low | Backend + Frontend |
 | S-05 | Products index: loading indicator for the list | Low | Frontend (UX polish) |
@@ -188,8 +188,8 @@ Updated `CLAUDE.md` and `docs/TEAM.md` with the two-phase dispatch protocol and 
 |---|---|---|
 | Q1 | ✅ Resolved 2026-10-13: remove entirely. `invalidateCacheTags` only flushes the prefetch cache (not history), so it was a no-op after P-01. | P-02 |
 | Q2 | ✅ Resolved: committed `docs/plans/<story>-plan.md` file. | W-01 |
-| Q3 | Should `stats` (KPI cards) on the dashboard be deferred or kept eager? Deferring means the KPI row shows skeletons for ~200ms; keeping them eager means the page waits for them before painting anything. | S-01 |
-| Q4 | Skeleton animation: pulse (`animate-pulse`, simpler) or shimmer (moving gradient, more familiar)? | S-04 |
+| Q3 | ✅ Resolved 2026-10-13: kept eager. Should `stats` (KPI cards) on the dashboard be deferred or kept eager? Deferring means the KPI row shows skeletons for ~200ms; keeping them eager means the page waits for them before painting anything. | S-01 |
+| Q4 | ✅ Resolved 2026-10-13: pulse. Skeleton animation: pulse (`animate-pulse`, simpler) or shimmer (moving gradient, more familiar)? | S-04 |
 
 ---
 

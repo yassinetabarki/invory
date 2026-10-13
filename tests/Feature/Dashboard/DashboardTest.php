@@ -57,7 +57,7 @@ it('sends every figure of the dashboard for the last 30 days, from the database'
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('dashboard')
-            ->hasAll(['period', 'periods', 'stats', 'top_products', 'needs_restock', 'recent_sales', 'alerts'])
+            ->hasAll(['period', 'periods', 'stats', 'top_products'])
             ->where('period', 'last_30_days')
             ->where('periods', [
                 ['value' => 'last_7_days', 'label' => 'Last 7 days'],
@@ -77,8 +77,9 @@ it('sends every figure of the dashboard for the last 30 days, from the database'
                 'out_of_stock_count' => 1,
                 'unproducible_count' => 1,
                 'products_count' => 7,
-            ])
-            ->has('needs_restock.0', fn (Assert $material) => $material->hasAll(materialContractKeys())));
+            ]));
+
+    $loaded = loadedPageProps($response);
 
     // Six products sold: the sixth (the Sneaker, 9 units and 621.0000) is out of both top fives.
     expect(pageProp($response, 'top_products.by_units'))->toBe([
@@ -93,9 +94,10 @@ it('sends every figure of the dashboard for the last 30 days, from the database'
         ['product' => productRef(1, 'PRD-JKT-001', 'Denim Jacket'), 'units_sold' => 38, 'revenue' => '3382.0000', 'percent_of_top' => '66.89'],
         ['product' => productRef(4, 'PRD-TOT-004', 'Leather Tote'), 'units_sold' => 12, 'revenue' => '2988.0000', 'percent_of_top' => '59.10'],
         ['product' => productRef(7, 'PRD-BLT-007', 'Leather Belt'), 'units_sold' => 31, 'revenue' => '1395.0000', 'percent_of_top' => '27.59'],
-    ])->and(pageProp($response, 'recent_sales.*.id'))->toBe(array_map(demoSaleId(...), [60, 59, 58, 57, 56]))
-        ->and(pageProp($response, 'recent_sales.*.sold_on'))->toBe(['2026-10-07', '2026-10-07', '2026-10-06', '2026-10-05', '2026-10-05'])
-        ->and(pageProp($response, 'recent_sales.0'))->toBe([
+    ])->and(data_get($loaded, 'recent_sales.*.id'))->toBe(array_map(demoSaleId(...), [60, 59, 58, 57, 56]))
+        ->and(data_get($loaded, 'recent_sales.*.sold_on'))->toBe(['2026-10-07', '2026-10-07', '2026-10-06', '2026-10-05', '2026-10-05'])
+        ->and(array_keys($loaded['needs_restock'][0]))->toEqualCanonicalizing(materialContractKeys())
+        ->and(data_get($loaded, 'recent_sales.0'))->toBe([
             'id' => demoSaleId(60),
             'product' => productRef(5, 'PRD-JNS-005', 'Denim Jeans 5-pocket'),
             'quantity' => 6,
@@ -103,12 +105,21 @@ it('sends every figure of the dashboard for the last 30 days, from the database'
             'total' => '474.0000',
             'sold_on' => '2026-10-07',
             'note' => 'Boutique Lyon',
-        ])->and(pageProp($response, 'alerts'))->toBe([[
+        ])->and($loaded['alerts'])->toBe([[
             'product' => productRef(3, 'PRD-SNK-003', 'Canvas Low Sneaker'),
             'bottleneck' => [...materialRef('MAT-SOL-042'), 'stock_status' => 'out'],
-        ]])->and(pageProp($response, 'needs_restock.*.name'))->toBe([
+        ]])->and(data_get($loaded, 'needs_restock.*.name'))->toBe([
             'Rubber cupsole 42', 'Cotton jersey 180gsm White', 'Metal shank button 17mm', 'Woven brand label',
         ]);
+});
+
+it('sends the stats and top products first, and the restock list, recent sales and alerts in one deferred request', function () {
+    actingAs($this->user)->get(dashboardUrl())
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->hasAll(['period', 'periods', 'stats', 'top_products'])
+            ->missingAll(['needs_restock', 'recent_sales', 'alerts'])
+            ->loadDeferredProps('default', fn (Assert $reloaded) => $reloaded->hasAll(['needs_restock', 'recent_sales', 'alerts'])));
 });
 
 it('switches the sales figures with the period and keeps the inventory and product ones', function (string $period, int $count, int $units, string $revenue, int $products) {
@@ -143,14 +154,16 @@ it('reports a period without sales as zero, with scale-4 revenue, and still list
     // The newest demo sales are dated 2026-10-01 to 2026-10-07: without them "this month" (today is 2026-10-08) is empty.
     Sale::query()->where('sold_on', '>=', '2026-10-01')->delete();
 
-    actingAs($this->user)->get(dashboardUrl(['period' => 'this_month']))
-        ->assertInertia(fn (Assert $page) => $page
-            ->where('stats.sales_count', 0)
-            ->where('stats.units_sold', 0)
-            ->where('stats.revenue', '0.0000')
-            ->where('stats.products_sold_count', 0)
-            ->where('top_products', ['by_units' => [], 'by_revenue' => []])
-            ->where('recent_sales.0.sold_on', '2026-09-30'));
+    $response = actingAs($this->user)->get(dashboardUrl(['period' => 'this_month']));
+
+    $response->assertInertia(fn (Assert $page) => $page
+        ->where('stats.sales_count', 0)
+        ->where('stats.units_sold', 0)
+        ->where('stats.revenue', '0.0000')
+        ->where('stats.products_sold_count', 0)
+        ->where('top_products', ['by_units' => [], 'by_revenue' => []]));
+
+    expect(loadedPageProp($response, 'recent_sales.0.sold_on'))->toBe('2026-09-30');
 });
 
 it('changes the figures when a sale is recorded', function () {
@@ -159,12 +172,14 @@ it('changes the figures when a sale is recorded', function () {
 
     $response = actingAs($this->user)->get(dashboardUrl());
 
-    expect(pageProp($response, 'stats.revenue'))->toBe('17117.0000')
-        ->and(pageProp($response, 'stats.units_sold'))->toBe(299)
-        ->and(pageProp($response, 'stats.sales_count'))->toBe(49)
-        ->and(pageProp($response, 'top_products.by_units.2.units_sold'))->toBe(41)
-        ->and(pageProp($response, 'recent_sales.0.sold_on'))->toBe('2026-10-08')
-        ->and(pageProp($response, 'recent_sales.0.total'))->toBe('267.0000');
+    $loaded = loadedPageProps($response);
+
+    expect(data_get($loaded, 'stats.revenue'))->toBe('17117.0000')
+        ->and(data_get($loaded, 'stats.units_sold'))->toBe(299)
+        ->and(data_get($loaded, 'stats.sales_count'))->toBe(49)
+        ->and(data_get($loaded, 'top_products.by_units.2.units_sold'))->toBe(41)
+        ->and(data_get($loaded, 'recent_sales.0.sold_on'))->toBe('2026-10-08')
+        ->and(data_get($loaded, 'recent_sales.0.total'))->toBe('267.0000');
 });
 
 it('keeps the sales of a deleted product in the figures but not the product in the counts or alerts (D-3)', function () {
@@ -174,18 +189,18 @@ it('keeps the sales of a deleted product in the figures but not the product in t
     demoProduct('PRD-TSH-002')->delete();
     demoProduct('PRD-SNK-003')->delete();
 
-    $response = actingAs($this->user)->get(dashboardUrl());
+    $loaded = loadedPageProps(actingAs($this->user)->get(dashboardUrl()));
 
-    expect(pageProp($response, 'stats'))->toMatchArray([
+    expect($loaded['stats'])->toMatchArray([
         'revenue' => '16850.0000',
         'units_sold' => 296,
         'sales_count' => 48,
         'products_sold_count' => 6,
         'products_count' => 5,
         'unproducible_count' => 0,
-    ])->and(pageProp($response, 'top_products.by_units.0.product'))->toBe(['id' => $tshirtId, 'sku' => 'PRD-TSH-002', 'name' => 'Classic White T-shirt', 'photo_url' => Storage::disk('public')->url('products/tshirt.jpg')])
-        ->and(pageProp($response, 'recent_sales.1.product.sku'))->toBe('PRD-TSH-002')
-        ->and(pageProp($response, 'alerts'))->toBe([]);
+    ])->and(data_get($loaded, 'top_products.by_units.0.product'))->toBe(['id' => $tshirtId, 'sku' => 'PRD-TSH-002', 'name' => 'Classic White T-shirt', 'photo_url' => Storage::disk('public')->url('products/tshirt.jpg')])
+        ->and(data_get($loaded, 'recent_sales.1.product.sku'))->toBe('PRD-TSH-002')
+        ->and($loaded['alerts'])->toBe([]);
 });
 
 it('sends 0.00 as the percent of every product when the top metric is zero', function () {
@@ -207,22 +222,22 @@ describe('stock-driven figures', function () {
         // 7 buttons don't cover one Denim Jacket (8): the button is low (7 <= 1000), not out.
         demoMaterial('MAT-BTN-017')->update(['quantity_on_hand' => '7']);
 
-        $response = actingAs($this->user)->get(dashboardUrl());
+        $loaded = loadedPageProps(actingAs($this->user)->get(dashboardUrl()));
 
-        expect(pageProp($response, 'alerts.*.product.name'))->toBe(['Canvas Low Sneaker', 'Denim Jacket'])
-            ->and(pageProp($response, 'alerts.*.bottleneck.sku'))->toBe(['MAT-SOL-042', 'MAT-BTN-017'])
-            ->and(pageProp($response, 'alerts.*.bottleneck.stock_status'))->toBe(['out', 'low'])
-            ->and(pageProp($response, 'stats.unproducible_count'))->toBe(2);
+        expect(data_get($loaded, 'alerts.*.product.name'))->toBe(['Canvas Low Sneaker', 'Denim Jacket'])
+            ->and(data_get($loaded, 'alerts.*.bottleneck.sku'))->toBe(['MAT-SOL-042', 'MAT-BTN-017'])
+            ->and(data_get($loaded, 'alerts.*.bottleneck.stock_status'))->toBe(['out', 'low'])
+            ->and(data_get($loaded, 'stats.unproducible_count'))->toBe(2);
     });
 
     it('does not count a product without a composition as one that can\'t be produced', function () {
         ProductComponent::query()->delete();
 
-        $response = actingAs($this->user)->get(dashboardUrl());
+        $loaded = loadedPageProps(actingAs($this->user)->get(dashboardUrl()));
 
-        expect(pageProp($response, 'stats.unproducible_count'))->toBe(0)
-            ->and(pageProp($response, 'stats.products_count'))->toBe(7)
-            ->and(pageProp($response, 'alerts'))->toBe([]);
+        expect(data_get($loaded, 'stats.unproducible_count'))->toBe(0)
+            ->and(data_get($loaded, 'stats.products_count'))->toBe(7)
+            ->and($loaded['alerts'])->toBe([]);
     });
 });
 
@@ -230,12 +245,12 @@ describe('needs restock', function () {
     it('lists the out-of-stock material first, then the low ones by name, as complete Material resources', function () {
         Material::query()->where('sku', 'MAT-JRS-180')->update(['photo_path' => 'materials/jersey.jpg']);
 
-        $response = actingAs($this->user)->get(dashboardUrl());
+        $loaded = loadedPageProps(actingAs($this->user)->get(dashboardUrl()));
 
-        expect(pageProp($response, 'needs_restock.*.stock_status'))->toBe(['out', 'low', 'low', 'low'])
-            ->and(pageProp($response, 'needs_restock.*.used_in_count'))->toBe([1, 1, 3, 6])
-            ->and(pageProp($response, 'needs_restock.*.photo_url'))->toBe([null, Storage::disk('public')->url('materials/jersey.jpg'), null, null])
-            ->and(pageProp($response, 'needs_restock.1'))->toMatchArray([
+        expect(data_get($loaded, 'needs_restock.*.stock_status'))->toBe(['out', 'low', 'low', 'low'])
+            ->and(data_get($loaded, 'needs_restock.*.used_in_count'))->toBe([1, 1, 3, 6])
+            ->and(data_get($loaded, 'needs_restock.*.photo_url'))->toBe([null, Storage::disk('public')->url('materials/jersey.jpg'), null, null])
+            ->and(data_get($loaded, 'needs_restock.1'))->toMatchArray([
                 'sku' => 'MAT-JRS-180',
                 'unit_cost' => '4.2000',
                 'quantity_on_hand' => '64.0000',
@@ -249,30 +264,30 @@ describe('needs restock', function () {
         Material::factory()->create(['name' => 'Aaa empty', 'quantity_on_hand' => '0', 'reorder_level' => '10']);
         Material::factory()->create(['name' => 'Zzz empty', 'quantity_on_hand' => '0', 'reorder_level' => null]);
 
-        $response = actingAs($this->user)->get(dashboardUrl());
+        $loaded = loadedPageProps(actingAs($this->user)->get(dashboardUrl()));
 
         // 6 materials need a restock (3 out, 3 low): the list keeps 5 and the count stays the real total.
-        expect(pageProp($response, 'needs_restock.*.name'))->toBe([
+        expect(data_get($loaded, 'needs_restock.*.name'))->toBe([
             'Aaa empty', 'Rubber cupsole 42', 'Zzz empty', 'Cotton jersey 180gsm White', 'Metal shank button 17mm',
-        ])->and(pageProp($response, 'stats.needs_restock_count'))->toBe(6)
-            ->and(pageProp($response, 'stats.out_of_stock_count'))->toBe(3);
+        ])->and(data_get($loaded, 'stats.needs_restock_count'))->toBe(6)
+            ->and(data_get($loaded, 'stats.out_of_stock_count'))->toBe(3);
     });
 
     it('is empty when every material is well stocked, and leaves soft-deleted ones out', function () {
         demoMaterial('MAT-SOL-042')->delete();
 
-        $response = actingAs($this->user)->get(dashboardUrl());
+        $loaded = loadedPageProps(actingAs($this->user)->get(dashboardUrl()));
 
-        expect(pageProp($response, 'needs_restock.*.sku'))->toBe(['MAT-JRS-180', 'MAT-BTN-017', 'MAT-LBL-WOV'])
-            ->and(pageProp($response, 'stats.materials_count'))->toBe(11)
-            ->and(pageProp($response, 'stats.out_of_stock_count'))->toBe(0);
+        expect(data_get($loaded, 'needs_restock.*.sku'))->toBe(['MAT-JRS-180', 'MAT-BTN-017', 'MAT-LBL-WOV'])
+            ->and(data_get($loaded, 'stats.materials_count'))->toBe(11)
+            ->and(data_get($loaded, 'stats.out_of_stock_count'))->toBe(0);
 
         Material::query()->withTrashed()->update(['quantity_on_hand' => '100000']);
 
-        $response = actingAs($this->user)->get(dashboardUrl());
+        $loaded = loadedPageProps(actingAs($this->user)->get(dashboardUrl()));
 
-        expect(pageProp($response, 'needs_restock'))->toBe([])
-            ->and(pageProp($response, 'alerts'))->toBe([]);
+        expect($loaded['needs_restock'])->toBe([])
+            ->and($loaded['alerts'])->toBe([]);
     });
 });
 
@@ -288,19 +303,31 @@ describe('access', function () {
     })->with([Material::class, Product::class, Sale::class]);
 });
 
-it('answers within the query budget, whatever the number of sales, products and materials', function () {
-    $queries = fn (): array => queryLog(fn () => actingAs($this->user)->get(dashboardUrl())->assertOk());
+it('answers within the query budget, in the first request and in the deferred one, whatever the number of sales, products and materials', function () {
+    $measure = function (): array {
+        $first = null;
+        $firstQueries = queryLog(function () use (&$first) {
+            $first = actingAs($this->user)->get(dashboardUrl())->assertOk();
+        });
+        $deferredQueries = queryLog(function () use ($first) {
+            $first->assertInertia(fn (Assert $page) => $page->loadDeferredProps('default', fn (Assert $reloaded) => $reloaded->hasAll(['needs_restock', 'recent_sales', 'alerts'])));
+        });
 
-    $queries(); // warm-up: one-off framework queries
-    $few = $queries();
+        return [$firstQueries, $deferredQueries];
+    };
+
+    $measure(); // warm-up: one-off framework queries
+    [$few, $fewDeferred] = $measure();
 
     Material::factory()->count(40)->create();
     Product::factory()->count(30)->withComponents(5)->create()->each(
         fn (Product $product) => Sale::factory()->count(3)->create(['product_id' => $product->id]),
     );
 
-    $many = $queries();
+    [$many, $manyDeferred] = $measure();
 
     expect(count($few))->toBeLessThanOrEqual(10, implode(PHP_EOL, $few))
-        ->and(count($many))->toBe(count($few), implode(PHP_EOL, $many));
+        ->and(count($many))->toBe(count($few), implode(PHP_EOL, $many))
+        ->and(count($fewDeferred))->toBeLessThanOrEqual(10, implode(PHP_EOL, $fewDeferred))
+        ->and(count($manyDeferred))->toBe(count($fewDeferred), implode(PHP_EOL, $manyDeferred));
 });

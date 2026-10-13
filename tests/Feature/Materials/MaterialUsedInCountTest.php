@@ -100,12 +100,12 @@ it('counts a product once per material, however many lines the others have', fun
 it('sends the count with the restock list of the dashboard', function () {
     $response = actingAs($this->user)->get(route('dashboard'));
 
-    expect(pageProp($response, 'needs_restock.*.sku'))->toBe(['MAT-SOL-042', 'MAT-JRS-180', 'MAT-BTN-017', 'MAT-LBL-WOV'])
-        ->and(pageProp($response, 'needs_restock.*.used_in_count'))->toBe([1, 1, 3, 6]);
+    expect(loadedPageProp($response, 'needs_restock.*.sku'))->toBe(['MAT-SOL-042', 'MAT-JRS-180', 'MAT-BTN-017', 'MAT-LBL-WOV'])
+        ->and(loadedPageProp($response, 'needs_restock.*.used_in_count'))->toBe([1, 1, 3, 6]);
 
     demoProduct('PRD-SNK-003')->delete();
 
-    expect(pageProp(actingAs($this->user)->get(route('dashboard')), 'needs_restock.0.used_in_count'))->toBe(0);
+    expect(loadedPageProp(actingAs($this->user)->get(route('dashboard')), 'needs_restock.0.used_in_count'))->toBe(0);
 });
 
 it('answers 404 for a soft-deleted material even though the route loads the count with it', function () {

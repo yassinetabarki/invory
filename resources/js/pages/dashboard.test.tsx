@@ -9,6 +9,7 @@ import {
     sneakerAlert,
 } from '@/test/fixtures/dashboard';
 import { inertiaMock, resetInertiaMock, setPageProps } from '@/test/inertia';
+import type { DashboardProps } from '@/types/domain';
 
 vi.mock('@inertiajs/react', async (importOriginal) => {
     const { createInertiaModule } = await import('@/test/inertia');
@@ -25,15 +26,71 @@ const VISIT_OPTIONS = {
     replace: true,
 };
 
+/**
+ * The mocked `<Deferred>` reads the page props, not the component props, so
+ * both are set from the same object: the deferred panels render for real.
+ */
+function renderDashboard(props: DashboardProps = dashboardProps()) {
+    setPageProps(props, { url: '/dashboard', component: 'dashboard' });
+
+    return render(<Dashboard {...props} />);
+}
+
 describe('dashboard page', () => {
     beforeEach(() => {
         resetInertiaMock();
-        setPageProps({}, { url: '/dashboard', component: 'dashboard' });
+    });
+
+    describe('deferred panels', () => {
+        it('paints the key figures and top products at once and shows loading placeholders for the restock list, recent sales and alerts until the deferred props land', () => {
+            const {
+                needs_restock: _restock,
+                recent_sales: _sales,
+                alerts: _alerts,
+                ...initial
+            } = dashboardProps();
+
+            const { rerender } = renderDashboard(initial);
+
+            expect(
+                screen.getByRole('region', { name: 'Key figures' }),
+            ).toBeVisible();
+            expect(
+                screen.getByRole('heading', { name: 'Top selling products' }),
+            ).toBeVisible();
+            expect(
+                screen.getByText('Loading restock list…'),
+            ).toBeInTheDocument();
+            expect(
+                screen.getByText('Loading recent sales…'),
+            ).toBeInTheDocument();
+            expect(
+                screen.getByText('Checking production alerts…'),
+            ).toBeInTheDocument();
+            expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+
+            // The deferred request lands: Inertia swaps in the page props and re-renders the page.
+            const loaded = dashboardProps();
+
+            setPageProps(loaded);
+            rerender(<Dashboard {...loaded} />);
+
+            expect(screen.getAllByRole('alert')).toHaveLength(1);
+            expect(
+                within(
+                    screen.getByRole('region', { name: 'Needs restock' }),
+                ).getAllByRole('listitem'),
+            ).toHaveLength(4);
+            expect(
+                within(screen.getByRole('table')).getAllByRole('row'),
+            ).toHaveLength(6);
+            expect(screen.queryByRole('status')).not.toBeInTheDocument();
+        });
     });
 
     describe('with data (mockup values)', () => {
         it('has the mockup header and every section', () => {
-            render(<Dashboard {...dashboardProps()} />);
+            renderDashboard();
 
             expect(
                 screen.getByRole('heading', { level: 1, name: 'Dashboard' }),
@@ -56,7 +113,7 @@ describe('dashboard page', () => {
         });
 
         it('shows the KPI values and the links they lead to', () => {
-            render(<Dashboard {...dashboardProps()} />);
+            renderDashboard();
 
             const figures = screen.getByRole('region', {
                 name: 'Key figures',
@@ -74,13 +131,11 @@ describe('dashboard page', () => {
         });
 
         it('names the selected period in the hint and the top products subtitle', () => {
-            render(
-                <Dashboard
-                    {...dashboardProps({
-                        period: 'this_month',
-                        stats: { ...dashboardStats, sales_count: 9 },
-                    })}
-                />,
+            renderDashboard(
+                dashboardProps({
+                    period: 'this_month',
+                    stats: { ...dashboardStats, sales_count: 9 },
+                }),
             );
 
             expect(screen.getByText('9 sales · this month')).toBeVisible();
@@ -90,7 +145,7 @@ describe('dashboard page', () => {
         });
 
         it('shows the top products, the restock list and the recent sales', () => {
-            render(<Dashboard {...dashboardProps()} />);
+            renderDashboard();
 
             const top = screen.getByRole('list', {
                 name: 'Top selling products',
@@ -112,7 +167,7 @@ describe('dashboard page', () => {
         it('switches the top products between units and revenue', async () => {
             const user = userEvent.setup();
 
-            render(<Dashboard {...dashboardProps()} />);
+            renderDashboard();
 
             const top = screen.getByRole('list', {
                 name: 'Top selling products',
@@ -136,10 +191,8 @@ describe('dashboard page', () => {
 
     describe('alerts', () => {
         it('shows one alert per product that cannot be produced', () => {
-            render(
-                <Dashboard
-                    {...dashboardProps({ alerts: [sneakerAlert, choreAlert] })}
-                />,
+            renderDashboard(
+                dashboardProps({ alerts: [sneakerAlert, choreAlert] }),
             );
 
             const alerts = screen.getAllByRole('alert');
@@ -154,7 +207,7 @@ describe('dashboard page', () => {
         });
 
         it('shows no alert when everything can be produced', () => {
-            render(<Dashboard {...dashboardProps({ alerts: [] })} />);
+            renderDashboard(dashboardProps({ alerts: [] }));
 
             expect(screen.queryByRole('alert')).not.toBeInTheDocument();
         });
@@ -164,7 +217,7 @@ describe('dashboard page', () => {
         it('is labelled Period and offers the server periods', async () => {
             const user = userEvent.setup();
 
-            render(<Dashboard {...dashboardProps()} />);
+            renderDashboard();
 
             const select = screen.getByRole('combobox', { name: 'Period' });
 
@@ -187,7 +240,7 @@ describe('dashboard page', () => {
         it('requests the chosen period, keeping state and scroll', async () => {
             const user = userEvent.setup();
 
-            render(<Dashboard {...dashboardProps()} />);
+            renderDashboard();
 
             await user.click(screen.getByRole('combobox', { name: 'Period' }));
             await user.click(screen.getByRole('option', { name: 'This year' }));
@@ -207,7 +260,7 @@ describe('dashboard page', () => {
         it('reloads only the period figures: restock, recent sales and alerts stay', async () => {
             const user = userEvent.setup();
 
-            render(<Dashboard {...dashboardProps()} />);
+            renderDashboard();
 
             await user.click(screen.getByRole('combobox', { name: 'Period' }));
             await user.click(
@@ -226,9 +279,7 @@ describe('dashboard page', () => {
         it('omits the default period from the query', async () => {
             const user = userEvent.setup();
 
-            render(
-                <Dashboard {...dashboardProps({ period: 'last_7_days' })} />,
-            );
+            renderDashboard(dashboardProps({ period: 'last_7_days' }));
 
             await user.click(screen.getByRole('combobox', { name: 'Period' }));
             await user.click(
@@ -243,7 +294,7 @@ describe('dashboard page', () => {
         });
 
         it('adopts a period that did not come from the select (back button)', () => {
-            const { rerender } = render(<Dashboard {...dashboardProps()} />);
+            const { rerender } = renderDashboard();
 
             rerender(
                 <Dashboard {...dashboardProps({ period: 'last_7_days' })} />,
@@ -257,7 +308,7 @@ describe('dashboard page', () => {
 
     describe('Record sale', () => {
         it('does not prefetch the sales page', () => {
-            render(<Dashboard {...dashboardProps()} />);
+            renderDashboard();
 
             const link = screen.getByRole('link', { name: 'Record sale' });
 
@@ -265,7 +316,7 @@ describe('dashboard page', () => {
         });
 
         it('links to the sales page with the form open', () => {
-            render(<Dashboard {...dashboardProps()} />);
+            renderDashboard();
 
             expect(
                 screen.getByRole('link', { name: 'Record sale' }),
@@ -275,20 +326,18 @@ describe('dashboard page', () => {
 
     describe('empty states', () => {
         it('explains an empty period and an empty log', () => {
-            render(
-                <Dashboard
-                    {...dashboardProps({
-                        stats: {
-                            ...dashboardStats,
-                            revenue: '0.0000',
-                            units_sold: 0,
-                            sales_count: 0,
-                            products_sold_count: 0,
-                        },
-                        top_products: { by_units: [], by_revenue: [] },
-                        recent_sales: [],
-                    })}
-                />,
+            renderDashboard(
+                dashboardProps({
+                    stats: {
+                        ...dashboardStats,
+                        revenue: '0.0000',
+                        units_sold: 0,
+                        sales_count: 0,
+                        products_sold_count: 0,
+                    },
+                    top_products: { by_units: [], by_revenue: [] },
+                    recent_sales: [],
+                }),
             );
 
             expect(screen.getByText(/No sales in this period/)).toBeVisible();
@@ -300,18 +349,16 @@ describe('dashboard page', () => {
         });
 
         it('says nothing needs restock', () => {
-            render(
-                <Dashboard
-                    {...dashboardProps({
-                        needs_restock: [],
-                        stats: {
-                            ...dashboardStats,
-                            needs_restock_count: 0,
-                            low_stock_count: 0,
-                            out_of_stock_count: 0,
-                        },
-                    })}
-                />,
+            renderDashboard(
+                dashboardProps({
+                    needs_restock: [],
+                    stats: {
+                        ...dashboardStats,
+                        needs_restock_count: 0,
+                        low_stock_count: 0,
+                        out_of_stock_count: 0,
+                    },
+                }),
             );
 
             expect(

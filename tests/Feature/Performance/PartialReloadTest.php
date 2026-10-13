@@ -203,11 +203,18 @@ describe('sales index', function () {
 });
 
 describe('dashboard', function () {
-    it('runs the restock list on a full visit', function () {
-        $queries = queryLog(fn () => $this->get(route('dashboard'))
-            ->assertInertia(fn (Assert $page) => $page->hasAll(['period', 'periods', 'stats', 'top_products', 'needs_restock', 'recent_sales', 'alerts'])));
+    it('runs the restock list in the deferred request, not in the first response', function () {
+        $first = null;
+        $firstQueries = queryLog(function () use (&$first) {
+            $first = $this->get(route('dashboard'))
+                ->assertInertia(fn (Assert $page) => $page->hasAll(['period', 'periods', 'stats', 'top_products'])->missingAll(['needs_restock', 'recent_sales', 'alerts']));
+        });
+        $deferredQueries = queryLog(fn () => $first->assertInertia(
+            fn (Assert $page) => $page->loadDeferredProps('default', fn (Assert $reloaded) => $reloaded->hasAll(['needs_restock', 'recent_sales', 'alerts'])),
+        ));
 
-        expect(queriesMatching($queries, NEEDS_RESTOCK_QUERY))->toHaveCount(1);
+        expect(queriesMatching($firstQueries, NEEDS_RESTOCK_QUERY))->toBeEmpty()
+            ->and(queriesMatching($deferredQueries, NEEDS_RESTOCK_QUERY))->toHaveCount(1);
     });
 
     it('skips the restock list, the recent sales and the alerts on a period switch', function () {
@@ -231,14 +238,20 @@ describe('dashboard', function () {
             ->and($queries)->toHaveCount(6);
     });
 
-    it('builds the costed products once when several sections need them', function () {
-        $queries = queryLog(fn () => $this->get(route('dashboard'))->assertOk());
+    it('builds the costed products once per request when several sections need them', function () {
+        $first = null;
+        $firstQueries = queryLog(function () use (&$first) {
+            $first = $this->get(route('dashboard'))->assertOk();
+        });
+        $deferredQueries = queryLog(fn () => $first->assertInertia(fn (Assert $page) => $page->loadDeferredProps('default', fn (Assert $reloaded) => $reloaded->has('alerts'))));
 
-        // One read of the products and their lines, shared by the stats and the alerts; the products of the rankings and of the
-        // recent sales come from them (no query of their own for products that are not deleted).
-        expect(queriesMatching($queries, 'select \* from "products"'))->toHaveCount(1)
-            ->and(queriesMatching($queries, 'from "product_components" where "product_components"."product_id" in'))->toHaveCount(1)
-            ->and(queriesMatching($queries, 'from "products" where "id" in|from "products" where "products"."id" in'))->toBeEmpty();
+        // First request: one read of the products and their lines, shared by the stats and the rankings (whose product refs come
+        // from them). Deferred request: one read again, shared by the alerts and the recent sales.
+        foreach ([$firstQueries, $deferredQueries] as $queries) {
+            expect(queriesMatching($queries, 'select \* from "products"'))->toHaveCount(1)
+                ->and(queriesMatching($queries, 'from "product_components" where "product_components"."product_id" in'))->toHaveCount(1)
+                ->and(queriesMatching($queries, 'from "products" where "id" in|from "products" where "products"."id" in'))->toBeEmpty();
+        }
     });
 
     it('loads only the restock list when only that is requested', function () {

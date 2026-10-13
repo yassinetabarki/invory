@@ -1,4 +1,4 @@
-import { Head, Link, router } from '@inertiajs/react';
+import { Deferred, Head, Link, router } from '@inertiajs/react';
 import { Plus } from 'lucide-react';
 import { useState } from 'react';
 import SaleController from '@/actions/App/Http/Controllers/SaleController';
@@ -8,12 +8,16 @@ import { RecentSalesCard } from '@/components/dashboard/recent-sales-card';
 import { TopProductsCard } from '@/components/dashboard/top-products-card';
 import { UnproducibleAlerts } from '@/components/dashboard/unproducible-alerts';
 import { PageHeader } from '@/components/shared/page-header';
+import { SkeletonCard } from '@/components/shared/skeletons';
 import { DEFAULT_PERIOD, PeriodSelect } from '@/components/sales/period-select';
 import { Button } from '@/components/ui/button';
 import { dashboard } from '@/routes';
 import type { DashboardProps, SalesPeriod } from '@/types/domain';
 
-/** Only the figures that follow the period; restock, recent sales and alerts don't. */
+/**
+ * Only the figures that follow the period. Restock, recent sales and alerts
+ * don't: they are deferred props, loaded once after the first paint.
+ */
 const PERIOD_PROPS = ['period', 'stats', 'top_products'];
 
 export default function Dashboard({
@@ -84,7 +88,16 @@ export default function Dashboard({
                     }
                 />
 
-                <UnproducibleAlerts alerts={alerts} />
+                <Deferred
+                    data="alerts"
+                    fallback={
+                        <span role="status" className="sr-only">
+                            Checking production alerts…
+                        </span>
+                    }
+                >
+                    <UnproducibleAlerts alerts={alerts ?? []} />
+                </Deferred>
 
                 <KeyFigures stats={stats} periodLabel={periodLabel} />
 
@@ -94,10 +107,33 @@ export default function Dashboard({
                         byRevenue={topProducts.by_revenue}
                         periodLabel={periodLabel}
                     />
-                    <NeedsRestockCard materials={needsRestock} />
+                    <Deferred
+                        data="needs_restock"
+                        fallback={
+                            <SkeletonCard
+                                title="Needs restock"
+                                label="restock list"
+                                rows={5}
+                            />
+                        }
+                    >
+                        <NeedsRestockCard materials={needsRestock ?? []} />
+                    </Deferred>
                 </div>
 
-                <RecentSalesCard sales={recentSales} />
+                <Deferred
+                    data="recent_sales"
+                    fallback={
+                        <SkeletonCard
+                            title="Recent sales"
+                            label="recent sales"
+                            rows={5}
+                            thumb={false}
+                        />
+                    }
+                >
+                    <RecentSalesCard sales={recentSales ?? []} />
+                </Deferred>
             </div>
         </>
     );

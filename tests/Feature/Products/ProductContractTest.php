@@ -181,13 +181,15 @@ it('sends the props of the create and edit pages (S-25: statuses, plus the produ
 it('sends the product-shaped props of the dashboard, the sales form and the material page as before', function () {
     $dashboard = actingAs($this->user)->get(route('dashboard'));
 
-    foreach ($dashboard->inertiaProps('alerts') as $alert) {
+    $alerts = loadedPageProp($dashboard, 'alerts');
+
+    foreach ($alerts as $alert) {
         expect(keysOf($alert))->toBe(['product', 'bottleneck'])
             ->and(keysOf($alert['product']))->toBe(['id', 'sku', 'name', 'photo_url'])
             ->and(keysOf($alert['bottleneck']))->toBe(['id', 'sku', 'name', 'unit', 'stock_status']);
     }
 
-    expect($dashboard->inertiaProps('alerts'))->toHaveCount(1)
+    expect($alerts)->toHaveCount(1)
         ->and($dashboard->inertiaProps('stats.unproducible_count'))->toBeInt()
         ->and($dashboard->inertiaProps('stats.products_count'))->toBeInt();
 

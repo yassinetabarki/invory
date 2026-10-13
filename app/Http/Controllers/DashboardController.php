@@ -25,7 +25,8 @@ use Inertia\Response;
 /**
  * The dashboard on real data (S-06-BE): sales through {@see SalesReport}, the costed products through {@see ProductCatalog},
  * inventory totals and the restock list from materials. Authorized in {@see DashboardRequest} (`viewAny` on materials, products
- * and sales). Sends the DashboardProps contract.
+ * and sales). Sends the DashboardProps contract: `stats` and `top_products` are eager (the first paint); `needs_restock`,
+ * `recent_sales` and `alerts` are deferred props of one group, loaded together right after it (RL-01).
  */
 final class DashboardController extends Controller
 {
@@ -63,9 +64,14 @@ final class DashboardController extends Controller
 
                 return ['by_units' => $this->rankingRows($top['by_units'], $catalog), 'by_revenue' => $this->rankingRows($top['by_revenue'], $catalog)];
             },
-            'needs_restock' => fn (): array => MaterialResource::collection($this->needsRestock($reference))->resolve(),
+            // The three secondary panels are deferred in ONE group (the default): the KPI row and the rankings paint at once and these
+            // arrive together in a single follow-up request, which builds the ProductCatalog once for its two products-based sections.
+            'needs_restock' => Inertia::defer(fn (): array => MaterialResource::collection($this->needsRestock($reference))->resolve()),
+            // Before `recent_sales` on purpose: deferred props resolve in this order, and `alerts` builds the catalog that `recent_sales`
+            // then takes its product refs from (otherwise it would query the products on its own).
+            'alerts' => Inertia::defer(fn (): array => $this->alerts($catalog->alerts(), $request)),
             // The newest sales, whatever the period.
-            'recent_sales' => function () use ($report, $catalog): array {
+            'recent_sales' => Inertia::defer(function () use ($report, $catalog): array {
                 $sales = $report->recent(self::LIST_SIZE);
                 $products = $catalog->refs(array_map(static fn (Sale $sale): int => $sale->product_id, $sales));
 
@@ -74,8 +80,7 @@ final class DashboardController extends Controller
                 }
 
                 return SaleResource::collection($sales)->resolve();
-            },
-            'alerts' => fn (): array => $this->alerts($catalog->alerts(), $request),
+            }),
         ]);
     }
 
