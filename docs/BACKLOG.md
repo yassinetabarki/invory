@@ -21,7 +21,7 @@ Scope added by the human on 2026-10-08 with the approved mockup ([docs/design/mo
 |---|---|---|---|
 | **1 — Foundation + Materials** | S-00, S-01, S-02, S-03 | [plans/phase-1-foundation-materials.md](plans/phase-1-foundation-materials.md) | **done** (committed on `phase/1-materials`) |
 | **2 — UI-first preview** (approved mockup on preview data, decided 2026-10-08) | S-12, S-13, S-05, S-06-FE, S-07-FE, S-14-FE, S-15-FE, S-16-FE | [plans/phase-2-ui-first-preview.md](plans/phase-2-ui-first-preview.md) | **review: all stories approved by the tech-lead and committed on `phase/2-ui-first-preview` (2026-10-08), awaiting the human click-through to mark `done`** |
-| 3 — Real backend (replaces preview data) | S-04, S-14-BE, S-16-BE, S-15-BE, S-06-BE, S-07-BE, S-17 | written by the tech-lead before Phase 3 | todo |
+| 3 — Real backend (replaces preview data) | S-04, S-14-BE, S-16-BE, S-25, S-15-BE, S-06-BE, S-07-BE, S-17 | [plans/phase-3-real-backend.md](plans/phase-3-real-backend.md) | **review: all approved by the tech-lead 2026-10-13, awaiting commit** (S-04 done) |
 | 4 — E2E + demo data | S-08 | written by the tech-lead before Phase 4 | todo |
 | 3P / 3R — Performance, SPA data loading, reference data (+ amendments to Phase 3 and 4) | S-18 … S-27 | [plans/phase-3-performance-spa-data.md](plans/phase-3-performance-spa-data.md) | **Proposed** (2026-10-08, awaiting the human's decisions Q1–Q10) |
 
@@ -151,36 +151,36 @@ writes to preview data validate for real, persist nothing and say so in an `info
 
 **Acceptance:** creating the Denim Jacket via HTTP yields exactly the Phase 2 expected props; the products fixture is deleted from `App\Mock`.
 
-## S-14-BE · Sales — backend — `todo` · decision 1
+## S-14-BE · Sales — backend — `review` (approved by the tech-lead 2026-10-13; includes F-37) · decision 1
 **Owner:** BE · **Depends on:** S-04
 
 - [ ] Migration `sales` (product FK `restrictOnDelete`, `quantity` unsigned int, `unit_price decimal(12,4)`, `sold_on date`, `note`, `user_id`), model, factory, `SalePolicy`
 - [ ] Actions `RecordSale`, `UpdateSale`, `DeleteSale`; `SaleController` bodies on Eloquent; totals and top products through `SalesCalculator` (exact on SQLite and PostgreSQL)
 - [ ] Tests: filters, periods (frozen time), totals, active-product rule, stock unchanged by sales
 
-## S-16-BE · Stock movement ledger + restock — backend — `todo` · decision 4
+## S-16-BE · Stock movement ledger + restock — backend — `review` (approved by the tech-lead 2026-10-13; started in the `wip` commit 2240e7d) · decision 4
 **Owner:** BE · **Depends on:** S-01
 
 - [ ] Migration `stock_movements` (material FK, type, occurred_on, quantity, quantity_before/after, unit_price, unit_cost_before/after, reference, note, user_id)
 - [ ] Action `RestockMaterial` (transaction: stock + optional unit cost = latest price paid, restock + price_change movements); `UpdateMaterial` logs corrections and price changes; `CreateMaterial` logs `created`
 - [ ] `MaterialRestockController` and material `history` / `recent_history` on Eloquent; tests incl. PostgreSQL parity
 
-## S-15-BE · Photo storage — backend — `todo` · decision 2
+## S-15-BE · Photo storage — backend — `review` (approved by the tech-lead 2026-10-13; includes F-36; no thumbnails, F-39) · decision 2
 **Owner:** BE · **Depends on:** S-04 (products part)
 
 - [ ] `photo_path` on materials and products; public disk + `storage:link`; upload, replace (delete the old file), remove; delete files with the item; `photo_url` accessor; tests with `Storage::fake()`
 
-## S-06-BE · Dashboard — backend — `todo`
+## S-06-BE · Dashboard — backend — `review` (approved by the tech-lead 2026-10-13)
 **Owner:** BE · **Depends on:** S-04, S-14-BE
 
 - [ ] `DashboardController` on real data (stats, top products, needs restock, recent sales, alerts) with the same props as Phase 2; tests
 
-## S-07-BE · Material usage — backend — `todo` · decision 3
+## S-07-BE · Material usage — backend — `review` (approved by the tech-lead 2026-10-13) · decision 3
 **Owner:** BE · **Depends on:** S-04
 
 - [ ] `materials.show` `usage` (effective qty, units covered, capacity, bottleneck, next limit) from real compositions in one eager-loaded query; tests
 
-## S-17 · Remove the preview layer — `todo` · **release blocker**
+## S-17 · Remove the preview layer — `review` (approved by the tech-lead 2026-10-13; demo seed lives in DemoProductsSeeder/DemoSalesSeeder, DemoCatalogSeeder untouched) · **release blocker**
 **Owner:** BE + TL · **Depends on:** all Phase 3 stories
 
 - [ ] Delete `app/Mock`, `public/mock/`, the `access-preview` ability and preview-only tests; move the demo fixture into `DemoCatalogSeeder`; arch test that nothing references `App\Mock`
@@ -239,7 +239,7 @@ The plan's §F.3 lists the amendments to S-04, S-14-BE, S-15-BE, S-16-BE, S-06-B
 **Owners:** BE + FE (one vertical commit) · **Depends on:** S-06-BE, S-07-BE
 - [ ] Dashboard secondary panels deferred; material history deferred with "Load more"; product recent sales deferred / `WhenVisible`; optimistic delete for sales and archive for reference items
 
-## S-25 · Material picker server-side search — `Proposed` · size M
+## S-25 · Material picker server-side search — `review` (approved by the tech-lead 2026-10-13; started in the `wip` commit 2240e7d) · size M
 **Owners:** BE + FE · **Depends on:** S-04
 - [ ] `GET /materials/options?search=&limit=20` (policy, Resource); the BOM picker uses `useHttp` (debounced); the `materials` prop is removed from product create/edit
 - **Acceptance:** product create JSON ≤ 5 KB at any catalogue size; render test with 50 rows / 2 000 materials
@@ -349,4 +349,27 @@ From the S-04 review (2026-10-09, MINOR/NIT, none blocking):
   (the fixture said 37 days ago). Fine for demo data; revisit with S-08.
 - **F-38 (perf note)**: the dashboard and material show sit exactly at the 10-query budget (preview adapters over real products) until
   S-06-BE/S-07-BE replace the adapters; the products index costs the whole filtered set when `cant_produce` is on (interim until S-23).
+  **Update 2026-10-13:** both pages are real and at ≤ 10 via request-scoped units and material categories (`ReferenceData`). The
+  dashboard still costs every product and the sales totals walk every row of the period in PHP (O(n)) until S-23.
+
+From the Phase 3 real-backend review (2026-10-13, MINOR/NIT, none blocking):
+- **F-35 (MINOR, BE, deferred by the human 2026-10-13, not blocking Phase 3)**: two simultaneous creates with the same material or product
+  SKU both pass validation; the second hits the partial unique index → 500. Map `UniqueConstraintViolationException` to a `sku` validation
+  error (F-33 pattern, `ReferenceNameGuard`). Schedule as its own follow-up story.
+- ~~**F-39**~~ **Decided 2026-10-13 (human): skip.** Original photos ship as-is (up to 4 MB, 25 per list page); no `photo_thumb_url`, no
+  contract change. Revisit only if list pages get slow (S-27 measures it).
+- ~~**F-40**~~ **Decided 2026-10-13 (human): no reason field.** The costing skill no longer mentions an "optional reason" for a `correction`;
+  corrections log before → after only.
+- **F-41 (MINOR, domain)**: `MaterialUsageService` takes `effective_quantity` / `units_covered` from the material's single line (DB-unique), because
+  the arch rule forbids arithmetic in `App\Services\Costing`. Expose the summed requirement per material from the domain
+  (`CostingCalculator`) so the "same material on two lines" edge case is honoured by construction.
+- **F-42 (MINOR, BE arch)**: `DashboardController` shapes `TopProduct`, `UnproducibleAlert` and `ProductRef` in private methods. Move them to
+  Resources so the controller is thin again.
+- **F-43 (NIT, BE)**: `PhotoStorage::persist()` deletes the old file when the Action's transaction returns; if an Action is ever called inside an
+  outer transaction, use `DB::afterCommit`. Two concurrent photo edits of one material can leave one orphan file.
+- **F-44 (NIT, FE)**: after a pick, the material picker fires one more `include` request before the popover unmounts (cancelled, harmless).
+- **F-45 (NIT, tests)**: stale "preview" wording in test comments/names (`MaterialPreviewDataTest`, `previewFixtureMaterials()`,
+  `DashboardTest` header…), `/mock/photos/...` strings in Vitest fixtures, and two dashboard test files (`tests/Feature/DashboardTest.php`
+  and `tests/Feature/Dashboard/DashboardTest.php`).
+- **F-46 (NIT, BE)**: `RecordSale` doesn't re-check that the product is still active inside its transaction (validation already did).
 

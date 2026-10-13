@@ -85,6 +85,8 @@ code testable and ready to scale.
  │     Sale     │  (does not change material stock)
  └──────────────┘
 ```
+Status (2026-10-13): every table above is real: `sales` (S-14-BE), `stock_movements` (S-16-BE), `photo_path` on materials and products
+(S-15-BE). The preview layer is gone (S-17). Demo data: `DemoCatalogSeeder` (materials) → `DemoProductsSeeder`, then `DemoSalesSeeder`.
 Status (2026-10-09): `materials`, `products` and `product_components` are real (S-04; demo products from `DemoProductsSeeder`).
 Earlier status (2026-10-08): `materials` is real. `products`, `product_components`, `sales`, `stock_movements` and the `photo_path` columns are
 **designed here and served from preview fixtures** (`App\Mock`, [ADR-0006](adr/0006-ui-first-preview-data.md)) until their Phase 3 stories
@@ -264,11 +266,11 @@ filters come from the shared `reference` once-prop, not from page props.
 
 The index pages accept the query parameters `search`, `category`, `status` and `cant_produce` (products), `low_stock` (materials),
 `product_id`, `period`, `record`, `record_product_id` (sales), `sort` and `page`. The dashboard accepts `period`.
-Pagination: 25 per page, `->withQueryString()`. Until Phase 3, product, sale, restock and photo writes are previews (validated, not persisted; ADR-0006).
+Pagination: 25 per page, `->withQueryString()`. Every write persists (Phase 3).
 
-### Preview layer (temporary, ADR-0006)
-`app/Mock/` holds the fixture inputs for products, sales, stock history and photos and shapes them into the final props through the real domain
-classes. Only controllers, FormRequests and seeders may use it (arch test). `public/mock/photos/` holds placeholder images. Removed by S-17 (release blocker).
+### Preview layer (retired 2026-10-13, ADR-0006)
+`app/Mock/` and `public/mock/` were removed by S-17; an arch test forbids `App\Mock`. Photos live on the `public` disk (`photo_url` accessor,
+`App\Services\Photos\PhotoStorage`; production needs `php artisan storage:link`).
 
 ### Shared Inertia props (HandleInertiaRequests)
 `name`, `auth.user`, `sidebarOpen` (starter kit) and `app.currency` / `app.locale` / `app.today` (typed in `resources/js/types/global.d.ts`).

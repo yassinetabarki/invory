@@ -123,7 +123,7 @@ restock(m, q, price, update_unit_cost):
     history: one `restock` movement (quantity q, unit price paid, reference); plus one `price_change` movement
              (unit_cost before → after) when the unit cost actually changed. Both are dated with the receipt date.
 ```
-A manual edit of `quantity_on_hand` is logged as a `correction` (before → after, optional reason); a manual edit of `unit_cost` as a `price_change`.
+A manual edit of `quantity_on_hand` is logged as a `correction` (before → after; no reason is recorded, decided 2026-10-13, F-40); a manual edit of `unit_cost` as a `price_change`.
 History is listed newest first (date, then entry order) with who did it.
 
 ## Precision and rounding (non-negotiable, see ADR-0002)
@@ -198,4 +198,6 @@ Variant checks:
 - Display: `resources/js/lib/format.ts`, `components/shared/money.tsx`, `components/shared/capacity-badge.tsx`.
 - Added 2026-10-08 (UI-first track): `App\Domain\Costing\MarginCalculator` (margin), `CostingCalculator::capacityWithout()` (next limit),
   `App\Domain\Sales\SalesCalculator` (sale total, period summary, top products, percent of top), `App\Enums\SalesPeriod::range()` (period dates).
-  Until the real tables exist, the preview layer `App\Mock` feeds these classes with fixture data ([ADR-0006](../../../docs/adr/0006-ui-first-preview-data.md)).
+  Eloquent adapters (Phase 3, 2026-10-13): `App\Services\Costing\MaterialUsageService` (usage and next limit of a material),
+  `App\Services\Products\ProductCatalog` (dashboard "can't produce" figures), `App\Services\Sales\SalesReport` (sales log totals, period
+  summary, top products; SQL sums only the integer `quantity`). The preview layer `App\Mock` is gone (ADR-0006, S-17).

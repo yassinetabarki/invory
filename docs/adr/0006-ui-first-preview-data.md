@@ -1,6 +1,7 @@
 # ADR-0006 — UI-first preview: real pages, real routes, fixture data behind one server-side seam
 
-- **Status:** Accepted · 2026-10-08
+- **Status:** Accepted · 2026-10-08 · **Completed and retired 2026-10-13** (Phase 3, S-17): every page now reads real tables;
+  `app/Mock`, `public/mock/` and the `access-preview` ability are deleted, and an arch test forbids `App\Mock`. Kept for the record.
 - **Plan:** [phase-2-ui-first-preview.md](../plans/phase-2-ui-first-preview.md) · **Removal:** backlog S-17 (release blocker)
 
 ## Context
