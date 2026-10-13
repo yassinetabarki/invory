@@ -146,19 +146,6 @@ describe('materials/create page', () => {
         });
     });
 
-    it('flushes the material, product and dashboard caches when it saves', async () => {
-        const user = userEvent.setup();
-
-        render(<MaterialsCreate />);
-
-        await user.type(screen.getByLabelText(/^SKU/), 'FAB-009');
-        await user.click(saveButtons()[0]);
-
-        expect(inertiaMock.submissions[0].options).toEqual({
-            invalidateCacheTags: ['materials', 'products', 'dashboard'],
-        });
-    });
-
     it('submits the typed values with keyboard and mouse', async () => {
         const user = userEvent.setup();
 

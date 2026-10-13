@@ -29,8 +29,6 @@ vi.mock('@inertiajs/react', async (importOriginal) => {
 
 vi.mock('sonner', () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 
-const RESET_TAGS = ['materials', 'products', 'sales', 'dashboard'];
-
 type Suite = {
     Page: ComponentType<{ categories: ReferenceRow[] }>;
     /** The page heading and the table's name. */
@@ -196,7 +194,7 @@ describe.each(suites)('settings/$title page', (suite) => {
             ).not.toBeInTheDocument();
         });
 
-        it('archives and restores through PATCH, flushing the caches', async () => {
+        it('archives and restores through PATCH', async () => {
             const user = userEvent.setup();
 
             render(
@@ -225,7 +223,6 @@ describe.each(suites)('settings/$title page', (suite) => {
                 {},
                 expect.objectContaining({
                     preserveScroll: true,
-                    invalidateCacheTags: RESET_TAGS,
                 }),
             );
             expect(inertiaMock.router.patch).toHaveBeenNthCalledWith(
@@ -234,7 +231,6 @@ describe.each(suites)('settings/$title page', (suite) => {
                 {},
                 expect.objectContaining({
                     preserveScroll: true,
-                    invalidateCacheTags: RESET_TAGS,
                 }),
             );
         });
@@ -304,7 +300,6 @@ describe.each(suites)('settings/$title page', (suite) => {
                 `${base}/1`,
                 expect.objectContaining({
                     preserveScroll: true,
-                    invalidateCacheTags: RESET_TAGS,
                 }),
             );
         });
@@ -337,7 +332,7 @@ describe.each(suites)('settings/$title page', (suite) => {
             expect(dialog.getByLabelText(/^Position/)).toBeInTheDocument();
         });
 
-        it('posts code and name, leaves an empty position out, and flushes the caches', async () => {
+        it('posts code and name and leaves an empty position out', async () => {
             const { user, dialog } = await openCreate();
 
             await user.type(dialog.getByLabelText(/^Code/), 'elastic');
@@ -352,7 +347,6 @@ describe.each(suites)('settings/$title page', (suite) => {
                 method: 'post',
                 options: {
                     preserveScroll: true,
-                    invalidateCacheTags: RESET_TAGS,
                 },
             });
             expect(inertiaMock.submissions[0].data).toEqual({
@@ -469,7 +463,6 @@ describe.each(suites)('settings/$title page', (suite) => {
                 method: 'put',
                 options: {
                     preserveScroll: true,
-                    invalidateCacheTags: RESET_TAGS,
                 },
             });
             expect(inertiaMock.submissions[0].data).toEqual({

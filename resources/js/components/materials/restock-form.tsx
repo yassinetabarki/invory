@@ -12,7 +12,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { useAppSettings } from '@/hooks/use-app-settings';
-import { invalidatedBy } from '@/lib/cache-tags';
 import { formatQuantity } from '@/lib/format';
 import type { Material } from '@/types/domain';
 
@@ -242,7 +241,6 @@ export function RestockForm({
         <Form
             {...MaterialRestockController.store.form(material.id)}
             options={{ preserveScroll: true, preserveState: true }}
-            invalidateCacheTags={invalidatedBy('material')}
             onSuccess={onSuccess}
         >
             {({ errors, processing }) => (

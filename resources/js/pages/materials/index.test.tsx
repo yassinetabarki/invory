@@ -171,7 +171,6 @@ describe('materials/index page', () => {
 
             for (const link of links) {
                 expect(link).not.toHaveAttribute('data-prefetch');
-                expect(link).not.toHaveAttribute('data-cache-tags');
             }
         });
 
@@ -678,13 +677,6 @@ describe('materials/index page', () => {
                         received_on: '2026-10-08',
                         reference: '',
                         update_unit_cost: '1',
-                    },
-                    options: {
-                        invalidateCacheTags: [
-                            'materials',
-                            'products',
-                            'dashboard',
-                        ],
                     },
                 },
             ]);

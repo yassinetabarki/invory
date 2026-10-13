@@ -15,7 +15,8 @@ caches, partial and deferred loading, merge and infinite scroll, optimistic upda
 Data-loading rules for every page (enforced in review):
 1. **Lazy by default:** every prop that costs a query or a computation is a closure, so partial reloads skip it.
 2. **Partial reloads** (`only` / `except`) for filter, sort, pagination and period changes.
-3. **Prefetch** primary navigation and CTAs (`<Link prefetch cacheTags=…>`); every write invalidates the tags it affects (`invalidateCacheTags`).
+3. ~~**Prefetch** primary navigation and CTAs (`<Link prefetch cacheTags=…>`); every write invalidates the tags it affects (`invalidateCacheTags`).~~
+   **Retired 2026-10-13** (P-01 + P-02, see the amendment below).
 4. **Reference data once per session:** the shared once-prop `reference` (versioned key), never per-page option lists.
 5. **Never send whole tables.** Pickers over growing tables use server-side search (`useHttp` → a session-authenticated JSON route in
    `routes/web.php` with a policy and a Resource). This is not a public API.
@@ -26,6 +27,20 @@ Data-loading rules for every page (enforced in review):
 
 ## Consequences
 - ✅ One deployable, one contract (`domain.ts`), session auth. Same Actions and Resources for any future `/api/v1`.
-- ✅ Perceived navigation becomes instant for prefetched routes; payloads stay flat as the catalogue grows.
+- ✅ Payloads stay flat as the catalogue grows. (The "instant prefetched navigation" benefit went with rule 3 on 2026-10-13.)
 - ⚠️ Partial reloads and once-props need tests on both sides (`X-Inertia-Partial-Data`, `X-Inertia-Except-Once-Props`).
 - ⚠️ Small internal JSON routes exist (typeahead, cost preview). They follow the same auth, policy and Resource rules as Inertia routes.
+
+## Amendment — 2026-10-13: prefetch and cache tags retired (rule 3)
+Rule 3 is withdrawn ([rendering & loading plan](../plans/rendering-loading-plan.md), P-01 and P-02).
+- **P-01** removed hover prefetch from every `<Link>`. Each hover fired a full page request, which cost more than the 30 s cache saved.
+  The source-scan guard `resources/js/lib/no-link-prefetch.test.ts` keeps the `prefetch` prop out of app code.
+- **P-02** removed the cache-tag system: `resources/js/lib/cache-tags.ts` (`CACHE_TAGS`, `invalidatedBy`, `prefetchProps`,
+  `prefetchPropsForUrl`, `cacheTagForUrl`) and the `invalidateCacheTags` option on every form and `router` write. In Inertia 3.8
+  `invalidateCacheTags` only calls `router.flushByCacheTags`, which empties tagged entries of the **prefetch** cache
+  (`@inertiajs/core`, `prefetchedRequests.removeByTags`). With no prefetching that cache is always empty, so the option did nothing.
+  It does not touch history (back-button) state.
+- Freshness after a write comes from the server response itself (redirect or partial reload). Perceived speed is the job of deferred props
+  and skeletons (rule 6, plan S-0x).
+- If prefetch comes back, it needs a new decision covering both sides again: tags on the prefetching links and `invalidateCacheTags` on every
+  write that changes what those pages show.

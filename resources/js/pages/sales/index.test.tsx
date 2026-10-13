@@ -608,7 +608,6 @@ describe('sales/index page', () => {
                 },
                 options: {
                     preserveScroll: true,
-                    invalidateCacheTags: ['sales', 'products', 'dashboard'],
                 },
             });
 
@@ -693,7 +692,6 @@ describe('sales/index page', () => {
                 data: { product_id: 1, quantity: '5' },
                 options: {
                     preserveScroll: true,
-                    invalidateCacheTags: ['sales', 'products', 'dashboard'],
                 },
             });
         });
@@ -819,26 +817,6 @@ describe('sales/index page', () => {
             expect(inertiaMock.router.delete).toHaveBeenCalledWith(
                 '/sales/57',
                 expect.objectContaining({ preserveScroll: true }),
-            );
-        });
-
-        it('invalidates the sales, products and dashboard caches', async () => {
-            const { user } = renderPage();
-
-            await user.click(
-                within(table()).getByRole('button', {
-                    name: deleteDenimJacket,
-                }),
-            );
-            await user.click(
-                screen.getByRole('button', { name: 'Delete sale' }),
-            );
-
-            expect(inertiaMock.router.delete).toHaveBeenCalledWith(
-                '/sales/57',
-                expect.objectContaining({
-                    invalidateCacheTags: ['sales', 'products', 'dashboard'],
-                }),
             );
         });
 

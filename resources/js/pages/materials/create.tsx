@@ -4,7 +4,6 @@ import { MaterialForm } from '@/components/materials/material-form';
 import { MaterialFormActions } from '@/components/materials/material-form-actions';
 import { PageHeader } from '@/components/shared/page-header';
 import { useReference } from '@/hooks/use-reference';
-import { invalidatedBy } from '@/lib/cache-tags';
 import { categoryOptions, unitOptions } from '@/lib/reference';
 import type { MaterialFormData } from '@/types/domain';
 
@@ -38,7 +37,6 @@ export default function MaterialsCreate() {
             {/* The header is inside the form so its Save button submits it. */}
             <Form
                 {...MaterialController.store.form()}
-                invalidateCacheTags={invalidatedBy('material')}
                 className="flex flex-1 flex-col gap-6 p-4 md:p-6"
             >
                 {({ errors, processing }) => (

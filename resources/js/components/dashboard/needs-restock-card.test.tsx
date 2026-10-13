@@ -80,7 +80,6 @@ describe('<NeedsRestockCard>', () => {
             const link = screen.getByRole('link', { name });
 
             expect(link).not.toHaveAttribute('data-prefetch');
-            expect(link).not.toHaveAttribute('data-cache-tags');
         }
     });
 

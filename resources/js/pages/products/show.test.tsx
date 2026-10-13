@@ -73,7 +73,6 @@ describe('products/show page', () => {
                 const link = screen.getByRole('link', { name });
 
                 expect(link).not.toHaveAttribute('data-prefetch');
-                expect(link).not.toHaveAttribute('data-cache-tags');
             }
         });
 
@@ -377,29 +376,6 @@ describe('products/show page', () => {
 
             expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
             expect(inertiaMock.router.delete).not.toHaveBeenCalled();
-        });
-
-        it('flushes the product, material, sales and dashboard caches when it deletes', async () => {
-            const user = userEvent.setup();
-
-            render(<ProductsShow {...props()} />);
-
-            await user.click(screen.getByRole('button', { name: 'Delete' }));
-            await user.click(
-                screen.getByRole('button', { name: 'Delete product' }),
-            );
-
-            expect(inertiaMock.router.delete).toHaveBeenCalledWith(
-                '/products/1',
-                expect.objectContaining({
-                    invalidateCacheTags: [
-                        'products',
-                        'materials',
-                        'sales',
-                        'dashboard',
-                    ],
-                }),
-            );
         });
 
         it('deletes through the destroy URL, shows progress, then closes', async () => {

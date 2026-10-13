@@ -296,7 +296,7 @@ resources/js/
 │                           photo-thumb · photo-field · stat-card · callout · capacity-badge · product-status-badge
 ├── hooks/                  use-flash-toast (starter kit) · use-app-settings · use-debounced-value
 ├── layouts/                # starter kit (sidebar layout; add Materials/Products nav items)
-├── lib/                    format.ts (Intl money/quantity/percent) · utils.ts · cache-tags.ts (prefetch tags) · reference.ts (options from the shared `reference` prop)
+├── lib/                    format.ts (Intl money/quantity/percent) · utils.ts · reference.ts (options from the shared `reference` prop)
 ├── types/
 │   ├── index.d.ts          # starter kit (auth, nav)
 │   └── domain.ts           # THE CONTRACT — mirrors API Resources (snake_case, decimals as strings)

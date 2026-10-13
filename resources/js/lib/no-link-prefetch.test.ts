@@ -2,8 +2,7 @@ import { describe, expect, it } from 'vite-plus/test';
 
 /**
  * Hover prefetch fires a full page request per hover, so no app source may
- * turn it on: neither a `prefetch` JSX prop nor the `prefetchProps` helpers.
- * Scans the raw sources, which also covers components without a test of their
+ * turn it on with a `prefetch` JSX prop. Scans the raw sources, which also covers components without a test of their
  * own (headers, tables, cards).
  */
 const sources = import.meta.glob(
@@ -20,7 +19,6 @@ const sources = import.meta.glob(
 /** A `prefetch` attribute on its own line, or inline on a `<Link …>` tag. */
 const PREFETCH_PROP =
     /^\s*prefetch(?![\w-])(?:=|\s*\/?>?\s*$)|<Link\b[^\n]*\sprefetch(?![\w-])/m;
-const PREFETCH_HELPER = /\bprefetchProps(?:ForUrl)?\(/;
 
 function offenders(pattern: RegExp): string[] {
     return Object.entries(sources)
@@ -35,6 +33,5 @@ describe('Inertia links', () => {
 
     it('never prefetch on hover', () => {
         expect(offenders(PREFETCH_PROP)).toEqual([]);
-        expect(offenders(PREFETCH_HELPER)).toEqual([]);
     });
 });

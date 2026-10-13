@@ -25,7 +25,6 @@ import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 import { useAppSettings } from '@/hooks/use-app-settings';
 import { useReference } from '@/hooks/use-reference';
-import { invalidatedBy } from '@/lib/cache-tags';
 import { unitLabel } from '@/lib/reference';
 import { cn } from '@/lib/utils';
 import type {
@@ -236,12 +235,10 @@ export function ProductForm({
 
         if (update && !spoofPut) {
             form.put(action.url, {
-                invalidateCacheTags: invalidatedBy('product'),
                 preserveScroll: 'errors',
             });
         } else {
             form.post(action.url, {
-                invalidateCacheTags: invalidatedBy('product'),
                 preserveScroll: 'errors',
                 ...(spoofPut ? { forceFormData: true } : {}),
             });

@@ -139,13 +139,15 @@ Updated `CLAUDE.md` and `docs/TEAM.md` with the two-phase dispatch protocol and 
 | ID | Task | Effort | Type |
 |---|---|---|---|
 | P-01 | Remove `prefetch` from all navigation links | Low | Frontend (26 prod files + 11 tests + 1 guard) — ✅ done 2026-10-13 |
-| P-02 | Decide fate of `prefetchProps` helper and cache-tags | Low | Frontend + Decision |
+| P-02 | Decide fate of `prefetchProps` helper and cache-tags | Low | Frontend + Decision — ✅ done 2026-10-13 (system removed) |
 
 **P-01:** Remove `prefetch: true` from all `<Link>` components (sidebar nav, CTAs, action buttons). Keep `cacheTags` / `invalidateCacheTags` on writes for now.
 
 *P-01 delivery notes (tech-lead, 2026-10-13):* the audit found 26 production files, not ~8 (every `{...prefetchProps(...)}` / `{...prefetchPropsForUrl(...)}` spread plus a bare `prefetch` in `user-menu-content.tsx`). The whole spread was removed, `cacheTags` included: on a `<Link>`, Inertia only reads `cacheTags` inside its prefetch call (`@inertiajs/react` Link), so a tag without prefetch does nothing. Write-side `invalidatedBy(...)` is unchanged, and `lib/cache-tags.ts` is untouched for P-02 (`prefetchProps` / `prefetchPropsForUrl` are now unused exports). Existing "prefetches …" tests now assert absence. A source-scan guard (`resources/js/lib/no-link-prefetch.test.ts`) covers components that have no test of their own, in place of ~18 padded render tests.
 
 **P-02:** If hover prefetch is fully removed, `prefetchProps()` in `cache-tags.ts` becomes unused. Decide: keep `cacheTags` for write-invalidation only, or remove the system entirely. Update ADR-0009.
+
+*P-02 delivery notes (tech-lead, 2026-10-13):* decision (main session, Q1): **remove the cache-tag system entirely**. Verified in `@inertiajs/core` 3.8: `invalidateCacheTags` only calls `router.flushByCacheTags` → `prefetchedRequests.removeByTags`, i.e. it empties tagged entries of the prefetch cache, which is always empty after P-01; it does not affect history (back-button) state. One frontend commit (NON-CRITICAL, 1 round): deleted `resources/js/lib/cache-tags.ts` + `cache-tags.test.ts` (23 cases); removed `invalidateCacheTags` (and the `invalidatedBy` import) from 11 production callers; stripped cache-tag plumbing from the test helper `resources/js/test/inertia.tsx` (mock `<Link>` `data-cache-tags`, mock `<Form>` `options` recording); dropped the `PREFETCH_HELPER` check from `no-link-prefetch.test.ts`; trimmed the option from 11 test files and deleted 10 invalidation-only `it`s; removed 11 now-dead `not.toHaveAttribute('data-cache-tags')` lines (the brief from the main session missed these). 34 files, +14 / −490 (production −134). Vitest 1161 → 1128. ADR-0009 amended (rule 3 retired), ARCHITECTURE.md and BACKLOG (S-19 bullet, F-47) refreshed.
 
 ---
 
@@ -184,7 +186,7 @@ Updated `CLAUDE.md` and `docs/TEAM.md` with the two-phase dispatch protocol and 
 
 | # | Question | Needed before |
 |---|---|---|
-| Q1 | Should `cacheTags` survive after prefetch removal? `invalidateCacheTags` on writes is still useful if Inertia caches visited pages for the back-button. Decision: keep for write-invalidation only, or remove entirely? | P-02 |
+| Q1 | ✅ Resolved 2026-10-13: remove entirely. `invalidateCacheTags` only flushes the prefetch cache (not history), so it was a no-op after P-01. | P-02 |
 | Q2 | ✅ Resolved: committed `docs/plans/<story>-plan.md` file. | W-01 |
 | Q3 | Should `stats` (KPI cards) on the dashboard be deferred or kept eager? Deferring means the KPI row shows skeletons for ~200ms; keeping them eager means the page waits for them before painting anything. | S-01 |
 | Q4 | Skeleton animation: pulse (`animate-pulse`, simpler) or shimmer (moving gradient, more familiar)? | S-04 |

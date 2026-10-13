@@ -15,7 +15,6 @@ import {
 } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
 import { useAppSettings } from '@/hooks/use-app-settings';
-import { invalidatedBy } from '@/lib/cache-tags';
 import { cn } from '@/lib/utils';
 import type { Sale, SaleFormData, SaleProductOption } from '@/types/domain';
 
@@ -198,7 +197,6 @@ export function SaleForm({
         event.preventDefault();
 
         const options = {
-            invalidateCacheTags: invalidatedBy('sale'),
             preserveScroll: true,
             onSuccess: () => onClose(),
         };

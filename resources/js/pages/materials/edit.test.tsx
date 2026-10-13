@@ -118,17 +118,6 @@ describe('materials/edit page', () => {
         }
     });
 
-    it('flushes the material, product and dashboard caches when it saves', async () => {
-        const user = userEvent.setup();
-
-        renderEdit(denim);
-        await user.click(saveButtons()[0]);
-
-        expect(inertiaMock.submissions[0].options).toEqual({
-            invalidateCacheTags: ['materials', 'products', 'dashboard'],
-        });
-    });
-
     it('submits the edited quantity to the update route', async () => {
         const user = userEvent.setup();
 

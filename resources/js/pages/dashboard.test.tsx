@@ -262,7 +262,6 @@ describe('dashboard page', () => {
             const link = screen.getByRole('link', { name: 'Record sale' });
 
             expect(link).not.toHaveAttribute('data-prefetch');
-            expect(link).not.toHaveAttribute('data-cache-tags');
         });
 
         it('links to the sales page with the form open', () => {

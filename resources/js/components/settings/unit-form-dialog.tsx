@@ -28,7 +28,6 @@ import {
 } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
 import { useAppSettings } from '@/hooks/use-app-settings';
-import { invalidatedBy } from '@/lib/cache-tags';
 import { formatCount } from '@/lib/format';
 import { BASE_UNIT_CODE, describeFactor } from '@/lib/reference';
 import type {
@@ -158,7 +157,6 @@ function UnitForm({ onOpenChange, row, dimensions, urls }: FormProps) {
 
         const options = {
             preserveScroll: true,
-            invalidateCacheTags: invalidatedBy('reference'),
             onSuccess: () => onOpenChange(false),
         };
 

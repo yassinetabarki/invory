@@ -11,7 +11,6 @@ import { ConfirmDeleteDialog } from '@/components/shared/confirm-delete-dialog';
 import { EmptyState } from '@/components/shared/empty-state';
 import { Button } from '@/components/ui/button';
 import { useAppSettings } from '@/hooks/use-app-settings';
-import { invalidatedBy } from '@/lib/cache-tags';
 import { formatCount } from '@/lib/format';
 import { activeFirst } from '@/lib/reference';
 import type { ReferenceRow } from '@/types/domain';
@@ -131,7 +130,6 @@ export function ReferenceManager<Row extends ReferenceRow>({
                 {},
                 {
                     preserveScroll: true,
-                    invalidateCacheTags: invalidatedBy('reference'),
                     ...callbacks,
                 },
             ),
@@ -147,7 +145,6 @@ export function ReferenceManager<Row extends ReferenceRow>({
                 {},
                 {
                     preserveScroll: true,
-                    invalidateCacheTags: invalidatedBy('reference'),
                     onError: (errors) =>
                         toast.error(
                             errors.name ??
@@ -167,7 +164,6 @@ export function ReferenceManager<Row extends ReferenceRow>({
 
         router.delete(urls.destroy(deleting.id), {
             preserveScroll: true,
-            invalidateCacheTags: invalidatedBy('reference'),
             onStart: () => setDeleteProcessing(true),
             onFinish: () => {
                 setDeleteProcessing(false);

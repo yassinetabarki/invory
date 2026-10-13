@@ -69,7 +69,6 @@ describe('<NavMain>', () => {
 
         for (const link of screen.getAllByRole('link')) {
             expect(link).not.toHaveAttribute('data-prefetch');
-            expect(link).not.toHaveAttribute('data-cache-tags');
         }
     });
 

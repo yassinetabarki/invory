@@ -13,7 +13,6 @@ import { ProductPhoto } from '@/components/products/product-photo';
 import { RecentSalesCard } from '@/components/products/recent-sales-card';
 import { ConfirmDeleteDialog } from '@/components/shared/confirm-delete-dialog';
 import { Button } from '@/components/ui/button';
-import { invalidatedBy } from '@/lib/cache-tags';
 import type { MaterialRef, ProductShowProps } from '@/types/domain';
 
 const materialHref = (material: MaterialRef) =>
@@ -39,7 +38,6 @@ export default function ProductsShow({
 
     function destroy() {
         router.delete(ProductController.destroy.url(product.id), {
-            invalidateCacheTags: invalidatedBy('product'),
             onStart: () => setProcessing(true),
             onFinish: () => {
                 setProcessing(false);

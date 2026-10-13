@@ -28,8 +28,6 @@ vi.mock('@inertiajs/react', async (importOriginal) => {
 
 vi.mock('sonner', () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 
-const RESET_TAGS = ['materials', 'products', 'sales', 'dashboard'];
-
 function system(code: string): UnitRow {
     const found = referenceUnits.find((unit) => unit.code === code);
 
@@ -251,7 +249,7 @@ describe('settings/units page', () => {
             ).not.toBeInTheDocument();
         });
 
-        it('archives straight away, flushing the caches', async () => {
+        it('archives straight away', async () => {
             const user = userEvent.setup();
 
             render(<Units {...props([yard])} />);
@@ -266,12 +264,11 @@ describe('settings/units page', () => {
                 {},
                 expect.objectContaining({
                     preserveScroll: true,
-                    invalidateCacheTags: RESET_TAGS,
                 }),
             );
         });
 
-        it('restores, flushing the caches', async () => {
+        it('restores', async () => {
             const user = userEvent.setup();
 
             render(<Units {...props([archived(yard)])} />);
@@ -286,7 +283,6 @@ describe('settings/units page', () => {
                 {},
                 expect.objectContaining({
                     preserveScroll: true,
-                    invalidateCacheTags: RESET_TAGS,
                 }),
             );
         });
@@ -370,7 +366,6 @@ describe('settings/units page', () => {
                 '/settings/units/20',
                 expect.objectContaining({
                     preserveScroll: true,
-                    invalidateCacheTags: RESET_TAGS,
                 }),
             );
         });
@@ -422,7 +417,7 @@ describe('settings/units page', () => {
             expect(dialog.getByLabelText(/^Position/)).toBeInTheDocument();
         });
 
-        it('posts the new unit with the code, and flushes the caches', async () => {
+        it('posts the new unit with the code', async () => {
             const { user, dialog } = await openCreate();
 
             await user.type(dialog.getByLabelText(/^Code/), 'in');
@@ -457,7 +452,6 @@ describe('settings/units page', () => {
                 },
                 options: {
                     preserveScroll: true,
-                    invalidateCacheTags: RESET_TAGS,
                 },
             });
             // An empty position is left out, so the server puts the unit last.
@@ -639,7 +633,6 @@ describe('settings/units page', () => {
                 method: 'put',
                 options: {
                     preserveScroll: true,
-                    invalidateCacheTags: RESET_TAGS,
                 },
             });
             expect(inertiaMock.submissions[0].data).toEqual({

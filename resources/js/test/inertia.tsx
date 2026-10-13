@@ -31,13 +31,12 @@
  *
  * The mocked `<Link>` renders a plain `<a>`. Its Inertia-only props are not
  * forwarded, except these, which are visible as attributes so a test can
- * assert them: `prefetch` → `data-prefetch`, `cacheTags` → `data-cache-tags`
- * (comma-separated) and `only` → `data-only` (comma-separated).
+ * assert them: `prefetch` → `data-prefetch` and `only` → `data-only`
+ * (comma-separated).
  *
  * ```tsx
- * expect(screen.getByRole('link', { name: 'Add material' })).toHaveAttribute(
- *     'data-cache-tags',
- *     'materials',
+ * expect(screen.getByRole('link', { name: 'Add material' })).not.toHaveAttribute(
+ *     'data-prefetch',
  * );
  * ```
  *
@@ -54,9 +53,7 @@
  * ```
  *
  * A recorded submission is `{ action, method, data }`: text fields as strings
- * and a chosen file input as its `File` (`''` when nothing was chosen). When
- * the form has `invalidateCacheTags`, it is recorded as
- * `options: { invalidateCacheTags }`.
+ * and a chosen file input as its `File` (`''` when nothing was chosen).
  *
  * ## `<Deferred>`
  *
@@ -189,10 +186,7 @@ export type MockFormSubmission = {
     action: string;
     method: string;
     data: Record<string, unknown>;
-    /**
-     * `useForm`: the options passed to `submit()` / `post()`…
-     * `<Form>`: `{ invalidateCacheTags }`, when the form sets it.
-     */
+    /** `useForm` only: the options passed to `submit()` / `post()`… */
     options?: Record<string, unknown>;
 };
 
@@ -438,7 +432,6 @@ type MockLinkProps = Omit<AnchorHTMLAttributes<HTMLAnchorElement>, 'href'> & {
     preserveState?: boolean;
     replace?: boolean;
     only?: string[];
-    cacheTags?: string | string[];
     cacheFor?: string | number | (string | number)[];
     data?: Record<string, unknown>;
     children?: ReactNode;
@@ -452,7 +445,6 @@ const INERTIA_ONLY_PROPS = new Set([
     'preserveState',
     'replace',
     'only',
-    'cacheTags',
     'cacheFor',
     'data',
 ]);
@@ -462,7 +454,7 @@ function joined(value: string | string[] | undefined): string | undefined {
 }
 
 function MockLink({ href, children, ...rest }: MockLinkProps) {
-    const { prefetch, cacheTags, only } = rest;
+    const { prefetch, only } = rest;
     const domProps = Object.fromEntries(
         Object.entries(rest).filter(([key]) => !INERTIA_ONLY_PROPS.has(key)),
     );
@@ -475,7 +467,6 @@ function MockLink({ href, children, ...rest }: MockLinkProps) {
                     ? undefined
                     : String(prefetch)
             }
-            data-cache-tags={joined(cacheTags)}
             data-only={joined(only)}
             {...domProps}
         >
@@ -532,13 +523,7 @@ function readFormData(form: HTMLFormElement): Fields {
     return data;
 }
 
-function MockForm({
-    action,
-    method,
-    className,
-    children,
-    invalidateCacheTags,
-}: MockFormProps) {
+function MockForm({ action, method, className, children }: MockFormProps) {
     const { errors, processing } = useFormStateMock();
 
     function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -548,9 +533,6 @@ function MockForm({
             action: action ?? '',
             method: method ?? 'get',
             data: readFormData(event.currentTarget),
-            ...(invalidateCacheTags === undefined
-                ? {}
-                : { options: { invalidateCacheTags } }),
         });
     }
 

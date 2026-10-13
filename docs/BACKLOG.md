@@ -211,7 +211,7 @@ The plan's §F.3 lists the amendments to S-04, S-14-BE, S-15-BE, S-16-BE, S-06-B
 
 ## S-19 · SPA navigation quick wins — frontend — `review` (approved by the tech-lead 2026-10-09) · size S
 **Owner:** FE · **Depends on:** — (parallel with S-18, S-20)
-- [ ] Exclude `*.test.tsx` from the pages glob (F-13); `prefetch` + `cacheTags` on CTAs, row links, breadcrumbs, KPI links; `invalidateCacheTags` on every write; `only` partial reloads for list filters and the dashboard period; `showProgress: false` on prefetch
+- [ ] Exclude `*.test.tsx` from the pages glob (F-13); `only` partial reloads for list filters and the dashboard period. (The `prefetch` + `cacheTags` links and `invalidateCacheTags` writes shipped here were retired on 2026-10-13 by P-01/P-02, ADR-0009 amendment.)
 - **Acceptance:** no test chunks in `public/build/manifest.json`; Vitest asserts the router options
 
 ## S-20 · Lazy props, query budgets, explicit `auth.user` — backend — `review` (approved by the tech-lead 2026-10-09) · size S
@@ -382,4 +382,4 @@ From the Phase 3 real-backend review (2026-10-13, MINOR/NIT, none blocking):
   and `tests/Feature/Dashboard/DashboardTest.php`).
 - **F-46 (NIT, BE)**: `RecordSale` doesn't re-check that the product is still active inside its transaction (validation already did).
 
-- **F-47 (NIT, docs)**: after P-02, refresh `ARCHITECTURE.md` (`cache-tags.ts (prefetch tags)`) and the S-19 bullet that still lists `prefetch` on links.
+- ~~**F-47 (NIT, docs)**: after P-02, refresh `ARCHITECTURE.md` (`cache-tags.ts (prefetch tags)`) and the S-19 bullet that still lists `prefetch` on links.~~ Done 2026-10-13 with P-02.

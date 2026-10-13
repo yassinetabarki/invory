@@ -141,7 +141,6 @@ describe('<RecentSalesCard>', () => {
 
         for (const link of [viewAll, product]) {
             expect(link).not.toHaveAttribute('data-prefetch');
-            expect(link).not.toHaveAttribute('data-cache-tags');
         }
     });
 

@@ -4,7 +4,6 @@ import { MaterialForm } from '@/components/materials/material-form';
 import { MaterialFormActions } from '@/components/materials/material-form-actions';
 import { PageHeader } from '@/components/shared/page-header';
 import { useReference } from '@/hooks/use-reference';
-import { invalidatedBy } from '@/lib/cache-tags';
 import { categoryOptions, unitOptions } from '@/lib/reference';
 import type {
     Material,
@@ -47,7 +46,6 @@ export default function MaterialsEdit({ material }: MaterialEditProps) {
             <Form
                 key={material.id}
                 {...MaterialController.update.form(material)}
-                invalidateCacheTags={invalidatedBy('material')}
                 className="flex flex-1 flex-col gap-6 p-4 md:p-6"
             >
                 {({ errors, processing }) => (

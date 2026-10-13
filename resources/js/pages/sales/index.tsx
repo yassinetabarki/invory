@@ -13,7 +13,6 @@ import { EmptyState } from '@/components/shared/empty-state';
 import { PageHeader } from '@/components/shared/page-header';
 import { Pagination } from '@/components/shared/pagination';
 import { Button } from '@/components/ui/button';
-import { invalidatedBy } from '@/lib/cache-tags';
 import { cn } from '@/lib/utils';
 import type { Sale, SalesFilters, SalesIndexProps } from '@/types/domain';
 
@@ -164,7 +163,6 @@ export default function SalesIndex({
         const deleted = deleting;
 
         router.delete(SaleController.destroy.url(deleted.id), {
-            invalidateCacheTags: invalidatedBy('sale'),
             preserveScroll: true,
             onStart: () => setDeleteProcessing(true),
             // A form open on the sale that just went has nothing left to save.

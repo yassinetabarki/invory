@@ -17,7 +17,6 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { Spinner } from '@/components/ui/spinner';
-import { invalidatedBy } from '@/lib/cache-tags';
 import type { ReferenceFormData, ReferenceRow } from '@/types/domain';
 
 type ReferenceFormDialogProps = {
@@ -75,7 +74,6 @@ function ReferenceForm({
 
         const options = {
             preserveScroll: true,
-            invalidateCacheTags: invalidatedBy('reference'),
             onSuccess: () => onOpenChange(false),
         };
 

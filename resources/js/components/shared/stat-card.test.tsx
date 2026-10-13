@@ -90,7 +90,6 @@ describe('<StatCard>', () => {
             const link = screen.getByRole('link');
 
             expect(link).not.toHaveAttribute('data-prefetch');
-            expect(link).not.toHaveAttribute('data-cache-tags');
         });
 
         it('accepts a Wayfinder route object', () => {

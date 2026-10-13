@@ -61,7 +61,6 @@ describe('<UnproducibleAlerts>', () => {
         const [link] = screen.getAllByRole('link');
 
         expect(link).not.toHaveAttribute('data-prefetch');
-        expect(link).not.toHaveAttribute('data-cache-tags');
     });
 
     it('shows one alert per product, each with its own link', () => {

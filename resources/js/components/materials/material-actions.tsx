@@ -6,7 +6,6 @@ import { RestockDialog } from '@/components/materials/restock-dialog';
 import { ConfirmDeleteDialog } from '@/components/shared/confirm-delete-dialog';
 import { Button } from '@/components/ui/button';
 import { useAppSettings } from '@/hooks/use-app-settings';
-import { invalidatedBy } from '@/lib/cache-tags';
 import { formatCount } from '@/lib/format';
 import type { Material } from '@/types/domain';
 
@@ -28,7 +27,6 @@ export function MaterialActions({ material }: { material: Material }) {
 
     function destroy() {
         router.delete(MaterialController.destroy.url(material), {
-            invalidateCacheTags: invalidatedBy('material'),
             onStart: () => setProcessing(true),
             onFinish: () => {
                 setProcessing(false);

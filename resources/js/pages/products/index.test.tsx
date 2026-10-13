@@ -150,7 +150,6 @@ describe('products/index page', () => {
                 }),
             ]) {
                 expect(link).not.toHaveAttribute('data-prefetch');
-                expect(link).not.toHaveAttribute('data-cache-tags');
             }
         });
 
