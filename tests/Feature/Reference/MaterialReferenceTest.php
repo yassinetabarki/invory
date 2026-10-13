@@ -249,7 +249,7 @@ describe('the product forms', function () {
             // The names of the products (once, not per product) and the shared reference lists of a full load. The option list's
             // own query is gone since S-22: 3 reads became 2.
             ->and(queriesMatching($queries, 'from "product_categories"'))->toHaveCount(2)
-            ->and(actingAs($this->user)->get(route('products.show', pid(1)))->inertiaProps('product.category_label'))->toBe('Clothing');
+            ->and(loadedPageProp(actingAs($this->user)->get(route('products.show', pid(1))), 'product.category_label'))->toBe('Clothing');
     });
 
     it('can no longer lose the category of a product: the foreign key refuses to delete it', function () {

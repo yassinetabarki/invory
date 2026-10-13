@@ -8,7 +8,7 @@ import { RecentSalesCard } from '@/components/dashboard/recent-sales-card';
 import { TopProductsCard } from '@/components/dashboard/top-products-card';
 import { UnproducibleAlerts } from '@/components/dashboard/unproducible-alerts';
 import { PageHeader } from '@/components/shared/page-header';
-import { SkeletonCard } from '@/components/shared/skeletons';
+import { SkeletonCard, SkeletonStat } from '@/components/shared/skeletons';
 import { DEFAULT_PERIOD, PeriodSelect } from '@/components/sales/period-select';
 import { Button } from '@/components/ui/button';
 import { dashboard } from '@/routes';
@@ -99,14 +99,41 @@ export default function Dashboard({
                     <UnproducibleAlerts alerts={alerts ?? []} />
                 </Deferred>
 
-                <KeyFigures stats={stats} periodLabel={periodLabel} />
+                <Deferred
+                    data="stats"
+                    fallback={
+                        <section
+                            aria-label="Key figures"
+                            className="grid grid-cols-[repeat(auto-fit,minmax(12.5rem,1fr))] gap-4"
+                        >
+                            <SkeletonStat label="Total sales" />
+                            <SkeletonStat label="Units sold" />
+                            <SkeletonStat label="Inventory value" />
+                            <SkeletonStat label="Needs restock" />
+                            <SkeletonStat label="Can't produce" />
+                        </section>
+                    }
+                >
+                    {stats && <KeyFigures stats={stats} periodLabel={periodLabel} />}
+                </Deferred>
 
                 <div className="grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] xl:items-start">
-                    <TopProductsCard
-                        byUnits={topProducts.by_units}
-                        byRevenue={topProducts.by_revenue}
-                        periodLabel={periodLabel}
-                    />
+                    <Deferred
+                        data="top_products"
+                        fallback={
+                            <SkeletonCard
+                                title="Top selling products"
+                                label="top selling products"
+                                rows={5}
+                            />
+                        }
+                    >
+                        <TopProductsCard
+                            byUnits={topProducts?.by_units ?? []}
+                            byRevenue={topProducts?.by_revenue ?? []}
+                            periodLabel={periodLabel}
+                        />
+                    </Deferred>
                     <Deferred
                         data="needs_restock"
                         fallback={

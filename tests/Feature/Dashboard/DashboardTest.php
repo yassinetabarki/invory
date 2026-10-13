@@ -57,38 +57,41 @@ it('sends every figure of the dashboard for the last 30 days, from the database'
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('dashboard')
-            ->hasAll(['period', 'periods', 'stats', 'top_products'])
+            ->hasAll(['period', 'periods'])
             ->where('period', 'last_30_days')
             ->where('periods', [
                 ['value' => 'last_7_days', 'label' => 'Last 7 days'],
                 ['value' => 'last_30_days', 'label' => 'Last 30 days'],
                 ['value' => 'this_month', 'label' => 'This month'],
                 ['value' => 'this_year', 'label' => 'This year'],
-            ])
-            ->where('stats', [
-                'revenue' => '16850.0000',
-                'units_sold' => 296,
-                'sales_count' => 48,
-                'products_sold_count' => 6,
-                'inventory_value' => '10544.3000',
-                'materials_count' => 12,
-                'needs_restock_count' => 4,
-                'low_stock_count' => 3,
-                'out_of_stock_count' => 1,
-                'unproducible_count' => 1,
-                'products_count' => 7,
             ]));
 
+    // All deferred groups (primary + default) are merged into $loaded.
     $loaded = loadedPageProps($response);
 
+    // Key order matches DashboardController: periodSummary() then inventory->summarize() then catalog counts.
+    expect($loaded['stats'])->toBe([
+        'revenue' => '16850.0000',
+        'units_sold' => 296,
+        'sales_count' => 48,
+        'products_sold_count' => 6,
+        'materials_count' => 12,
+        'inventory_value' => '10544.3000',
+        'needs_restock_count' => 4,
+        'low_stock_count' => 3,
+        'out_of_stock_count' => 1,
+        'unproducible_count' => 1,
+        'products_count' => 7,
+    ]);
+
     // Six products sold: the sixth (the Sneaker, 9 units and 621.0000) is out of both top fives.
-    expect(pageProp($response, 'top_products.by_units'))->toBe([
+    expect(data_get($loaded, 'top_products.by_units'))->toBe([
         ['product' => productRef(2, 'PRD-TSH-002', 'Classic White T-shirt'), 'units_sold' => 142, 'revenue' => '3408.0000', 'percent_of_top' => '100.00'],
         ['product' => productRef(5, 'PRD-JNS-005', 'Denim Jeans 5-pocket'), 'units_sold' => 64, 'revenue' => '5056.0000', 'percent_of_top' => '45.07'],
         ['product' => productRef(1, 'PRD-JKT-001', 'Denim Jacket'), 'units_sold' => 38, 'revenue' => '3382.0000', 'percent_of_top' => '26.76'],
         ['product' => productRef(7, 'PRD-BLT-007', 'Leather Belt'), 'units_sold' => 31, 'revenue' => '1395.0000', 'percent_of_top' => '21.83'],
         ['product' => productRef(4, 'PRD-TOT-004', 'Leather Tote'), 'units_sold' => 12, 'revenue' => '2988.0000', 'percent_of_top' => '8.45'],
-    ])->and(pageProp($response, 'top_products.by_revenue'))->toBe([
+    ])->and(data_get($loaded, 'top_products.by_revenue'))->toBe([
         ['product' => productRef(5, 'PRD-JNS-005', 'Denim Jeans 5-pocket'), 'units_sold' => 64, 'revenue' => '5056.0000', 'percent_of_top' => '100.00'],
         ['product' => productRef(2, 'PRD-TSH-002', 'Classic White T-shirt'), 'units_sold' => 142, 'revenue' => '3408.0000', 'percent_of_top' => '67.41'],
         ['product' => productRef(1, 'PRD-JKT-001', 'Denim Jacket'), 'units_sold' => 38, 'revenue' => '3382.0000', 'percent_of_top' => '66.89'],
@@ -113,12 +116,13 @@ it('sends every figure of the dashboard for the last 30 days, from the database'
         ]);
 });
 
-it('sends the stats and top products first, and the restock list, recent sales and alerts in one deferred request', function () {
+it('renders immediately with only metadata; stats and top products arrive in the primary group; secondary panels in the default group', function () {
     actingAs($this->user)->get(dashboardUrl())
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
-            ->hasAll(['period', 'periods', 'stats', 'top_products'])
-            ->missingAll(['needs_restock', 'recent_sales', 'alerts'])
+            ->hasAll(['period', 'periods'])
+            ->missingAll(['stats', 'top_products', 'needs_restock', 'recent_sales', 'alerts'])
+            ->loadDeferredProps('primary', fn (Assert $reloaded) => $reloaded->hasAll(['stats', 'top_products']))
             ->loadDeferredProps('default', fn (Assert $reloaded) => $reloaded->hasAll(['needs_restock', 'recent_sales', 'alerts'])));
 });
 
@@ -127,13 +131,14 @@ it('switches the sales figures with the period and keeps the inventory and produ
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->where('period', $period)
-            ->where('stats.sales_count', $count)
-            ->where('stats.units_sold', $units)
-            ->where('stats.revenue', $revenue)
-            ->where('stats.products_sold_count', $products)
-            ->where('stats.inventory_value', '10544.3000')
-            ->where('stats.unproducible_count', 1)
-            ->where('stats.products_count', 7));
+            ->loadDeferredProps('primary', fn (Assert $primary) => $primary
+                ->where('stats.sales_count', $count)
+                ->where('stats.units_sold', $units)
+                ->where('stats.revenue', $revenue)
+                ->where('stats.products_sold_count', $products)
+                ->where('stats.inventory_value', '10544.3000')
+                ->where('stats.unproducible_count', 1)
+                ->where('stats.products_count', 7)));
 })->with([
     'last 7 days' => ['last_7_days', 8, 57, '3001.0000', 6],
     'last 30 days' => ['last_30_days', 48, 296, '16850.0000', 6],
@@ -143,7 +148,9 @@ it('switches the sales figures with the period and keeps the inventory and produ
 
 it('reads an empty period as the default and rejects an unknown one', function () {
     actingAs($this->user)->get(dashboardUrl(['period' => '']))
-        ->assertInertia(fn (Assert $page) => $page->where('period', 'last_30_days')->where('stats.sales_count', 48));
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('period', 'last_30_days')
+            ->loadDeferredProps('primary', fn (Assert $primary) => $primary->where('stats.sales_count', 48)));
 
     foreach (['last_year', 'custom', ['last_7_days']] as $period) {
         actingAs($this->user)->get(dashboardUrl(['period' => $period]))->assertSessionHasErrors('period');
@@ -157,11 +164,12 @@ it('reports a period without sales as zero, with scale-4 revenue, and still list
     $response = actingAs($this->user)->get(dashboardUrl(['period' => 'this_month']));
 
     $response->assertInertia(fn (Assert $page) => $page
-        ->where('stats.sales_count', 0)
-        ->where('stats.units_sold', 0)
-        ->where('stats.revenue', '0.0000')
-        ->where('stats.products_sold_count', 0)
-        ->where('top_products', ['by_units' => [], 'by_revenue' => []]));
+        ->loadDeferredProps('primary', fn (Assert $primary) => $primary
+            ->where('stats.sales_count', 0)
+            ->where('stats.units_sold', 0)
+            ->where('stats.revenue', '0.0000')
+            ->where('stats.products_sold_count', 0)
+            ->where('top_products', ['by_units' => [], 'by_revenue' => []])));
 
     expect(loadedPageProp($response, 'recent_sales.0.sold_on'))->toBe('2026-09-30');
 });
@@ -208,13 +216,13 @@ it('sends 0.00 as the percent of every product when the top metric is zero', fun
     Sale::factory()->create(['product_id' => pid(1), 'quantity' => 3, 'unit_price' => '0.0000']);
     Sale::factory()->create(['product_id' => pid(2), 'quantity' => 2, 'unit_price' => '0.0000']);
 
-    $response = actingAs($this->user)->get(dashboardUrl());
+    $loaded = loadedPageProps(actingAs($this->user)->get(dashboardUrl()));
 
     // By revenue every product earned nothing: the units break the tie, and no bar has anything to measure against.
-    expect(pageProp($response, 'top_products.by_revenue.*.product.sku'))->toBe(['PRD-JKT-001', 'PRD-TSH-002'])
-        ->and(pageProp($response, 'top_products.by_revenue.*.percent_of_top'))->toBe(['0.00', '0.00'])
-        ->and(pageProp($response, 'top_products.by_units.*.percent_of_top'))->toBe(['100.00', '66.67'])
-        ->and(pageProp($response, 'stats.revenue'))->toBe('0.0000');
+    expect(data_get($loaded, 'top_products.by_revenue.*.product.sku'))->toBe(['PRD-JKT-001', 'PRD-TSH-002'])
+        ->and(data_get($loaded, 'top_products.by_revenue.*.percent_of_top'))->toBe(['0.00', '0.00'])
+        ->and(data_get($loaded, 'top_products.by_units.*.percent_of_top'))->toBe(['100.00', '66.67'])
+        ->and(data_get($loaded, 'stats.revenue'))->toBe('0.0000');
 });
 
 describe('stock-driven figures', function () {
@@ -303,31 +311,36 @@ describe('access', function () {
     })->with([Material::class, Product::class, Sale::class]);
 });
 
-it('answers within the query budget, in the first request and in the deferred one, whatever the number of sales, products and materials', function () {
+it('answers within the query budget, in the first request and in both deferred groups, whatever the number of sales, products and materials', function () {
     $measure = function (): array {
         $first = null;
         $firstQueries = queryLog(function () use (&$first) {
             $first = actingAs($this->user)->get(dashboardUrl())->assertOk();
         });
+        $primaryQueries = queryLog(function () use ($first) {
+            $first->assertInertia(fn (Assert $page) => $page->loadDeferredProps('primary', fn (Assert $reloaded) => $reloaded->hasAll(['stats', 'top_products'])));
+        });
         $deferredQueries = queryLog(function () use ($first) {
             $first->assertInertia(fn (Assert $page) => $page->loadDeferredProps('default', fn (Assert $reloaded) => $reloaded->hasAll(['needs_restock', 'recent_sales', 'alerts'])));
         });
 
-        return [$firstQueries, $deferredQueries];
+        return [$firstQueries, $primaryQueries, $deferredQueries];
     };
 
     $measure(); // warm-up: one-off framework queries
-    [$few, $fewDeferred] = $measure();
+    [$few, $fewPrimary, $fewDeferred] = $measure();
 
     Material::factory()->count(40)->create();
     Product::factory()->count(30)->withComponents(5)->create()->each(
         fn (Product $product) => Sale::factory()->count(3)->create(['product_id' => $product->id]),
     );
 
-    [$many, $manyDeferred] = $measure();
+    [$many, $manyPrimary, $manyDeferred] = $measure();
 
     expect(count($few))->toBeLessThanOrEqual(10, implode(PHP_EOL, $few))
         ->and(count($many))->toBe(count($few), implode(PHP_EOL, $many))
+        ->and(count($fewPrimary))->toBeLessThanOrEqual(10, implode(PHP_EOL, $fewPrimary))
+        ->and(count($manyPrimary))->toBe(count($fewPrimary), implode(PHP_EOL, $manyPrimary))
         ->and(count($fewDeferred))->toBeLessThanOrEqual(10, implode(PHP_EOL, $fewDeferred))
         ->and(count($manyDeferred))->toBe(count($fewDeferred), implode(PHP_EOL, $manyDeferred));
 });

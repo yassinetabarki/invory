@@ -203,11 +203,11 @@ describe('sales index', function () {
 });
 
 describe('dashboard', function () {
-    it('runs the restock list in the deferred request, not in the first response', function () {
+    it('renders with only metadata first; stats/top_products in the primary group; secondary panels in the default group', function () {
         $first = null;
         $firstQueries = queryLog(function () use (&$first) {
             $first = $this->get(route('dashboard'))
-                ->assertInertia(fn (Assert $page) => $page->hasAll(['period', 'periods', 'stats', 'top_products'])->missingAll(['needs_restock', 'recent_sales', 'alerts']));
+                ->assertInertia(fn (Assert $page) => $page->hasAll(['period', 'periods'])->missingAll(['stats', 'top_products', 'needs_restock', 'recent_sales', 'alerts']));
         });
         $deferredQueries = queryLog(fn () => $first->assertInertia(
             fn (Assert $page) => $page->loadDeferredProps('default', fn (Assert $reloaded) => $reloaded->hasAll(['needs_restock', 'recent_sales', 'alerts'])),
@@ -219,16 +219,16 @@ describe('dashboard', function () {
 
     it('skips the restock list, the recent sales and the alerts on a period switch', function () {
         $firstVisit = $this->get(route('dashboard', ['period' => 'last_7_days']))->assertOk();
-        $full = $firstVisit->inertiaProps();
 
+        // stats and top_products are now deferred; a partial reload for them returns them directly.
         $queries = partialReloadQueries(
             $firstVisit,
             ['period', 'stats', 'top_products'],
             fn (Assert $partial) => $partial
                 ->missingAll(['needs_restock', 'recent_sales', 'alerts', 'periods'])
                 ->where('period', 'last_7_days')
-                ->where('stats', $full['stats'])
-                ->where('top_products', $full['top_products']),
+                ->has('stats')
+                ->has('top_products'),
         );
 
         expect(queriesMatching($queries, NEEDS_RESTOCK_QUERY))->toBeEmpty()
@@ -243,15 +243,18 @@ describe('dashboard', function () {
         $firstQueries = queryLog(function () use (&$first) {
             $first = $this->get(route('dashboard'))->assertOk();
         });
+        $primaryQueries = queryLog(fn () => $first->assertInertia(fn (Assert $page) => $page->loadDeferredProps('primary', fn (Assert $reloaded) => $reloaded->has('stats'))));
         $deferredQueries = queryLog(fn () => $first->assertInertia(fn (Assert $page) => $page->loadDeferredProps('default', fn (Assert $reloaded) => $reloaded->has('alerts'))));
 
-        // First request: one read of the products and their lines, shared by the stats and the rankings (whose product refs come
-        // from them). Deferred request: one read again, shared by the alerts and the recent sales.
-        foreach ([$firstQueries, $deferredQueries] as $queries) {
+        // Primary group: one read of the products and their lines, shared by the stats and the rankings.
+        // Default group: one read again, shared by the alerts and the recent sales.
+        foreach ([$primaryQueries, $deferredQueries] as $queries) {
             expect(queriesMatching($queries, 'select \* from "products"'))->toHaveCount(1)
                 ->and(queriesMatching($queries, 'from "product_components" where "product_components"."product_id" in'))->toHaveCount(1)
                 ->and(queriesMatching($queries, 'from "products" where "id" in|from "products" where "products"."id" in'))->toBeEmpty();
         }
+        // First request: no products queries — all data is deferred.
+        expect(queriesMatching($firstQueries, 'select \* from "products"'))->toBeEmpty();
     });
 
     it('loads only the restock list when only that is requested', function () {

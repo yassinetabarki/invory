@@ -77,10 +77,10 @@ describe('products/show page', () => {
         resetInertiaMock();
     });
 
-    describe('deferred sales', () => {
-        it('paints the product, its cost and composition at once, and shows loading placeholders for the sales figure and the recent sales until the deferred props land', () => {
-            // The first response: the deferred props are not in it yet.
-            const first: ProductShowProps = { product: denimJacket };
+    describe('deferred props', () => {
+        it('paints a skeleton of the whole page until the deferred props land, then the product, its cost, composition and sales', () => {
+            // The first response: none of the deferred props is in it.
+            const first: ProductShowProps = {};
 
             setPageProps(first, {
                 url: '/products/1',
@@ -88,26 +88,15 @@ describe('products/show page', () => {
             });
             const { rerender } = render(<ProductsShow {...first} />);
 
-            expect(
-                screen.getByRole('region', { name: 'Production capacity' }),
-            ).toBeInTheDocument();
-            expect(
-                screen.getByRole('region', { name: 'Unit cost' }),
-            ).toBeInTheDocument();
-            expect(
-                screen.getByRole('table', { name: 'Composition' }),
-            ).toBeInTheDocument();
-            expect(
-                screen.getByText('Loading Sold · last 30 days…'),
-            ).toBeInTheDocument();
+            expect(screen.getByText('Loading Unit cost…')).toBeInTheDocument();
             expect(
                 screen.getByText('Loading recent sales…'),
             ).toBeInTheDocument();
             expect(
-                screen.queryByRole('region', { name: 'Sales, last 30 days' }),
+                screen.queryByRole('region', { name: 'Production capacity' }),
             ).not.toBeInTheDocument();
             expect(
-                screen.queryByRole('table', { name: 'Recent sales' }),
+                screen.queryByRole('table', { name: 'Composition' }),
             ).not.toBeInTheDocument();
 
             // The deferred request lands: Inertia re-renders the page with the new props.
@@ -116,6 +105,12 @@ describe('products/show page', () => {
             setPageProps({ ...landed });
             rerender(<ProductsShow {...landed} />);
 
+            expect(
+                screen.getByRole('region', { name: 'Production capacity' }),
+            ).toBeInTheDocument();
+            expect(
+                screen.getByRole('table', { name: 'Composition' }),
+            ).toBeInTheDocument();
             expect(
                 within(
                     screen.getByRole('region', { name: 'Sales, last 30 days' }),
@@ -201,6 +196,12 @@ describe('products/show page', () => {
                     title: 'Denim Jacket',
                     href: { url: '/products/1', method: 'get' },
                 }),
+            ]);
+        });
+
+        it('has only the Products breadcrumb until the product lands', () => {
+            expect(ProductsShow.layout({}).breadcrumbs).toEqual([
+                expect.objectContaining({ title: 'Products' }),
             ]);
         });
     });

@@ -53,17 +53,19 @@ final class DashboardController extends Controller
         return Inertia::render('dashboard', [
             'period' => $period->value,
             'periods' => SalesPeriod::options(),
-            'stats' => fn (): array => [
+            // Deferred in the same group so the server responds instantly and the page paints with skeletons;
+            // both share the $lines cache because they are fetched in one follow-up request.
+            'stats' => Inertia::defer(fn (): array => [
                 ...$report->periodSummary($lines()),
                 ...$inventory->summarize(),
                 'unproducible_count' => $catalog->unproducibleCount(),
                 'products_count' => $catalog->count(),
-            ],
-            'top_products' => function () use ($report, $lines, $catalog): array {
+            ], 'primary'),
+            'top_products' => Inertia::defer(function () use ($report, $lines, $catalog): array {
                 $top = $report->topProducts($lines(), self::LIST_SIZE);
 
                 return ['by_units' => $this->rankingRows($top['by_units'], $catalog), 'by_revenue' => $this->rankingRows($top['by_revenue'], $catalog)];
-            },
+            }, 'primary'),
             // The three secondary panels are deferred in ONE group (the default): the KPI row and the rankings paint at once and these
             // arrive together in a single follow-up request, which builds the ProductCatalog once for its two products-based sections.
             'needs_restock' => Inertia::defer(fn (): array => MaterialResource::collection($this->needsRestock($reference))->resolve()),

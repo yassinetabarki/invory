@@ -376,7 +376,7 @@ export type ProductCreateProps = {
 };
 export type ProductEditProps = ProductCreateProps & { product: Product };
 export type ProductShowProps = {
-    product: Product;
+    product?: Product; // deferred prop
     sales_last_30_days?: { units_sold: number; revenue: Decimal }; // deferred prop
     recent_sales?: Sale[]; // deferred prop: newest 5
 };
@@ -391,8 +391,8 @@ export type SalesIndexProps = {
 export type DashboardProps = {
     period: SalesPeriod;
     periods: Option<SalesPeriod>[];
-    stats: DashboardStats;
-    top_products: { by_units: TopProduct[]; by_revenue: TopProduct[] }; // max 5 each, for the period
+    stats?: DashboardStats; // deferred prop (group 'primary'): KPI figures
+    top_products?: { by_units: TopProduct[]; by_revenue: TopProduct[] }; // deferred prop (group 'primary'): max 5 each, for the period
     needs_restock?: Material[]; // deferred prop: max 5, out first, then low; by name
     recent_sales?: Sale[]; // deferred prop: newest 5, any period
     alerts?: UnproducibleAlert[]; // deferred prop: every product that can't be produced, by name

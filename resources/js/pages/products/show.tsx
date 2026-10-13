@@ -12,18 +12,22 @@ import { ProductHero } from '@/components/products/product-hero';
 import { ProductPhoto } from '@/components/products/product-photo';
 import { RecentSalesCard } from '@/components/products/recent-sales-card';
 import { ConfirmDeleteDialog } from '@/components/shared/confirm-delete-dialog';
-import { SkeletonCard } from '@/components/shared/skeletons';
+import { SkeletonCard, SkeletonStat } from '@/components/shared/skeletons';
 import { Button } from '@/components/ui/button';
-import type { MaterialRef, ProductShowProps } from '@/types/domain';
+import { Skeleton } from '@/components/ui/skeleton';
+import type { MaterialRef, Product, ProductShowProps } from '@/types/domain';
 
 const materialHref = (material: MaterialRef) =>
     MaterialController.show.url(material.id);
 
-export default function ProductsShow({
-    product,
-    sales_last_30_days: sales,
-    recent_sales: recentSales,
-}: ProductShowProps) {
+type ProductDetailsProps = {
+    product: Product;
+    sales: NonNullable<ProductShowProps['sales_last_30_days']>;
+    recentSales: NonNullable<ProductShowProps['recent_sales']>;
+};
+
+/** The whole page body; rendered only once the deferred props have landed. */
+function ProductDetails({ product, sales, recentSales }: ProductDetailsProps) {
     const [confirming, setConfirming] = useState(false);
     const [processing, setProcessing] = useState(false);
     const deleteButtonRef = useRef<HTMLButtonElement>(null);
@@ -49,8 +53,6 @@ export default function ProductsShow({
 
     return (
         <>
-            <Head title={product.name} />
-
             <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
                 <ProductHeader
                     product={product}
@@ -138,25 +140,13 @@ export default function ProductsShow({
                     editHref={editHref}
                 />
 
-                <Deferred
-                    data="recent_sales"
-                    fallback={
-                        <SkeletonCard
-                            title="Recent sales"
-                            label="recent sales"
-                            rows={5}
-                            thumb={false}
-                        />
-                    }
-                >
-                    <RecentSalesCard
-                        sales={recentSales ?? []}
-                        recordHref={recordHref}
-                        viewAllHref={SaleController.index.url({
-                            query: { product_id: product.id },
-                        })}
-                    />
-                </Deferred>
+                <RecentSalesCard
+                    sales={recentSales}
+                    recordHref={recordHref}
+                    viewAllHref={SaleController.index.url({
+                        query: { product_id: product.id },
+                    })}
+                />
             </div>
 
             <ConfirmDeleteDialog
@@ -182,15 +172,81 @@ export default function ProductsShow({
     );
 }
 
+/** Mirrors the page (header, hero, cards) so nothing jumps when the content lands. */
+function ProductPageSkeleton() {
+    return (
+        <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
+            <div aria-hidden="true" className="flex flex-col gap-2">
+                <Skeleton className="h-8 w-64 max-w-full motion-reduce:animate-none" />
+                <Skeleton className="h-4 w-40 motion-reduce:animate-none" />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                <SkeletonStat label="Can produce now" />
+                <SkeletonStat label="Unit cost" />
+                <SkeletonStat label="Sold · last 30 days" />
+            </div>
+            <SkeletonCard
+                title="Cost breakdown"
+                label="cost breakdown"
+                rows={4}
+                thumb={false}
+            />
+            <SkeletonCard
+                title="Composition"
+                label="composition"
+                rows={4}
+                thumb={false}
+            />
+            <SkeletonCard
+                title="Recent sales"
+                label="recent sales"
+                rows={5}
+                thumb={false}
+            />
+        </div>
+    );
+}
+
+export default function ProductsShow({
+    product,
+    sales_last_30_days: sales,
+    recent_sales: recentSales,
+}: ProductShowProps) {
+    return (
+        <>
+            <Head title={product?.name ?? 'Product'} />
+
+            {/* `<Deferred>` children are built eagerly: ProductDetails only
+                mounts behind the guard, so `product` is never read before it lands. */}
+            <Deferred
+                data={['product', 'sales_last_30_days', 'recent_sales']}
+                fallback={<ProductPageSkeleton />}
+            >
+                {product && sales && (
+                    <ProductDetails
+                        product={product}
+                        sales={sales}
+                        recentSales={recentSales ?? []}
+                    />
+                )}
+            </Deferred>
+        </>
+    );
+}
+
 ProductsShow.layout = (props: ProductShowProps) => ({
     breadcrumbs: [
         {
             title: 'Products',
             href: ProductController.index(),
         },
-        {
-            title: props.product.name,
-            href: ProductController.show(props.product.id),
-        },
+        ...(props.product
+            ? [
+                  {
+                      title: props.product.name,
+                      href: ProductController.show(props.product.id),
+                  },
+              ]
+            : []),
     ],
 });

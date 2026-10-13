@@ -134,7 +134,7 @@ it('stays within the query budget when the deferred recent history of the materi
         ->toHaveCount(count($queries));
 });
 
-it('stays within the query budget when the deferred sales of the product page load, however many sales there are', function () {
+it('stays within the query budget when the deferred props of the product page load, however many sales there are', function () {
     actingAs($this->user);
     $uri = route('products.show', pid(1));
     // Only the deferred request is measured: the first visit happens outside the query log.
@@ -142,7 +142,7 @@ it('stays within the query budget when the deferred sales of the product page lo
         $firstVisit = $this->get($uri)->assertOk();
 
         return queryLog(fn () => $firstVisit->assertInertia(
-            fn (Assert $page) => $page->loadDeferredProps('default', fn (Assert $reloaded) => $reloaded->hasAll(['sales_last_30_days', 'recent_sales'])),
+            fn (Assert $page) => $page->loadDeferredProps('default', fn (Assert $reloaded) => $reloaded->hasAll(['product', 'sales_last_30_days', 'recent_sales'])),
         ));
     };
 

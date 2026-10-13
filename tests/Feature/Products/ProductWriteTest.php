@@ -215,14 +215,14 @@ describe('store', function () {
         $response = actingAs($this->user)->get(route('products.show', $created));
 
         // The golden values of the costing skill.
-        $response->assertInertia(fn (Assert $page) => $page
+        $response->assertInertia(fn (Assert $page) => $page->loadDeferredProps('default', fn (Assert $reloaded) => $reloaded
             ->where('product.cost', ['material_cost' => '20.2540', 'labor_cost' => '12.0000', 'overhead_cost' => '3.5000', 'unit_cost' => '35.7540'])
             ->where('product.capacity.max_producible', 112)
             ->where('product.capacity.bottleneck.sku', 'MAT-BTN-017')
             ->where('product.margin', ['amount' => '53.2460', 'percent' => '59.83'])
-            ->where('product.selling_price', '89.0000'));
+            ->where('product.selling_price', '89.0000')));
 
-        expect(pageProp($response, 'product.components.*.units_possible'))->toBe([126, 112, 158, 400]);
+        expect(loadedPageProp($response, 'product.components.*.units_possible'))->toBe([126, 112, 158, 400]);
 
         // And it is the page of the seeded Denim Jacket, prop for prop (what identifies the rows and the photo aside).
         $seeded = actingAs($this->user)->get(route('products.show', pid(1)));
@@ -231,7 +231,7 @@ describe('store', function () {
             'components' => array_map(fn (array $line): array => Arr::except($line, ['id']), $product['components']),
         ];
 
-        expect($strip(pageProp($response, 'product')))->toBe($strip(pageProp($seeded, 'product')));
+        expect($strip(loadedPageProp($response, 'product')))->toBe($strip(loadedPageProp($seeded, 'product')));
     });
 
     it('rejects invalid input with an error on the field, no toast and nothing saved', function (array $override, string $field) {
@@ -438,12 +438,12 @@ describe('update', function () {
 
         // The page shows the new composition with fresh figures: denim needs 2.1 x 1.125 = 2.3625 per unit, so 250 / 2.3625 = 105 units.
         actingAs($this->user)->get(route('products.show', $jacket))
-            ->assertInertia(fn (Assert $page) => $page
+            ->assertInertia(fn (Assert $page) => $page->loadDeferredProps('default', fn (Assert $reloaded) => $reloaded
                 ->where('product.components.1.effective_quantity', '2.3625')
                 ->where('product.capacity.max_producible', 105)
-                ->where('product.capacity.bottleneck.sku', 'MAT-DEN-012'));
+                ->where('product.capacity.bottleneck.sku', 'MAT-DEN-012')));
 
-        expect(pageProp(actingAs($this->user)->get(route('products.show', $jacket)), 'product.components.*.material.sku'))
+        expect(loadedPageProp(actingAs($this->user)->get(route('products.show', $jacket)), 'product.components.*.material.sku'))
             ->toBe(['MAT-LBL-WOV', 'MAT-DEN-012', 'MAT-ZIP-018']);
     });
 

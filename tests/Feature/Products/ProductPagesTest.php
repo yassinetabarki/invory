@@ -244,13 +244,19 @@ describe('index', function () {
 });
 
 describe('show', function () {
-    it('sends the product first, and the sales of the last 30 days and the recent sales in one deferred request', function () {
-        actingAs($this->user)->get(route('products.show', pid(1)))
-            ->assertOk()
+    it('sends none of the props first, and the product, the sales of the last 30 days and the recent sales in one deferred request', function () {
+        $first = null;
+        $queries = queryLog(function () use (&$first) {
+            $first = actingAs($this->user)->get(route('products.show', pid(1)));
+        });
+
+        // The costing reads the composition: no work of it happens before the first response.
+        expect(queriesMatching($queries, 'product_components'))->toBe([]);
+
+        $first->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->has('product')
-                ->missingAll(['sales_last_30_days', 'recent_sales'])
-                ->loadDeferredProps('default', fn (Assert $reloaded) => $reloaded->hasAll(['sales_last_30_days', 'recent_sales'])));
+                ->missingAll(['product', 'sales_last_30_days', 'recent_sales'])
+                ->loadDeferredProps('default', fn (Assert $reloaded) => $reloaded->hasAll(['product', 'sales_last_30_days', 'recent_sales'])));
     });
 
     it('sends the ProductShowProps contract', function () {
@@ -258,15 +264,15 @@ describe('show', function () {
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('products/show')
-                ->has('product', fn (Assert $product) => $product->hasAll([
-                    'id', 'sku', 'name', 'category', 'category_label', 'status', 'status_label', 'description', 'photo_url',
-                    'labor_cost', 'overhead_cost', 'selling_price', 'cost', 'margin', 'capacity', 'components',
-                    'created_at', 'updated_at',
-                ]))
-                ->has('product.cost', fn (Assert $cost) => $cost->hasAll(['material_cost', 'labor_cost', 'overhead_cost', 'unit_cost']))
-                ->has('product.margin', fn (Assert $margin) => $margin->hasAll(['amount', 'percent']))
-                ->has('product.capacity', fn (Assert $capacity) => $capacity->hasAll(['max_producible', 'bottleneck']))
                 ->loadDeferredProps('default', fn (Assert $reloaded) => $reloaded
+                    ->has('product', fn (Assert $product) => $product->hasAll([
+                        'id', 'sku', 'name', 'category', 'category_label', 'status', 'status_label', 'description', 'photo_url',
+                        'labor_cost', 'overhead_cost', 'selling_price', 'cost', 'margin', 'capacity', 'components',
+                        'created_at', 'updated_at',
+                    ]))
+                    ->has('product.cost', fn (Assert $cost) => $cost->hasAll(['material_cost', 'labor_cost', 'overhead_cost', 'unit_cost']))
+                    ->has('product.margin', fn (Assert $margin) => $margin->hasAll(['amount', 'percent']))
+                    ->has('product.capacity', fn (Assert $capacity) => $capacity->hasAll(['max_producible', 'bottleneck']))
                     ->has('sales_last_30_days', fn (Assert $sales) => $sales->hasAll(['units_sold', 'revenue']))
                     ->has('recent_sales', 5)));
     });
@@ -282,19 +288,20 @@ describe('show', function () {
 
         $response
             ->assertInertia(fn (Assert $page) => $page
-                ->where('product.id', pid($id))
-                ->where('product.sku', $sku)
-                ->where('product.name', $name)
-                ->where('product.status', $status)
-                ->where('product.selling_price', $price)
-                ->where('product.cost.material_cost', $materialCost)
-                ->where('product.cost.unit_cost', $unitCost)
-                ->where('product.margin', $marginAmount === null ? null : ['amount' => $marginAmount, 'percent' => $marginPercent])
-                ->where('product.capacity.max_producible', $maxProducible)
-                ->where('product.capacity.bottleneck.sku', $bottleneckSku)
-                ->where('product.capacity.bottleneck.name', $bottleneck->name)
-                ->has('product.components', $components)
-                ->etc());
+                ->loadDeferredProps('default', fn (Assert $reloaded) => $reloaded
+                    ->where('product.id', pid($id))
+                    ->where('product.sku', $sku)
+                    ->where('product.name', $name)
+                    ->where('product.status', $status)
+                    ->where('product.selling_price', $price)
+                    ->where('product.cost.material_cost', $materialCost)
+                    ->where('product.cost.unit_cost', $unitCost)
+                    ->where('product.margin', $marginAmount === null ? null : ['amount' => $marginAmount, 'percent' => $marginPercent])
+                    ->where('product.capacity.max_producible', $maxProducible)
+                    ->where('product.capacity.bottleneck.sku', $bottleneckSku)
+                    ->where('product.capacity.bottleneck.name', $bottleneck->name)
+                    ->has('product.components', $components)
+                    ->etc()));
 
         expect(loadedPageProp($response, 'sales_last_30_days.units_sold'))->toBe($sold);
     })->with('expectedProducts');
@@ -304,7 +311,7 @@ describe('show', function () {
 
         $response = actingAs($this->user)->get(route('products.show', pid(1)));
 
-        $response->assertInertia(fn (Assert $page) => $page
+        $response->assertInertia(fn (Assert $page) => $page->loadDeferredProps('default', fn (Assert $reloaded) => $reloaded
             ->where('product.labor_cost', '12.0000')
             ->where('product.overhead_cost', '3.5000')
             ->where('product.cost', [
@@ -319,13 +326,13 @@ describe('show', function () {
             ->where('product.photo_url', Storage::disk('public')->url('products/jacket.jpg'))
             // The real timestamps of the row (the seeder ran at the frozen clock), as ISO-8601 strings.
             ->where('product.created_at', '2026-10-08T12:00:00+00:00')
-            ->where('product.updated_at', '2026-10-08T12:00:00+00:00'));
+            ->where('product.updated_at', '2026-10-08T12:00:00+00:00')));
 
         // The golden lines: effective quantity, line cost, units possible and the bottleneck of each of the 4 lines.
-        expect(pageProp($response, 'product.components.*.effective_quantity'))->toBe(['1.9800', '8.0000', '126.0000', '1.0000'])
-            ->and(pageProp($response, 'product.components.*.line_cost'))->toBe(['16.8300', '2.8000', '0.5040', '0.1200'])
-            ->and(pageProp($response, 'product.components.*.units_possible'))->toBe([126, 112, 158, 400])
-            ->and(pageProp($response, 'product.components.*.is_bottleneck'))->toBe([false, true, false, false]);
+        expect(loadedPageProp($response, 'product.components.*.effective_quantity'))->toBe(['1.9800', '8.0000', '126.0000', '1.0000'])
+            ->and(loadedPageProp($response, 'product.components.*.line_cost'))->toBe(['16.8300', '2.8000', '0.5040', '0.1200'])
+            ->and(loadedPageProp($response, 'product.components.*.units_possible'))->toBe([126, 112, 158, 400])
+            ->and(loadedPageProp($response, 'product.components.*.is_bottleneck'))->toBe([false, true, false, false]);
     });
 
     it('sends the composition lines with the ProductComponentLine contract, in position order', function () {
@@ -336,12 +343,12 @@ describe('show', function () {
         // The ids are the real ids of the stored lines, in position order.
         $ids = ProductComponent::query()->where('product_id', pid(1))->orderBy('position')->pluck('id')->all();
 
-        expect(pageProp($response, 'product.components.*.id'))->toBe($ids)
-            ->and(pageProp($response, 'product.components.*.position'))->toBe([1, 2, 3, 4])
-            ->and(pageProp($response, 'product.components.*.material.sku'))->toBe(['MAT-DEN-012', 'MAT-BTN-017', 'MAT-THR-PES', 'MAT-LBL-WOV'])
-            ->and(pageProp($response, 'product.components.*.notes'))->toBe(['Body, sleeves, collar', 'Front placket (6), cuffs (2)', 'All seams', 'Inside back yoke']);
+        expect(loadedPageProp($response, 'product.components.*.id'))->toBe($ids)
+            ->and(loadedPageProp($response, 'product.components.*.position'))->toBe([1, 2, 3, 4])
+            ->and(loadedPageProp($response, 'product.components.*.material.sku'))->toBe(['MAT-DEN-012', 'MAT-BTN-017', 'MAT-THR-PES', 'MAT-LBL-WOV'])
+            ->and(loadedPageProp($response, 'product.components.*.notes'))->toBe(['Body, sleeves, collar', 'Front placket (6), cuffs (2)', 'All seams', 'Inside back yoke']);
 
-        $response->assertInertia(fn (Assert $page) => $page
+        $response->assertInertia(fn (Assert $page) => $page->loadDeferredProps('default', fn (Assert $reloaded) => $reloaded
             ->has('product.components.0', fn (Assert $line) => $line
                 ->where('id', $ids[0])
                 ->where('position', 1)
@@ -367,7 +374,7 @@ describe('show', function () {
             ->where('product.components.1.notes', 'Front placket (6), cuffs (2)')
             ->where('product.components.1.quantity', '8.0000')
             ->where('product.components.1.waste_percent', '0.00')
-            ->where('product.capacity.bottleneck.sku', 'MAT-BTN-017'));
+            ->where('product.capacity.bottleneck.sku', 'MAT-BTN-017')));
     });
 
     it('numbers the lines of every product from 1 in the order they are stored', function () {
@@ -375,8 +382,8 @@ describe('show', function () {
             $response = actingAs($this->user)->get(route('products.show', pid($number)));
             $stored = ProductComponent::query()->where('product_id', pid($number))->orderBy('position')->pluck('id')->all();
 
-            expect(pageProp($response, 'product.components.*.position'))->toBe(range(1, $count))
-                ->and(pageProp($response, 'product.components.*.id'))->toBe($stored);
+            expect(loadedPageProp($response, 'product.components.*.position'))->toBe(range(1, $count))
+                ->and(loadedPageProp($response, 'product.components.*.id'))->toBe($stored);
         }
     });
 
@@ -408,10 +415,10 @@ describe('show', function () {
     it('sends no sales and no margin for the unpriced draft', function () {
         $response = actingAs($this->user)->get(route('products.show', pid(6)));
 
-        $response->assertInertia(fn (Assert $page) => $page
+        $response->assertInertia(fn (Assert $page) => $page->loadDeferredProps('default', fn (Assert $reloaded) => $reloaded
             ->where('product.selling_price', null)
             ->where('product.margin', null)
-            ->where('product.photo_url', null));
+            ->where('product.photo_url', null)));
 
         expect(loadedPageProp($response, 'sales_last_30_days'))->toEqual(['units_sold' => 0, 'revenue' => '0.0000'])
             ->and(loadedPageProp($response, 'recent_sales'))->toBe([]);
@@ -422,7 +429,7 @@ describe('show', function () {
 
         actingAs($this->user)->get(route('products.show', $product))
             ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
+            ->assertInertia(fn (Assert $page) => $page->loadDeferredProps('default', fn (Assert $reloaded) => $reloaded
                 ->where('product.components', [])
                 ->where('product.capacity', ['max_producible' => null, 'bottleneck' => null])
                 ->where('product.cost', [
@@ -431,7 +438,7 @@ describe('show', function () {
                     'overhead_cost' => '3.5000',
                     'unit_cost' => '15.5000',
                 ])
-                ->where('product.margin', ['amount' => '73.5000', 'percent' => '82.58']));
+                ->where('product.margin', ['amount' => '73.5000', 'percent' => '82.58'])));
     });
 
     it('costs a line whose material was soft-deleted like any other (a delete that bypassed the guard)', function () {
@@ -440,11 +447,11 @@ describe('show', function () {
 
         actingAs($this->user)->get(route('products.show', pid(1)))
             ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
+            ->assertInertia(fn (Assert $page) => $page->loadDeferredProps('default', fn (Assert $reloaded) => $reloaded
                 ->has('product.components', 4)
                 ->where('product.capacity.max_producible', 112)
                 ->where('product.capacity.bottleneck.sku', 'MAT-BTN-017')
-                ->where('product.cost.unit_cost', '35.7540'));
+                ->where('product.cost.unit_cost', '35.7540')));
     });
 
     it('sends the lines in position order after the composition was reordered', function () {
@@ -455,11 +462,11 @@ describe('show', function () {
 
         $response = actingAs($this->user)->get(route('products.show', $jacket));
 
-        expect(pageProp($response, 'product.components.*.material.sku'))->toBe(['MAT-LBL-WOV', 'MAT-BTN-017', 'MAT-THR-PES', 'MAT-DEN-012'])
-            ->and(pageProp($response, 'product.components.*.position'))->toBe([1, 2, 3, 4])
+        expect(loadedPageProp($response, 'product.components.*.material.sku'))->toBe(['MAT-LBL-WOV', 'MAT-BTN-017', 'MAT-THR-PES', 'MAT-DEN-012'])
+            ->and(loadedPageProp($response, 'product.components.*.position'))->toBe([1, 2, 3, 4])
             // The figures follow the lines they belong to.
-            ->and(pageProp($response, 'product.components.*.units_possible'))->toBe([400, 112, 158, 126])
-            ->and(pageProp($response, 'product.capacity.bottleneck.sku'))->toBe('MAT-BTN-017');
+            ->and(loadedPageProp($response, 'product.components.*.units_possible'))->toBe([400, 112, 158, 126])
+            ->and(loadedPageProp($response, 'product.capacity.bottleneck.sku'))->toBe('MAT-BTN-017');
     });
 
     it('follows the stock of the materials immediately', function () {
@@ -467,9 +474,9 @@ describe('show', function () {
         demoMaterial('MAT-BTN-017')->update(['quantity_on_hand' => '7']);
 
         actingAs($this->user)->get(route('products.show', pid(1)))
-            ->assertInertia(fn (Assert $page) => $page
+            ->assertInertia(fn (Assert $page) => $page->loadDeferredProps('default', fn (Assert $reloaded) => $reloaded
                 ->where('product.capacity.max_producible', 0)
-                ->where('product.capacity.bottleneck.sku', 'MAT-BTN-017'));
+                ->where('product.capacity.bottleneck.sku', 'MAT-BTN-017')));
     });
 
     it('answers 404 for an unknown product', function (string $id) {
@@ -535,7 +542,12 @@ it('reads the materials table once per page and answers within a bounded number 
     $count = function (string $url): array {
         DB::enableQueryLog();
         DB::flushQueryLog();
-        actingAs($this->user)->get($url)->assertOk();
+        $response = actingAs($this->user)->get($url)->assertOk();
+
+        // The show page defers all its props (RL-02): its figures are the first visit plus the deferred request.
+        if (data_get($response->viewData('page'), 'deferredProps') !== null) {
+            loadedPageProps($response);
+        }
 
         $log = array_column(DB::getQueryLog(), 'query');
 
@@ -554,9 +566,9 @@ it('reads the materials table once per page and answers within a bounded number 
 
     // What each page runs besides the reference lists of a full load: the list is the count, the products, their categories, their
     // lines, the materials of the lines and the units of those (6; the units sold are a sum inside the products query); a product is the row,
-    // its category, its lines, their materials and the units of those, and its sales figures and recent sales (7); the create form reads nothing (the picker searches the materials through `materials.options`, S-25)
+    // its category, its lines, their materials and the units of those, and its sales figures and recent sales (7), plus the product row again for the deferred request (8); the create form reads nothing (the picker searches the materials through `materials.options`, S-25)
     // and the edit page costs the lines like the show page (5).
-    $budget = ['index' => 6, 'show' => 7, 'create' => 0, 'edit' => 5];
+    $budget = ['index' => 6, 'show' => 8, 'create' => 0, 'edit' => 5];
     $materialReads = ['index' => 1, 'show' => 1, 'create' => 0, 'edit' => 1];
 
     $baseline = array_map($count, $urls);

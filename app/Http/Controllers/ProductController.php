@@ -79,12 +79,13 @@ final class ProductController extends Controller
         Gate::authorize('view', $product);
 
         return Inertia::render('products/show', [
-            'product' => function () use ($product, $costing): ProductResource {
+            // RL-02: all three props are deferred in one group: the first response carries none of them (no costing work, so the
+            // navigation is instant) and one follow-up request brings them all.
+            'product' => Inertia::defer(function () use ($product, $costing): ProductResource {
                 $product->load(['category', 'components.material' => fn ($materials) => $materials->without('category')]);
 
                 return $this->resource($product, $costing);
-            },
-            // RL-02: the two sales props are deferred in one group (one extra request after the first paint); `product` is not.
+            }),
             'sales_last_30_days' => Inertia::defer(fn (): array => $sales->lastThirtyDays($product)),
             'recent_sales' => Inertia::defer(fn (): array => SaleResource::collection($sales->recentOf($product))->resolve()),
         ]);

@@ -101,7 +101,7 @@ it('sends the paginator of the list with the keys of a paginated resource', func
 it('sends Product with its exact keys, order and types', function () {
     foreach (range(1, 7) as $number) {
         $response = actingAs($this->user)->get(route('products.show', pid($number)));
-        $product = $response->inertiaProps('product');
+        $product = loadedPageProp($response, 'product');
 
         expect(keysOf($product))->toBe([
             'id', 'sku', 'name', 'category', 'category_label', 'status', 'status_label', 'description', 'photo_url',
@@ -190,8 +190,8 @@ it('sends the product-shaped props of the dashboard, the sales form and the mate
     }
 
     expect($alerts)->toHaveCount(1)
-        ->and($dashboard->inertiaProps('stats.unproducible_count'))->toBeInt()
-        ->and($dashboard->inertiaProps('stats.products_count'))->toBeInt();
+        ->and(loadedPageProp($dashboard, 'stats.unproducible_count'))->toBeInt()
+        ->and(loadedPageProp($dashboard, 'stats.products_count'))->toBeInt();
 
     foreach (actingAs($this->user)->get(route('sales.index'))->inertiaProps('products') as $option) {
         expect(keysOf($option))->toBe(['id', 'sku', 'name', 'photo_url', 'status', 'selling_price']);
