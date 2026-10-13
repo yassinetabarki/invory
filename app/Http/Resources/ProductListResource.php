@@ -10,7 +10,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
  * `ProductListItem`: the lightweight row of the products list. The product must carry its category, its composition (with the
- * materials) and the attributes the controller sets (`costing`, `photo_url`, `units_sold_last_30_days`).
+ * materials) and the attributes the controller sets (`costing`, `units_sold_last_30_days`).
  *
  * @mixin Product
  */

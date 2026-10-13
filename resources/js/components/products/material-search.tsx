@@ -113,7 +113,9 @@ export function MaterialSearch({
                                     ) : (
                                         <>
                                             <Quantity
-                                                value={material.quantity_on_hand}
+                                                value={
+                                                    material.quantity_on_hand
+                                                }
                                                 unit={material.unit}
                                             />{' '}
                                             in stock ·{' '}

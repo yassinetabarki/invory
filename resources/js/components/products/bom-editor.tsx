@@ -37,7 +37,8 @@ export function BomEditor({
     const idPrefix = useId();
     // id → material for every material seen: seeded by the caller, then fed by the picker.
     const [catalog, setCatalog] = useState<ReadonlyMap<number, MaterialOption>>(
-        () => new Map(knownMaterials.map((material) => [material.id, material])),
+        () =>
+            new Map(knownMaterials.map((material) => [material.id, material])),
     );
     const containerRef = useRef<HTMLElement>(null);
     // The picker that is open (one at a time), by row uid.

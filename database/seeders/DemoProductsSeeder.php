@@ -16,8 +16,9 @@ use Illuminate\Support\Facades\DB;
  * rows on the demo materials of {@see DemoCatalogSeeder}. With those materials they give the worked example of the costing domain
  * skill (Denim Jacket: unit cost 35.7540, 112 units, limited by the button).
  *
- * Idempotent and never destructive: a product is created only when no non-deleted product has its SKU, so running it again
- * creates nothing, and a product the user edited is left alone. A composition line whose material is missing (deleted, or never
+ * Idempotent and never destructive: a product is created only when no product at all has its SKU, so running it again
+ * creates nothing, a product the user edited is left alone, and one the user deleted stays deleted (F-37: a soft-deleted
+ * demo product is not recreated). A composition line whose material is missing (deleted, or never
  * seeded) is skipped; the product is still created, with the lines that exist.
  */
 class DemoProductsSeeder extends Seeder
@@ -156,7 +157,7 @@ class DemoProductsSeeder extends Seeder
 
     public function run(SyncProductComponents $syncComponents): void
     {
-        $existing = Product::query()->whereIn('sku', array_column(self::PRODUCTS, 'sku'))->pluck('sku')->all();
+        $existing = Product::query()->withTrashed()->whereIn('sku', array_column(self::PRODUCTS, 'sku'))->pluck('sku')->all();
         $missing = array_filter(self::PRODUCTS, static fn (array $product): bool => ! in_array($product['sku'], $existing, true));
 
         if ($missing === []) {

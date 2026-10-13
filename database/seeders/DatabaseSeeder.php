@@ -22,7 +22,10 @@ class DatabaseSeeder extends Seeder
             'email' => 'test@example.com',
         ]);
 
-        // The mockup's 12 materials and the 7 demo products on them (the sales and stock history of the preview reference them by SKU).
+        // The mockup's 12 materials and the 7 demo products on them.
         $this->call(DemoCatalogSeeder::class);
+
+        // The 60 demo sales of those products (only when there are no sales yet).
+        $this->call(DemoSalesSeeder::class);
     }
 }

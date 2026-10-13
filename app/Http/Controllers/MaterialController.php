@@ -12,13 +12,14 @@ use App\Http\Requests\Materials\IndexMaterialRequest;
 use App\Http\Requests\Materials\StoreMaterialRequest;
 use App\Http\Requests\Materials\UpdateMaterialRequest;
 use App\Http\Resources\MaterialResource;
+use App\Http\Resources\MaterialUsageResource;
 use App\Http\Resources\StockMovementResource;
-use App\Mock\PreviewMaterials;
-use App\Mock\PreviewProducts;
 use App\Models\Material;
 use App\Models\User;
+use App\Services\Costing\MaterialUsageService;
 use App\Services\Inventory\InventorySummary;
 use App\Services\Inventory\StockHistory;
+use App\Services\Reference\ReferenceData;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -28,8 +29,8 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * Materials are real (CRUD on the database, used-in counts from the real compositions, the stock history from the ledger). The
- * parts that depend on tables that do not exist yet (photos, usage) come from App\Mock (ADR-0006, removed by S-17).
+ * Materials are real: CRUD on the database (photos on the public disk through the Actions), used-in counts and usage from the
+ * real compositions, the stock history from the ledger.
  */
 final class MaterialController extends Controller
 {
@@ -43,7 +44,9 @@ final class MaterialController extends Controller
         // (a full visit, or a partial reload that lists it). The page is shared by `materials` and `recent_history`.
         /** @var LengthAwarePaginator<int, Material>|null $page */
         $page = null;
-        $materials = function () use (&$page, $request, $filters): LengthAwarePaginator {
+        /** @var list<int> $pageIds the ids of the page, read before MaterialResource::collection() replaces the paginator's items */
+        $pageIds = [];
+        $materials = function () use (&$page, &$pageIds, $request, $filters): LengthAwarePaginator {
             if ($page === null) {
                 $page = Material::query()
                     ->withUsedInCount()
@@ -54,8 +57,7 @@ final class MaterialController extends Controller
                     ->paginate(config('invory.per_page'))
                     ->withQueryString();
 
-                // MOCK (ADR-0006): photo_url has no source yet.
-                PreviewMaterials::decorate($page);
+                $pageIds = array_values(array_map(static fn (Material $material): int => $material->id, $page->items()));
             }
 
             return $page;
@@ -74,9 +76,11 @@ final class MaterialController extends Controller
                 ];
             },
             // The newest 5 movements of each material on this page, in one query, loaded after the first paint.
-            'recent_history' => Inertia::defer(fn (): AnonymousResourceCollection => StockMovementResource::collection(
-                $history->recentFor(array_map(static fn (Material $material): int => $material->id, $materials()->items())),
-            )),
+            'recent_history' => Inertia::defer(function () use ($history, $materials, &$pageIds): AnonymousResourceCollection {
+                $materials();
+
+                return StockMovementResource::collection($history->recentFor($pageIds));
+            }),
         ]);
     }
 
@@ -90,24 +94,25 @@ final class MaterialController extends Controller
 
     public function store(StoreMaterialRequest $request, CreateMaterial $createMaterial): RedirectResponse
     {
-        // Photos are a preview (ADR-0006): validated, but neither stored nor part of the material.
-        $material = $createMaterial->handle($request->safe()->except(['photo', 'remove_photo']), $this->actor($request));
+        $material = $createMaterial->handle($request->validated(), $this->actor($request));
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => $this->toastMessage($request, __('Material created.'))]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Material created.')]);
 
         return to_route('materials.show', $material);
     }
 
-    public function show(Material $material, StockHistory $history): Response
+    public function show(Material $material, StockHistory $history, ReferenceData $reference, MaterialUsageService $usage): Response
     {
         Gate::authorize('view', $material);
 
-        // MOCK (ADR-0006): the photo comes from the fixture. The usage is real (costed by ProductCostingService) and so is the history.
-        PreviewMaterials::decorate([$material]);
-
         return Inertia::render('materials/show', [
             'material' => MaterialResource::make($material),
-            'usage' => fn (): array => PreviewProducts::load()->usageOf($material),
+            // The units are the ones the shared `reference` prop reads: one query for both (the query budget).
+            'usage' => function () use ($usage, $material, $reference): AnonymousResourceCollection {
+                $rows = $usage->for($material, $reference->units());
+
+                return MaterialUsageResource::collection($rows);
+            },
             'history' => fn (): AnonymousResourceCollection => StockMovementResource::collection($history->forMaterial($material)),
         ]);
     }
@@ -116,8 +121,6 @@ final class MaterialController extends Controller
     {
         Gate::authorize('update', $material);
 
-        PreviewMaterials::decorate([$material]);
-
         return Inertia::render('materials/edit', [
             'material' => MaterialResource::make($material),
         ]);
@@ -125,9 +128,9 @@ final class MaterialController extends Controller
 
     public function update(UpdateMaterialRequest $request, Material $material, UpdateMaterial $updateMaterial): RedirectResponse
     {
-        $updateMaterial->handle($material, $request->safe()->except(['photo', 'remove_photo']), $this->actor($request));
+        $updateMaterial->handle($material, $request->validated(), $this->actor($request));
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => $this->toastMessage($request, __('Material updated.'))]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Material updated.')]);
 
         return to_route('materials.show', $material);
     }
@@ -156,17 +159,5 @@ final class MaterialController extends Controller
         $user = $request->user();
 
         return $user instanceof User ? $user : abort(401);
-    }
-
-    /**
-     * MOCK (ADR-0006): says so when a photo was sent (or removed), because photos are not saved yet.
-     */
-    private function toastMessage(StoreMaterialRequest|UpdateMaterialRequest $request, string $message): string
-    {
-        if ($request->hasFile('photo') || $request->boolean('remove_photo')) {
-            return $message.' '.__("Photos are a preview and weren't saved.");
-        }
-
-        return $message;
     }
 }

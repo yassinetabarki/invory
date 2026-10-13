@@ -6,16 +6,19 @@ namespace App\Models;
 
 use App\Enums\ProductStatus;
 use App\Services\Costing\ProductCosting;
+use App\Services\Photos\PhotoStorage;
 use Carbon\CarbonInterface;
 use Database\Factories\ProductFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * A final fashion product and the cost it adds on top of its materials (the BOM lives in `components`).
@@ -31,11 +34,11 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property string $labor_cost Decimal string, scale 4.
  * @property string $overhead_cost Decimal string, scale 4.
  * @property string|null $selling_price Decimal string, scale 4.
- * @property string|null $photo_path Public-disk path (S-15-BE).
+ * @property string|null $photo_path Public-disk path of the photo (S-15-BE). Narrow selects must include it: `photo_url` reads it.
  * @property int|null $created_by
  * @property int|null $updated_by
  * @property ProductCosting $costing Not a column: the controller sets it from ProductCostingService before a Resource reads it (strict models throw if it forgot).
- * @property string|null $photo_url Public URL of the photo. Not a column: the controller sets it as an attribute (a photo accessor in S-15-BE).
+ * @property-read string|null $photo_url Public URL of the photo (the `public` disk's), null without one. Not a column.
  * @property int $units_sold_last_30_days Not a column: the controller sets it for the list (the sales aggregate of S-23 later).
  * @property CarbonInterface $created_at
  * @property CarbonInterface $updated_at
@@ -69,6 +72,16 @@ class Product extends Model
         ];
     }
 
+    /**
+     * The URL of the photo on the public disk, or null. Reads `photo_path`, so a strict model throws when a narrow select left it out.
+     *
+     * @return Attribute<string|null, never>
+     */
+    protected function photoUrl(): Attribute
+    {
+        return Attribute::get(fn (): ?string => $this->photo_path === null ? null : Storage::disk(PhotoStorage::DISK)->url($this->photo_path));
+    }
+
     /** @return BelongsTo<ProductCategory, $this> */
     public function category(): BelongsTo
     {
@@ -83,6 +96,16 @@ class Product extends Model
     public function components(): HasMany
     {
         return $this->hasMany(ProductComponent::class)->orderBy('position')->orderBy('id');
+    }
+
+    /**
+     * The recorded sales of this product (a sale outlives a soft-deleted product, D-3).
+     *
+     * @return HasMany<Sale, $this>
+     */
+    public function sales(): HasMany
+    {
+        return $this->hasMany(Sale::class);
     }
 
     /** @return BelongsTo<User, $this> */

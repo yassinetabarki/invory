@@ -52,6 +52,8 @@ const jacketRows = (): BomRow[] => [
 
 type HarnessProps = {
     initial?: BomRow[];
+    /** What the form knows of its saved rows (the edit page's `product.components`). */
+    known?: readonly MaterialOption[];
     errors?: Record<string, string | undefined>;
     onRows?: (rows: BomRow[]) => void;
 };
@@ -59,6 +61,7 @@ type HarnessProps = {
 /** The editor is controlled, so tests hold the rows in state like the form does. */
 function Harness({
     initial = jacketRows(),
+    known = knownMaterials,
     errors = {},
     onRows,
 }: HarnessProps) {
@@ -67,7 +70,7 @@ function Harness({
     return (
         <BomEditor
             rows={rows}
-            knownMaterials={knownMaterials}
+            knownMaterials={known}
             errors={errors}
             onChange={(next) => {
                 setRows(next);
@@ -249,7 +252,9 @@ describe('<BomEditor>', () => {
                 screen.getByRole('button', { name: 'Add material' }),
             );
             await user.click(
-                await screen.findByRole('option', { name: /Metal zipper 18cm/ }),
+                await screen.findByRole('option', {
+                    name: /Metal zipper 18cm/,
+                }),
             );
 
             const picker = within(rowGroup(1)).getByRole('combobox', {
@@ -362,7 +367,9 @@ describe('<BomEditor>', () => {
                 }),
             );
             await user.click(
-                await screen.findByRole('option', { name: /Cotton canvas 10oz/ }),
+                await screen.findByRole('option', {
+                    name: /Cotton canvas 10oz/,
+                }),
             );
 
             expect(quantity().parentElement).toHaveTextContent('m');
@@ -427,7 +434,9 @@ describe('<BomEditor>', () => {
             );
 
             expect(
-                await screen.findByRole('option', { name: /Denim 12oz Indigo/ }),
+                await screen.findByRole('option', {
+                    name: /Denim 12oz Indigo/,
+                }),
             ).not.toHaveAttribute('aria-disabled', 'true');
             expect(
                 screen.getByRole('option', { name: /Polyester thread/ }),
@@ -447,7 +456,9 @@ describe('<BomEditor>', () => {
             );
 
             expect(
-                await screen.findByRole('option', { name: /Metal shank button/ }),
+                await screen.findByRole('option', {
+                    name: /Metal shank button/,
+                }),
             ).not.toHaveAttribute('aria-disabled', 'true');
         });
     });
@@ -485,7 +496,9 @@ describe('<BomEditor>', () => {
                 }),
             );
             await user.click(
-                await screen.findByRole('option', { name: /Rubber cupsole 42/ }),
+                await screen.findByRole('option', {
+                    name: /Rubber cupsole 42/,
+                }),
             );
 
             expect(
@@ -788,8 +801,17 @@ describe('<BomEditor>', () => {
                 screen.getByRole('button', { name: 'Add material' }),
             );
             await user.keyboard('cupsole');
+            // The option is already in the first page, so wait for the
+            // debounced search request itself before picking.
+            await waitFor(() =>
+                expect(
+                    inertiaMock.http.requests.map((request) => request.params),
+                ).toContainEqual({ search: 'cupsole', limit: '20' }),
+            );
             await user.click(
-                await screen.findByRole('option', { name: /Rubber cupsole 42/ }),
+                await screen.findByRole('option', {
+                    name: /Rubber cupsole 42/,
+                }),
             );
 
             const group = within(rowGroup(1));
@@ -802,11 +824,6 @@ describe('<BomEditor>', () => {
                     .parentElement,
             ).toHaveTextContent('pair');
             expect(lastRows(onRows)).toMatchObject([{ material_id: 9 }]);
-            // The request carried the search text, the page size and no picked ids.
-            expect(inertiaMock.http.requests.at(-1)?.params).toEqual({
-                search: 'cupsole',
-                limit: '20',
-            });
         });
 
         it('keeps a picked material shown when a later search does not find it', async () => {
@@ -877,6 +894,7 @@ describe('<BomEditor>', () => {
             );
 
             const { user } = setup({
+                known: picked,
                 initial: picked.map((material, index) =>
                     row(`r${index}`, material.id, '1'),
                 ),

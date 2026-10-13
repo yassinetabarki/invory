@@ -14,7 +14,7 @@ use function Pest\Laravel\actingAs;
 | restock list. The lines of a soft-deleted product stay in the table (history, restore) but are not a use.
 */
 
-beforeEach(fn () => $this->user = preparePreview($this));
+beforeEach(fn () => $this->user = prepareDemo($this));
 
 /** The count of each material by SKU, from the list page. */
 function usedInCounts(): array
@@ -35,7 +35,7 @@ it('counts the demo compositions on the list', function () {
 });
 
 it('gives the same count on the list, the page and the form', function () {
-    $material = previewMaterial('MAT-BTN-017');
+    $material = demoMaterial('MAT-BTN-017');
 
     expect(actingAs($this->user)->get(route('materials.show', $material))->inertiaProps('material.used_in_count'))->toBe(3)
         ->and(actingAs($this->user)->get(route('materials.edit', $material))->inertiaProps('material.used_in_count'))->toBe(3)
@@ -43,7 +43,7 @@ it('gives the same count on the list, the page and the form', function () {
 });
 
 it('does not count the lines of a soft-deleted product, and counts them again once it is restored', function () {
-    $jacket = previewProduct('PRD-JKT-001');
+    $jacket = demoProduct('PRD-JKT-001');
     $jacket->delete();
 
     // The Denim Jacket used the denim, the button, the thread and the label.
@@ -55,19 +55,19 @@ it('does not count the lines of a soft-deleted product, and counts them again on
 });
 
 it('follows the products as they are created, changed and deleted through the pages', function () {
-    $zip = previewMaterial('MAT-ZIP-018');
+    $zip = demoMaterial('MAT-ZIP-018');
 
     actingAs($this->user)->post(route('products.store'), validProductPayload(['components' => [
         ['material_id' => $zip->id, 'quantity' => '1', 'waste_percent' => '0'],
     ]]))->assertSessionHasNoErrors();
 
-    $created = previewProduct('PRD-NEW-100');
+    $created = demoProduct('PRD-NEW-100');
 
     expect(usedInCounts()['MAT-ZIP-018'])->toBe(3);
 
     // Move the line to another material.
     actingAs($this->user)->put(route('products.update', $created), validProductPayload(['components' => [
-        ['material_id' => previewMaterial('MAT-LAC-120')->id, 'quantity' => '1', 'waste_percent' => '0'],
+        ['material_id' => demoMaterial('MAT-LAC-120')->id, 'quantity' => '1', 'waste_percent' => '0'],
     ]]))->assertSessionHasNoErrors();
 
     expect(usedInCounts())->toMatchArray(['MAT-ZIP-018' => 2, 'MAT-LAC-120' => 2]);
@@ -103,13 +103,13 @@ it('sends the count with the restock list of the dashboard', function () {
     expect(pageProp($response, 'needs_restock.*.sku'))->toBe(['MAT-SOL-042', 'MAT-JRS-180', 'MAT-BTN-017', 'MAT-LBL-WOV'])
         ->and(pageProp($response, 'needs_restock.*.used_in_count'))->toBe([1, 1, 3, 6]);
 
-    previewProduct('PRD-SNK-003')->delete();
+    demoProduct('PRD-SNK-003')->delete();
 
     expect(pageProp(actingAs($this->user)->get(route('dashboard')), 'needs_restock.0.used_in_count'))->toBe(0);
 });
 
 it('answers 404 for a soft-deleted material even though the route loads the count with it', function () {
-    $material = previewMaterial('MAT-LAC-120');
+    $material = demoMaterial('MAT-LAC-120');
     $material->delete();
 
     actingAs($this->user)->get(route('materials.show', $material->id))->assertNotFound();
@@ -117,7 +117,7 @@ it('answers 404 for a soft-deleted material even though the route loads the coun
 });
 
 it('keeps writing a material fine when the route loaded the count with it', function () {
-    $material = previewMaterial('MAT-BTN-017');
+    $material = demoMaterial('MAT-BTN-017');
 
     actingAs($this->user)->put(route('materials.update', $material), validMaterialPayload([
         'sku' => $material->sku, 'name' => 'Renamed button', 'category' => 'fastener', 'unit' => 'pc',

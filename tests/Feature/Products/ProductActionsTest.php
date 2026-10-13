@@ -168,21 +168,17 @@ describe('UpdateProduct', function () {
             ->and($updated->updated_by)->toBe($this->user->id);
     });
 
-    it('leaves the composition alone when the input has no components key', function () {
-        $before = storedLines($this->product);
+    it('always replaces the composition: a missing or null `components` clears it (F-36)', function (array $input) {
+        expect(storedLines($this->product))->toHaveCount(4);
 
-        $this->update->handle($this->product, ['name' => 'Renamed'], $this->user);
+        $this->update->handle($this->product, ['name' => 'Renamed', ...$input], $this->user);
 
-        expect(storedLines($this->product))->toBe($before);
-    });
-
-    it('leaves the composition alone when the components are null (a multipart body cannot carry an empty list)', function () {
-        $before = storedLines($this->product);
-
-        $this->update->handle($this->product, ['name' => 'Renamed', 'components' => null], $this->user);
-
-        expect(storedLines($this->product))->toBe($before);
-    });
+        expect(storedLines($this->product))->toBe([])
+            ->and($this->product->refresh()->name)->toBe('Renamed');
+    })->with([
+        'no components key' => [[]],
+        'null components (a multipart body cannot carry an empty list)' => [['components' => null]],
+    ]);
 
     it('replaces the composition: updates, adds, removes and reorders lines', function () {
         $denimLineId = ProductComponent::query()->where('material_id', $this->materials['denim']->id)->value('id');

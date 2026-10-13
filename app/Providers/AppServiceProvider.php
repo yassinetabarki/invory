@@ -2,13 +2,11 @@
 
 namespace App\Providers;
 
-use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 
@@ -28,17 +26,6 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
-        $this->configureAuthorization();
-    }
-
-    /**
-     * Abilities that are not tied to a model policy.
-     */
-    protected function configureAuthorization(): void
-    {
-        // MOCK (ADR-0006, removed by S-17): preview-only controllers (sales, dashboard, restocks) serve fixture data and
-        // must never be reachable in production. Products are real since S-04b and are guarded by ProductPolicy.
-        Gate::define('access-preview', fn (User $user): bool => ! app()->isProduction());
     }
 
     /**

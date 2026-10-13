@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\StockStatus;
+use App\Services\Photos\PhotoStorage;
 use Brick\Math\BigDecimal;
 use Brick\Math\RoundingMode;
 use Carbon\CarbonInterface;
@@ -12,11 +13,13 @@ use Database\Factories\MaterialFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
 
 /**
@@ -38,7 +41,8 @@ use InvalidArgumentException;
  * @property int|null $created_by Audit: the user who created the material (null for rows that predate the column or a deleted user).
  * @property int|null $updated_by Audit: the user who last changed it.
  * @property int $used_in_count Non-deleted products whose composition uses this material. Not a column: `withUsedInCount()` provides it (route binding adds it too), strict models throw when a caller forgot.
- * @property string|null $photo_url Public URL of the photo. Not a column: the controllers set it as an attribute (a photo accessor in S-15-BE).
+ * @property string|null $photo_path Public-disk path of the photo (S-15-BE). Narrow selects must include it: `photo_url` reads it.
+ * @property-read string|null $photo_url Public URL of the photo (the `public` disk's), null without one. Not a column.
  * @property CarbonInterface $created_at
  * @property CarbonInterface $updated_at
  * @property CarbonInterface|null $deleted_at
@@ -75,6 +79,16 @@ class Material extends Model
             'quantity_on_hand' => 'decimal:4',
             'reorder_level' => 'decimal:4',
         ];
+    }
+
+    /**
+     * The URL of the photo on the public disk, or null. Reads `photo_path`, so a strict model throws when a narrow select left it out.
+     *
+     * @return Attribute<string|null, never>
+     */
+    protected function photoUrl(): Attribute
+    {
+        return Attribute::get(fn (): ?string => $this->photo_path === null ? null : Storage::disk(PhotoStorage::DISK)->url($this->photo_path));
     }
 
     /** @return BelongsTo<MaterialCategory, $this> */

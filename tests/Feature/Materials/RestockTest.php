@@ -18,7 +18,7 @@ use function Pest\Laravel\post;
 | (the button: 900 pc at 0.3500).
 */
 
-beforeEach(fn () => $this->user = preparePreview($this));
+beforeEach(fn () => $this->user = prepareDemo($this));
 
 dataset('invalidRestockInput', [
     'missing quantity' => [['quantity' => null], 'quantity'],
@@ -67,24 +67,24 @@ dataset('validRestockBoundaries', [
 ]);
 
 it('redirects guests to the login page and books nothing', function () {
-    post(route('materials.restocks.store', previewMaterial('MAT-BTN-017')), validRestockPayload())->assertRedirect(route('login'));
+    post(route('materials.restocks.store', demoMaterial('MAT-BTN-017')), validRestockPayload())->assertRedirect(route('login'));
 
     expect(StockMovement::query()->count())->toBe(0)
-        ->and(previewMaterial('MAT-BTN-017')->quantity_on_hand)->toBe('900.0000');
+        ->and(demoMaterial('MAT-BTN-017')->quantity_on_hand)->toBe('900.0000');
 });
 
 it('asks the material policy for the right to update before it books anything', function () {
     // MaterialPolicy lets everyone in (one company, no roles), so deny the ability to prove the route asks for it.
     Gate::before(fn (User $user, string $ability) => $ability === 'update' ? false : null);
 
-    actingAs($this->user)->post(route('materials.restocks.store', previewMaterial('MAT-BTN-017')), validRestockPayload())->assertForbidden();
+    actingAs($this->user)->post(route('materials.restocks.store', demoMaterial('MAT-BTN-017')), validRestockPayload())->assertForbidden();
 
     expect(StockMovement::query()->count())->toBe(0)
-        ->and(previewMaterial('MAT-BTN-017')->quantity_on_hand)->toBe('900.0000');
+        ->and(demoMaterial('MAT-BTN-017')->quantity_on_hand)->toBe('900.0000');
 });
 
 it('books the receipt: stock plus the quantity, the price paid as the unit cost, a success toast, and back where it came from', function () {
-    $button = previewMaterial('MAT-BTN-017');
+    $button = demoMaterial('MAT-BTN-017');
 
     actingAs($this->user)
         ->from(route('materials.show', $button))
@@ -106,7 +106,7 @@ it('books the receipt: stock plus the quantity, the price paid as the unit cost,
 });
 
 it('updates the unit cost when update_unit_cost is left out', function () {
-    $button = previewMaterial('MAT-BTN-017');
+    $button = demoMaterial('MAT-BTN-017');
     $payload = validRestockPayload(['unit_price' => '0.4']);
     unset($payload['update_unit_cost']);
 
@@ -117,7 +117,7 @@ it('updates the unit cost when update_unit_cost is left out', function () {
 });
 
 it('keeps the unit cost, and logs only the restock, when update_unit_cost is off', function (mixed $off) {
-    $button = previewMaterial('MAT-BTN-017');
+    $button = demoMaterial('MAT-BTN-017');
 
     actingAs($this->user)
         ->post(route('materials.restocks.store', $button), validRestockPayload(['quantity' => '500', 'unit_price' => '0.9', 'update_unit_cost' => $off]))
@@ -130,7 +130,7 @@ it('keeps the unit cost, and logs only the restock, when update_unit_cost is off
 })->with(['"0"' => '0', 'false' => false, '0' => 0]);
 
 it('words the quantity of the toast like a sentence', function (string $quantity, string $shown) {
-    $button = previewMaterial('MAT-BTN-017');
+    $button = demoMaterial('MAT-BTN-017');
 
     actingAs($this->user)->post(route('materials.restocks.store', $button), validRestockPayload(['quantity' => $quantity]))
         ->assertInertiaFlash('toast', ['type' => 'success', 'message' => "Restocked Metal shank button 17mm: +{$shown} pc."]);
@@ -143,7 +143,7 @@ it('words the quantity of the toast like a sentence', function (string $quantity
 ]);
 
 it('rejects invalid input with an error on the field, no toast and no change', function (array $override, string $field) {
-    $button = previewMaterial('MAT-BTN-017');
+    $button = demoMaterial('MAT-BTN-017');
 
     actingAs($this->user)
         ->from(route('materials.index'))
@@ -159,22 +159,22 @@ it('rejects invalid input with an error on the field, no toast and no change', f
 
 it('accepts the boundary values', function (array $override, string $sku = 'MAT-BTN-017') {
     actingAs($this->user)
-        ->post(route('materials.restocks.store', previewMaterial($sku)), validRestockPayload($override))
+        ->post(route('materials.restocks.store', demoMaterial($sku)), validRestockPayload($override))
         ->assertSessionHasNoErrors()
         ->assertInertiaFlash('toast');
 
-    expect(StockMovement::query()->where('material_id', previewMaterial($sku)->id)->where('type', 'restock')->count())->toBe(1);
+    expect(StockMovement::query()->where('material_id', demoMaterial($sku)->id)->where('type', 'restock')->count())->toBe(1);
 })->with('validRestockBoundaries');
 
 it('rejects only the invalid fields', function () {
     actingAs($this->user)
-        ->post(route('materials.restocks.store', previewMaterial('MAT-BTN-017')), validRestockPayload(['quantity' => '0', 'received_on' => '2031-01-01']))
+        ->post(route('materials.restocks.store', demoMaterial('MAT-BTN-017')), validRestockPayload(['quantity' => '0', 'received_on' => '2031-01-01']))
         ->assertSessionHasErrors(['quantity', 'received_on'])
         ->assertSessionDoesntHaveErrors(['unit_price', 'reference', 'update_unit_cost']);
 });
 
 it('answers with an error on the quantity, not a server error, when the stock would not fit its column', function () {
-    $button = previewMaterial('MAT-BTN-017');
+    $button = demoMaterial('MAT-BTN-017');
 
     actingAs($this->user)
         ->post(route('materials.restocks.store', $button), validRestockPayload(['quantity' => '9999999999.9999']))
@@ -185,7 +185,7 @@ it('answers with an error on the quantity, not a server error, when the stock wo
 });
 
 it('answers 404 for a deleted material before it validates anything', function () {
-    $material = previewMaterial('MAT-BTN-017');
+    $material = demoMaterial('MAT-BTN-017');
     $material->delete();
 
     actingAs($this->user)->post(route('materials.restocks.store', $material->id), ['quantity' => '0'])
@@ -193,13 +193,4 @@ it('answers 404 for a deleted material before it validates anything', function (
         ->assertSessionHasNoErrors();
 
     expect(Material::withTrashed()->findOrFail($material->id)->quantity_on_hand)->toBe('900.0000');
-});
-
-it('no longer needs the preview ability, which production denies', function () {
-    Gate::define('access-preview', fn (User $user): bool => false);
-
-    actingAs($this->user)->post(route('materials.restocks.store', previewMaterial('MAT-BTN-017')), validRestockPayload())
-        ->assertSessionHasNoErrors();
-
-    expect(previewMaterial('MAT-BTN-017')->quantity_on_hand)->toBe('1400.0000');
 });

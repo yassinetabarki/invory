@@ -992,9 +992,8 @@ export function useHttpMock() {
             });
         }
 
-        const shortcut =
-            (method: string) => (url: string, options?: unknown) =>
-                submit(method, url, options);
+        const shortcut = (method: string) => (url: string, options?: unknown) =>
+            submit(method, url, options);
 
         return {
             submit,
@@ -1008,7 +1007,7 @@ export function useHttpMock() {
                     return;
                 }
 
-                for (const cancelRequest of [...pending.values()]) {
+                for (const cancelRequest of pending.values()) {
                     cancelRequest();
                 }
             },

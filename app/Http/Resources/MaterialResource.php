@@ -33,8 +33,8 @@ final class MaterialResource extends JsonResource
             'color' => $this->color,
             'composition' => $this->composition,
             'notes' => $this->notes,
-            // Not columns: the caller sets both as attributes on the model (strict mode throws if it forgot). Today
-            // the preview controllers do (App\Mock, ADR-0006); later `withCount()` and a photo accessor provide them.
+            // Not columns: `photo_url` is the model's accessor over `photo_path` and `used_in_count` comes from `withUsedInCount()`
+            // (strict mode throws when a narrow select left either source out).
             'photo_url' => $this->photo_url,
             'used_in_count' => $this->used_in_count,
             'created_at' => $this->created_at->toIso8601String(),

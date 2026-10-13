@@ -5,17 +5,26 @@ declare(strict_types=1);
 namespace App\Http\Requests;
 
 use App\Enums\SalesPeriod;
+use App\Models\Material;
+use App\Models\Product;
+use App\Models\Sale;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class DashboardRequest extends FormRequest
 {
     /**
-     * MOCK (ADR-0006): preview-only, denied in production. Checked here so that a 403 comes before any validation error.
+     * The dashboard reads materials, products and sales, so it needs `viewAny` on each (D-4). Checked here so that a 403 comes
+     * before any validation error.
      */
     public function authorize(): bool
     {
-        return $this->user()?->can('access-preview') ?? false;
+        $user = $this->user();
+
+        return $user !== null
+            && $user->can('viewAny', Material::class)
+            && $user->can('viewAny', Product::class)
+            && $user->can('viewAny', Sale::class);
     }
 
     /** @return array<string, mixed> */

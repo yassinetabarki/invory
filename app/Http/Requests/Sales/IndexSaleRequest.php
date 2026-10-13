@@ -5,17 +5,16 @@ declare(strict_types=1);
 namespace App\Http\Requests\Sales;
 
 use App\Enums\SalesPeriod;
+use App\Models\Sale;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class IndexSaleRequest extends FormRequest
 {
-    /**
-     * MOCK (ADR-0006): preview-only, denied in production. Checked here so that a 403 comes before any validation error.
-     */
+    /** Checked here so that a 403 comes before any validation error. */
     public function authorize(): bool
     {
-        return $this->user()?->can('access-preview') ?? false;
+        return $this->user()?->can('viewAny', Sale::class) ?? false;
     }
 
     /** @return array<string, mixed> */

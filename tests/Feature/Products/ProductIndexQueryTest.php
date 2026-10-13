@@ -2,6 +2,7 @@
 
 use App\Models\Material;
 use App\Models\Product;
+use App\Models\Sale;
 
 use function Pest\Laravel\actingAs;
 
@@ -15,8 +16,9 @@ use function Pest\Laravel\actingAs;
 */
 
 beforeEach(function () {
-    $this->user = preparePreview($this);
-    // A clean slate: the demo products and materials go, the tests make the ones they need.
+    $this->user = prepareDemo($this);
+    // A clean slate: the demo sales, products and materials go (a product with sales can't be hard-deleted), the tests make the ones they need.
+    Sale::query()->delete();
     Product::query()->forceDelete();
     Material::query()->forceDelete();
 });

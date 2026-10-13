@@ -5,10 +5,7 @@ import { useReference } from '@/hooks/use-reference';
 import { categoryOptions } from '@/lib/reference';
 import type { ProductEditProps } from '@/types/domain';
 
-export default function ProductsEdit({
-    product,
-    statuses,
-}: ProductEditProps) {
+export default function ProductsEdit({ product, statuses }: ProductEditProps) {
     const reference = useReference();
 
     return (

@@ -13,7 +13,7 @@ use function Pest\Laravel\actingAs;
 | percentage are scale 2). Run on the demo data, where every shape occurs (a priced product, the unpriced draft, a bottleneck, ...).
 */
 
-beforeEach(fn () => $this->user = preparePreview($this));
+beforeEach(fn () => $this->user = prepareDemo($this));
 
 const SCALE_4 = '/^-?\d+\.\d{4}$/';
 const SCALE_2 = '/^-?\d+\.\d{2}$/';
@@ -160,7 +160,7 @@ it('sends the other props of the show page as before', function () {
     }
 });
 
-it('sends the props of the create and edit pages as before', function () {
+it('sends the props of the create and edit pages (S-25: statuses, plus the product on edit, and no materials list)', function () {
     foreach ([route('products.create'), route('products.edit', pid(1))] as $url) {
         $response = actingAs($this->user)->get($url);
 
@@ -170,12 +170,8 @@ it('sends the props of the create and edit pages as before', function () {
             ['value' => 'archived', 'label' => 'Archived'],
         ]);
 
-        foreach ($response->inertiaProps('materials') as $option) {
-            expect(keysOf($option))->toBe(['id', 'sku', 'name', 'unit', 'unit_label', 'unit_cost', 'quantity_on_hand', 'stock_status'])
-                ->and($option['id'])->toBeInt()
-                ->and($option['unit_cost'])->toMatch(SCALE_4)
-                ->and($option['quantity_on_hand'])->toMatch(SCALE_4);
-        }
+        // S-25: the material picker searches the server (`materials.options`), so the pages no longer carry the whole catalogue.
+        expect($response->inertiaProps())->not->toHaveKey('materials');
     }
 
     expect(actingAs($this->user)->get(route('products.create'))->inertiaProps())->not->toHaveKey('product')
@@ -199,7 +195,7 @@ it('sends the product-shaped props of the dashboard, the sales form and the mate
         expect(keysOf($option))->toBe(['id', 'sku', 'name', 'photo_url', 'status', 'selling_price']);
     }
 
-    $usage = actingAs($this->user)->get(route('materials.show', previewMaterial('MAT-BTN-017')))->inertiaProps('usage');
+    $usage = actingAs($this->user)->get(route('materials.show', demoMaterial('MAT-BTN-017')))->inertiaProps('usage');
 
     expect($usage)->toHaveCount(3);
 
@@ -220,7 +216,7 @@ it('sends the product-shaped props of the dashboard, the sales form and the mate
 });
 
 it('sends MaterialResource with the same keys, now with a real used_in_count', function () {
-    $material = actingAs($this->user)->get(route('materials.show', previewMaterial('MAT-BTN-017')))->inertiaProps('material');
+    $material = actingAs($this->user)->get(route('materials.show', demoMaterial('MAT-BTN-017')))->inertiaProps('material');
 
     expect(keysOf($material))->toBe(materialContractKeys())
         ->and($material['used_in_count'])->toBe(3);

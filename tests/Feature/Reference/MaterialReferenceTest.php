@@ -21,7 +21,7 @@ use function Pest\Laravel\actingAs;
 */
 
 beforeEach(function () {
-    $this->user = preparePreview($this);
+    $this->user = prepareDemo($this);
 });
 
 describe('the option lists moved to the shared reference prop (S-22)', function () {
@@ -284,7 +284,7 @@ describe('the unit lock while a product uses the material (decision Q7)', functi
 
     it('refuses a unit change on a material that compositions use, naming how many', function (int $which) use ($usage, $payload) {
         [$sku, $count] = $usage()[$which];
-        $material = previewMaterial($sku);
+        $material = demoMaterial($sku);
         $other = $material->unit->code === 'kg' ? 'g' : 'kg';
 
         $noun = $count === 1 ? 'composition' : 'compositions';
@@ -297,7 +297,7 @@ describe('the unit lock while a product uses the material (decision Q7)', functi
 
     it('refuses even when other fields change in the same request', function () use ($usage, $payload) {
         [$sku] = $usage()[0];
-        $material = previewMaterial($sku);
+        $material = demoMaterial($sku);
         $name = $material->name;
 
         actingAs($this->user)->put(route('materials.update', $material), $payload($material, ['unit' => 'kg', 'name' => 'Renamed', 'unit_cost' => '99']))
@@ -318,7 +318,7 @@ describe('the unit lock while a product uses the material (decision Q7)', functi
 
     it('lets a used material keep its unit while other fields change', function () use ($usage, $payload) {
         [$sku] = $usage()[1];
-        $material = previewMaterial($sku);
+        $material = demoMaterial($sku);
 
         actingAs($this->user)->put(route('materials.update', $material), $payload($material, ['name' => 'Renamed', 'unit_cost' => '1.25', 'category' => 'other', 'supplier_name' => 'New supplier']))
             ->assertSessionHasNoErrors();
@@ -331,7 +331,7 @@ describe('the unit lock while a product uses the material (decision Q7)', functi
 
     it('does not run the lock on a unit that failed validation, so only the validation error shows', function () use ($usage, $payload) {
         [$sku] = $usage()[0];
-        $material = previewMaterial($sku);
+        $material = demoMaterial($sku);
 
         $response = actingAs($this->user)->put(route('materials.update', $material), $payload($material, ['unit' => 'bananas']));
 
@@ -346,7 +346,7 @@ describe('the unit lock while a product uses the material (decision Q7)', functi
 
     it('locks the unit of a material the demo products use', function () {
         // The denim is in the compositions of the Denim Jacket and the Jeans.
-        $material = previewMaterial('MAT-DEN-012');
+        $material = demoMaterial('MAT-DEN-012');
 
         actingAs($this->user)->put(route('materials.update', $material), validMaterialPayload([
             'sku' => $material->sku, 'name' => $material->name, 'unit' => 'cm',
@@ -354,8 +354,8 @@ describe('the unit lock while a product uses the material (decision Q7)', functi
     });
 
     it('allows the change once only soft-deleted products use the material, and locks it again on restore', function () {
-        $material = previewMaterial('MAT-SOL-042');
-        $sneaker = previewProduct('PRD-SNK-003');
+        $material = demoMaterial('MAT-SOL-042');
+        $sneaker = demoProduct('PRD-SNK-003');
         $update = fn (string $unit) => actingAs($this->user)->put(route('materials.update', $material), validMaterialPayload([
             'sku' => $material->sku, 'name' => $material->name, 'category' => 'sole', 'unit' => $unit, 'reorder_level' => '40',
         ]));

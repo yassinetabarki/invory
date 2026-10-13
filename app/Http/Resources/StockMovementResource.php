@@ -6,11 +6,12 @@ namespace App\Http\Resources;
 
 use App\Enums\StockMovementType;
 use App\Models\StockMovement;
+use App\Services\Inventory\StockHistory;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * `StockMovement` in resources/js/types/domain.ts. Needs the `user_name` attribute that {@see \App\Services\Inventory\StockHistory}
+ * `StockMovement` in resources/js/types/domain.ts. Needs the `user_name` attribute that {@see StockHistory}
  * joins in. Decimals are scale-4 strings (the model's casts), dates are 'YYYY-MM-DD'.
  *
  * @mixin StockMovement

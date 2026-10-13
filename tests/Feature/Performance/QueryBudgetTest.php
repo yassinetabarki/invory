@@ -2,6 +2,7 @@
 
 use App\Models\Material;
 use App\Models\Product;
+use App\Models\Sale;
 use Inertia\Testing\AssertableInertia as Assert;
 use PHPUnit\Framework\ExpectationFailedException;
 
@@ -21,8 +22,8 @@ use function Pest\Laravel\actingAs;
 const QUERY_BUDGET = 10;
 
 beforeEach(function () {
-    $this->user = preparePreview($this);
-    $this->material = previewMaterial('MAT-DEN-012');
+    $this->user = prepareDemo($this);
+    $this->material = demoMaterial('MAT-DEN-012');
 });
 
 /**
@@ -90,11 +91,12 @@ dataset('productPages', [
 ]);
 
 it('stays within the query budget and runs the same queries with 3 and with 30 products', function (Closure $url) {
-    // Start from 3 products (the demo ones go), each with a composition of 3 of the demo materials.
+    // Start from 3 products (the demo ones and their sales go), each with a composition of 3 of the demo materials.
+    Sale::query()->delete();
     Product::query()->forceDelete();
 
     $lines = fn (): array => array_map(
-        fn (string $sku): array => ['material' => previewMaterial($sku), 'quantity' => '1.5000', 'waste_percent' => '5.00'],
+        fn (string $sku): array => ['material' => demoMaterial($sku), 'quantity' => '1.5000', 'waste_percent' => '5.00'],
         ['MAT-DEN-012', 'MAT-BTN-017', 'MAT-THR-PES'],
     );
 

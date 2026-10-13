@@ -42,7 +42,7 @@ final class StockLedgerVerifier
             ->without(['category', 'unit'])
             ->select(['id', 'sku', 'name', 'quantity_on_hand'])
             ->chunkById(self::CHUNK_SIZE, function ($materials) use (&$checked, &$drifts): void {
-                $balances = $this->ledgerBalances($materials->pluck('id')->all());
+                $balances = $this->ledgerBalances(array_values(array_map(static fn (Material $material): int => $material->id, $materials->all())));
 
                 foreach ($materials as $material) {
                     $checked++;

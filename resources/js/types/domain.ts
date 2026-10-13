@@ -226,7 +226,11 @@ export type ProductFilters = {
  * the first `limit` (default 20, max 50) non-deleted materials whose name or SKU contains `search` (case-insensitive), by name then
  * id, followed by the `include`d ids (max 50) that were not among them. An `include`d id that is soft-deleted or unknown is skipped.
  */
-export type MaterialOptionsQuery = { search?: string; limit?: number; include?: number[] };
+export type MaterialOptionsQuery = {
+    search?: string;
+    limit?: number;
+    include?: number[];
+};
 
 /** A material the composition editor can pick. */
 export type MaterialOption = MaterialRef & {

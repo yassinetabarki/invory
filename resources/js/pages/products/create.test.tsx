@@ -67,7 +67,6 @@ describe('products/create page', () => {
                 .getAllByRole('option')
                 .map((option) => option.textContent),
         ).toEqual(productCategories.map((option) => option.label));
-
     });
 
     it('asks the server for materials only when a picker opens', async () => {
@@ -79,9 +78,9 @@ describe('products/create page', () => {
 
         await user.click(screen.getByRole('button', { name: 'Add material' }));
 
-        expect(
-            await screen.findAllByRole('option'),
-        ).toHaveLength(materialOptions.length);
+        expect(await screen.findAllByRole('option')).toHaveLength(
+            materialOptions.length,
+        );
         expect(inertiaMock.http.requests).toHaveLength(1);
         expect(inertiaMock.http.requests[0]).toMatchObject({
             method: 'get',

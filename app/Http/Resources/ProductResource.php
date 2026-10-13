@@ -12,7 +12,7 @@ use LogicException;
 
 /**
  * `Product`: the detail of one product with its cost breakdown, margin, capacity and composition. The product must carry its
- * category, its composition (with the materials) and the attributes the controller sets (`costing`, `photo_url`).
+ * category, its composition (with the materials) and the attribute the controller sets (`costing`).
  *
  * @mixin Product
  */

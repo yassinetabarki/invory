@@ -61,7 +61,7 @@ return new class extends Migration
     {
         Schema::dropIfExists('product_components');
 
-        // The partial SKU index goes with the table.
-        Schema::dropIfExists('products');
+        // CASCADE drops dependent FK constraints (e.g. sales.product_id) on PostgreSQL without removing those tables.
+        DB::statement('DROP TABLE IF EXISTS products CASCADE');
     }
 };

@@ -6,17 +6,15 @@ namespace App\Http\Requests\Sales;
 
 use App\Enums\ProductStatus;
 use App\Models\Product;
+use App\Models\Sale;
 use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreSaleRequest extends FormRequest
 {
-    /**
-     * MOCK (ADR-0006): preview-only, denied in production. S-14-BE replaces it with SalePolicy::create.
-     */
     public function authorize(): bool
     {
-        return $this->user()?->can('access-preview') ?? false;
+        return $this->user()?->can('create', Sale::class) ?? false;
     }
 
     /** @return array<string, mixed> */

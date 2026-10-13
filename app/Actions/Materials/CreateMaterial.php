@@ -7,6 +7,7 @@ namespace App\Actions\Materials;
 use App\Enums\StockMovementType;
 use App\Models\Material;
 use App\Models\User;
+use App\Services\Photos\PhotoStorage;
 use Illuminate\Support\Facades\DB;
 
 final readonly class CreateMaterial
@@ -14,13 +15,18 @@ final readonly class CreateMaterial
     public function __construct(
         private ResolveReferenceCodes $resolveCodes,
         private AppendStockMovement $appendMovement,
+        private PhotoStorage $photos,
     ) {}
 
-    /** @param array<string, mixed> $data validated input, with `category` and `unit` as codes */
+    /**
+     * An uploaded `photo` is stored on the public disk before the transaction and deleted again if it throws.
+     *
+     * @param  array<string, mixed>  $data  validated input, with `category` and `unit` as codes (and the `photo` upload, if any)
+     */
     public function handle(array $data, User $actor): Material
     {
-        return DB::transaction(function () use ($data, $actor): Material {
-            $material = new Material($this->resolveCodes->handle($data));
+        return $this->photos->persist('materials', $data, null, fn (array $attributes, array $photo): Material => DB::transaction(function () use ($attributes, $photo, $actor): Material {
+            $material = (new Material($this->resolveCodes->handle($attributes)))->forceFill($photo);
 
             // Audit columns are never mass-assignable: they come from the actor, not from the request.
             $material->created_by = $actor->id;
@@ -35,6 +41,6 @@ final readonly class CreateMaterial
             ]);
 
             return $material;
-        });
+        }));
     }
 }

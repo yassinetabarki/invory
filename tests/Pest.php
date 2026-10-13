@@ -3,9 +3,11 @@
 use App\Actions\Products\CreateProduct;
 use App\Models\Material;
 use App\Models\Product;
+use App\Models\Sale;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Database\Seeders\DemoCatalogSeeder;
+use Database\Seeders\DemoSalesSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Response;
 use Illuminate\Http\UploadedFile;
@@ -121,31 +123,33 @@ function materialContractKeys(): array
 
 /*
 |--------------------------------------------------------------------------
-| UI-first preview helpers (ADR-0006)
+| Demo-data helpers
 |--------------------------------------------------------------------------
 |
-| The preview tests run with the clock frozen at 2026-10-08 12:00 and the 12 DemoCatalogSeeder materials in the
+| The demo-data tests run with the clock frozen at 2026-10-08 12:00 and the 12 DemoCatalogSeeder materials in the
 | database, so every "Expected" value of docs/plans/phase-2-ui-first-preview.md can be asserted exactly.
 |
 */
 
-/** The instant the preview fixture's `days_ago` values and the plan's "Expected" tables are relative to. */
-const PREVIEW_NOW = '2026-10-08 12:00:00';
+/** The instant the demo sales (`DemoSalesSeeder`, dated relative to it) and the plan's "Expected" tables are relative to. */
+const DEMO_NOW = '2026-10-08 12:00:00';
 
 /**
- * Freeze the clock at PREVIEW_NOW, seed the 12 demo materials and return a verified user.
- * Call it from a `beforeEach` of a preview test file: `beforeEach(fn () => $this->user = preparePreview($this));`.
+ * Freeze the clock at DEMO_NOW, seed the 12 demo materials, the 7 demo products and the 60 demo sales (relative to the frozen
+ * today) and return a verified user.
+ * Call it from a `beforeEach` of a test file that needs the demo data: `beforeEach(fn () => $this->user = prepareDemo($this));`.
  */
-function preparePreview(TestCase $test): User
+function prepareDemo(TestCase $test): User
 {
-    $test->travelTo(CarbonImmutable::parse(PREVIEW_NOW));
+    $test->travelTo(CarbonImmutable::parse(DEMO_NOW));
     $test->seed(DemoCatalogSeeder::class);
+    $test->seed(DemoSalesSeeder::class);
 
     return User::factory()->create();
 }
 
 /** The seeded (or factory-made) material with this SKU. */
-function previewMaterial(string $sku): Material
+function demoMaterial(string $sku): Material
 {
     return Material::query()->where('sku', $sku)->firstOrFail();
 }
@@ -168,7 +172,7 @@ function pageProp(TestResponse $response, string $path): mixed
 const DEMO_PRODUCT_SKUS = [1 => 'PRD-JKT-001', 2 => 'PRD-TSH-002', 3 => 'PRD-SNK-003', 4 => 'PRD-TOT-004', 5 => 'PRD-JNS-005', 6 => 'PRD-JKT-006', 7 => 'PRD-BLT-007'];
 
 /** The product (non-deleted) with this SKU: the one `DemoProductsSeeder` created, or one a test made. */
-function previewProduct(string $sku): Product
+function demoProduct(string $sku): Product
 {
     return Product::query()->where('sku', $sku)->firstOrFail();
 }
@@ -176,7 +180,16 @@ function previewProduct(string $sku): Product
 /** The database id of the demo product with this number (1 = Denim Jacket ... 7 = Leather Belt). */
 function pid(int $number): int
 {
-    return previewProduct(DEMO_PRODUCT_SKUS[$number])->id;
+    return demoProduct(DEMO_PRODUCT_SKUS[$number])->id;
+}
+
+/**
+ * The database id of the demo sale with this number (1 to 60, the order of DemoSalesSeeder::SALES; the oldest is 1). Assumes the
+ * demo sales are the only ones: ids are not those numbers (a PostgreSQL sequence never goes back).
+ */
+function demoSaleId(int $number): int
+{
+    return (int) Sale::query()->orderBy('id')->offset($number - 1)->value('id');
 }
 
 /** An id no product has, however many a long test run created (the id of a PostgreSQL sequence only grows). */
@@ -184,7 +197,7 @@ const NO_SUCH_ID = 900000000;
 
 /**
  * A valid Store/UpdateProductRequest payload: the Denim Jacket composition on the seeded materials, with overrides.
- * Needs the seeded materials (`preparePreview()`); the SKU is new, so it also passes the create rules.
+ * Needs the seeded materials (`prepareDemo()`); the SKU is new, so it also passes the create rules.
  *
  * @param  array<string, mixed>  $overrides
  * @return array<string, mixed>
@@ -201,8 +214,8 @@ function validProductPayload(array $overrides = []): array
         'overhead_cost' => '2',
         'selling_price' => '59.9',
         'components' => [
-            ['material_id' => previewMaterial('MAT-DEN-012')->id, 'quantity' => '1.6', 'waste_percent' => '8', 'notes' => 'Body'],
-            ['material_id' => previewMaterial('MAT-THR-PES')->id, 'quantity' => '90', 'waste_percent' => '5', 'notes' => 'Seams'],
+            ['material_id' => demoMaterial('MAT-DEN-012')->id, 'quantity' => '1.6', 'waste_percent' => '8', 'notes' => 'Body'],
+            ['material_id' => demoMaterial('MAT-THR-PES')->id, 'quantity' => '90', 'waste_percent' => '5', 'notes' => 'Seams'],
         ],
         ...$overrides,
     ];

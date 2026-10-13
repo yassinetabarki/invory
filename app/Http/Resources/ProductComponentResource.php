@@ -32,7 +32,6 @@ final class ProductComponentResource extends JsonResource
             'position' => $this->position,
             'material' => [
                 ...(new MaterialRefResource($material))->resolve($request),
-                // MOCK (ADR-0006): set by the controller until S-15-BE.
                 'photo_url' => $material->photo_url,
                 'stock_status' => $material->stockStatus()->value,
                 'reorder_level' => $material->reorder_level,

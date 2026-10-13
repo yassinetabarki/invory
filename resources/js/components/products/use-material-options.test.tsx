@@ -1,6 +1,13 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { useState } from 'react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
+import {
+    afterEach,
+    beforeEach,
+    describe,
+    expect,
+    it,
+    vi,
+} from 'vite-plus/test';
 import { useMaterialOptions } from '@/components/products/use-material-options';
 import { materialOptions } from '@/test/fixtures/products';
 import {

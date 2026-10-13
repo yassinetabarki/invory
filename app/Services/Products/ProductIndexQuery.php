@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 namespace App\Services\Products;
 
+use App\Enums\SalesPeriod;
 use App\Models\Product;
+use App\Models\Sale;
 use App\Services\Costing\ProductCostingService;
+use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\Paginator;
 
@@ -29,6 +33,8 @@ final readonly class ProductIndexQuery
     {
         $query = Product::query()
             ->withComposition()
+            // `units_sold_last_30_days` (S-14-BE): a correlated sum of the integer `quantity`, so no query of its own and no money in SQL.
+            ->withSum(['sales as units_sold_last_30_days' => self::soldInLastThirtyDays(...)], 'quantity')
             ->search($filters['search'])
             ->inCategory($filters['category'])
             ->when($filters['status'], fn ($products, string $status) => $products->where('status', $status))
@@ -60,6 +66,17 @@ final readonly class ProductIndexQuery
         }
 
         return $paginator->withQueryString();
+    }
+
+    /**
+     * @param  Builder<Sale>  $sales
+     * @return Builder<Sale>
+     */
+    private static function soldInLastThirtyDays(Builder $sales): Builder
+    {
+        [$first, $last] = SalesPeriod::LastThirtyDays->range(CarbonImmutable::today());
+
+        return $sales->soldBetween($first, $last);
     }
 
     /**

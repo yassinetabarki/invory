@@ -3,24 +3,24 @@
 use App\Models\Material;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\assertDatabaseCount;
 
 /*
 |--------------------------------------------------------------------------
-| Material photos are a preview (ADR-0006, S-13c)
+| Material photo input (S-13c validation, S-15-BE storage)
 |--------------------------------------------------------------------------
 |
-| A photo or `remove_photo` is validated for real (JPG / PNG / WebP, up to 4096 KB, no SVG) but neither stored nor part of
-| the material: the real create / update still saves, and the success toast says that photos weren't saved.
+| A photo or `remove_photo` is validated (JPG / PNG / WebP, up to 4096 KB, no SVG) and an invalid one changes nothing. What the
+| disk and the row do with a valid one (upload, replace, remove, delete, rollback) is PhotoWritesTest.
 */
 
 beforeEach(function () {
     $this->user = User::factory()->create();
+    Storage::fake('public');
 });
-
-const PHOTO_SUFFIX = " Photos are a preview and weren't saved.";
 
 dataset('invalidPhotos', [
     'an svg' => [fn () => UploadedFile::fake()->createWithContent('logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>')],
@@ -43,37 +43,18 @@ dataset('validPhotos', [
 ]);
 
 describe('store', function () {
-    it('still creates the material and says the photo wasn\'t saved', function (UploadedFile $photo) {
+    it('creates the material and stores a photo of each allowed type, up to 4096 KB', function (UploadedFile $photo) {
         $response = actingAs($this->user)->post(route('materials.store'), validMaterialPayload(['photo' => $photo]));
 
         $material = Material::query()->where('sku', 'FAB-DEN-001')->firstOrFail();
 
         $response->assertSessionHasNoErrors()
             ->assertRedirect(route('materials.show', $material))
-            ->assertInertiaFlash('toast', ['type' => 'success', 'message' => 'Material created.'.PHOTO_SUFFIX]);
-
-        expect($material->name)->toBe('Denim 12oz Indigo');
-    })->with('validPhotos');
-
-    it('says the photo wasn\'t saved when remove_photo is true', function () {
-        actingAs($this->user)
-            ->post(route('materials.store'), validMaterialPayload(['remove_photo' => '1']))
-            ->assertInertiaFlash('toast', ['type' => 'success', 'message' => 'Material created.'.PHOTO_SUFFIX]);
-
-        assertDatabaseCount('materials', 1);
-    });
-
-    it('keeps the plain message without a photo or when remove_photo is off', function (array $override) {
-        actingAs($this->user)
-            ->post(route('materials.store'), validMaterialPayload($override))
-            ->assertSessionHasNoErrors()
             ->assertInertiaFlash('toast', ['type' => 'success', 'message' => 'Material created.']);
-    })->with([
-        'no photo keys' => [[]],
-        'remove_photo false' => [['remove_photo' => false]],
-        'remove_photo 0' => [['remove_photo' => '0']],
-        'a null photo' => [['photo' => null]],
-    ]);
+
+        expect($material->photo_path)->toStartWith('materials/');
+        Storage::disk('public')->assertExists($material->photo_path);
+    })->with('validPhotos');
 
     it('rejects an invalid photo and creates nothing', function (mixed $photo) {
         actingAs($this->user)
@@ -82,6 +63,7 @@ describe('store', function () {
             ->assertInertiaFlashMissing('toast');
 
         assertDatabaseCount('materials', 0);
+        expect(Storage::disk('public')->allFiles())->toBe([]);
     })->with('invalidPhotos');
 
     it('rejects a remove_photo that is not a boolean', function () {
@@ -92,7 +74,7 @@ describe('store', function () {
         assertDatabaseCount('materials', 0);
     });
 
-    it('does not put the photo among the attributes of the material', function () {
+    it('does not put the upload or the flag among the attributes of the material', function () {
         actingAs($this->user)->post(route('materials.store'), validMaterialPayload([
             'photo' => UploadedFile::fake()->image('a.jpg'),
             'remove_photo' => true,
@@ -103,40 +85,27 @@ describe('store', function () {
 });
 
 describe('update', function () {
-    it('still updates the material and says the photo wasn\'t saved', function (UploadedFile $photo) {
+    it('updates the material and stores a photo of each allowed type, up to 4096 KB', function (UploadedFile $photo) {
         $material = Material::factory()->create(['name' => 'Before']);
 
         actingAs($this->user)
             ->put(route('materials.update', $material), validMaterialPayload(['name' => 'After', 'photo' => $photo]))
             ->assertSessionHasNoErrors()
             ->assertRedirect(route('materials.show', $material))
-            ->assertInertiaFlash('toast', ['type' => 'success', 'message' => 'Material updated.'.PHOTO_SUFFIX]);
+            ->assertInertiaFlash('toast', ['type' => 'success', 'message' => 'Material updated.']);
 
-        expect($material->refresh()->name)->toBe('After');
+        expect($material->refresh()->name)->toBe('After')
+            ->and($material->photo_path)->toStartWith('materials/');
+        Storage::disk('public')->assertExists($material->photo_path);
     })->with('validPhotos');
 
-    it('says the photo wasn\'t saved when remove_photo is true', function (mixed $removePhoto) {
+    it('accepts remove_photo as a boolean or its numeric forms', function (mixed $removePhoto) {
         $material = Material::factory()->create();
 
         actingAs($this->user)
             ->put(route('materials.update', $material), validMaterialPayload(['remove_photo' => $removePhoto]))
-            ->assertSessionHasNoErrors()
-            ->assertInertiaFlash('toast', ['type' => 'success', 'message' => 'Material updated.'.PHOTO_SUFFIX]);
-    })->with([true, '1', 1]);
-
-    it('keeps the plain message without a photo or when remove_photo is off', function (array $override) {
-        $material = Material::factory()->create();
-
-        actingAs($this->user)
-            ->put(route('materials.update', $material), validMaterialPayload($override))
-            ->assertSessionHasNoErrors()
-            ->assertInertiaFlash('toast', ['type' => 'success', 'message' => 'Material updated.']);
-    })->with([
-        'no photo keys' => [[]],
-        'remove_photo false' => [['remove_photo' => false]],
-        'remove_photo 0' => [['remove_photo' => '0']],
-        'a null photo' => [['photo' => null]],
-    ]);
+            ->assertSessionHasNoErrors();
+    })->with([true, false, '1', '0', 1, 0]);
 
     it('rejects an invalid photo and changes nothing', function (mixed $photo) {
         $material = Material::factory()->create(['name' => 'Untouched']);
@@ -147,6 +116,7 @@ describe('update', function () {
             ->assertInertiaFlashMissing('toast');
 
         expect($material->refresh()->name)->toBe('Untouched');
+        expect(Storage::disk('public')->allFiles())->toBe([]);
     })->with('invalidPhotos');
 
     it('rejects a remove_photo that is not a boolean', function () {

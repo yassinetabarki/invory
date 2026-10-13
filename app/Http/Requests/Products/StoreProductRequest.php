@@ -48,7 +48,8 @@ class StoreProductRequest extends FormRequest
             'photo' => ['nullable', File::image()->types(['jpg', 'jpeg', 'png', 'webp'])->max(4096)],
             'remove_photo' => ['nullable', 'boolean'],
             // The composition may be empty (a draft). It is `nullable` rather than `present` because a multipart body
-            // (a photo is attached) cannot carry an empty array: the key is simply absent.
+            // (a photo is attached) cannot carry an empty array: the key is simply absent, and on update a missing or null list is an empty
+            // composition (F-36: the composition is always replaced).
             'components' => ['nullable', 'array'],
             'components.*.material_id' => ['required', 'integer', 'distinct', Rule::exists('materials', 'id')->withoutTrashed()],
             'components.*.quantity' => ['required', 'decimal:0,4', 'gt:0', 'max:9999999999.9999'],

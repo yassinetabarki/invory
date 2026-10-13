@@ -8,32 +8,28 @@ use App\Actions\Products\CreateProduct;
 use App\Actions\Products\DeleteProduct;
 use App\Actions\Products\UpdateProduct;
 use App\Enums\ProductStatus;
-use App\Enums\SalesPeriod;
 use App\Http\Requests\Products\IndexProductRequest;
 use App\Http\Requests\Products\StoreProductRequest;
 use App\Http\Requests\Products\UpdateProductRequest;
 use App\Http\Resources\ProductListResource;
 use App\Http\Resources\ProductResource;
-use App\Mock\PreviewProducts;
-use App\Mock\PreviewSales;
+use App\Http\Resources\SaleResource;
 use App\Models\Product;
 use App\Models\User;
 use App\Services\Costing\ProductCostingService;
 use App\Services\Products\ProductIndexQuery;
+use App\Services\Sales\SalesReport;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
 /**
  * Products are real: Eloquent reads, the S-04a Actions for writes, `ProductPolicy` on every route, and the Resources send
- * exactly the props of resources/js/types/domain.ts. What has no table yet comes from App\Mock (ADR-0006, removed by S-17): the
- * photo swatches (S-15-BE) and the sales (S-14-BE).
- *
- * @phpstan-import-type DatedSale from PreviewSales
+ * exactly the props of resources/js/types/domain.ts. The sales figures come from `SalesReport` (S-14-BE). A photo is stored on
+ * the public disk by the Actions (S-15-BE).
  */
 final class ProductController extends Controller
 {
@@ -48,13 +44,9 @@ final class ProductController extends Controller
             'products' => function () use ($products, $filters): AnonymousResourceCollection {
                 $page = $products->paginate($filters, (int) config('invory.per_page'));
 
-                PreviewProducts::decorate($page->items());
-
-                // MOCK (ADR-0006, S-14-BE): the units sold come from the preview sales of the products on this page.
-                $sold = PreviewSales::unitsSoldLastThirtyDays($page->items());
-
+                // The units sold come with the page's query (a sum, null without a sale).
                 foreach ($page->items() as $product) {
-                    $product->setAttribute('units_sold_last_30_days', $sold[$product->id]);
+                    $product->setAttribute('units_sold_last_30_days', (int) ($product->units_sold_last_30_days ?? 0));
                 }
 
                 return ProductListResource::collection($page);
@@ -75,24 +67,16 @@ final class ProductController extends Controller
 
     public function store(StoreProductRequest $request, CreateProduct $createProduct): RedirectResponse
     {
-        // Photos are a preview (ADR-0006): validated, but neither stored nor part of the product.
-        $product = $createProduct->handle($request->safe()->except(['photo', 'remove_photo']), $this->actor($request));
+        $product = $createProduct->handle($request->validated(), $this->actor($request));
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => $this->toastMessage($request, __('Product created.'))]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Product created.')]);
 
         return to_route('products.show', $product);
     }
 
-    public function show(Product $product, ProductCostingService $costing): Response
+    public function show(Product $product, ProductCostingService $costing, SalesReport $sales): Response
     {
         Gate::authorize('view', $product);
-
-        /** @var list<DatedSale>|null $loaded */
-        $loaded = null;
-        // MOCK (ADR-0006, S-14-BE): the sales of this product, from the fixture. Read once for both props below.
-        $sales = function () use (&$loaded, $product): array {
-            return $loaded ??= PreviewSales::ofProduct(PreviewSales::resolve([$product]), $product->id);
-        };
 
         return Inertia::render('products/show', [
             'product' => function () use ($product, $costing): ProductResource {
@@ -100,11 +84,8 @@ final class ProductController extends Controller
 
                 return $this->resource($product, $costing);
             },
-            'sales_last_30_days' => fn (): array => Arr::only(
-                PreviewSales::totals(PreviewSales::inPeriod($sales(), SalesPeriod::LastThirtyDays)),
-                ['units_sold', 'revenue'],
-            ),
-            'recent_sales' => fn (): array => PreviewSales::recent($sales()),
+            'sales_last_30_days' => fn (): array => $sales->lastThirtyDays($product),
+            'recent_sales' => fn (): array => SaleResource::collection($sales->recentOf($product))->resolve(),
         ]);
     }
 
@@ -125,9 +106,9 @@ final class ProductController extends Controller
 
     public function update(UpdateProductRequest $request, Product $product, UpdateProduct $updateProduct): RedirectResponse
     {
-        $updateProduct->handle($product, $request->safe()->except(['photo', 'remove_photo']), $this->actor($request));
+        $updateProduct->handle($product, $request->validated(), $this->actor($request));
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => $this->toastMessage($request, __('Product updated.'))]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Product updated.')]);
 
         return to_route('products.show', $product);
     }
@@ -147,7 +128,6 @@ final class ProductController extends Controller
     private function resource(Product $product, ProductCostingService $costing): ProductResource
     {
         $product->setAttribute('costing', $costing->cost($product));
-        PreviewProducts::decorate([$product]);
 
         return new ProductResource($product);
     }
@@ -158,17 +138,5 @@ final class ProductController extends Controller
         $user = $request->user();
 
         return $user instanceof User ? $user : abort(401);
-    }
-
-    /**
-     * MOCK (ADR-0006): says so when a photo was sent (or removed), because photos are not saved yet.
-     */
-    private function toastMessage(StoreProductRequest|UpdateProductRequest $request, string $message): string
-    {
-        if ($request->hasFile('photo') || $request->boolean('remove_photo')) {
-            return $message.' '.__("Photos are a preview and weren't saved.");
-        }
-
-        return $message;
     }
 }

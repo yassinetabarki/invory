@@ -3,6 +3,7 @@
 use App\Models\Material;
 use App\Models\StockMovement;
 use App\Models\User;
+use Brick\Math\BigDecimal;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\Support\DemoHistory;
 
@@ -19,7 +20,7 @@ use function Pest\Laravel\actingAs;
 */
 
 beforeEach(function () {
-    $this->user = preparePreview($this);
+    $this->user = prepareDemo($this);
     $this->admin = DemoHistory::seed(); // "Admin" did every entry
 });
 
@@ -32,12 +33,12 @@ const STOCK_MOVEMENT_KEYS = [
 /** The ids of a material's entries, newest first (every demo entry is dated in order, so that is the reverse of the entry order). */
 function newestFirstIds(string $sku): array
 {
-    return array_reverse(DemoHistory::idsOf(previewMaterial($sku)));
+    return array_reverse(DemoHistory::idsOf(demoMaterial($sku)));
 }
 
 describe('show: history', function () {
     it('sends the history of the button, newest first, with every value', function () {
-        $button = previewMaterial('MAT-BTN-017');
+        $button = demoMaterial('MAT-BTN-017');
         [$priceChange, $restock, $correction, $created] = newestFirstIds('MAT-BTN-017');
 
         $response = actingAs($this->user)->get(route('materials.show', $button))->assertOk();
@@ -112,21 +113,21 @@ describe('show: history', function () {
     });
 
     it('sends exactly the keys of the StockMovement contract', function () {
-        actingAs($this->user)->get(route('materials.show', previewMaterial('MAT-BTN-017')))
+        actingAs($this->user)->get(route('materials.show', demoMaterial('MAT-BTN-017')))
             ->assertInertia(fn (Assert $page) => $page->has('history', 4, fn (Assert $movement) => $movement->hasAll(STOCK_MOVEMENT_KEYS)));
     });
 
     it('stores the stock after a price change but sends null for it', function () {
-        $priceChange = StockMovement::query()->where('material_id', previewMaterial('MAT-BTN-017')->id)->where('type', 'price_change')->firstOrFail();
+        $priceChange = StockMovement::query()->where('material_id', demoMaterial('MAT-BTN-017')->id)->where('type', 'price_change')->firstOrFail();
 
-        $response = actingAs($this->user)->get(route('materials.show', previewMaterial('MAT-BTN-017')));
+        $response = actingAs($this->user)->get(route('materials.show', demoMaterial('MAT-BTN-017')));
 
         expect($priceChange->quantity_after)->toBe('900.0000')
             ->and(pageProp($response, 'history.0.quantity_after'))->toBeNull();
     });
 
     it('lists a same-day restock and price change with the later entry first (higher id)', function () {
-        $response = actingAs($this->user)->get(route('materials.show', previewMaterial('MAT-LBL-WOV')));
+        $response = actingAs($this->user)->get(route('materials.show', demoMaterial('MAT-LBL-WOV')));
         [$priceChange, $restock, $created] = newestFirstIds('MAT-LBL-WOV');
 
         expect(pageProp($response, 'history.*.id'))->toBe([$priceChange, $restock, $created])
@@ -148,7 +149,7 @@ describe('show: history', function () {
     });
 
     it('has only the opening entry for a material that was never touched', function () {
-        $response = actingAs($this->user)->get(route('materials.show', previewMaterial('MAT-LIN-VIS')));
+        $response = actingAs($this->user)->get(route('materials.show', demoMaterial('MAT-LIN-VIS')));
 
         expect(pageProp($response, 'history'))->toHaveCount(1)
             ->and(pageProp($response, 'history.0'))->toMatchArray([
@@ -161,7 +162,7 @@ describe('show: history', function () {
     });
 
     it('sends every material\'s history by its entry counts', function (string $sku, int $entries, array $types) {
-        $response = actingAs($this->user)->get(route('materials.show', previewMaterial($sku)));
+        $response = actingAs($this->user)->get(route('materials.show', demoMaterial($sku)));
 
         expect(pageProp($response, 'history'))->toHaveCount($entries)
             ->and(pageProp($response, 'history.*.type'))->toBe($types);
@@ -181,7 +182,7 @@ describe('show: history', function () {
     ]);
 
     it('sends a correction with the quantities before and after, never a unit price', function () {
-        $response = actingAs($this->user)->get(route('materials.show', previewMaterial('MAT-SOL-042')));
+        $response = actingAs($this->user)->get(route('materials.show', demoMaterial('MAT-SOL-042')));
 
         expect(pageProp($response, 'history.0'))->toMatchArray([
             'type' => 'correction',
@@ -194,9 +195,9 @@ describe('show: history', function () {
     });
 
     it('sends only the history of the material shown', function () {
-        $response = actingAs($this->user)->get(route('materials.show', previewMaterial('MAT-DEN-012')));
+        $response = actingAs($this->user)->get(route('materials.show', demoMaterial('MAT-DEN-012')));
 
-        expect(array_unique(pageProp($response, 'history.*.material_id')))->toBe([previewMaterial('MAT-DEN-012')->id]);
+        expect(array_unique(pageProp($response, 'history.*.material_id')))->toBe([demoMaterial('MAT-DEN-012')->id]);
     });
 
     it('sends an empty list for a material with no history', function () {
@@ -207,7 +208,7 @@ describe('show: history', function () {
     });
 
     it('names who did an entry, and sends null once that user is gone', function () {
-        $button = previewMaterial('MAT-BTN-017');
+        $button = demoMaterial('MAT-BTN-017');
         $other = User::factory()->create(['name' => 'Amel']);
         StockMovement::factory()->for($button)->restock('1.0000', '901.0000')->create(['user_id' => $other->id, 'occurred_on' => '2026-10-08']);
 
@@ -219,7 +220,7 @@ describe('show: history', function () {
     });
 
     it('stays within the query budget, flat in the number of entries', function () {
-        $button = previewMaterial('MAT-BTN-017');
+        $button = demoMaterial('MAT-BTN-017');
         $url = route('materials.show', $button);
         actingAs($this->user)->get($url)->assertOk(); // warm up
 
@@ -258,7 +259,7 @@ describe('index: recent_history', function () {
 
                 expect(array_column($props['recent_history'], 'id'))->toBe(array_merge(...array_map(newestFirstIds(...), $skus)))
                     ->and(array_column($props['recent_history'], 'material_id'))->toBe(array_merge(...array_map(
-                        fn (string $sku): array => array_fill(0, count(DemoHistory::entries()[$sku]), previewMaterial($sku)->id),
+                        fn (string $sku): array => array_fill(0, count(DemoHistory::entries()[$sku]), demoMaterial($sku)->id),
                         $skus,
                     )));
             }));
@@ -278,10 +279,14 @@ describe('index: recent_history', function () {
         $firstVisit = actingAs($this->user)->get(route('materials.index', ['search' => 'zzz']))->assertOk();
         $props = null;
 
+        // A plain closure, not an arrow function: an arrow function captures `$props` by value, so the reference below would
+        // point at its own copy and the outer `$props` would stay null.
         $queries = queryLog(function () use ($firstVisit, &$props) {
-            $firstVisit->assertInertia(fn (Assert $page) => $page->loadDeferredProps(function (Assert $reloaded) use (&$props) {
-                $props = $reloaded->toArray()['props']['recent_history'];
-            }));
+            $firstVisit->assertInertia(function (Assert $page) use (&$props) {
+                $page->loadDeferredProps(function (Assert $reloaded) use (&$props) {
+                    $props = $reloaded->toArray()['props']['recent_history'];
+                });
+            });
         });
 
         $busyRows = array_values(array_filter($props, fn (array $m): bool => $m['material_id'] === $busy->id));
@@ -339,4 +344,20 @@ describe('index: recent_history', function () {
 
 it('gives the demo materials a ledger that balances with their seeded stock', function () {
     $this->artisan('invory:stock:verify')->assertExitCode(0);
+});
+
+it('reports a stored balance that drifts from the ledger and exits with 1', function () {
+    $button = demoMaterial('MAT-BTN-017');
+    $ledger = $button->quantity_on_hand;
+
+    // A write that bypassed the Actions: the cached balance moves, the ledger does not.
+    Material::query()->whereKey($button->id)->update(['quantity_on_hand' => '1.0000']);
+
+    $this->artisan('invory:stock:verify')
+        ->expectsTable(
+            ['ID', 'SKU', 'Name', 'Stored', 'Ledger', 'Drift'],
+            [[$button->id, 'MAT-BTN-017', $button->name, '1.0000', $ledger, (string) BigDecimal::of('1.0000')->minus($ledger)]],
+        )
+        ->expectsOutputToContain('1 of 12 materials drift from their ledger.')
+        ->assertExitCode(1);
 });

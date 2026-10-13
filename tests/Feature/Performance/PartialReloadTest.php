@@ -22,7 +22,7 @@ const SUMMARY_SCAN = 'select\s+"id",\s*"quantity_on_hand",\s*"unit_cost",\s*"reo
 const NEEDS_RESTOCK_QUERY = 'case when quantity_on_hand';
 
 beforeEach(function () {
-    $this->user = preparePreview($this);
+    $this->user = prepareDemo($this);
     actingAs($this->user);
 });
 
@@ -56,7 +56,9 @@ describe('materials index', function () {
         expect(queriesMatching($queries, SUMMARY_SCAN))->toBeEmpty()
             // The page itself: the count, the rows, and the categories and units of those rows (eager-loaded, two constant queries).
             // (The category option query is gone: S-22 moved the options to the shared reference prop.)
-            ->and($queries)->toHaveCount(4);
+            // Plus the one ledger query of `recent_history`, which is part of this reload.
+            ->and(queriesMatching($queries, 'stock_movements'))->toHaveCount(1)
+            ->and($queries)->toHaveCount(5);
     });
 
     it('runs the summary scan and nothing else when only the summary is requested', function () {
@@ -177,9 +179,10 @@ describe('sales index', function () {
                 ->where('filters.period', 'last_7_days'),
         );
 
-        // The one query that resolves the sales fixture against the products (by SKU): no product options, no costing.
-        expect($queries)->toHaveCount(1)
-            ->and(queriesMatching($queries, 'from "products" where "sku" in'))->toHaveCount(1);
+        // The page count, the page, the products of the page and the totals read: no product options, no costing.
+        expect($queries)->toHaveCount(4)
+            ->and(queriesMatching($queries, '"selling_price"'))->toBeEmpty()
+            ->and(queriesMatching($queries, 'from "sales"'))->toHaveCount(3);
     });
 
     it('sends the product options and the record prop when they are requested', function () {
@@ -222,19 +225,20 @@ describe('dashboard', function () {
         );
 
         expect(queriesMatching($queries, NEEDS_RESTOCK_QUERY))->toBeEmpty()
-            // The stats still need the inventory summary and the costed products (the units, the products, their lines and the
-            // materials of those), once each: the sales are resolved from those products, with no query of their own.
+            // The stats still need the inventory summary, the sales of the period and the costed products (the units, the products,
+            // their lines and the materials of those), once each; the rankings take their product refs from those products.
             ->and(queriesMatching($queries, SUMMARY_SCAN))->toHaveCount(1)
-            ->and($queries)->toHaveCount(5);
+            ->and($queries)->toHaveCount(6);
     });
 
     it('builds the costed products once when several sections need them', function () {
         $queries = queryLog(fn () => $this->get(route('dashboard'))->assertOk());
 
-        // One read of the products and their lines, and the sales are resolved from them (no query by SKU of their own).
+        // One read of the products and their lines, shared by the stats and the alerts; the products of the rankings and of the
+        // recent sales come from them (no query of their own for products that are not deleted).
         expect(queriesMatching($queries, 'select \* from "products"'))->toHaveCount(1)
             ->and(queriesMatching($queries, 'from "product_components" where "product_components"."product_id" in'))->toHaveCount(1)
-            ->and(queriesMatching($queries, '"sku" in'))->toBeEmpty();
+            ->and(queriesMatching($queries, 'from "products" where "id" in|from "products" where "products"."id" in'))->toBeEmpty();
     });
 
     it('loads only the restock list when only that is requested', function () {
@@ -255,7 +259,7 @@ describe('dashboard', function () {
 
 describe('material show', function () {
     it('skips the usage costing when only the material is requested', function () {
-        $material = previewMaterial('MAT-BTN-017');
+        $material = demoMaterial('MAT-BTN-017');
         $firstVisit = $this->get(route('materials.show', $material))->assertOk();
 
         $queries = partialReloadQueries(
@@ -264,8 +268,9 @@ describe('material show', function () {
             fn (Assert $partial) => $partial->missingAll(['usage', 'history'])->where('material.id', $material->id),
         );
 
-        // Only the route-model binding of the material itself.
-        expect(queriesMatching($queries, '"sku" in'))->toBeEmpty()
+        // Only the route-model binding of the material itself: no product or composition is read.
+        expect(queriesMatching($queries, '^select \* from "products"'))->toBeEmpty()
+            ->and(queriesMatching($queries, '^select \* from "product_components"'))->toBeEmpty()
             ->and(Material::query()->count())->toBe(12);
     });
 });
