@@ -27,6 +27,11 @@ services:
             MAIL_PORT: 1025
         volumes:
             - '.:/var/www/html'
+            # On Windows, Docker does not follow NTFS junctions/symlinks in bind-mounted paths.
+            # This explicit mount makes storage/app/public accessible at public/storage inside the
+            # container (and via HTTP at /storage/*), replacing the symlink that `artisan storage:link`
+            # would normally create.
+            - './storage/app/public:/var/www/html/public/storage'
         networks:
             - sail
         depends_on:
