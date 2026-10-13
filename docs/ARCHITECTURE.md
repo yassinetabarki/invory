@@ -327,18 +327,35 @@ tabular numbers, status badges with text + icon. Light and dark mode, usable at 
 
 ## 8. Quality, testing and definition of done
 
-| Level | Tooling | Owner | Minimum |
-|---|---|---|---|
-| Domain unit | Pest (no DB) | backend | 100 % of `Domain/Costing` branches, worked example from the skill |
-| Feature/HTTP | Pest + `RefreshDatabase` + `assertInertia` | backend | every route: guest redirect, validation (datasets), happy path, DB state, props contract |
-| Architecture | Pest `arch()` + presets | backend (set up), tech-lead (guards) | layer rules from §3 |
-| Static analysis | Larastan (the starter kit ships level 7; raise to 8 once the MVP is green) + Pint | backend | zero errors |
-| Component | Vitest + React Testing Library + user-event (jsdom) | frontend | every component with logic, the BOM editor, formatters |
-| Lint/format/types | `npm run check`, `npm run types:check` | frontend | zero warnings (`denyWarnings: true`) |
-| E2E smoke | Pest 4 browser tests (Playwright) | frontend | 1 golden path: material → product with BOM → capacity shown |
+Test the **risk**, not the code. Every subtask is tagged CRITICAL or NON-CRITICAL by the tech-lead (see [TEAM.md](TEAM.md) §Two-lane delivery)
+and gets a **test budget** in the brief. Agents write to the budget — not more, not less. Rubric below:
 
-**Definition of Done** for a story: acceptance criteria met · tests written and green · `composer test`, `npm run check`,
-`npm run types:check`, `npx vp test` and `npm run build` green · contract (`domain.ts`) in sync · tech-lead verdict **APPROVED**.
+| Level | Tooling | Owner | Rubric |
+|---|---|---|---|
+| Domain unit | Pest (no DB) | backend | 100 % of `App\Domain\*` branches; worked example from the skill with exact string assertions |
+| Policy | Pest + `assertStatus(403)` | backend | 1 dataset per policy (guest / denied / allowed) |
+| Action | Pest + `RefreshDatabase` | backend | 1 happy + 1 rollback-on-exception if transactional + 1 per business rule it enforces |
+| Feature/HTTP | Pest + `RefreshDatabase` + `assertInertia` | backend | 1 happy per route + 1 validation **dataset** (5–10 rule combinations in one test) + 1 guest redirect |
+| Resource contract | Pest `assertInertia` on one row | backend | 1 shape test per Resource; the `resources/js/types/domain.ts` edit ships in the same commit |
+| N+1 regression | `expectQueryBudget()` / `DB::enableQueryLog` | backend | 1 per index page |
+| Architecture | Pest `arch()` + presets | backend (set up), tech-lead (guards) | 1 test per layer rule from §3 (not per file) |
+| Static analysis | Larastan (level 7; raise to 8 once the MVP is green) + Pint | backend | zero errors |
+| Formatters | Vitest (jsdom) | frontend | 1 per format rule |
+| Form editors (`BomEditor`, `ProductForm`, forms with validation branching) | Vitest + RTL + user-event | frontend | 1 happy + 1 error branch + 1 key edge, queries by role / label |
+| Page | Vitest + RTL | frontend | 1 render-with-props smoke that shows the critical values (unit cost, can produce, bottleneck) |
+| Lint/format/types | `npm run check`, `npm run types:check` | frontend | zero warnings (`denyWarnings: true`) |
+| E2E smoke | Pest 4 browser tests (Playwright) | frontend | 1 golden path per feature (`material → product with BOM → capacity shown`) |
+
+**Skip these (both sides):** framework glue (Request extends Request, Resource maps field 1:1), getters/setters, per-column assertions when a shape
+test covers them, repeated datasets, snapshots, implementation-detail queries (`getByTestId` where `getByRole` works), private methods, pure
+shadcn/ui wrappers, empty-state components.
+
+**Reliability patterns (both sides):** `travelTo()` / `vi.setSystemTime` for date-dependent code; factories valid-by-default; `waitFor` always wraps
+a positive assertion with a tight timeout; behaviour not internals; one assertion focus per test.
+
+**Definition of Done** for a story: every acceptance criterion ships its own commit · tests written to budget and green · `composer test`,
+`npm run check`, `npm run types:check`, `npx vp test` and `npm run build` green · PostgreSQL parity green when the diff touches migrations, queries
+or seeders · contract (`resources/js/types/domain.ts`) in sync · tech-lead verdict **APPROVED** (full checklist for CRITICAL, fast lane for NON-CRITICAL).
 
 ## 9. Reliability and security baseline
 

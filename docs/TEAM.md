@@ -50,11 +50,87 @@ Project skills live in `.claude/skills/invory-*` and are committed. `invory-cost
    frontend can build components in parallel. Pages that need routes wait for the backend story.
 2. **One shared working tree, so disjoint files per wave.** Agents touch only the files in their brief and run focused checks while others work.
    The tech-lead runs the full gates once the wave is complete.
-3. **Git:** one branch per phase (`phase/1-materials`), **one commit per approved story**, staged from the story's file list.
+3. **Git:** one branch per phase (`phase/1-materials`), **one commit per acceptance criterion** (not per story), staged from that criterion's file list.
    Conventional Commits (`feat(materials): …`, `test(costing): …`). The human approves every commit, push and merge. Agents never commit.
 4. **Handoff reports are mandatory** and use the exact template in each agent file. The tech-lead re-runs every gate. Pasted output is not proof.
 5. **Disagreements** are settled by the tech-lead. Product questions (scope, wording, business rules) go up to the human through the main session.
 6. **Domain changes** (a formula, rounding, a new edge case) require the tech-lead to update `invory-costing-domain` first. Code follows the skill, never the other way round.
+
+## Two-lane delivery (CRITICAL vs NON-CRITICAL)
+
+Every subtask is tagged by the tech-lead before dispatch. The tag drives the test budget, the pre-flight ack and the review template.
+
+| Lane | What belongs | Pre-flight ack | Test budget | Review |
+|---|---|---|---|---|
+| **CRITICAL** | `App\Domain\*`, money / quantities / `BigDecimal`, migrations w/ FKs or in-use guards, transactions, policies, `FormRequest`s with business rules, contract edits (`domain.ts`, Resources, routes), form editors with validation branching, anything the human called out | **Yes** — dev replies with files + listed tests + risks and waits for a confirm before coding | Full (see tables below). 100 % branch on domain code | Full checklist from `invory-code-review` |
+| **NON-CRITICAL** | Pure CRUD without business rules, copy, labels, layouts, pure styling, shadcn wrappers, empty / loading / error states, toast wording, formatter displays that call tested primitives, docs | No | Light (see tables below) | Fast-lane: gates green + domain-correctness scan + security scan + contract check |
+
+When in doubt, tag CRITICAL. If a NON-CRITICAL commit turns out to touch anything from the CRITICAL list (added a `BigDecimal`, grew a `FormRequest`
+rule, drifted the contract), the tech-lead upgrades the lane and re-reviews full.
+
+## Slicing rubric — slice or lump?
+
+**Slice when any of these is true:**
+- Two concerns have independent acceptance criteria (one criterion ≈ one commit).
+- One is CRITICAL, the other is NON-CRITICAL — different review depth.
+- File list spans > 2 directories or > ~400 lines of production code.
+- One could ship, revert or bisect without the other.
+- A reviewer would scroll back and forth between unrelated chunks.
+
+**Lump when any of these is true (bisect-safety wins):**
+- Migration + model + factory + first policy for a new table — splitting breaks `composer test` mid-history.
+- Resource + the `resources/js/types/domain.ts` edit it caused — never split a contract.
+- A page + the components only that page uses.
+- Removing a half-made feature in one revert beats two.
+
+**Commit sweet spot:** 3–8 files, 100–400 lines of production code, one coherent concern that reads top-to-bottom in a diff.
+`composer test` and `npx vp test` must stay green at every head.
+
+The tech-lead publishes a **slicing table** per story in the phase plan (`docs/plans/`): subtask id → lane → files → line budget → tests allowed → owner → commit label.
+
+## Testing rubric — "test the risk, not the code"
+
+**Backend — must-have per layer:**
+
+| Layer | Tests | Count |
+|---|---|---|
+| `App\Domain\*` (costing, sales, capacity) | Worked example with exact string assertions + every edge case named in the domain skill | 100 % branch |
+| Policy | Guest, denied, allowed — in one dataset | 1 per policy |
+| Action | Happy path + rollback-on-exception if transactional + one per business rule it enforces | 1 happy + 1 rollback + 1 per rule |
+| Controller (route) | Happy path per route + validation dataset (5–10 rule combinations in one test) + guest redirect | 1 happy + 1 dataset + 1 guest |
+| Resource | Shape via `assertInertia` on one row | 1 contract |
+| Index page | Query budget / N+1 regression | 1 per index |
+| Architecture | Each layer rule from §3 | 1 per rule, not per file |
+
+**Backend — skip:**
+- "Request extends FormRequest", "Resource maps field 1:1", getters, setters, framework behaviour.
+- Repeating the same assertion on different data when one dataset covers it.
+- Per-column assertions when `assertInertia` on the shape proves it.
+- Private methods and internal state.
+
+**Frontend — must-have per target:**
+
+| Target | Tests | Count |
+|---|---|---|
+| Formatters (`lib/format.ts`) | One per format rule | per rule |
+| Form editors (`BomEditor`, `ProductForm`, forms with validation branching) | user-event happy + error branch + one key edge, queries by role / label | 1 happy + 1 error + 1 edge |
+| Page | Render with representative props; one smoke that the critical values show (unit cost, can produce, bottleneck) | 1 per page |
+| E2E (Pest 4 browser) | Golden path per feature | 1 per feature (S-08) |
+
+**Frontend — skip:**
+- shadcn/ui wrappers, pure layouts, empty-state components.
+- Per-column render checks on tables.
+- Snapshot tests.
+- Multiple page tests for the same page unless the branches differ.
+
+**Reliability patterns (both sides):**
+- Time: `travelTo()` / `vi.setSystemTime`. No `now()` or `new Date()` in assertions.
+- Factories valid-by-default; the test overrides only what it's about.
+- `waitFor` wraps a positive assertion with a tight timeout; no bare sleeps.
+- Behaviour not internals: no private-method tests; use `getByRole` not `getByTestId` where possible.
+- One assertion focus per test; split only when the setup differs.
+- Agents list the tests they'll add in the pre-flight ack (one line each) so the tech-lead prunes before code is written.
+- Handoffs report lines-of-diff + test count + runtime.
 
 ## Example prompts for the main session
 - "Start Phase 1." → the main session hands `docs/plans/phase-1-foundation-materials.md` to the tech-lead, who runs waves 1–3.
