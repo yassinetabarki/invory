@@ -25,9 +25,9 @@ it('has public/storage set up as a readable directory', function () {
 
     // Must be a directory (symlink that resolves to a dir, or a volume mount).
     expect(is_dir($path))->toBeTrue(
-        "public/storage is not a readable directory. " .
-        "Add './storage/app/public:/var/www/html/public/storage' to compose.yaml, or " .
-        "run `php artisan storage:link` inside the Docker container."
+        'public/storage is not a readable directory. '.
+        "Add './storage/app/public:/var/www/html/public/storage' to compose.yaml, or ".
+        'run `php artisan storage:link` inside the Docker container.'
     );
 })->skip(PHP_OS_FAMILY === 'Windows', 'public/storage is a Docker mount — run this test inside the container.');
 
@@ -41,9 +41,9 @@ it('can access a file stored on the public disk through public/storage', functio
         $viaPublic = public_path("storage/{$path}");
 
         expect(file_exists($viaPublic))->toBeTrue(
-            "A file written to the public disk is not readable at public/storage. " .
-            "Add './storage/app/public:/var/www/html/public/storage' to compose.yaml, or " .
-            "run `php artisan storage:link` inside the Docker container."
+            'A file written to the public disk is not readable at public/storage. '.
+            "Add './storage/app/public:/var/www/html/public/storage' to compose.yaml, or ".
+            'run `php artisan storage:link` inside the Docker container.'
         )
             ->and(file_get_contents($viaPublic))->toBe('ok');
     } finally {

@@ -61,6 +61,13 @@ return new class extends Migration
     {
         Schema::dropIfExists('product_components');
 
+        if (DB::getDriverName() !== 'pgsql') {
+            // SQLite has no DROP TABLE ... CASCADE; it does not block dropping a referenced table.
+            Schema::dropIfExists('products');
+
+            return;
+        }
+
         // CASCADE drops dependent FK constraints (e.g. sales.product_id) on PostgreSQL without removing those tables.
         DB::statement('DROP TABLE IF EXISTS products CASCADE');
     }
