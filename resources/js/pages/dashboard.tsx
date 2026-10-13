@@ -114,7 +114,9 @@ export default function Dashboard({
                         </section>
                     }
                 >
-                    {stats && <KeyFigures stats={stats} periodLabel={periodLabel} />}
+                    {stats && (
+                        <KeyFigures stats={stats} periodLabel={periodLabel} />
+                    )}
                 </Deferred>
 
                 <div className="grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] xl:items-start">
