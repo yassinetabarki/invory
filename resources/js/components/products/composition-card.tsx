@@ -3,7 +3,6 @@ import { Plus } from 'lucide-react';
 import { BomTable } from '@/components/products/bom-table';
 import { EmptyState } from '@/components/shared/empty-state';
 import { Button } from '@/components/ui/button';
-import { CACHE_TAGS, prefetchProps } from '@/lib/cache-tags';
 import type {
     Decimal,
     MaterialRef,
@@ -43,7 +42,6 @@ export function CompositionCard({
                 </div>
                 {lines.length > 0 && (
                     <Link
-                        {...prefetchProps(CACHE_TAGS.products)}
                         href={editHref}
                         className="text-sm font-semibold text-primary underline-offset-4 hover:underline"
                     >
@@ -59,10 +57,7 @@ export function CompositionCard({
                         description="Add the materials that make one unit to see the cost and how many can be produced."
                         action={
                             <Button asChild variant="outline">
-                                <Link
-                                    {...prefetchProps(CACHE_TAGS.products)}
-                                    href={editHref}
-                                >
+                                <Link href={editHref}>
                                     <Plus aria-hidden="true" />
                                     Add materials
                                 </Link>

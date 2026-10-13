@@ -13,7 +13,6 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { useAppSettings } from '@/hooks/use-app-settings';
-import { CACHE_TAGS, prefetchProps } from '@/lib/cache-tags';
 import { EMPTY_VALUE, formatCount, formatDate } from '@/lib/format';
 import type { Sale } from '@/types/domain';
 
@@ -139,9 +138,6 @@ export function SalesTable({ sales, onEdit, onDelete }: SalesTableProps) {
                                     </TableCell>
                                     <TableCell>
                                         <Link
-                                            {...prefetchProps(
-                                                CACHE_TAGS.products,
-                                            )}
                                             href={ProductController.show(
                                                 sale.product.id,
                                             )}
@@ -190,7 +186,6 @@ export function SalesTable({ sales, onEdit, onDelete }: SalesTableProps) {
                             <div className="flex items-start justify-between gap-3">
                                 <div className="min-w-0">
                                     <Link
-                                        {...prefetchProps(CACHE_TAGS.products)}
                                         href={ProductController.show(
                                             sale.product.id,
                                         )}

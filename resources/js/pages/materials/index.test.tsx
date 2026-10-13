@@ -157,7 +157,7 @@ describe('materials/index page', () => {
             ).toHaveAttribute('href', '/materials/1/edit');
         });
 
-        it('prefetches Add material and the row links under the materials tag', () => {
+        it('does not prefetch Add material or the row links', () => {
             render(<MaterialsIndex {...props()} />);
 
             const table = screen.getByRole('table');
@@ -170,8 +170,8 @@ describe('materials/index page', () => {
             ];
 
             for (const link of links) {
-                expect(link).toHaveAttribute('data-prefetch', 'true');
-                expect(link).toHaveAttribute('data-cache-tags', 'materials');
+                expect(link).not.toHaveAttribute('data-prefetch');
+                expect(link).not.toHaveAttribute('data-cache-tags');
             }
         });
 

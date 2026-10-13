@@ -73,14 +73,14 @@ describe('<NeedsRestockCard>', () => {
         );
     });
 
-    it('prefetches the material and the restock list under the materials tag', () => {
+    it('does not prefetch the material or the restock list', () => {
         render(<NeedsRestockCard materials={needsRestock} />);
 
         for (const name of ['Rubber cupsole 42', 'View all']) {
             const link = screen.getByRole('link', { name });
 
-            expect(link).toHaveAttribute('data-prefetch', 'true');
-            expect(link).toHaveAttribute('data-cache-tags', 'materials');
+            expect(link).not.toHaveAttribute('data-prefetch');
+            expect(link).not.toHaveAttribute('data-cache-tags');
         }
     });
 

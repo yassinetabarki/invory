@@ -138,10 +138,12 @@ Updated `CLAUDE.md` and `docs/TEAM.md` with the two-phase dispatch protocol and 
 
 | ID | Task | Effort | Type |
 |---|---|---|---|
-| P-01 | Remove `prefetch` from all navigation links | Low | Frontend (~8 files) |
+| P-01 | Remove `prefetch` from all navigation links | Low | Frontend (26 prod files + 11 tests + 1 guard) — ✅ done 2026-10-13 |
 | P-02 | Decide fate of `prefetchProps` helper and cache-tags | Low | Frontend + Decision |
 
 **P-01:** Remove `prefetch: true` from all `<Link>` components (sidebar nav, CTAs, action buttons). Keep `cacheTags` / `invalidateCacheTags` on writes for now.
+
+*P-01 delivery notes (tech-lead, 2026-10-13):* the audit found 26 production files, not ~8 (every `{...prefetchProps(...)}` / `{...prefetchPropsForUrl(...)}` spread plus a bare `prefetch` in `user-menu-content.tsx`). The whole spread was removed, `cacheTags` included: on a `<Link>`, Inertia only reads `cacheTags` inside its prefetch call (`@inertiajs/react` Link), so a tag without prefetch does nothing. Write-side `invalidatedBy(...)` is unchanged, and `lib/cache-tags.ts` is untouched for P-02 (`prefetchProps` / `prefetchPropsForUrl` are now unused exports). Existing "prefetches …" tests now assert absence. A source-scan guard (`resources/js/lib/no-link-prefetch.test.ts`) covers components that have no test of their own, in place of ~18 padded render tests.
 
 **P-02:** If hover prefetch is fully removed, `prefetchProps()` in `cache-tags.ts` becomes unused. Decide: keep `cacheTags` for write-invalidation only, or remove the system entirely. Update ADR-0009.
 

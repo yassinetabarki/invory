@@ -4,7 +4,6 @@ import ProductController from '@/actions/App/Http/Controllers/ProductController'
 import { Money } from '@/components/shared/money';
 import { PhotoThumb } from '@/components/shared/photo-thumb';
 import { useAppSettings } from '@/hooks/use-app-settings';
-import { CACHE_TAGS, prefetchProps } from '@/lib/cache-tags';
 import { formatCount } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { TopProduct } from '@/types/domain';
@@ -111,7 +110,6 @@ export function TopProductsCard({
                             />
                             <span className="flex min-w-0 flex-col">
                                 <Link
-                                    {...prefetchProps(CACHE_TAGS.products)}
                                     href={ProductController.show(
                                         row.product.id,
                                     )}

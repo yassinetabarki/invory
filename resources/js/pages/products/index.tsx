@@ -10,7 +10,6 @@ import { PageHeader } from '@/components/shared/page-header';
 import { Pagination } from '@/components/shared/pagination';
 import { Button } from '@/components/ui/button';
 import { useReference } from '@/hooks/use-reference';
-import { CACHE_TAGS, prefetchProps } from '@/lib/cache-tags';
 import { categoryOptions } from '@/lib/reference';
 import type {
     MaterialRef,
@@ -125,10 +124,7 @@ export default function ProductsIndex({
                     description="Final items you make. Cost and capacity update from current material stock."
                     actions={
                         <Button asChild>
-                            <Link
-                                href={ProductController.create()}
-                                {...prefetchProps(CACHE_TAGS.products)}
-                            >
+                            <Link href={ProductController.create()}>
                                 <Plus aria-hidden="true" />
                                 Add product
                             </Link>
@@ -156,10 +152,7 @@ export default function ProductsIndex({
                         description="Add the items you make and the materials that go into one unit. Cost and capacity are worked out for you."
                         action={
                             <Button asChild>
-                                <Link
-                                    href={ProductController.create()}
-                                    {...prefetchProps(CACHE_TAGS.products)}
-                                >
+                                <Link href={ProductController.create()}>
                                     <Plus aria-hidden="true" />
                                     Add your first product
                                 </Link>

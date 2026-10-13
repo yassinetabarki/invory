@@ -12,7 +12,6 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { CACHE_TAGS, prefetchProps } from '@/lib/cache-tags';
 import { dashboard } from '@/routes';
 import { index as materialsIndex } from '@/routes/materials';
 import { index as productsIndex } from '@/routes/products';
@@ -49,10 +48,7 @@ export function AppSidebar() {
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton size="lg" asChild>
-                            <Link
-                                href={dashboard()}
-                                {...prefetchProps(CACHE_TAGS.dashboard)}
-                            >
+                            <Link href={dashboard()}>
                                 <AppLogo />
                             </Link>
                         </SidebarMenuButton>

@@ -39,13 +39,13 @@ describe('<MaterialActions>', () => {
     });
 
     describe('Edit', () => {
-        it('prefetches the edit page under the materials tag', () => {
+        it('does not prefetch the edit page', () => {
             render(<MaterialActions material={denim} />);
 
             const link = screen.getByRole('link', { name: 'Edit' });
 
-            expect(link).toHaveAttribute('data-prefetch', 'true');
-            expect(link).toHaveAttribute('data-cache-tags', 'materials');
+            expect(link).not.toHaveAttribute('data-prefetch');
+            expect(link).not.toHaveAttribute('data-cache-tags');
         });
 
         it('links to the edit page', () => {

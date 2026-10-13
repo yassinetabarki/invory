@@ -66,13 +66,15 @@ describe('products/show page', () => {
             expect(screen.getByText('Active')).toBeInTheDocument();
         });
 
-        it('prefetches the Record sale page under the sales tag', () => {
+        it('does not prefetch the Record sale or Edit pages', () => {
             render(<ProductsShow {...props()} />);
 
-            const link = screen.getByRole('link', { name: 'Record sale' });
+            for (const name of ['Record sale', 'Edit']) {
+                const link = screen.getByRole('link', { name });
 
-            expect(link).toHaveAttribute('data-prefetch', 'true');
-            expect(link).toHaveAttribute('data-cache-tags', 'sales');
+                expect(link).not.toHaveAttribute('data-prefetch');
+                expect(link).not.toHaveAttribute('data-cache-tags');
+            }
         });
 
         it('links Record sale to the sales page with this product pre-selected', () => {
@@ -93,14 +95,6 @@ describe('products/show page', () => {
                 'href',
                 '/products/1/edit',
             );
-        });
-
-        it('prefetches the edit page under the products tag', () => {
-            render(<ProductsShow {...props()} />);
-
-            const link = screen.getByRole('link', { name: 'Edit' });
-            expect(link).toHaveAttribute('data-prefetch', 'true');
-            expect(link).toHaveAttribute('data-cache-tags', 'products');
         });
 
         it('disables Record sale, with the reason, for a product that is not active', () => {

@@ -16,7 +16,6 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { useAppSettings } from '@/hooks/use-app-settings';
-import { CACHE_TAGS, prefetchProps } from '@/lib/cache-tags';
 import { EMPTY_VALUE, formatCount } from '@/lib/format';
 import type { MaterialRef, ProductListItem } from '@/types/domain';
 
@@ -49,7 +48,6 @@ function Bottleneck({ product, hrefs }: RowProps) {
 
     return (
         <Link
-            {...prefetchProps(CACHE_TAGS.materials)}
             href={hrefs.material(bottleneck)}
             className="font-medium hover:underline focus-visible:underline"
         >
@@ -76,7 +74,6 @@ function IconActions({ product, hrefs }: RowProps) {
         <div className="flex justify-end gap-1">
             <Button asChild variant="ghost" size="icon">
                 <Link
-                    {...prefetchProps(CACHE_TAGS.products)}
                     href={hrefs.show(product)}
                     aria-label={`View ${product.name}`}
                     title="View"
@@ -86,7 +83,6 @@ function IconActions({ product, hrefs }: RowProps) {
             </Button>
             <Button asChild variant="ghost" size="icon">
                 <Link
-                    {...prefetchProps(CACHE_TAGS.products)}
                     href={hrefs.edit(product)}
                     aria-label={`Edit ${product.name}`}
                     title="Edit"
@@ -103,7 +99,6 @@ function TextActions({ product, hrefs }: RowProps) {
         <div className="flex flex-wrap gap-2">
             <Button asChild variant="outline" size="sm">
                 <Link
-                    {...prefetchProps(CACHE_TAGS.products)}
                     href={hrefs.show(product)}
                     aria-label={`View ${product.name}`}
                 >
@@ -113,7 +108,6 @@ function TextActions({ product, hrefs }: RowProps) {
             </Button>
             <Button asChild variant="outline" size="sm">
                 <Link
-                    {...prefetchProps(CACHE_TAGS.products)}
                     href={hrefs.edit(product)}
                     aria-label={`Edit ${product.name}`}
                 >
@@ -169,9 +163,6 @@ export function ProductsTable({ products, hrefs }: ProductsTableProps) {
                                         />
                                         <div className="flex min-w-0 flex-col">
                                             <Link
-                                                {...prefetchProps(
-                                                    CACHE_TAGS.products,
-                                                )}
                                                 href={hrefs.show(product)}
                                                 className="font-semibold whitespace-normal hover:underline focus-visible:underline"
                                             >
@@ -246,7 +237,6 @@ export function ProductsTable({ products, hrefs }: ProductsTableProps) {
                             />
                             <div className="min-w-0 flex-1">
                                 <Link
-                                    {...prefetchProps(CACHE_TAGS.products)}
                                     href={hrefs.show(product)}
                                     className="font-semibold break-words hover:underline focus-visible:underline"
                                 >

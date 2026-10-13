@@ -38,30 +38,14 @@ describe('<Breadcrumbs>', () => {
         expect(current).not.toHaveAttribute('href');
     });
 
-    it('prefetches each parent under the tag of its section', () => {
+    it('does not prefetch any parent', () => {
         render(<Breadcrumbs breadcrumbs={trail} />);
 
-        const dashboardLink = screen.getByRole('link', { name: 'Dashboard' });
-        const materialsLink = screen.getByRole('link', { name: 'Materials' });
+        for (const name of ['Dashboard', 'Materials']) {
+            const link = screen.getByRole('link', { name });
 
-        expect(dashboardLink).toHaveAttribute('data-prefetch', 'true');
-        expect(dashboardLink).toHaveAttribute('data-cache-tags', 'dashboard');
-        expect(materialsLink).toHaveAttribute('data-prefetch', 'true');
-        expect(materialsLink).toHaveAttribute('data-cache-tags', 'materials');
-    });
-
-    it('does not prefetch a parent that has no cache tag', () => {
-        render(
-            <Breadcrumbs
-                breadcrumbs={[
-                    { title: 'Settings', href: '/settings/profile' },
-                    { title: 'Profile', href: '/settings/profile' },
-                ]}
-            />,
-        );
-
-        expect(
-            screen.getByRole('link', { name: 'Settings' }),
-        ).not.toHaveAttribute('data-prefetch');
+            expect(link).not.toHaveAttribute('data-prefetch');
+            expect(link).not.toHaveAttribute('data-cache-tags');
+        }
     });
 });

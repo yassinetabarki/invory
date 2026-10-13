@@ -2,7 +2,6 @@ import { Link } from '@inertiajs/react';
 import { Callout } from '@/components/shared/callout';
 import { Quantity } from '@/components/shared/quantity';
 import { useAppSettings } from '@/hooks/use-app-settings';
-import { CACHE_TAGS, prefetchProps } from '@/lib/cache-tags';
 import { formatCount } from '@/lib/format';
 import type {
     Capacity,
@@ -41,14 +40,7 @@ export function BottleneckCallout({
             <Callout
                 tone="info"
                 title="No composition defined."
-                action={
-                    <Link
-                        {...prefetchProps(CACHE_TAGS.products)}
-                        href={editHref}
-                    >
-                        Edit composition
-                    </Link>
-                }
+                action={<Link href={editHref}>Edit composition</Link>}
             >
                 Add the materials that make one unit to see its cost and how
                 many can be produced.
@@ -66,12 +58,7 @@ export function BottleneckCallout({
         (component) => component.material.id === bottleneck.id,
     );
     const openMaterial = (
-        <Link
-            {...prefetchProps(CACHE_TAGS.materials)}
-            href={materialHref(bottleneck)}
-        >
-            Open material
-        </Link>
+        <Link href={materialHref(bottleneck)}>Open material</Link>
     );
 
     if (capacity.max_producible === 0) {

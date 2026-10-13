@@ -64,26 +64,13 @@ describe('<NavMain>', () => {
         );
     });
 
-    it('prefetches every item under the tag of its section', () => {
+    it('does not prefetch any item', () => {
         renderNavAt('/dashboard');
 
-        const tags = Object.fromEntries(
-            screen
-                .getAllByRole('link')
-                .map((link) => [
-                    link.textContent,
-                    [
-                        link.getAttribute('data-prefetch'),
-                        link.getAttribute('data-cache-tags'),
-                    ],
-                ]),
-        );
-
-        expect(tags).toEqual({
-            Dashboard: ['true', 'dashboard'],
-            Materials: ['true', 'materials'],
-            Products: ['true', 'products'],
-        });
+        for (const link of screen.getAllByRole('link')) {
+            expect(link).not.toHaveAttribute('data-prefetch');
+            expect(link).not.toHaveAttribute('data-cache-tags');
+        }
     });
 
     it('marks Dashboard as the current page on /dashboard, and only it', () => {

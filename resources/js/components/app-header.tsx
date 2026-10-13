@@ -31,11 +31,6 @@ import {
 import { UserMenuContent } from '@/components/user-menu-content';
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { useInitials } from '@/hooks/use-initials';
-import {
-    CACHE_TAGS,
-    prefetchProps,
-    prefetchPropsForUrl,
-} from '@/lib/cache-tags';
 import { cn, toUrl } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem, NavItem } from '@/types';
@@ -141,7 +136,6 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
 
                     <Link
                         href={dashboard()}
-                        {...prefetchProps(CACHE_TAGS.dashboard)}
                         className="flex items-center space-x-2"
                     >
                         <AppLogo />
@@ -158,7 +152,6 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                     >
                                         <Link
                                             href={item.href}
-                                            {...prefetchPropsForUrl(item.href)}
                                             className={cn(
                                                 navigationMenuTriggerStyle(),
                                                 whenCurrentUrl(

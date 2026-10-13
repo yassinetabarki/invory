@@ -10,7 +10,6 @@ import { Pagination } from '@/components/shared/pagination';
 import { Button } from '@/components/ui/button';
 import { useAppSettings } from '@/hooks/use-app-settings';
 import { useReference } from '@/hooks/use-reference';
-import { CACHE_TAGS, prefetchProps } from '@/lib/cache-tags';
 import { formatCount, formatMoney } from '@/lib/format';
 import { categoryOptions } from '@/lib/reference';
 import type {
@@ -142,10 +141,7 @@ export default function MaterialsIndex({
                     description={describeSummary(summary, currency, locale)}
                     actions={
                         <Button asChild>
-                            <Link
-                                href={MaterialController.create()}
-                                {...prefetchProps(CACHE_TAGS.materials)}
-                            >
+                            <Link href={MaterialController.create()}>
                                 <Plus aria-hidden="true" />
                                 Add material
                             </Link>
@@ -172,10 +168,7 @@ export default function MaterialsIndex({
                         description="Add the fabrics, trims and other primary materials you keep in stock."
                         action={
                             <Button asChild>
-                                <Link
-                                    href={MaterialController.create()}
-                                    {...prefetchProps(CACHE_TAGS.materials)}
-                                >
+                                <Link href={MaterialController.create()}>
                                     <Plus aria-hidden="true" />
                                     Add your first material
                                 </Link>

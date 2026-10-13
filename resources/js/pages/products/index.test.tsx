@@ -133,7 +133,7 @@ describe('products/index page', () => {
             ).toHaveAttribute('href', '/materials/5');
         });
 
-        it('prefetches Add product and the row links, each under the tag of its page', () => {
+        it('does not prefetch Add product or the row links', () => {
             render(<ProductsIndex {...props()} />);
 
             const table = screen.getByRole('table');
@@ -145,16 +145,13 @@ describe('products/index page', () => {
                 screen.getByRole('link', { name: 'Add product' }),
                 within(table).getByRole('link', { name: 'Denim Jacket' }),
                 within(table).getByRole('link', { name: 'Edit Denim Jacket' }),
-            ]) {
-                expect(link).toHaveAttribute('data-prefetch', 'true');
-                expect(link).toHaveAttribute('data-cache-tags', 'products');
-            }
-
-            expect(
                 within(row).getByRole('link', {
                     name: 'Metal shank button 17mm',
                 }),
-            ).toHaveAttribute('data-cache-tags', 'materials');
+            ]) {
+                expect(link).not.toHaveAttribute('data-prefetch');
+                expect(link).not.toHaveAttribute('data-cache-tags');
+            }
         });
 
         it('shows the stacked cards too (swapped with the table by CSS below md)', () => {

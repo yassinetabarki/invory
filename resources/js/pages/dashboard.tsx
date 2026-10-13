@@ -10,7 +10,6 @@ import { UnproducibleAlerts } from '@/components/dashboard/unproducible-alerts';
 import { PageHeader } from '@/components/shared/page-header';
 import { DEFAULT_PERIOD, PeriodSelect } from '@/components/sales/period-select';
 import { Button } from '@/components/ui/button';
-import { CACHE_TAGS, prefetchProps } from '@/lib/cache-tags';
 import { dashboard } from '@/routes';
 import type { DashboardProps, SalesPeriod } from '@/types/domain';
 
@@ -76,7 +75,6 @@ export default function Dashboard({
                                     href={SaleController.index({
                                         query: { record: 1 },
                                     })}
-                                    {...prefetchProps(CACHE_TAGS.sales)}
                                 >
                                     <Plus aria-hidden="true" />
                                     Record sale

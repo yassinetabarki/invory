@@ -310,7 +310,9 @@ From the Phase 3 performance planning (2026-10-08):
 From the Phase 3P review (2026-10-09, MINOR/NIT, none blocking):
 - **F-22 (MINOR, FE tests)**: `product-form.test.tsx` "posts the typed values, the selling price and the composition without row keys" failed once
   (passed on 4 reruns) when the Vitest suite ran at the same time as Pest. It's a long `user.type` test near the 5 s default timeout. Give the
-  heavy form tests a larger timeout or type less, and run the gates sequentially.
+  heavy form tests a larger timeout or type less, and run the gates sequentially. Seen again on 2026-10-13 (P-01 review): it failed once while
+  `npm run build` ran alongside, and the developer saw it fail on a clean HEAD. It passed when the suite ran alone. Preferred fix: `user.paste` /
+  `fireEvent.change` for the long text fields instead of `user.type`.
 - **F-23 (NIT, FE build)**: the `wayfinder-*.js` chunk is now 377 KB raw (118 KB gzip). That's chunk renaming, not growth: React DOM moved into it, and
   the entry closure is unchanged at ~565 KB raw / 176 KB gzip. Consider `manualChunks` naming (vendor-react, vendor-inertia) for readable reports.
 - **F-24 (NIT, BE)** — _resolved on PostgreSQL by S-28 (one aggregate query); SQLite keeps the scan_: `InventorySummary` reads with `lazyById(500)`, so the materials-index query count grows by one per 500 materials. That's within
@@ -380,3 +382,4 @@ From the Phase 3 real-backend review (2026-10-13, MINOR/NIT, none blocking):
   and `tests/Feature/Dashboard/DashboardTest.php`).
 - **F-46 (NIT, BE)**: `RecordSale` doesn't re-check that the product is still active inside its transaction (validation already did).
 
+- **F-47 (NIT, docs)**: after P-02, refresh `ARCHITECTURE.md` (`cache-tags.ts (prefetch tags)`) and the S-19 bullet that still lists `prefetch` on links.

@@ -8,7 +8,6 @@ import {
     BreadcrumbPage,
     BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
-import { prefetchPropsForUrl } from '@/lib/cache-tags';
 import type { BreadcrumbItem as BreadcrumbItemType } from '@/types';
 
 export function Breadcrumbs({
@@ -33,12 +32,7 @@ export function Breadcrumbs({
                                             </BreadcrumbPage>
                                         ) : (
                                             <BreadcrumbLink asChild>
-                                                <Link
-                                                    href={item.href}
-                                                    {...prefetchPropsForUrl(
-                                                        item.href,
-                                                    )}
-                                                >
+                                                <Link href={item.href}>
                                                     {item.title}
                                                 </Link>
                                             </BreadcrumbLink>

@@ -256,13 +256,13 @@ describe('dashboard page', () => {
     });
 
     describe('Record sale', () => {
-        it('prefetches the sales page under the sales tag', () => {
+        it('does not prefetch the sales page', () => {
             render(<Dashboard {...dashboardProps()} />);
 
             const link = screen.getByRole('link', { name: 'Record sale' });
 
-            expect(link).toHaveAttribute('data-prefetch', 'true');
-            expect(link).toHaveAttribute('data-cache-tags', 'sales');
+            expect(link).not.toHaveAttribute('data-prefetch');
+            expect(link).not.toHaveAttribute('data-cache-tags');
         });
 
         it('links to the sales page with the form open', () => {

@@ -1,7 +1,6 @@
 import { Link } from '@inertiajs/react';
 import { PhotoThumb } from '@/components/shared/photo-thumb';
 import { Button } from '@/components/ui/button';
-import { CACHE_TAGS, prefetchProps } from '@/lib/cache-tags';
 
 type MaterialPhotoCardProps = {
     name: string;
@@ -30,10 +29,7 @@ export function MaterialPhotoCard({
                     JPG, PNG or WebP · max 4 MB
                 </span>
                 <Button asChild variant="outline" size="sm">
-                    <Link
-                        {...prefetchProps(CACHE_TAGS.materials)}
-                        href={editHref}
-                    >
+                    <Link href={editHref}>
                         {photoUrl === null ? 'Add photo' : 'Replace photo'}
                     </Link>
                 </Button>

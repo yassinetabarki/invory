@@ -131,7 +131,7 @@ describe('<RecentSalesCard>', () => {
         ).toHaveAttribute('href', '/sales');
     });
 
-    it('prefetches the sales log under the sales tag and a product under the products tag', () => {
+    it('does not prefetch the sales log or a product', () => {
         render(<RecentSalesCard sales={recentSales} />);
 
         const viewAll = screen.getByRole('link', { name: 'View all sales' });
@@ -139,10 +139,10 @@ describe('<RecentSalesCard>', () => {
             name: 'Denim Jeans 5-pocket',
         });
 
-        expect(viewAll).toHaveAttribute('data-prefetch', 'true');
-        expect(viewAll).toHaveAttribute('data-cache-tags', 'sales');
-        expect(product).toHaveAttribute('data-prefetch', 'true');
-        expect(product).toHaveAttribute('data-cache-tags', 'products');
+        for (const link of [viewAll, product]) {
+            expect(link).not.toHaveAttribute('data-prefetch');
+            expect(link).not.toHaveAttribute('data-cache-tags');
+        }
     });
 
     it('explains an empty log instead of showing an empty table', () => {

@@ -21,7 +21,6 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { useAppSettings } from '@/hooks/use-app-settings';
-import { CACHE_TAGS, prefetchProps } from '@/lib/cache-tags';
 import { EMPTY_VALUE, formatCount } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { Material, StockMovement } from '@/types/domain';
@@ -189,7 +188,6 @@ function RowActions({ material, hrefs, panels, layout }: RowActionsProps) {
                 size={isTable ? 'icon' : 'sm'}
             >
                 <Link
-                    {...prefetchProps(CACHE_TAGS.materials)}
                     href={hrefs.show(material)}
                     aria-label={`View ${material.name}`}
                     title="View"
@@ -204,7 +202,6 @@ function RowActions({ material, hrefs, panels, layout }: RowActionsProps) {
                 size={isTable ? 'icon' : 'sm'}
             >
                 <Link
-                    {...prefetchProps(CACHE_TAGS.materials)}
                     href={hrefs.edit(material)}
                     aria-label={`Edit ${material.name}`}
                     title="Edit"
@@ -267,9 +264,6 @@ function MaterialsTableView({
                                         />
                                         <div className="flex min-w-0 flex-col">
                                             <Link
-                                                {...prefetchProps(
-                                                    CACHE_TAGS.materials,
-                                                )}
                                                 href={hrefs.show(material)}
                                                 className="font-medium hover:underline focus-visible:underline"
                                             >
@@ -365,7 +359,6 @@ function MaterialsCardsView({
                             />
                             <div className="min-w-0">
                                 <Link
-                                    {...prefetchProps(CACHE_TAGS.materials)}
                                     href={hrefs.show(material)}
                                     className="font-medium break-words hover:underline focus-visible:underline"
                                 >
