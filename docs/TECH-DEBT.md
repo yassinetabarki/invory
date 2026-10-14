@@ -3,7 +3,7 @@
 > Owner: **tech-lead** (adds items from reviews, sizes them, states the cost of delay). Scheduling: **product-owner**, who pulls items into a
 > phase's "tech allowance" in [BACKLOG.md](BACKLOG.md) (about 15 % of a phase). User-visible behaviour or UX items don't belong here: they
 > go to the product-owner as story candidates.
-> Open items only. Closed items: [archive/backlog-2026-10-14.md](archive/backlog-2026-10-14.md) §"Follow-ups from reviews". Next free ID: **F-55**.
+> Open items only. Closed items: [archive/backlog-2026-10-14.md](archive/backlog-2026-10-14.md) §"Follow-ups from reviews". Next free ID: **F-58**.
 
 "Proposed phase" is the tech-lead's suggestion; the phase lists in [BACKLOG.md](BACKLOG.md) are the source of truth.
 
@@ -25,6 +25,9 @@ Severity: **MAJOR** (fix before release) · **MINOR** (fix when touching the are
 | F-46 | NIT | BE | `RecordSale` doesn't re-check, inside its transaction, that the product is still active (validation already did) | A sale on a product archived a millisecond earlier | 6 |
 | F-52 | NIT | repo | `scripts/bootstrap.ps1` still runs `sail:install` and prints `.\sail` steps. Retire it or mark it historical (SETUP.md §2 already says not to re-run it). *(was "F-42" in the dev-Docker plan)* | Misleads a new developer | 6 |
 | F-53 | NIT | dev | Pin `axllent/mailpit` to a version instead of `latest`. *(was "F-43" in the dev-Docker plan)* | Surprise upgrades | 6 |
+| F-55 | MINOR | seeders | Re-running the demo step (`php artisan db:seed`) on a database where a demo material's stock or cost was changed resets it through `updateOrCreate` without a ledger entry, so `invory:stock:verify` reports drift for it. Fix: write a `correction` / `price_change` entry on reset. Refusing to run on a non-empty database would change S-08 AC-7 and needs a card change (product-owner) | Only on a database with your own data, which the guide warns against (S-08) | 5 |
+| F-56 | MINOR | dev env | Since S-08 every Pest run (`composer test`, `test:pgsql`, not only the browser gate) needs `ext-sockets` (the browser plugin opens a socket in `terminate()`). Laragon PHP 8.3.35 ships `;extension=sockets` commented out; Herd PHP 8.4 has it but `memory_limit=128M` (the suite peaks ~180 MB in `artisan test`'s child). The human enables `extension=sockets` in `C:laragoninphpphp-8.3.33-Win32-vs16-x64php.ini`; CLAUDE.md and the agent definitions should say so (F-25 style, main session) | Agents and the human get 2 000 errored tests on a PHP without sockets | 4 |
+| F-57 | NOTE | dev env | On 2026-10-14 after a host restart, Laragon PHP 8.3.35 took ~2.4 s per HTTP feature test (Herd 8.4: 0.37 s; same tree, same ini, no Xdebug, OPcache CLI off in both). `composer test` on Laragon then exceeds Composer's 300 s process timeout. Not caused by S-08 (the same suite ran in 82 s on Laragon earlier that day). Investigate (Defender exclusions on the repo and PHP folder, DNS for `localhost`) | Red local gates by timeout | 4 |
 
 ## Unscheduled (fix when touching the area)
 | ID | Sev. | Area | Item |

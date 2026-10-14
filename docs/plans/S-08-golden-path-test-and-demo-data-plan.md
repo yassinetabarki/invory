@@ -1,5 +1,5 @@
 # Technical plan: S-08 One automated test walks the whole journey, and a fresh install shows the demo workshop
-> Status: **draft (planning-only, awaiting the human's approval)** · Date: 2026-10-14 · Owner: tech-lead
+> Status: **approved 2026-10-14 (H-1 a, H-2 a, H-3 a; PO answers P-1 a, P-2 a, P-3 yes, P-4 yes), in execution** on `phase/4-mvp-release-readiness` · Date: 2026-10-14 · Owner: tech-lead
 > Story card: [docs/stories/S-08-golden-path-test-and-demo-data.md](../stories/S-08-golden-path-test-and-demo-data.md) (`Ready`, approved 2026-10-14)
 > Constraints from the brief: dev runtime per ADR-0012 (app on `php artisan serve` :8000, Docker = PostgreSQL + Mailpit only). **Nothing in this
 > plan seeds, migrates or wipes the development database `laravel`** (human, 2026-10-14). F-37 holds. D-1: CI on every push to `main` and `phase/**`.
@@ -198,3 +198,21 @@ server); the `golden-path` CI job ~3–4 min wall (setup + Chromium install domi
 
 ## Progress log
 - 2026-10-14: plan written (planning-only). Nothing dispatched.
+- 2026-10-14: approved. Intake: HEAD `6e776f0` clean, `composer test` green (2076 tests, 24 skipped). Wave 1 dispatched: S-08-a (BE #1) ∥ S-08-c (BE #2).
+- 2026-10-14: Wave 1 reviewed, both APPROVED in round 1. S-08-a: plugin v4.3.1, `playwright` 1.59.1 (exact; the plugin's floor), Chromium
+  headless shell 147 (111.5 MiB); Windows GO; browser suite excluded from `composer test` by leaving it out of phpunit.xml's suites.
+  **New fact:** once installed, the plugin's `terminate()` opens a socket on **every** Pest run, so `ext-sockets` is required for
+  `composer test` and `test:pgsql` too. Laragon PHP 8.3.35 has it commented out; Herd PHP 8.4 has it but `memory_limit=128M` (suite peaks
+  ~182 MB). Gates run on Laragon PHP with a session-only `PHP_INI_SCAN_DIR` holding `extension=sockets` (no system change). S-08-c: 18 ledger
+  rows, `DatabaseSeeder` re-runnable. Gates on the wave-1 tree: composer test 2079 (24 skipped) · vp test 1134 · check · types · build ·
+  test:browser 1 (≈4 s) · test:pgsql 2079 — all green. Wave 2 dispatched: S-08-b (FE) ∥ S-08-d (BE).
+- 2026-10-14: Wave 2 cut off by an API session limit before writing anything (no GoldenPathTest, no FreshInstallDemoTest, README untouched).
+  Wave 1 still on disk and approved. Wave 2 re-dispatched with the same briefs.
+- 2026-10-14: Wave 2 re-run. S-08-d APPROVED round 1. S-08-b CHANGES REQUESTED round 1 (MAJOR: a non-assertion failure kept no screenshot,
+  AC-3) → fixed by the FE developer (`GoldenPathStep::run(..., ?object $page)` takes the screenshot itself) → APPROVED round 2. S-08-e and
+  SETUP.md written by the tech-lead. Demo step verified twice on a scratch SQLite file (12/7/60/18 rows, 1 user, ledger balances).
+  Host restarted mid-delivery: Docker containers exited (parity not re-run), and Laragon PHP 8.3 became ~6× slower per HTTP test (F-57), so the
+  final gates ran on Herd PHP 8.4.26 with a session-only `memory_limit=1G`. Follow-ups F-55, F-56, F-57 added to TECH-DEBT.md.
+- 2026-10-14 (acceptance follow-up): click-through recipe on a throwaway SQLite (`.env.demo` + `APP_ENV=demo`) proven on a scratch copy:
+  `artisan serve` passes only `APP_ENV` to its server, which then loads `.env.demo` (signed in as the demo user, 12 materials served).
+  `.env.demo` git-ignored (commit 1); `database/demo.sqlite` was already covered by `database/.gitignore`.
