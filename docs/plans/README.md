@@ -8,6 +8,7 @@ Plans are history once done: their commands and statuses reflect the day they we
 
 | Plan | Stories | Status (verified 2026-10-14) |
 |---|---|---|
+| [S-43-overhead-cost-optional-plan.md](S-43-overhead-cost-optional-plan.md) | S-43 (S-43-a … S-43-c) | **Delivered 2026-10-14, awaiting acceptance** |
 | [S-08-golden-path-test-and-demo-data-plan.md](S-08-golden-path-test-and-demo-data-plan.md) | S-08 (S-08-a … S-08-e) | **Delivered 2026-10-14, awaiting acceptance and the first green `golden-path` run on GitHub** |
 | [dev-docker-db-mail-only-plan.md](dev-docker-db-mail-only-plan.md) | S-29 (DK-a … DK-d) | **Approved 2026-10-14, in execution** |
 | [fix-rl-02-product-defer-all.md](fix-rl-02-product-defer-all.md) | RL-02 fix | Done (`a9208d3`, `c809962`) |

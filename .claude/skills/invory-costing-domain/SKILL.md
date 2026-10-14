@@ -57,6 +57,7 @@ effective_qty(L)      = L.quantity × (1 + L.waste_percent / 100)
 line_cost(L)          = effective_qty(L) × L.material.unit_cost
 material_cost(P)      = Σ line_cost(L)
 unit_cost(P)          = material_cost(P) + P.labor_cost + P.overhead_cost
+                        (P.overhead_cost is never null: a blank overhead is stored as 0, S-43)
 
 required(m)           = Σ effective_qty(L) for every line L whose material is m     ← aggregate per material!
 units_possible(m)     = ⌊ m.quantity_on_hand / required(m) ⌋
@@ -155,12 +156,15 @@ History is listed newest first (date, then entry order) with who did it.
 | Ties for bottleneck | lowest name, then lowest id (deterministic) |
 | `unit_cost = 0` material | allowed, contributes 0 to cost but still limits capacity |
 | Archived / draft products | still calculated; status is display/filter only |
+| Overhead left blank on Add/Edit product | saved as `0.0000`; `unit_cost = material_cost + labor_cost`; capacity, bottleneck and next limit unaffected (decided 2026-10-14, D-8) |
 
 ## Validation rules (inputs)
 
 - Material: `unit_cost` ≥ 0 (max 4 decimals), `quantity_on_hand` ≥ 0 (max 4 decimals), `reorder_level` nullable ≥ 0.
 - BOM line: `quantity` > 0 (max 4 decimals); `waste_percent` 0 ≤ x < 100 (max 2 decimals); `material_id` exists, not soft-deleted, `distinct` within the product.
-- Product: `labor_cost`, `overhead_cost` ≥ 0 (max 4 decimals). An empty BOM is allowed (e.g. a draft). `selling_price` nullable ≥ 0 (max 4 decimals).
+- Product: `labor_cost` required, ≥ 0 (max 4 decimals). `overhead_cost` **optional**, ≥ 0 (max 4 decimals): blank or missing is saved as `0`
+  and counts as 0 in the unit cost; a typed value follows the same rules (decided 2026-10-14, D-8, S-43). An empty BOM is allowed (e.g. a draft).
+  `selling_price` nullable ≥ 0 (max 4 decimals).
 - A material referenced by any non-deleted product **cannot be deleted** (`MaterialInUseException`).
 - Sale: `product_id` exists, not soft-deleted, status `active`; `quantity` integer 1 … 1 000 000; `unit_price` ≥ 0 (max 4 decimals);
   `sold_on` a date ≤ today; `note` nullable, ≤ 255 chars.
@@ -188,6 +192,8 @@ History is listed newest first (date, then entry order) with who did it.
 Variant checks:
 - Set button stock to `7.0000` → `max_producible = 0`, bottleneck = button.
 - Remove all lines → `material_cost = "0.0000"`, `unit_cost = "15.5000"`, `max_producible = null`.
+- Overhead left empty (`0.0000`) → `unit_cost = "32.2540"`, at selling price `89.0000` `margin.amount = "56.7460"`, `margin.percent = "63.76"`;
+  `max_producible = 112`, bottleneck = button (unchanged).
 
 ## Where it lives in code
 
