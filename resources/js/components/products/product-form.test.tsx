@@ -155,13 +155,22 @@ describe('<ProductForm>', () => {
                 /^Category/,
                 /^Status/,
                 /^Labor cost/,
-                /^Overhead cost/,
             ]) {
                 expect(screen.getByLabelText(field)).toHaveAttribute(
                     'aria-required',
                     'true',
                 );
             }
+
+            const overhead = screen.getByLabelText('Overhead cost (optional)');
+
+            expect(overhead).not.toHaveAttribute('aria-required');
+            // The description also carries the currency addon ("€").
+            expect(overhead).toHaveAccessibleDescription(
+                expect.stringContaining(
+                    "Leave empty if you don't track overhead. It counts as 0.",
+                ),
+            );
 
             expect(
                 screen.getByLabelText('Description (optional)'),
@@ -402,7 +411,7 @@ describe('<ProductForm>', () => {
             expect(submission().data).not.toHaveProperty('_method');
         });
 
-        it('sends an empty selling price as an empty string (no price)', async () => {
+        it('sends an empty selling price and an empty overhead as empty strings', async () => {
             const { user } = setup();
 
             await user.type(screen.getByLabelText(/^SKU/), 'PRD-JKT-011');
@@ -410,7 +419,10 @@ describe('<ProductForm>', () => {
                 screen.getAllByRole('button', { name: 'Save product' })[1],
             );
 
-            expect(submission().data).toMatchObject({ selling_price: '' });
+            expect(submission().data).toMatchObject({
+                selling_price: '',
+                overhead_cost: '',
+            });
         });
 
         it('submits from the header button too', async () => {
@@ -533,6 +545,14 @@ describe('<ProductForm>', () => {
                 within(rowGroup(2)).getByLabelText(/^Quantity per unit for/)
                     .parentElement,
             ).toHaveTextContent('pc');
+        });
+
+        it('shows 0 in Overhead cost for a product whose overhead is 0', () => {
+            setup({ product: { ...denimJacket, overhead_cost: '0.0000' } });
+
+            expect(
+                screen.getByLabelText('Overhead cost (optional)'),
+            ).toHaveValue('0');
         });
 
         it('leaves the selling price empty for a product without one', () => {

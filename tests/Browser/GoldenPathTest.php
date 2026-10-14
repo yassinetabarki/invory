@@ -98,7 +98,7 @@ it('a new user goes from sign-in to a sale on the dashboard', function () {
         $choose('Category', 'Apparel');
         $choose('Status', 'Active');
         $field('Labor cost')->fill('12.000');
-        $field('Overhead cost')->fill('3.500');
+        $field('Overhead cost (optional)')->fill('3.500');
         $field('Selling price (optional)')->fill('89.000');
 
         foreach ([['Denim 12oz Indigo', '1.8', '10'], ['Metal shank button 17mm', '8', '0']] as [$material, $quantity, $waste]) {

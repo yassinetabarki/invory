@@ -75,6 +75,18 @@ describe('<CostBreakdownCard>', () => {
         expect(valueOf('Margin')).toHaveTextContent('TND 53.246 · 59.83%');
     });
 
+    it('keeps the Overhead row and shows a zero overhead as TND 0.000', () => {
+        setPageProps({
+            app: { currency: 'TND', locale: 'en', today: '2026-10-14' },
+        });
+        renderCard({
+            ...denimJacket,
+            cost: { ...denimJacket.cost, overhead_cost: '0.0000' },
+        });
+
+        expect(valueOf('Overhead')).toHaveTextContent('TND 0.000');
+    });
+
     it('says "1 line" for a single line', () => {
         render(
             <CostBreakdownCard

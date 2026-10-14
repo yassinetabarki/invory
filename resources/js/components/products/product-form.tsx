@@ -450,7 +450,8 @@ export function ProductForm({
                                 <FormField
                                     id={id('overhead')}
                                     label="Overhead cost"
-                                    required
+                                    optional
+                                    hint="Leave empty if you don't track overhead. It counts as 0."
                                     error={errors.overhead_cost}
                                 >
                                     {(control) => (
