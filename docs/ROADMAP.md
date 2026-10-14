@@ -30,7 +30,7 @@ A small fashion workshop knows, at any moment, **what each product costs to make
 | Must | S-29 Reliable dev environment (Docker = database + mail only; Sail removed). Open point: speed target on `php artisan serve`, see BACKLOG | M |
 | Must | S-30 MVP acceptance walkthrough (`Ready`) | S |
 | Must | S-08 End-to-end golden-path test + demo data on a fresh install (`Ready`) | M |
-| Should (next, your choice 2026-10-14, D-8) | S-43 Save a product without filling in the overhead cost (`Acceptance`; started over the two-story limit by your choice) | S |
+| Should (next, your choice 2026-10-14, D-8) | S-43 Save a product without filling in the overhead cost (accepted 2026-10-14, committed on the phase branch; `Done` once on `main`) | S |
 | Should | S-31 A section that fails to load offers "Try again" (`Ready`, on hold since 2026-10-14, D-8) | S |
 | Should | S-32 Saving a duplicate SKU at the same moment shows a clear message, not a crash (`Ready`, on hold since 2026-10-14, D-8) | S |
 | Could (your choice 2026-10-14) | S-42 Screen readers hear "112 units", not "112units" (`Ready`, after S-32; found in the S-08 review) | S |

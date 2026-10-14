@@ -1,5 +1,6 @@
 # S-43 — Save a product without filling in the overhead cost
-> Phase 4 · Priority Should (next in line, your choice 2026-10-14) · Size S · Status **Acceptance** (card approved 2026-10-14; delivered 2026-10-14, not committed yet; product-owner review done, waits for your click-through) · Type feature
+> Phase 4 · Priority Should (next in line, your choice 2026-10-14) · Size S · Status **Acceptance**, accepted by you 2026-10-14 and committed on `phase/4-mvp-release-readiness` (`6179d52`, `4644a08`, `9fc8e98`,
+> `9df0ca0`); becomes **Done** when `main` is brought up to date · Type feature
 > Links: [Roadmap, Phase 4](../ROADMAP.md#now--phase-4-mvp-release-readiness) · [Backlog](../BACKLOG.md) · Related: S-30 (the walkthrough
 > types an overhead of 3.5, so it is not affected) · S-31 and S-32 (on hold so this story goes first) · Technical plan: added by the tech-lead
 > Asked for by the human on 2026-10-14: "we need to remove overhead cost from product creation as required field".
@@ -118,17 +119,20 @@ Q6 **Approve the card?** **Answer: (a)** yes. The card is `Ready`.
 ## Acceptance check (filled in at the end)
 | AC | Evidence (test name / screen) | Result |
 |---|---|---|
-| AC-1 Create without overhead | Backend test "saves a blank overhead as 0, and the Denim Jacket then costs 32.2540" (blank, empty and not sent; "Product created.", product page opens); "reports every broken field at once" no longer lists overhead; form test "sends an empty selling price and an empty overhead as empty strings" · click-through step 3 | Met; waits for your click-through |
-| AC-2 Blank counts as 0 | Same backend test: stored 0, materials 20.2540 + labor 12.0000 + overhead 0.0000 = unit cost 32.2540, margin 56.7460 · 63.76, 112 units, button limits · screen test "keeps the Overhead row and shows a zero overhead as TND 0.000" · step 3 | Met; waits for your click-through |
-| AC-3 Edit: clearing the field | Backend test "clears the overhead to 0 and the unit cost drops by the old overhead" (35.7540 → 32.2540, "Product updated.") · step 5 | Met; waits for your click-through |
-| AC-4 Edit shows what was saved | Form test "shows 0 in Overhead cost for a product whose overhead is 0" · step 4 | Met; waits for your click-through |
-| AC-5 Typed values still checked | Invalid-input checks on create and edit: "text overhead cost" (new), "negative overhead cost", "overhead cost with 5 decimals"; "free product" accepts 0 typed by hand. Only "required" was removed, so the other messages are unchanged · step 6 | Met; waits for your click-through |
-| AC-6 The field says it is optional | Form test "marks the required fields and labels the optional ones": "Overhead cost (optional)" isn't announced as required and is read with its hint; Labor cost still is. The golden-path test finds the field by its new name · steps 2 and 6 | Met; your eyes for the look |
-| AC-7 Existing products unchanged | No change to stored data; the worked-example, product-page, demo-data and PostgreSQL tests pass unchanged (35.7540 / 112 / 59.83) · step 7 | Met; waits for your click-through |
+| AC-1 Create without overhead | Backend test "saves a blank overhead as 0, and the Denim Jacket then costs 32.2540" (blank, empty and not sent; "Product created.", product page opens); "reports every broken field at once" no longer lists overhead; form test "sends an empty selling price and an empty overhead as empty strings" · click-through step 3 | Met; accepted by you 2026-10-14 |
+| AC-2 Blank counts as 0 | Same backend test: stored 0, materials 20.2540 + labor 12.0000 + overhead 0.0000 = unit cost 32.2540, margin 56.7460 · 63.76, 112 units, button limits · screen test "keeps the Overhead row and shows a zero overhead as TND 0.000" · step 3 | Met; accepted by you 2026-10-14 |
+| AC-3 Edit: clearing the field | Backend test "clears the overhead to 0 and the unit cost drops by the old overhead" (35.7540 → 32.2540, "Product updated.") · step 5 | Met; accepted by you 2026-10-14 |
+| AC-4 Edit shows what was saved | Form test "shows 0 in Overhead cost for a product whose overhead is 0" · step 4 | Met; accepted by you 2026-10-14 |
+| AC-5 Typed values still checked | Invalid-input checks on create and edit: "text overhead cost" (new), "negative overhead cost", "overhead cost with 5 decimals"; "free product" accepts 0 typed by hand. Only "required" was removed, so the other messages are unchanged · step 6 | Met; accepted by you 2026-10-14 |
+| AC-6 The field says it is optional | Form test "marks the required fields and labels the optional ones": "Overhead cost (optional)" isn't announced as required and is read with its hint; Labor cost still is. The golden-path test finds the field by its new name · steps 2 and 6 | Met; accepted by you 2026-10-14 (the look not yet checked on screen) |
+| AC-7 Existing products unchanged | No change to stored data; the worked-example, product-page, demo-data and PostgreSQL tests pass unchanged (35.7540 / 112 / 59.83) · step 7 | Met; accepted by you 2026-10-14 |
 
 Product-owner review 2026-10-14 (delivery report: all cards APPROVED, every gate green on the final tree). Verdict: ready for your click-through.
+**Accepted by you on 2026-10-14** on the delivery report, before the click-through below was walked. Committed on the branch
+`phase/4-mvp-release-readiness`: `6179d52` (card; S-31 and S-32 on hold), `4644a08` (costing rule, S-43-a), `9fc8e98` (saving, S-43-b),
+`9df0ca0` (form label and hint, S-43-c). The story becomes `Done` when these commits reach `main`.
 
-## Click-through (about 10 minutes, http://localhost:8000)
+## Click-through (optional now; about 10 minutes, http://localhost:8000)
 Your development data has no demo workshop (you chose not to load it), so you type a small two-material jacket with `OH-` SKUs and
 delete it at the end. Expected figures: materials TND 19.630 (denim 1.98 m × TND 8.500 = 16.830, plus 8 buttons × TND 0.350 = 2.800).
 

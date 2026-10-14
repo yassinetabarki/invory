@@ -50,7 +50,8 @@ no "Reorder at" is never flagged as low. ·
 - S-41 is a Phase 4 Could, right after S-40, and needs your free Pexels key first.
 
 **D-8 Overhead cost optional** (you asked for it on 2026-10-14):
-- [S-43](stories/S-43-overhead-cost-optional.md) is `Ready` (card approved 2026-10-14 with every recommended answer).
+- [S-43](stories/S-43-overhead-cost-optional.md): card approved 2026-10-14 with every recommended answer. Delivered, accepted by you
+  and committed the same day on `phase/4-mvp-release-readiness` (see §4). It counts as `Done` once those commits are on `main`.
 - New business rule: overhead is optional. A blank overhead is saved as 0, and the unit-cost formula doesn't change. The tech-lead adds the
   rule to the costing rules before any code changes.
 - It applies to "Add product" and "Edit <product>". Existing products keep their overhead, and labor cost stays required.
@@ -97,6 +98,7 @@ a PostgreSQL parity suite (last green: 2 074 passed on 2026-10-13, during RL-01)
 | **3 — Real backend** | S-04 (incl. F-29), S-14-BE (incl. F-37), S-16-BE, S-25, S-15-BE (incl. F-36), S-06-BE, S-07-BE, S-17 | 2026-10-09/13 (`4e5b2ef`, `11299a9`, `2240e7d` wip start of S-16-BE + S-25, `12c2a16`, `4a98c74`; `57e215b` photo storage fix) | ✅ Done. Preview layer removed |
 | **Perf — dashboard endpoint** | S-28 (+ the S-28-0 baseline fix) | 2026-10-13 (`9ea79f7`, `784ae8c`, `b2ea946`) | ✅ Done |
 | **Rendering and loading** | W-01, P-01, P-02, RL-04, RL-01, RL-02 (+ fix) | 2026-10-13 (`03cc4da` … `c809962`) | ✅ Done. RL-03 and RL-05 still open |
+| **4 — MVP release readiness** | S-43 overhead cost optional (D-8) | 2026-10-14 on `phase/4-mvp-release-readiness`, not yet on `main` (`6179d52` card, `4644a08` costing rule, `9fc8e98` saving, `9df0ca0` form) | Accepted by you on the delivery report (tech-lead APPROVED; every gate green, including PostgreSQL parity and the golden path). `Done` once on `main`. Click-through optional |
 
 All phase branches (`phase/1-materials`, `phase/2-ui-first-preview`, `phase/3-performance-spa-data`, `fix/rl-02-product-show-loading`,
 `worktree-fix-hover-prefetch-bug`) are fully merged into `main`. They and the worktree under `.claude/worktrees/` can be deleted (human decision D-6).
@@ -189,6 +191,11 @@ The plan headers were corrected on 2026-10-14, and [plans/README.md](plans/READM
    - AC-6: the fresh-install click-through on a throwaway database.
    The review found that screen readers hear "112units" on the product page. That is now **S-42** (`Ready`, approved 2026-10-14; Phase 4
    Could, planned after S-32). Any further places get fixed only with your agreement.
+   **Update 2026-10-14 (D-8):** S-31 and S-32 are on hold; S-43 went first and is accepted and committed on
+   `phase/4-mvp-release-readiness`.
+   - Human and main session: bring `main` up to date with the phase branch when you choose. S-43 then becomes `Done` and leaves the backlog.
+   - Optional for you: the 10-minute S-43 click-through on its card. It also checks the look of "Overhead cost (optional)", which no test sees.
+   - Human: say yes or no to changing S-30 step 4.2 from "Overhead cost 3.5" to "Overhead cost (optional) 3.5" (it works either way).
 4. Human: walk S-30 as soon as S-29 lands. The product-owner sorts the findings into "fix in Phase 4" and "new backlog item"; you confirm.
 5. Phase 4 closes when S-30 is accepted and the S-08 test is green in the gates and in CI on GitHub.
 6. Coulds, if time allows and in this order:

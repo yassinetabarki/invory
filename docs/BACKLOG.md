@@ -48,7 +48,7 @@ loads the demo workshop (12 materials, 7 products, 60 sales, material history) w
 **Done when:** the test passes in the tech-lead's gates and is green on GitHub (CI runs on every push since D-1, 2026-10-14); the demo-data
 step gives the documented figures on an empty database. Never load demo data into the existing development database (your decision, 2026-10-14).
 
-### S-43 · Save a product without filling in the overhead cost · Should · S · feature · `Acceptance` (card approved 2026-10-14; delivered 2026-10-14, not committed yet; product-owner review done, waits for your click-through)
+### S-43 · Save a product without filling in the overhead cost · Should · S · feature · `Acceptance`, accepted by you 2026-10-14 (committed on `phase/4-mvp-release-readiness`: `6179d52`, `4644a08`, `9fc8e98`, `9df0ca0`; leaves this list as `Done` once on `main`)
 Card: [stories/S-43-overhead-cost-optional.md](stories/S-43-overhead-cost-optional.md).
 **You get:** "Overhead cost (optional)" on "Add product" and "Edit <product>". Leave it empty and the product saves, with an overhead of 0:
 the Denim Jacket without overhead costs TND 32.254 instead of TND 35.754 and still makes 112 units. Labor cost stays required; existing
