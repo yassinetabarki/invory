@@ -1,6 +1,6 @@
 # S-43 — Save a product without filling in the overhead cost
-> Phase 4 · Priority Should (next in line, your choice 2026-10-14) · Size S · Status **Acceptance**, accepted by you 2026-10-14 and committed on `phase/4-mvp-release-readiness` (`6179d52`, `4644a08`, `9fc8e98`,
-> `9df0ca0`); becomes **Done** when `main` is brought up to date · Type feature
+> Phase 4 · Priority Should (next in line, your choice 2026-10-14) · Size S · Status **Done** (accepted by you 2026-10-14; on `main`: `6179d52`, `4644a08`, `9fc8e98`,
+> `9df0ca0`, close-out `eccb09a`) · Type feature
 > Links: [Roadmap, Phase 4](../ROADMAP.md#now--phase-4-mvp-release-readiness) · [Backlog](../BACKLOG.md) · Related: S-30 (the walkthrough
 > types an overhead of 3.5, so it is not affected) · S-31 and S-32 (on hold so this story goes first) · Technical plan: added by the tech-lead
 > Asked for by the human on 2026-10-14: "we need to remove overhead cost from product creation as required field".
@@ -130,7 +130,8 @@ Q6 **Approve the card?** **Answer: (a)** yes. The card is `Ready`.
 Product-owner review 2026-10-14 (delivery report: all cards APPROVED, every gate green on the final tree). Verdict: ready for your click-through.
 **Accepted by you on 2026-10-14** on the delivery report, before the click-through below was walked. Committed on the branch
 `phase/4-mvp-release-readiness`: `6179d52` (card; S-31 and S-32 on hold), `4644a08` (costing rule, S-43-a), `9fc8e98` (saving, S-43-b),
-`9df0ca0` (form label and hint, S-43-c). The story becomes `Done` when these commits reach `main`.
+`9df0ca0` (form label and hint, S-43-c). `main` was brought up to the phase branch at `eccb09a` (close-out notes) on 2026-10-14:
+the story is **Done**.
 
 ## Click-through (optional now; about 10 minutes, http://localhost:8000)
 Your development data has no demo workshop (you chose not to load it), so you type a small two-material jacket with `OH-` SKUs and

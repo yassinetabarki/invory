@@ -13,7 +13,7 @@ A small fashion workshop knows, at any moment, **what each product costs to make
 | Activity | Built (Phases 1–3) | Phase 4 | Phase 5 | Phase 6 | Phase 7 + Vision |
 |---|---|---|---|---|---|
 | **Keep stock of materials** | List, filters, CRUD, photo, restock, history, status badges | Acceptance | History on demand (S-33) | | Suppliers and purchase orders, CSV import (S-11) |
-| **Define products** | Product CRUD, composition editor, selling price, photo | Acceptance | Instant edit page (S-35) | | Sizes and variants, sub-assemblies, unit conversions |
+| **Define products** | Product CRUD, composition editor, selling price, photo | Acceptance; overhead cost optional (S-43, done) | Instant edit page (S-35) | | Sizes and variants, sub-assemblies, unit conversions |
 | **Know cost and capacity** | Unit cost, can produce, bottleneck, next limit, margin, "what you can make with it" | Acceptance, E2E (S-08) | Fast at 500 products (S-23, S-27) | | Live cost preview (S-09), production planner (S-10), cost history |
 | **Sell** | Sales log, totals, filters, record/edit/delete | Acceptance | Instant delete feedback (S-36) | | Custom date range (S-37) |
 | **Monitor** | Dashboard: KPIs, top 5, restock list, alerts | Panels offer "Try again" after an error (S-31) | Loading states (S-34) | | |
@@ -30,7 +30,7 @@ A small fashion workshop knows, at any moment, **what each product costs to make
 | Must | S-29 Reliable dev environment (Docker = database + mail only; Sail removed). Open point: speed target on `php artisan serve`, see BACKLOG | M |
 | Must | S-30 MVP acceptance walkthrough (`Ready`) | S |
 | Must | S-08 End-to-end golden-path test + demo data on a fresh install (`Ready`) | M |
-| Should (next, your choice 2026-10-14, D-8) | S-43 Save a product without filling in the overhead cost (accepted 2026-10-14, committed on the phase branch; `Done` once on `main`) | S |
+| Should (your choice 2026-10-14, D-8) | S-43 Save a product without filling in the overhead cost (✅ `Done` 2026-10-14: `6179d52`, `4644a08`, `9fc8e98`, `9df0ca0`, close-out `eccb09a`) | S |
 | Should | S-31 A section that fails to load offers "Try again" (`Ready`, on hold since 2026-10-14, D-8) | S |
 | Should | S-32 Saving a duplicate SKU at the same moment shows a clear message, not a crash (`Ready`, on hold since 2026-10-14, D-8) | S |
 | Could (your choice 2026-10-14) | S-42 Screen readers hear "112 units", not "112units" (`Ready`, after S-32; found in the S-08 review) | S |

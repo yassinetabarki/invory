@@ -48,19 +48,6 @@ loads the demo workshop (12 materials, 7 products, 60 sales, material history) w
 **Done when:** the test passes in the tech-lead's gates and is green on GitHub (CI runs on every push since D-1, 2026-10-14); the demo-data
 step gives the documented figures on an empty database. Never load demo data into the existing development database (your decision, 2026-10-14).
 
-### S-43 · Save a product without filling in the overhead cost · Should · S · feature · `Acceptance`, accepted by you 2026-10-14 (committed on `phase/4-mvp-release-readiness`: `6179d52`, `4644a08`, `9fc8e98`, `9df0ca0`; leaves this list as `Done` once on `main`)
-Card: [stories/S-43-overhead-cost-optional.md](stories/S-43-overhead-cost-optional.md).
-**You get:** "Overhead cost (optional)" on "Add product" and "Edit <product>". Leave it empty and the product saves, with an overhead of 0:
-the Denim Jacket without overhead costs TND 32.254 instead of TND 35.754 and still makes 112 units. Labor cost stays required; existing
-products keep their overhead.
-**Why:** today a blank overhead is refused ("The overhead cost field is required."), so workshops that don't track overhead must type 0 on
-every product.
-**Done when:** a product saves with the field empty on create and on edit, its cost breakdown shows Overhead TND 0.000, typed values are
-checked as before, and existing products don't change.
-**Your decisions (2026-10-14):** it goes next, ahead of S-31 and S-32 ("stop S-31 and S-32 for now"). You chose to start it even though
-S-29 and S-08 already fill the two-story limit. New rule for the tech-lead to bring into the costing rules: overhead is optional, a blank
-is saved as 0, the formula doesn't change.
-
 ### S-31 · A section that fails to load offers "Try again" · Should · S · feature · `Ready`, on hold (your decision 2026-10-14: "stop S-31 and S-32 for now"; paused, not dropped) (card approved 2026-10-14; was F-48)
 Card: [stories/S-31-deferred-section-try-again.md](stories/S-31-deferred-section-try-again.md).
 **You get:** if a part of a page that loads after the frame fails (dashboard figure cards and top 5, dashboard panels and alerts, the
@@ -110,10 +97,9 @@ checks "Can produce now 112 units".
 **Phase 4 tech allowance** (tech-lead picks these up alongside the stories): F-22 flaky form test · F-12 frontend skill wording ·
 F-45 stale "preview" test names (F-08, F-25 and F-51 ride with S-29). Details in [TECH-DEBT.md](TECH-DEBT.md).
 **Sizing note:** the Musts are about 70 % of this phase, above the usual 60 % guideline, because the phase is a release gate. S-31 and S-32
-are the contingency and slip to Phase 5 first; they are on hold since 2026-10-14 so S-43 goes first. S-42 is planned after S-32, so it
-waits too.
-**Work-in-progress limit:** S-43 starts while S-29 (in progress) and S-08 (in acceptance) are open, three stories instead of two. This was
-your explicit choice on 2026-10-14.
+are the contingency and slip to Phase 5 first. They have been on hold since 2026-10-14 (D-8) so S-43 could go first. S-43 is done
+(on `main` since 2026-10-14, see [STATUS.md](STATUS.md)), but they stay on hold until you lift it. S-42 is planned after S-32, so it waits
+too.
 
 ---
 
@@ -179,7 +165,7 @@ cost history snapshots · production runs that consume stock (Q9) · REST API / 
 Q1 native serving · Q2 units editable, conversions later · Q3 any signed-in user edits the catalogue · Q4 bigint keys (provisional) ·
 Q6 currency/locale in config (provisional) · Q7 unit locked while used · Q8 sales stock-neutral, hard delete · Q9 no production runs (provisional) ·
 F-20 restock updates unit cost by default · F-37 deleted demo products stay deleted · F-39 no thumbnails · F-40 no correction reason ·
-dev DB demo seed skipped (2026-10-14) · D-1 repository on GitHub, CI on every push (2026-10-14) · D-3 Phase 4 scope approved with its four cards (2026-10-14) · D-8 S-43 added to Phase 4 and goes next; overhead optional, blank = 0;
-S-31 and S-32 on hold; started over the two-story limit (2026-10-14) · low stock: no new story, no email alerts, no flag without "Reorder at" (2026-10-14) · large demo catalogue: new throwaway database only,
+dev DB demo seed skipped (2026-10-14) · D-1 repository on GitHub, CI on every push (2026-10-14) · D-3 Phase 4 scope approved with its four cards (2026-10-14) · D-8 overhead cost optional, blank = 0 (S-43, done 2026-10-14);
+S-31 and S-32 on hold (2026-10-14) · low stock: no new story, no email alerts, no flag without "Reorder at" (2026-10-14) · large demo catalogue: new throwaway database only,
 add-on after the demo workshop, no sales, same every run, no brand or sub-category, real Pexels photos with credits off-screen (S-40 Q1–Q7,
 S-41 Q1–Q4, 2026-10-14). Pending: [STATUS.md §2](STATUS.md#2-decisions-needed-from-you).
