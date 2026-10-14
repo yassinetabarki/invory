@@ -174,6 +174,12 @@ The plan headers were corrected on 2026-10-14, and [plans/README.md](plans/READM
 1. Human: decisions D-4 … D-6, and a first look at the CI result in GitHub's Actions tab.
 2. Tech-lead (in progress): adjust S-29's plan to `php artisan serve` (no Apache, no Laragon), report the speed consequence, then finish S-29.
 3. Tech-lead: plan S-08, S-31 and S-32 next, from their `Ready` cards (done by the product-owner on 2026-10-14).
+   **Update 2026-10-14:** S-08 is delivered, not yet committed. The product-owner review accepted every criterion from the evidence;
+   two things are still yours:
+   - AC-5: push, then check that the `golden-path` job is green on GitHub (this also re-checks PostgreSQL, which wasn't re-run locally);
+   - AC-6: the fresh-install click-through on a throwaway database.
+   The review found that screen readers hear "112units" on the product page. That is now **S-42** (`Ready`, approved 2026-10-14; Phase 4
+   Could, planned after S-32). Any further places get fixed only with your agreement.
 4. Human: walk S-30 as soon as S-29 lands. The product-owner sorts the findings into "fix in Phase 4" and "new backlog item"; you confirm.
 5. Phase 4 closes when S-30 is accepted and the S-08 test is green in the gates and in CI on GitHub.
 6. Coulds, if time allows and in this order:

@@ -10,7 +10,7 @@
 - **Priority** (MoSCoW, per phase): Must · Should · Could · Won't (this time). **Size:** S (≤ 1 day of agent work) · M · L (split it).
 - **Card:** the full story card (story, acceptance criteria with examples, what you will see, out of scope, questions) lives in
   `docs/stories/<id>-<slug>.md` once the product-owner writes it. Items below show the short version.
-- **IDs:** `S-` stories are numbered by the product-owner, `F-` technical items by the tech-lead. IDs are never reused. Next free: **S-42**, **F-54**.
+- **IDs:** `S-` stories are numbered by the product-owner, `F-` technical items by the tech-lead. IDs are never reused. Next free: **S-43**, **F-58** (F-IDs: see [TECH-DEBT.md](TECH-DEBT.md)).
 
 ---
 
@@ -39,7 +39,7 @@ worked example (Denim Jacket: TND 35.754, can produce 112, bottleneck "Metal sha
 **Done when:** you have walked the script; every finding is either fixed or recorded as a new backlog item; you declare the MVP accepted.
 Step 8.1 checks decision D-7 (2026-10-14): the dashboard numbers fill in just after the page frame appears. Best walked right after S-29.
 
-### S-08 · End-to-end golden-path test + demo data on a fresh install · Must · M · feature (quality) · `Ready` (card approved 2026-10-14; next: tech-lead plan)
+### S-08 · End-to-end golden-path test + demo data on a fresh install · Must · M · feature (quality) · `Acceptance` (delivered 2026-10-14, not committed yet; product-owner review done: AC-5 waits for your look at GitHub, AC-6 for your click-through)
 Card: [stories/S-08-golden-path-test-and-demo-data.md](stories/S-08-golden-path-test-and-demo-data.md).
 **You get:** one automated browser test that does what a new user does: sign in → add two materials → add Denim Jacket with its
 composition → see TND 35.130, 112 units, bottleneck "Metal shank button 17mm" → record a sale → see it on the dashboard. A fresh install
@@ -85,6 +85,14 @@ one photo may serve at most 3 items.
 only (Q1).
 **Done when:** every catalogue item has a fitting photo, every photo is in the licence record, the size limits hold, and your spot-check of
 20 photos passes.
+
+### S-42 · Screen readers hear "112 units", not "112units" · Could (after S-32; your choice 2026-10-14) · S · bug (accessibility) · `Ready` (card approved 2026-10-14; tech-lead plans it after S-32; any place beyond the two product-page cards only with your agreement)
+Card: [stories/S-42-screen-readers-hear-units.md](stories/S-42-screen-readers-hear-units.md).
+**You get:** on the product page, "Can produce now 112 units" and "Sold · last 30 days 38 units" are read aloud with a space between the
+number and its unit. The screen looks the same.
+**Why:** today assistive technology reads "112units": the gap is only visual. Invory aims at WCAG 2.2 AA.
+**Done when:** every number shown with a unit word on the product page reaches screen readers with a space, and the golden-path test
+checks "Can produce now 112 units".
 
 **Phase 4 tech allowance** (tech-lead picks these up alongside the stories): F-22 flaky form test · F-12 frontend skill wording ·
 F-45 stale "preview" test names (F-08, F-25 and F-51 ride with S-29). Details in [TECH-DEBT.md](TECH-DEBT.md).

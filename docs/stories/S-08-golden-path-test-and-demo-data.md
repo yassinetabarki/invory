@@ -1,5 +1,5 @@
 # S-08 — One automated test walks the whole journey, and a fresh install shows the demo workshop
-> Phase 4 · Priority Must · Size M · Status **Ready** (approved by the human 2026-10-14) · Type feature (quality)
+> Phase 4 · Priority Must · Size M · Status **Acceptance** (delivered 2026-10-14, uncommitted on `phase/4-mvp-release-readiness`; card approved 2026-10-14) · Type feature (quality)
 > Links: [Roadmap, Phase 4](../ROADMAP.md#now--phase-4-mvp-release-readiness) · [Backlog](../BACKLOG.md) · Related: S-30 (your walkthrough),
 > D-1 (decided 2026-10-14: the repository is on GitHub and the automatic checks run on every push) · Technical plan: added by the tech-lead
 
@@ -113,14 +113,25 @@ because the test user already exists" goes.
 - Which parts of AC-6 already hold today (the 12 materials, 7 products and 60 sales are loaded by the existing setup), and what the
   history chosen in Q1 costs.
 
-## Acceptance check (filled in at the end)
+## Acceptance check (product-owner review 2026-10-14, from the tech-lead's delivery report; nothing committed yet)
+Delivery status: PARTIAL. All 5 technical cards are APPROVED, and every gate is green on the final tree. Two items are open:
+- the PostgreSQL parity check wasn't re-run after the restart (CI covers it);
+- AC-5 needs your look at GitHub.
+
 | AC | Evidence (test name / screen) | Result |
 |---|---|---|
-| AC-1 Golden path | | |
-| AC-2 Waits for deferred content | | |
-| AC-3 Failure names the step | | |
-| AC-4 Own database | | |
-| AC-5 Runs with the gates and green on GitHub | | |
-| AC-6 Fresh install shows the demo workshop | | |
-| AC-7 Safe to repeat, never on real data | | |
-| AC-8 Guide matches the app | | |
+| AC-1 Golden path | `GoldenPathTest` › "a new user goes from sign-in to a sale on the dashboard": 16 named steps with the card's exact figures (TND 35.130, 112, button, TND 53.870 · 60.53%, TND 267.000, 3, TND 2,440.000, "0 of 1 product", Denim Jacket first with 3 units, still 112). Passed 3 runs in a row | Accepted |
+| AC-2 Waits for deferred content | The same test waits for each figure by its exact value, then checks that no "Loading…" or "Checking…" text is left; no fixed pauses | Accepted |
+| AC-3 Failure names the step | `GoldenPathStepTest`, plus failures made on purpose: `Golden path failed at step "dashboard: Total sales"` with a screenshot; on GitHub the screenshots are kept as `golden-path-screenshots` | Accepted |
+| AC-4 Own database | First step "database: throwaway" checks the in-memory database; the test suite refuses any PostgreSQL database other than `testing` | Accepted |
+| AC-5 Runs with the gates and green on GitHub | Local gate `composer test:browser` green; new `golden-path` job on GitHub | **Accepted pending your look** at the Actions tab after the push |
+| AC-6 Fresh install shows the demo workshop | `FreshInstallDemoTest` › "a fresh install shows the demo workshop" (every AC-6 figure, the history on exactly the button, label and denim) · `DemoStockHistorySeederTest` (2 tests, every entry "by Test User") · CI runs the documented step on a fresh database | Accepted by tests; **your click-through steps 4–8** |
+| AC-7 Safe to repeat, never on real data | `FreshInstallDemoTest` re-run test (nothing twice, the deleted Belt stays deleted, 18 history entries) · CI runs the step twice · README Step 6 and SETUP §3 carry the warning and "safe to run again" | Accepted |
+| AC-8 Guide matches the app | README Step 6 reads "*Denim Jacket* costs **TND 35.754** per unit" (read by the product-owner); "35.75 TND/unit" and "a second run fails" are gone | Accepted |
+
+Found during the review (not gaps in S-08's criteria):
+- The guide says "a new, empty database only" but doesn't say how to get one on a machine whose database is `laravel`. Setting the
+  database in the terminal doesn't reach the running app: `php artisan serve` passes on only `APP_ENV`, so the pages would show
+  `laravel`. The click-through below uses a separate settings file, which the tech-lead confirms first. S-40 AC-5 makes this part of the
+  guide.
+- On the product page, "Can produce now 112 units" reaches screen readers as "112units" (no space). Proposed as S-42.

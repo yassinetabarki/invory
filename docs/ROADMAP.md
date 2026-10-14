@@ -32,6 +32,7 @@ A small fashion workshop knows, at any moment, **what each product costs to make
 | Must | S-08 End-to-end golden-path test + demo data on a fresh install (`Ready`) | M |
 | Should | S-31 A section that fails to load offers "Try again" (`Ready`) | S |
 | Should | S-32 Saving a duplicate SKU at the same moment shows a clear message, not a crash (`Ready`) | S |
+| Could (your choice 2026-10-14) | S-42 Screen readers hear "112 units", not "112units" (`Ready`, after S-32; found in the S-08 review) | S |
 | Could (your choice 2026-10-14, S-40 Q6) | S-40 A realistic catalogue of 100 products on a fresh install (`Ready`, after S-08; not an exit criterion) | M |
 | Could (your choice 2026-10-14, S-41 Q4) | S-41 A real photo on every item of the demo catalogue, from Pexels (`Ready`, after S-40; needs your Pexels key; slips to Phase 5 first) | M |
 | Tech allowance (~15 %) | F-22 flaky form test · F-12 frontend skill wording · F-45 stale "preview" test names (F-08, F-25, F-51 ride with S-29) | — |
