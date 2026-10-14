@@ -13,7 +13,9 @@ Costing and production-capacity tool for fashion products (clothing, shoes, bags
 | Full setup (environments, tooling) | [docs/SETUP.md](docs/SETUP.md) |
 | Architecture | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
 | Decisions | [docs/adr/](docs/adr/) |
-| MVP backlog | [docs/BACKLOG.md](docs/BACKLOG.md) |
+| Roadmap (phases) | [docs/ROADMAP.md](docs/ROADMAP.md) |
+| Backlog | [docs/BACKLOG.md](docs/BACKLOG.md) |
+| Project status | [docs/STATUS.md](docs/STATUS.md) |
 | AI team and workflow | [docs/TEAM.md](docs/TEAM.md) |
 
 ---

@@ -1,6 +1,6 @@
 # Phase 2 — UI-first preview (approved mockup on mock data)
 
-> Owner: **tech-lead** · Status: **review: all stories approved 2026-10-08, awaiting human commit approval and click-through** · Stories: S-12, S-13, S-05, S-06-FE, S-07-FE, S-14-FE, S-15-FE, S-16-FE ([BACKLOG](../BACKLOG.md))
+> Owner: **tech-lead** · Status: **done** (verified 2026-10-14: committed `becfcae`; the preview data was retired by S-17; the human click-through moves to backlog S-30) · Stories: S-12, S-13, S-05, S-06-FE, S-07-FE, S-14-FE, S-15-FE, S-16-FE ([BACKLOG](../BACKLOG.md))
 > Design reference: [docs/design/mockup/](../design/mockup/README.md) · Data seam: [ADR-0006](../adr/0006-ui-first-preview-data.md) · Maths: `invory-costing-domain` skill
 > Executed by the tech-lead, who dispatches `backend-developer` (BE) and `frontend-developer` (FE) per wave and reviews every handoff.
 

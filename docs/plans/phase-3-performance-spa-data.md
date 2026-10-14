@@ -1,6 +1,6 @@
 # Phase 3 — Performance, SPA data loading, reference data and database architecture
 
-> Owner: **tech-lead** · Status: **3P delivered 2026-10-09: S-19 and S-20 approved; S-18 repo side approved, waiting for the human's machine steps (SETUP.md §4.1). The rest Proposed.** Decisions: see the end of the plan.
+> Owner: **tech-lead** · Status: **mostly done** (verified 2026-10-14): S-18 repo side, S-19, S-20, S-21, S-22, S-04 committed. Open work moved to [BACKLOG](../BACKLOG.md): S-18 measurement (with S-29), S-23, S-24 remainder (→ S-33, S-36), S-26, S-27 Decisions: see the end of the plan.
 > Stories: S-18 … S-27 (new, `Proposed` in [BACKLOG](../BACKLOG.md)), plus amendments to the existing Phase 3 stories S-04, S-14-BE, S-15-BE,
 > S-16-BE, S-06-BE, S-07-BE and S-17. ADR drafts: [0007](../adr/0007-dev-runtime-native-serving.md), [0008](../adr/0008-reference-data-in-database.md),
 > [0009](../adr/0009-spa-data-loading-on-inertia.md), [0010](../adr/0010-database-architecture.md). 0007 and 0008 are **Accepted** (2026-10-08); 0009 and 0010 are **Proposed**.

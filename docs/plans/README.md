@@ -1,0 +1,20 @@
+# Technical plans (tech-lead)
+
+A plan turns one or more **approved story cards** (`docs/stories/`, product-owner) into **technical cards**: slicing table, frozen contract,
+waves, test budget, risks. The tech-lead writes it in planning-only mode, the human approves it, then the tech-lead executes it.
+Format: [TEAM.md §Technical plan](../TEAM.md#technical-plan-docsplansid-slug-planmd). Name new plans `<story-id>-<slug>-plan.md`, e.g. `S-31-deferred-retry-plan.md`.
+
+Plans are history once done: their commands and statuses reflect the day they were written. Only the status line is kept current.
+
+| Plan | Stories | Status (verified 2026-10-14) |
+|---|---|---|
+| [dev-docker-db-mail-only-plan.md](dev-docker-db-mail-only-plan.md) | S-29 (DK-a … DK-d) | **Approved 2026-10-14, in execution** |
+| [fix-rl-02-product-defer-all.md](fix-rl-02-product-defer-all.md) | RL-02 fix | Done (`a9208d3`, `c809962`) |
+| [s02-product-show-defer-plan.md](s02-product-show-defer-plan.md) | RL-02 | Done (`0241b7a`) |
+| [s04-s01-skeleton-dashboard-plan.md](s04-s01-skeleton-dashboard-plan.md) | RL-04, RL-01 | Done (`8220fa9`, `3a2eeca`) |
+| [rendering-loading-plan.md](rendering-loading-plan.md) | W-01, P-01, P-02, RL-01…RL-05, Q-01, Q-02 | Mostly done. RL-03 → S-33, RL-05 → S-34 |
+| [perf-dashboard-endpoint.md](perf-dashboard-endpoint.md) | S-28 | Done (`9ea79f7`, `784ae8c`, `b2ea946`) |
+| [phase-3-real-backend.md](phase-3-real-backend.md) | S-04, S-14-BE, S-16-BE, S-25, S-15-BE, S-06-BE, S-07-BE, S-17 | Done (`4e5b2ef`, `12c2a16`, `4a98c74`) |
+| [phase-3-performance-spa-data.md](phase-3-performance-spa-data.md) | S-18 … S-27 + database design | Mostly done. Open: S-18 measurement, S-23, S-24 rest (→ S-33, S-36), S-26, S-27 |
+| [phase-2-ui-first-preview.md](phase-2-ui-first-preview.md) | S-12, S-13, S-05, S-06/07/14/15/16-FE | Done (`becfcae`). Click-through → S-30 |
+| [phase-1-foundation-materials.md](phase-1-foundation-materials.md) | S-00 … S-03 | Done |

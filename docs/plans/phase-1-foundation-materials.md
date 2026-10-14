@@ -1,6 +1,6 @@
 # Phase 1 — Foundation + Materials inventory (+ costing engine)
 
-> Owner: **tech-lead** · Status: **delivered: S-00 to S-03 approved 2026-10-08, awaiting human commit approval and sign-off** · Stories: S-00, S-01, S-02, S-03 ([BACKLOG](../BACKLOG.md))
+> Owner: **tech-lead** · Status: **done** (verified 2026-10-14: committed 2026-10-08, `c53ec14` … `d877a4a`) · Stories: S-00, S-01, S-02, S-03 ([BACKLOG](../BACKLOG.md))
 > Executed by the tech-lead, who dispatches `backend-developer` (BE) and `frontend-developer` (FE) per wave and reviews every handoff.
 
 ## Outcome

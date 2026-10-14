@@ -1,27 +1,51 @@
 # Invory — Team, skills and workflow
 
-Three Claude Code subagents (in `.claude/agents/`) build Invory. The **tech-lead orchestrates**: it plans, dispatches the two developers,
-reviews and loops fixes. The **main Claude session is the liaison**: it hands work to the tech-lead, relays reports, asks you (the human) for
-product decisions, and commits only with your approval.
+Four Claude Code subagents (in `.claude/agents/`) build Invory, split by **what/why** and **how**:
+
+- The **product-owner** owns the *what* and *why*. It plans the phases, keeps the backlog ordered, writes story cards you can read and
+  approve, specifies behaviour and UX, accepts delivered work against its acceptance criteria, and reports progress.
+- The **tech-lead** owns the *how*. It turns an approved story card into technical cards (a plan), dispatches the two developers, reviews
+  the code by running every gate itself, and owns architecture, ADRs, technical debt and CI.
+- The **main Claude session is the liaison.** Subagents can't ask you questions, so it carries work between you and the two leads, asks
+  you their questions, and commits only with your approval.
 
 ## Roles
 
 | Agent | Model | Owns | Can spawn | Never does |
 |---|---|---|---|---|
-| **tech-lead** | opus | Planning, contracts, dispatching, reviews, architecture, ADRs, backlog, plans (`docs/plans/`), CI (`.github/`) | `backend-developer`, `frontend-developer` | Write application code, commit |
-| **backend-developer** | sonnet | `app/`, `routes/`, `database/`, `config/`, `tests/` (PHP), `resources/js/types/domain.ts`, `sharedPageProps` | nothing (`disallowedTools: Agent`) | Build UI (page *stubs* only), commit |
-| **frontend-developer** | sonnet | `resources/js/**` (except contract files and generated code), `resources/css`, Vitest and browser tests | nothing (`disallowedTools: Agent`) | Touch PHP or the contract files, commit |
+| **product-owner** | opus | Roadmap and phases (`docs/ROADMAP.md`), backlog order (`docs/BACKLOG.md`), story cards (`docs/stories/`), behaviour and UX, acceptance review, progress report (`docs/STATUS.md`) | nothing | Write code or technical plans, dispatch developers, review code, run gates, commit |
+| **tech-lead** | opus | Technical plans (`docs/plans/`), contracts, dispatching, code review and gates, architecture, ADRs, `docs/TECH-DEBT.md`, `docs/SETUP.md`, CI (`.github/`) | `backend-developer`, `frontend-developer` | Write application code, decide behaviour/UX/priority, edit the product-owner's files, commit |
+| **backend-developer** | sonnet | `app/`, `routes/`, `database/`, `config/`, `tests/` (PHP), `resources/js/types/domain.ts`, `sharedPageProps` | nothing | Build UI (page *stubs* only), invent business rules, commit |
+| **frontend-developer** | sonnet | `resources/js/**` (except contract files and generated code), `resources/css`, Vitest and browser tests | nothing | Touch PHP or the contract files, invent copy or UX, commit |
+| *main session* | — | Relaying, `AskUserQuestion`, commits after your yes | `product-owner`, `tech-lead` | Write stories, plans or code itself; brief developers directly |
+| *human (you)* | — | Vision, approvals (cards, plans, acceptance, commits), product decisions | — | — |
 
-Subagents can't ask you questions directly. The tech-lead collects product questions in its report, and the main session asks you.
+### Decision rights (RACI-style; full table in the `invory-product-owner` skill §1)
+
+| Topic | Decides | Proposes / does | Consulted |
+|---|---|---|---|
+| Phases, roadmap, backlog order | **Human** | Product-owner | Tech-lead (size, risk, dependencies) |
+| Story text, acceptance criteria, UX, wording | **Human** (approves the card) | Product-owner | Tech-lead (feasibility) |
+| Business rules (formulas, stock rules) | **Human** | Product-owner states it; tech-lead encodes it in `invory-costing-domain` first | — |
+| Technical approach, contracts, slicing, tests | **Tech-lead** | Tech-lead; human approves the plan | Developers (pre-flight ack) |
+| Technical debt items and their cost of delay | **Tech-lead** | Tech-lead (`TECH-DEBT.md`) | — |
+| Which debt goes into a phase (≈ 15 % allowance) | **Product-owner** | Product-owner | Tech-lead |
+| Code verdict (APPROVED / CHANGES REQUESTED) | **Tech-lead** | Tech-lead | — |
+| Story accepted | **Human** | Product-owner (AC check + click-through script) | Tech-lead (evidence) |
+| Commits | **Human** | Main session commits; tech-lead proposes messages | — |
+
+No role overlaps another: the tech-lead no longer owns the backlog or product questions, and the main session no longer picks stories or
+writes plans.
 
 ## Skills matrix: what each role must master
 
-The *competency* column is the human-level skill set we researched for each role. The *Claude skills / tools* column is
-what the agent loads to apply it in this codebase.
+The *competency* column is the human-level skill set researched for each role. The *Claude skills / tools* column is what the agent loads to
+apply it here.
 
 | Role | Competencies required | Claude skills / tools |
 |---|---|---|
-| **Tech lead** | Laravel architecture (modular monolith, actions, policies) · domain modelling of BOM costing · decimal precision · OWASP Top 10 for web apps (mass assignment, broken access control, XSS, SQLi) · DB design and indexing · N+1 detection · test strategy (unit/feature/arch/E2E) · accessibility review · CI/CD · writing ADRs · mentoring-quality feedback | Preloaded: `invory-costing-domain`, `invory-code-review` · Built-in: `/security-review`, `/code-review` · Boost MCP: `search-docs`, `database-schema`, `application-info` · Agent memory (project) |
+| **Product owner** | Product vision and outcome-based roadmaps (Now / Next / Later) · story mapping and phase slicing · backlog management (DEEP, hygiene) · user stories (INVEST, 3 Cs) and acceptance criteria (Given / When / Then with real examples) · prioritisation (MoSCoW, value / effort, cost of delay) · UX writing, interaction design and WCAG 2.2 AA basics · domain knowledge of fashion BOM costing · acceptance testing · progress reporting (RAG, RAID, flow metrics) · stakeholder communication | Preloaded: `invory-product-owner`, `invory-costing-domain` · Read-only `git log` · WebSearch / WebFetch for research · Agent memory (project) |
+| **Tech lead** | Laravel architecture (modular monolith, actions, policies) · domain modelling of BOM costing · decimal precision · OWASP Top 10 for web apps (mass assignment, broken access control, XSS, SQLi) · DB design and indexing · N+1 detection · test strategy (unit/feature/arch/E2E) · vertical slicing and technical task breakdown · accessibility review · CI/CD · writing ADRs · technical-debt management · mentoring-quality feedback | Preloaded: `invory-costing-domain`, `invory-code-review` · Built-in: `/security-review`, `/code-review` · Boost MCP: `search-docs`, `database-schema`, `application-info` · Agent memory (project) |
 | **Backend developer** | PHP 8.3+ (enums, readonly classes, strict types) · Laravel 13: Eloquent, migrations, FormRequests, Policies, API Resources, transactions, service container · Inertia 3 server side · `brick/math` BigDecimal · Pest 4 (datasets, `assertInertia`, arch tests) · Larastan / PHPStan generics · Pint · Wayfinder route naming | Preloaded: `invory-costing-domain`, `invory-laravel-backend` · Boost skills: `pest-testing`, `wayfinder-development`, `infer-conventions` · Boost MCP: `search-docs`, `database-schema`, `database-query`, `last-error`, `read-log-entries` |
 | **Frontend developer** | React 19 (Rules of React, React Compiler, ref-as-prop) · TypeScript strict · Inertia 3 client (pages, `<Form>`, `useForm`, partial reloads, `preserveState`) · Wayfinder · Tailwind 4 · shadcn/ui + Radix · form UX for numeric data · `Intl.NumberFormat` · WCAG 2.2 AA · responsive and dark mode · Vitest + React Testing Library + user-event · Pest browser tests | Preloaded: `invory-costing-domain`, `invory-react-frontend` · Boost skills: `inertia-react-development`, `wayfinder-development`, `tailwindcss-development` · Boost MCP: `search-docs`, `browser-logs` |
 
@@ -32,71 +56,89 @@ Project skills live in `.claude/skills/invory-*` and are committed. `invory-cost
 
 ```
  human ⇄ main session (liaison)
-              │ hands over a story / phase (+ human decisions)
-              ▼
- tech-lead ── 1. PLAN: writes docs/plans/<story>-plan.md (see format below), returns WITHOUT dispatching
               │
-              ▼ plan ──► main session ──► human: scope, subtasks, risks, open questions
-                                                  │
-                                      human approves (or requests changes → back to 1)
-                                                  │
-              ◄─────────────────── "approved, execute" ───────────────────────────────
+   0. REFINE  ├──► product-owner: phase proposal + story cards (docs/stories/<id>-<slug>.md), questions with options
+              │◄── cards ──► human approves each card ──► status Ready
               │
-          ├── 2. DISPATCH (Agent tool, briefs) ──► backend-developer  ┐ same message = parallel
-          │                                  ──► frontend-developer ┘ (also 2× backend on disjoint stories)
-          │                                       │ handoff reports
-          ├── 3. REVIEW: runs all gates + parity ◄┘
-          ├── 4. FIX LOOP: findings → same developer (SendMessage), max 3 rounds
-          ▼
- 5. DELIVERY REPORT ──► main session ──► human: verdicts, questions, "commit S-xx?" ──► scoped commit per story
+   1. PLAN    ├──► tech-lead (planning-only): technical plan docs/plans/<id>-<slug>-plan.md
+              │       technical cards S-xx-a, -b… · AC traceability · frozen contract · waves · risks · questions for the PO
+              │◄── plan ──► human approves (questions for the PO go back through step 0)
+              │
+   2. BUILD   ├──► tech-lead (execute): dispatch ──► backend-developer ┐ same message = parallel
+              │                                   ──► frontend-developer ┘
+              │                         review (all gates + parity) · fix loop, max 3 rounds
+              │◄── delivery report: verdicts, gates, AC → test evidence, proposed commits
+              │
+   3. ACCEPT  ├──► product-owner: acceptance review (each AC vs evidence) + click-through script
+              │◄── human clicks through and accepts (or a gap goes back to step 2 / a new story)
+              │
+   4. CLOSE   └── main session commits per acceptance criterion (your yes) ──► product-owner updates BACKLOG / STATUS / ROADMAP
 ```
 
-### Plan document format (`docs/plans/<story>-plan.md`)
+Small technical items from `TECH-DEBT.md` in a phase's tech allowance skip step 0 (no card) and step 3 (no click-through): the tech-lead
+plans them, the human approves, they're built, reviewed and committed.
 
-The tech-lead writes this file in phase 1 and commits it only after the human approves (the main session commits it together with the first story).
+**Flow limits:** at most two stories between `Planned` and `Acceptance` at once. The product-owner flags any story older than its size suggests.
+
+### Story card (product-owner → human)
+Template, writing rules, Definition of Ready and Definition of Done (product side): [`invory-product-owner` skill](../.claude/skills/invory-product-owner/SKILL.md)
+§4–§7. In short, a card is the story ("As a … I want … so that …"), why it matters, acceptance criteria AC-1…n (Given / When / Then or a
+rule), an example with real numbers, what you will see (screens, exact wording, states), out of scope, and questions with options.
+Only you move a card to `Ready`.
+
+### Technical plan (`docs/plans/<id>-<slug>-plan.md`)
+
+The tech-lead writes this file in planning-only mode and it's committed with the story after you approve it.
 
 ```markdown
-# Story Plan: <title>
-> Status: draft | approved | in-progress | done
-> Date: YYYY-MM-DD
-> Stories: S-xx, S-xx
+# Technical plan: S-xx <story title>
+> Status: draft | approved | in-progress | done · Date: YYYY-MM-DD · Story card: docs/stories/S-xx-<slug>.md
 
 ## Scope
-What is in / out of scope.
+In / out (out of scope must match the card).
 
-## Subtasks
-| ID | Lane | Owner | Files | Lines est. | Commit label |
-|---|---|---|---|---|---|
+## AC traceability
+| AC | Technical card(s) | Test(s) that will prove it |
+|---|---|---|
+
+## Technical cards (slicing table)
+| # | Card id | AC | Lane | Files (exact paths) | Line budget | Tests allowed | Owner | Commit label |
+|---|---|---|---|---|---|---|---|---|
 
 ## Frozen contract
-Routes, props shape, `domain.ts` types the backend delivers and the frontend consumes.
-Settled before dispatch so both agents can build against a stable interface.
+Routes, props shape, `domain.ts` types the backend delivers and the frontend consumes. Settled before dispatch.
+
+## Approach and decisions
+Chosen design, alternatives rejected, ADR links. Technical decisions only.
 
 ## Execution order / waves
-Wave 1 (backend): …
-Wave 2 (frontend, unblocked after wave 1 types land): …
+Wave 1 (backend): … · Wave 2 (frontend, unblocked after wave 1 types land): …
 
-## Risks & open questions
-- Risk: …
-- Q (for human): Should X be Y?
+## Risks
+## Questions for the product-owner (behaviour, wording, scope)
 ```
 
-The main session presents a plan by linking the file and summarising the open questions. Execution does not start until the human says "approved" (or equivalent). Changes requested by the human go back to the tech-lead via `SendMessage`; the file is updated in-place before execution begins.
+The main session presents a plan by linking the file and summarising scope, cards, risks and questions. Execution doesn't start until you
+say "approved" (or equivalent). Changes go back to the tech-lead via `SendMessage`; questions about behaviour go to the product-owner.
 
 ### Rules of engagement
-1. **Contract first.** The contract (routes, props, `domain.ts`, PHP APIs) is frozen in the plan, and the backend writes the types first, so the
-   frontend can build components in parallel. Pages that need routes wait for the backend story.
+1. **Card first, then contract first.** No plan without an approved card (except tech-allowance items and S-29, whose plan predates cards). Inside a plan the contract (routes,
+   props, `domain.ts`, PHP APIs) is frozen before dispatch, and the backend writes the types first, so the frontend can build in parallel.
 2. **One shared working tree, so disjoint files per wave.** Agents touch only the files in their brief and run focused checks while others work.
    The tech-lead runs the full gates once the wave is complete.
-3. **Git:** one branch per phase (`phase/1-materials`), **one commit per acceptance criterion** (not per story), staged from that criterion's file list.
-   Conventional Commits (`feat(materials): …`, `test(costing): …`). The human approves every commit, push and merge. Agents never commit.
+3. **Git:** one branch per phase (`phase/4-release-readiness`), **one commit per acceptance criterion** (not per story), staged from that
+   criterion's file list. Conventional Commits (`feat(materials): …`, `test(costing): …`). You approve every commit, push and merge. Agents never commit.
 4. **Handoff reports are mandatory** and use the exact template in each agent file. The tech-lead re-runs every gate. Pasted output is not proof.
-5. **Disagreements** are settled by the tech-lead. Product questions (scope, wording, business rules) go up to the human through the main session.
-6. **Domain changes** (a formula, rounding, a new edge case) require the tech-lead to update `invory-costing-domain` first. Code follows the skill, never the other way round.
+5. **Disagreements:** technical ones are settled by the tech-lead; behaviour, UX, scope and priority by the product-owner, with you deciding
+   anything the card doesn't settle. Neither lead edits the other's documents.
+6. **Domain changes** (a formula, rounding, a new edge case) are product decisions: the product-owner states the rule in the card, you
+   decide, and the tech-lead updates `invory-costing-domain` before any code changes. Code follows the skill, never the other way round.
+7. **IDs are never reused.** The product-owner numbers stories `S-xx`; the tech-lead numbers technical cards `S-xx-a…` and debt `F-xx`.
+   Next free IDs sit at the top of `BACKLOG.md` and `TECH-DEBT.md`.
 
 ## Two-lane delivery (CRITICAL vs NON-CRITICAL)
 
-Every subtask is tagged by the tech-lead before dispatch. The tag drives the test budget, the pre-flight ack and the review template.
+Every technical card is tagged by the tech-lead before dispatch. The tag drives the test budget, the pre-flight ack and the review template.
 
 | Lane | What belongs | Pre-flight ack | Test budget | Review |
 |---|---|---|---|---|
@@ -171,6 +213,8 @@ The tech-lead publishes a **slicing table** per story in the phase plan (`docs/p
 - Handoffs report lines-of-diff + test count + runtime.
 
 ## Example prompts for the main session
-- "Start Phase 1." → the main session hands `docs/plans/phase-1-foundation-materials.md` to the tech-lead, who runs waves 1–3.
-- "Do only Wave 1 of Phase 1, then stop for review."
-- "Start S-04 and S-05." → the tech-lead writes the Phase 2 plan first, then dispatches.
+- "What's next?" → the product-owner proposes the next phase or the next stories, with cards to approve.
+- "Write the cards for Phase 4." → the product-owner refines S-30, S-08, S-31, S-32; you approve them; then the tech-lead plans.
+- "Plan S-31." → the tech-lead writes `docs/plans/S-31-…-plan.md` from the approved card, then stops for your approval.
+- "Approved, build it." → the tech-lead dispatches, reviews and returns a delivery report; then the product-owner prepares your acceptance check.
+- "Where are we?" → the product-owner refreshes `docs/STATUS.md`.

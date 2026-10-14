@@ -1,6 +1,6 @@
 # Phase 3 — Real backend (swap the preview fixtures for real tables)
 
-> Owner: **tech-lead** · Status: **all stories approved 2026-10-13, awaiting commit + PostgreSQL parity** (written 2026-10-13) · Branch: work continues on `main` (S-04 and the Wave A `wip` commit are there).
+> Owner: **tech-lead** · Status: **done** (verified 2026-10-14: committed `12c2a16` + `4a98c74` on 2026-10-13; PostgreSQL parity green the same day, 2 073 during S-28) (written 2026-10-13) · Branch: work continues on `main` (S-04 and the Wave A `wip` commit are there).
 > Stories: S-16-BE, S-25 (both started in the `wip` commit 2240e7d), S-14-BE, S-06-BE, S-07-BE, S-15-BE, S-17. S-04 is done (4e5b2ef).
 > Background and the database design: [phase-3-performance-spa-data.md](phase-3-performance-spa-data.md) §D, §F.3. Process: [TEAM.md](../TEAM.md).
 

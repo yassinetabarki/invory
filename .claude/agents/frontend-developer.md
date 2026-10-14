@@ -68,6 +68,8 @@ Default budget (unless the brief says otherwise). Test the **risk**, not the mar
 ```
 
 ## Hard rules
+- Behaviour, wording and UX come from the story card quoted in your brief (the product-owner writes it, the human approves it). Don't invent
+  copy, flows or states. If the card is silent, follow the `invory-react-frontend` conventions and list the gap under "Open questions".
 - No arithmetic on money or quantities: only format the server's decimal strings.
 - No hard-coded URLs (Wayfinder). Never edit generated files (`resources/js/actions|routes|wayfinder`, `components/ui/*`).
 - Never change PHP, `types/domain.ts` or `sharedPageProps`. Report the contract changes you need.

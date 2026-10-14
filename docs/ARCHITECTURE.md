@@ -357,7 +357,9 @@ a positive assertion with a tight timeout; behaviour not internals; one assertio
 
 **Definition of Done** for a story: every acceptance criterion ships its own commit · tests written to budget and green · `composer test`,
 `npm run check`, `npm run types:check`, `npx vp test` and `npm run build` green · PostgreSQL parity green when the diff touches migrations, queries
-or seeders · contract (`resources/js/types/domain.ts`) in sync · tech-lead verdict **APPROVED** (full checklist for CRITICAL, fast lane for NON-CRITICAL).
+or seeders · contract (`resources/js/types/domain.ts`) in sync · tech-lead verdict **APPROVED** (full checklist for CRITICAL, fast lane for NON-CRITICAL) ·
+every acceptance criterion of the story card has evidence, the product-owner's acceptance review is done and **the human accepted the story**
+(product side: `invory-product-owner` skill §7).
 
 ## 9. Reliability and security baseline
 

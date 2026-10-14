@@ -10,7 +10,8 @@ You are reviewing as the tech lead. Your job is to protect **correctness of the 
 
 ## 1. Establish scope
 - `git status` and `git diff --stat` (plus `git diff` for content) against the base branch, or against the last approved commit.
-- Re-read the story's acceptance criteria in `docs/BACKLOG.md` and the developer's handoff report.
+- Re-read the story card's acceptance criteria and UX notes (`docs/stories/<id>-<slug>.md`, written by the product-owner), the plan's AC
+  traceability, and the developer's handoff report. You check that the code **implements** the card; you don't change what the card asks for.
 - Read the lane you tagged in the brief (CRITICAL or NON-CRITICAL) and pick the matching checklist in §3.
 - Note any **contract changes** (Resources ↔ `resources/js/types/domain.ts`, route names) and check both sides moved together.
 - **Upgrade the lane** if the diff touches anything from the CRITICAL list in `docs/TEAM.md` (money/quantity, migration FK, policy, business-rule FormRequest, transaction, domain code, contract). A NON-CRITICAL tag can't shield CRITICAL code.
@@ -77,10 +78,12 @@ If all boxes are ticked and there are no CRITICAL markers, approve. Otherwise go
 **UX and accessibility**
 - [ ] Empty, loading and error states; flash toasts; confirm dialog before delete.
 - [ ] Labels, `aria-invalid`/`aria-describedby` on errors, keyboard operable, status not shown by colour alone, works at 375 px and in dark mode.
-- [ ] Copy uses the domain glossary (Material, Product, Composition, Can produce, Bottleneck).
+- [ ] Copy uses the domain glossary (Material, Product, Composition, Can produce, Bottleneck) and matches the story card's exact wording.
+- [ ] A behaviour or UX problem that the card doesn't cover is a **story candidate for the product-owner**, not a finding to fix in this round
+  (unless it breaks an acceptance criterion or the accessibility baseline).
 
 **Hygiene**
-- [ ] No `dd`, `dump`, `ray`, `console.log` or commented-out code. No TODO without a backlog reference. Generated files (Wayfinder, shadcn ui) are untouched.
+- [ ] No `dd`, `dump`, `ray`, `console.log` or commented-out code. No TODO without a `TECH-DEBT.md` (F-xx) or backlog (S-xx) reference. Generated files (Wayfinder, shadcn ui) are untouched.
 
 Optionally run the built-in `/security-review` on large or risky diffs.
 
@@ -89,7 +92,7 @@ Optionally run the built-in `/security-review` on large or risky diffs.
 |---|---|---|
 | **BLOCKER** | Wrong numbers, security hole, data loss risk, red gate, broken acceptance criterion | No |
 | **MAJOR** | Architecture violation, missing tests for a criterion, N+1, accessibility failure on a core flow | No |
-| **MINOR** | Naming, small duplication, missing edge-case test, copy issue | Yes, with a follow-up in the backlog |
+| **MINOR** | Naming, small duplication, missing edge-case test, copy issue | Yes, with a follow-up in `docs/TECH-DEBT.md` (or a story candidate for the product-owner if it is UX) |
 | **NIT** | Taste | Yes |
 
 Verdict: **APPROVED** only if there are zero BLOCKER and zero MAJOR findings.
@@ -120,7 +123,10 @@ Resources ↔ domain.ts: in sync / drift: <details>
 ### Budget check
 Lines: +<prod> / +<tests> (brief said ~<N>). Test count: <N>. Over budget / within / under — <reason if diverged>.
 
-### Follow-ups for backlog (MINOR/NIT accepted)
+### Follow-ups for docs/TECH-DEBT.md (MINOR/NIT accepted)
+- …
+
+### Story candidates for the product-owner (behaviour / UX)
 - …
 ```
 Also record recurring mistakes in your agent memory so that future reviews catch them faster.

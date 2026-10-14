@@ -71,6 +71,8 @@ Default budget by layer (unless the brief says otherwise). Test the **risk**, no
 ```
 
 ## Hard rules
+- Business rules come from `invory-costing-domain` and the acceptance criteria quoted in your brief. Don't invent a rule, a limit or a
+  user-facing message; list the gap under "Open questions".
 - No floats for money or quantities: BigDecimal, scale-4 strings. No business rules in controllers, Resources or accessors.
 - Never weaken or skip a test, lower the Larastan level or add baseline entries.
 - Never over-test to pad the handoff. Stay within the brief's test budget — ask to raise it if the risk needs more.

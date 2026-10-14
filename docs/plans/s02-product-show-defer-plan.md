@@ -1,6 +1,6 @@
 # Story Plan: Product show, deferred sales panels (S-02 → RL-02)
 
-> Status: **delivered 2026-10-13, awaiting commit** (Q-1 = RL-02 confirmed, Q-2 = skeleton gap accepted)
+> Status: **done** (verified 2026-10-14: committed `0241b7a`; extended by [fix-rl-02-product-defer-all.md](fix-rl-02-product-defer-all.md)) (Q-1 = RL-02 confirmed, Q-2 = skeleton gap accepted)
 > Date: 2026-10-13
 > Story: S-02 of [rendering-loading-plan.md](rendering-loading-plan.md) §4 "Skeleton / Progressive Loading"
 > Owner: tech-lead · To be executed by `backend-developer` (BE) and `frontend-developer` (FE)

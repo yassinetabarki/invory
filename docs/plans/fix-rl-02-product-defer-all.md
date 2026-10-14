@@ -1,6 +1,6 @@
 # Bug fix plan: product show page blocks navigation — defer all props (RL-02 fix)
 
-> Status: **in execution 2026-10-13** (mode PLAN + EXECUTE, fix direction decided by the main session; no human review between phases)
+> Status: **done** (verified 2026-10-14: committed `a9208d3` + `c809962`; the commit also deferred the dashboard KPIs). Ran in PLAN + EXECUTE mode, fix direction decided by the main session, no human review between phases
 > Date: 2026-10-13 · Branch: `fix/rl-02-product-show-loading` (HEAD `0241b7a`)
 > Owner: tech-lead · Executed by `backend-developer` (BE) ∥ `frontend-developer` (FE), one wave, one commit
 > Follows: [s02-product-show-defer-plan.md](s02-product-show-defer-plan.md) (RL-02, commit `0241b7a`)

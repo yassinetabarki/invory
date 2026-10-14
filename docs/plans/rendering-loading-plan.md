@@ -1,6 +1,6 @@
 # Rendering & Loading — Analysis & Plan
 
-> Status: **Approved — W-01 done, remainder pending**
+> Status: **mostly done** (verified 2026-10-14): W-01, P-01, P-02, RL-04, RL-01, RL-02 committed; Q-01 and Q-02 are covered by `QueryBudgetTest`. Open: §4 S-03 → backlog **S-33**, §4 S-05 → backlog **S-34**
 > Date: 2026-10-13
 > Author: main session (discussion draft)
 
@@ -188,7 +188,7 @@ Updated `CLAUDE.md` and `docs/TEAM.md` with the two-phase dispatch protocol and 
 |---|---|---|
 | Q1 | ✅ Resolved 2026-10-13: remove entirely. `invalidateCacheTags` only flushes the prefetch cache (not history), so it was a no-op after P-01. | P-02 |
 | Q2 | ✅ Resolved: committed `docs/plans/<story>-plan.md` file. | W-01 |
-| Q3 | ✅ Resolved 2026-10-13: kept eager. Should `stats` (KPI cards) on the dashboard be deferred or kept eager? Deferring means the KPI row shows skeletons for ~200ms; keeping them eager means the page waits for them before painting anything. | S-01 |
+| Q3 | ✅ Resolved 2026-10-13: kept eager. **Superseded 2026-10-14** (STATUS D-7): `a9208d3` deferred `stats` + `top_products` (group `primary`) and the human kept it. Should `stats` (KPI cards) on the dashboard be deferred or kept eager? Deferring means the KPI row shows skeletons for ~200ms; keeping them eager means the page waits for them before painting anything. | S-01 |
 | Q4 | ✅ Resolved 2026-10-13: pulse. Skeleton animation: pulse (`animate-pulse`, simpler) or shimmer (moving gradient, more familiar)? | S-04 |
 
 ---

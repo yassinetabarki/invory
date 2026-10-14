@@ -1,6 +1,6 @@
 # S-28 — Perf: speed up the dashboard endpoint
 
-> Owner: **tech-lead** · Status: **approved 2026-10-13, awaiting commit** (written 2026-10-13) · Branch: `main` (clean at intake, HEAD 57e215b).
+> Owner: **tech-lead** · Status: **done** (verified 2026-10-14: committed `9ea79f7`, `784ae8c`, `b2ea946`) (written 2026-10-13) · Branch: `main` (clean at intake, HEAD 57e215b).
 > Backend only: no page, prop, route or `domain.ts` change. No caching layer. `ProductCatalog` loading every product stays an accepted
 > limitation until S-23 / F-38.
 

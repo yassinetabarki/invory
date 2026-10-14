@@ -1,6 +1,6 @@
 # Story Plan: Skeleton primitives (S-04) + deferred dashboard panels (S-01)
 
-> Status: **delivered 2026-10-13, awaiting commit** (Q-1 = A, Q-2 and Q-3 confirmed)
+> Status: **done** (verified 2026-10-14: committed `8220fa9`, `3a2eeca`) (Q-1 = A, Q-2 and Q-3 confirmed)
 > Date: 2026-10-13
 > Stories: S-04 and S-01 of [rendering-loading-plan.md](rendering-loading-plan.md) §4 "Skeleton / Progressive Loading"
 > Owner: tech-lead · Executed by `frontend-developer` (FE) and `backend-developer` (BE)
