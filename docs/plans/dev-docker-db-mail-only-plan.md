@@ -253,3 +253,19 @@ H-6. **S-04 dev seed** (pending; now native): the migrations are already applied
 
 **TL memory (`project_review_gotchas.md`)**, written by the tech-lead in DK-d: replace the "After ADR-0007" entry with the native parity
 command and the dev-DB guard; drop the 9p/`laravel.test` profiling entries (history now lives in ADR-0007).
+
+## Amendment 2026-10-14 (human's environment correction, during execution)
+The human said Laragon (the application and its Apache) isn't used any more: the app is served by `php artisan serve` on :8000
+(`composer dev`); the Laragon PHP folder is only a PATH entry; `.env` already has `MAIL_HOST=127.0.0.1`, `MAIL_PORT=1026` (H-1 done).
+- **D-9, D-10 and runbook H-3 are void.** SETUP.md and README describe `composer dev` (or `php artisan serve` + `npm run dev`). `public/storage`
+  works with the built-in server through the junction (checked: a file under `storage/app/public` returns 200 on :8000).
+- **F-51 is void (won't do).** DK-b's `DevCommands::except('server')` and its test were reverted in fix round 1.
+- **ADR-0012** records native `artisan serve` and supersedes ADR-0007's "Laragon Apache" part.
+- **Performance** (S-18): the built-in server is single-process on Windows. Measured on `/login` (2026-10-14): ~0.31 s per request with
+  `opcache.enable_cli=0` (current php.ini), ~0.06 s with `opcache.enable_cli=1` (a throw-away server on :8091, stopped); 4 parallel requests
+  finish at 0.06 / 0.17 / 0.27 / 0.37 s. The trade-off is a product question in the delivery report.
+- Q4 (a): runbook H-6 (demo seed on the dev DB) is dropped.
+
+## Progress log
+- 2026-10-14: Wave 1 DK-a (BE) delivered; DK-c (TL) written. Wave 2 DK-b (BE) + `tests.yml` (TL) delivered. Fix round 1: F-51 reverted.
+  Next: TL full gates + parity, then the delivery report; DK-d (main session) after it.

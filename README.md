@@ -22,7 +22,9 @@ Costing and production-capacity tool for fashion products (clothing, shoes, bags
 
 ## Fresh installation
 
-These steps take you from a bare clone to a running app with demo data. The detailed environment setup (Laragon, Docker, OPcache, Apache virtual host) is in [docs/SETUP.md](docs/SETUP.md).
+These steps take you from a bare clone to a running app with demo data on Windows (they work the same on macOS and Linux).
+The app runs natively on PHP's built-in server; Docker runs only **PostgreSQL** and **Mailpit**
+([ADR-0012](docs/adr/0012-dev-docker-db-and-mail-only.md)). More detail: [docs/SETUP.md](docs/SETUP.md).
 
 ### Prerequisites
 
@@ -37,6 +39,13 @@ You need the following installed and reachable from your terminal before startin
 
 PHP must have these extensions enabled: `pdo_pgsql`, `pgsql`, `pdo_sqlite`, `sqlite3`, `intl`, `mbstring`, `zip`.  
 Check: `php -m | grep -E "pdo_pgsql|intl|zip"`
+
+**Windows:** install PHP and Composer natively (any source: the php.net zip, Laragon's `bin\php` folder, Scoop…) and make sure `php` and
+`composer` are on your PATH. Restart the terminal after changing the PATH.
+
+> **Shortcut:** after Step 3 (Docker running), `composer setup` does the rest of the installation in one command: `composer install`,
+> creates `.env` from `.env.example` (only if `.env` doesn't exist), `php artisan key:generate`, `php artisan migrate --force`,
+> `php artisan storage:link`, `npm install` and `npm run build`. Then go to Step 6 (demo data) and Step 7 (run).
 
 ---
 
@@ -58,7 +67,7 @@ cp .env.example .env
 php artisan key:generate
 ```
 
-Open `.env` and set at minimum:
+`.env.example` already points the app at the Docker services. These are the values it ships (keep them unless your ports differ):
 
 ```dotenv
 APP_NAME=Invory
@@ -71,25 +80,38 @@ DB_PORT=5432
 DB_DATABASE=laravel
 DB_USERNAME=sail
 DB_PASSWORD=password
+
+MAIL_MAILER=smtp
+MAIL_HOST=127.0.0.1
+MAIL_PORT=1026
+FORWARD_MAILPIT_PORT=1026
+FORWARD_MAILPIT_DASHBOARD_PORT=8026
 ```
 
-> The default credentials match the Docker Compose PostgreSQL service. Change them if your database uses different values.
+> The database credentials match the PostgreSQL service in `compose.yaml` (the user is called `sail` for historical reasons). `FORWARD_*`
+> are the host ports Docker publishes; `MAIL_PORT` must equal `FORWARD_MAILPIT_PORT`.
 
 ---
 
-### Step 3 — Start the database
+### Step 3 — Start PostgreSQL and Mailpit
 
 ```bash
 docker compose up -d
-```
-
-This starts PostgreSQL (port 5432) and Mailpit (port 8026). Wait a few seconds for PostgreSQL to be ready, then verify:
-
-```bash
 docker compose ps
 ```
 
-Both `invory-pgsql-1` and `invory-mailpit-1` should show **running**.
+`compose.yaml` has exactly two services, and both should show **running (healthy)**:
+
+| Service | Container | Host ports |
+|---|---|---|
+| `pgsql` (PostgreSQL 18) | `invory-pgsql-1` | 5432 |
+| `mailpit` | `invory-mailpit-1` | SMTP **1026**, inbox http://localhost:8026 |
+
+Mailpit uses 1026/8026, not its usual 1025/8025, because another local Mailpit (Laragon ships one) often holds those ports.
+The first start also creates the `testing` database used by the PostgreSQL test suite.
+
+> **Never run `docker compose down -v`**: `-v` deletes the volume that holds your database. To stop the services and keep the data,
+> use `docker compose stop`.
 
 ---
 
@@ -146,13 +168,27 @@ Apparel · Footwear · Bag · Accessory · Jewelry · Other
 
 ---
 
-### Step 5 — Seed demo data (optional but recommended)
+### Step 5 — Link public storage (photos)
+
+```bash
+php artisan storage:link
+```
+
+This makes `public/storage` point at `storage/app/public` (a junction on Windows, a symlink elsewhere). Without it, material and product
+photos don't load (404/403). `composer setup` runs it for you; running it again only prints "link already exists".
+
+---
+
+### Step 6 — Seed demo data (optional, new empty database only)
 
 ```bash
 php artisan db:seed
 ```
 
-This populates the app with realistic sample data so every screen has something to show:
+Run this **once, on a new, empty database**. It resets the stock and costs of the 12 demo materials to their demo values, and a second run fails
+because the test user already exists. Never run it (or `php artisan migrate:fresh`) on a database with real data.
+
+It populates the app with realistic sample data so every screen has something to show:
 
 | What | Count | Details |
 |---|---|---|
@@ -163,33 +199,29 @@ This populates the app with realistic sample data so every screen has something 
 
 **Demo materials** include four restock alerts (3 low stock, 1 out of stock) so the dashboard cards are populated on first load.
 
-**Demo products** include a worked costing example: *Denim Jacket* costs **35.75 TND/unit** and is limited by the metal shank button (900 in stock → 112 units producible).
-
-> The seeder is idempotent — running it again resets the 12 demo materials to their original values and skips any product that already exists (including soft-deleted ones).
+**Demo products** include the worked costing example: *Denim Jacket* costs **TND 35.754** per unit and can be produced **112** times,
+limited by the bottleneck **Metal shank button 17mm** (900 in stock, 8 per jacket).
 
 ---
 
-### Step 6 — Build the frontend and start the dev server
+### Step 7 — Run the app
 
 ```bash
-npm run build      # one-time build, or
-npm run dev        # live HMR during development (keeps running in the terminal)
+composer dev
 ```
 
----
+`composer dev` runs `php artisan dev`, which starts, in one terminal: `php artisan serve` on http://localhost:8000, the queue listener
+(`php artisan queue:listen`) and Vite (`npm run dev`, hot reload). Ctrl+C stops them all.
 
-### Step 7 — Serve the app
-
-**Option A — Laravel's built-in server (quickest, no extra config):**
+Alternative, in two terminals:
 
 ```bash
 php artisan serve --port=8000
+npm run dev
 ```
 
-Then open http://localhost:8000.
-
-**Option B — Laragon + Apache (recommended for this project, faster):**  
-See [docs/SETUP.md §4](docs/SETUP.md) for the one-time virtual-host setup.
+> PHP's built-in server handles **one request at a time on Windows**, so the dashboard and product pages fill their panels one after another.
+> Turning on `opcache.enable_cli=1` in `php.ini` makes each request several times faster ([docs/SETUP.md §4.3](docs/SETUP.md)).
 
 ---
 
@@ -200,16 +232,43 @@ Go to http://localhost:8000 and sign in with:
 - **Email:** `test@example.com`
 - **Password:** `password`
 
+Emails the app sends (account verification, password reset) arrive in Mailpit at http://localhost:8026.
+
 ---
 
 ### Running the test suite
 
+Run the gates **one after another** (in parallel, a long frontend test can time out):
+
 ```bash
-composer test      # Pint (style check) + Larastan + Pest on SQLite in-memory
-npx vp test        # Vitest (React component tests)
-npm run check      # Oxfmt + Oxlint
-npm run types:check
-npm run build
+composer test         # Pint (style check) + Larastan + Pest on SQLite in-memory (no Docker needed)
+npx vp test           # Vitest (React component tests)
+npm run check         # Oxfmt + Oxlint
+npm run types:check   # TypeScript
+npm run build         # production bundle
 ```
 
 All five gates must be green before committing.
+
+PostgreSQL parity (Docker running):
+
+```bash
+composer test:pgsql   # the same Pest suite against Docker PostgreSQL, database `testing` only
+```
+
+It never touches your dev database `laravel` (the run stops if the database isn't `testing`). Don't start two parity runs at once: they share
+the `testing` database.
+
+CI (GitHub Actions) runs on every push to `main` and `phase/**` and on pull requests: lint, types, Vitest, build and Pest on SQLite, plus the
+PostgreSQL suite on PHP 8.3 and 8.5.
+
+---
+
+### Troubleshooting
+
+| Problem | Fix |
+|---|---|
+| `docker compose up -d` fails: "port is already allocated" (1026, 8026 or 5432) | Something else holds the port. In `.env`, set free ports: `FORWARD_MAILPIT_PORT` and `MAIL_PORT` (SMTP), `FORWARD_MAILPIT_DASHBOARD_PORT` (inbox), or `FORWARD_DB_PORT` and `DB_PORT` (PostgreSQL). Then `php artisan config:clear` and `docker compose up -d` |
+| Photos return 403 or 404 | `php artisan storage:link` (Step 5) |
+| `php` or `composer`: command not found | Add PHP and Composer to your PATH, then restart the terminal |
+| Emails don't arrive in Mailpit | In `.env`: `MAIL_HOST=127.0.0.1` and `MAIL_PORT=1026` (the SMTP port, not the 8026 inbox). Then `php artisan config:clear`, and check `docker compose ps` shows `mailpit` running |

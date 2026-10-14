@@ -17,5 +17,5 @@ sub-cent unit costs.
 ## Consequences
 - ✅ Deterministic, testable numbers (golden tests use exact strings).
 - ⚠️ SQLite (fast test suite only) has no true decimal type. Values are read back through the `decimal:N` cast (BigDecimal rounding), so they
-  stay correct at scale 4. Dev (Sail) and production use PostgreSQL native decimals, and CI runs the suite on PostgreSQL too ([ADR-0005](0005-dev-environment-laragon-sail.md)).
+  stay correct at scale 4. Dev (Docker PostgreSQL, [ADR-0012](0012-dev-docker-db-and-mail-only.md)) and production use PostgreSQL native decimals, and CI runs the suite on PostgreSQL too ([ADR-0005](0005-dev-environment-laragon-sail.md)).
 - ⚠️ Multi-currency would need a currency column plus FX snapshots (phase 2+).

@@ -2,6 +2,9 @@
 
 - **Status:** Accepted · 2026-10-08 (the human chose option 1, decision Q1 of [phase-3 plan](../plans/phase-3-performance-spa-data.md); delivered by S-18)
 - **Amends:** [ADR-0005](0005-dev-environment-laragon-sail.md) ("Runtime = Sail"; its consequence "revisit if file I/O becomes painful")
+- **Superseded in part by [ADR-0012](0012-dev-docker-db-and-mail-only.md) (2026-10-14):** the app is served by `php artisan serve` (`composer dev`),
+  not Laragon's Apache; `laravel.test` and Sail are removed; the parity suite runs natively (`composer test:pgsql`). Leaving the container
+  (the 9p measurements below) still holds. The text below is history.
 
 ## Context
 The human reports slow page loads. Measurements on 2026-10-08 (plan §A):

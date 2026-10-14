@@ -17,7 +17,7 @@ The app then answers two questions for every product:
 
 | Layer | Choice | Notes |
 |---|---|---|
-| Runtime | PHP ≥ **8.3** (Laragon 8.3.33 native, Sail container 8.5), Node **24** | Code must run on the lowest PHP in use (8.3). |
+| Runtime | PHP ≥ **8.3** (native 8.3 in dev; CI tests 8.3 and 8.5), Node **24** | Code must run on the lowest PHP in use (8.3). |
 | Backend | **Laravel 13** | Laravel has no LTS since v6. v13 is the current major: bug fixes until Q3 2027, security fixes until Q1 2028. See [ADR-0001](adr/0001-stack.md). |
 | Glue | **Inertia 3** (`inertiajs/inertia-laravel`, `@inertiajs/react`) | Server-side routing and controllers; React renders pages. No separate REST API in the MVP. |
 | Frontend | **React 19** + **TypeScript** (strict) + **React Compiler** | From the official Laravel React starter kit. |
@@ -26,8 +26,8 @@ The app then answers two questions for every product:
 | Auth | **Laravel Fortify** (starter kit) | Login, registration, password reset, 2FA. Single company: no teams. |
 | Tooling (FE) | **Vite+** (`vp`): Vite 8, Oxlint, Oxfmt, **Vitest** | `npm run check`, `npm run types:check`, `npx vp test` |
 | Tooling (BE) | **Pest 4**, **Larastan**, **Pint** | `composer test` |
-| Database | **PostgreSQL** in Sail (dev) and in production. SQLite in-memory for the fast test suite only. | Write portable SQL only. CI also runs the suite on PostgreSQL. |
-| Dev environment | **Laravel Sail** (Docker: app, PostgreSQL, Mailpit) for the runtime + **Laragon** (native PHP + Composer) for tooling and agents | See [ADR-0005](adr/0005-dev-environment-laragon-sail.md) and [SETUP.md](SETUP.md). |
+| Database | **PostgreSQL** (Docker in dev, and production). SQLite in-memory for the fast test suite only. | Write portable SQL only. The parity suite runs on PostgreSQL locally (`composer test:pgsql`) and in CI. |
+| Dev environment | Native PHP 8.3 + Composer (app on `php artisan serve` :8000 via `composer dev`, tooling, agents) + **Docker Compose** for PostgreSQL and Mailpit only | See [ADR-0012](adr/0012-dev-docker-db-and-mail-only.md) and [SETUP.md](SETUP.md). |
 | AI tooling | **Laravel Boost** (MCP server + guidelines + skills) | Version-aware docs search, DB schema, logs. |
 
 ## 3. Architectural style
@@ -386,4 +386,4 @@ every acceptance criterion of the story card has evidence, the product-owner's a
 | Integrations / mobile | `/api/v1` with Sanctum, reusing Actions and Resources | Controllers are thin and Resources already exist |
 | Roles | Policies gain role checks (owner, planner, viewer) | Policies already wired everywhere |
 | Cost history | Snapshot `CostBreakdown` per product on change | The breakdown is already an immutable value object |
-| Containerised production | Production image (FrankenPHP/Octane or php-fpm + nginx); Sail stays dev-only | App is already developed and tested in containers on PostgreSQL |
+| Containerised production | Production image (FrankenPHP/Octane or php-fpm + nginx) | App is developed and tested on PostgreSQL; CI runs the suite on Linux |
