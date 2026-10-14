@@ -1,10 +1,11 @@
-# Technical plans (tech-lead)
+# Technical plans (tech-lead, until 2026-10-14)
 
-A plan turns one or more **approved story cards** (`docs/stories/`, product-owner) into **technical cards**: slicing table, frozen contract,
-waves, test budget, risks. The tech-lead writes it in planning-only mode, the human approves it, then the tech-lead executes it.
-Format: [TEAM.md §Technical plan](../TEAM.md#technical-plan-docsplansid-slug-planmd). Name new plans `<story-id>-<slug>-plan.md`, e.g. `S-31-deferred-retry-plan.md`.
+**No new plans go here.** Since 2026-10-14 the tech-lead writes the technical side of a story as a **Technical work** section inside the
+story card itself (`docs/stories/<id>-<slug>.md`): a few plain bullets when the work is simple, a detailed plan when it is complex. See
+[TEAM.md §One card, two authors](../TEAM.md#one-card-two-authors-docsstoriesid-slugmd).
 
-Plans are history once done: their commands and statuses reflect the day they were written. Only the status line is kept current.
+The plans below are history: their commands and statuses reflect the day they were written. Only the status line is kept current, and work
+still running from a plan (S-29) keeps using it.
 
 | Plan | Stories | Status (verified 2026-10-14) |
 |---|---|---|

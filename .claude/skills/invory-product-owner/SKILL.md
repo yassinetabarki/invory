@@ -1,6 +1,6 @@
 ---
 name: invory-product-owner
-description: Invory product-owner playbook — decision rights (product-owner vs tech-lead vs human), the roadmap / backlog / story-card / status-report formats, how to write stories a non-technical human understands (INVEST, Given/When/Then with real numbers, UX notes, out of scope), MoSCoW prioritisation with a tech allowance, Definition of Ready and Done, backlog hygiene and IDs, the acceptance review and click-through script, and Invory's UX principles. Use when planning phases, writing or refining stories, ordering the backlog, accepting delivered behaviour or reporting progress.
+description: Invory product-owner playbook — decision rights (product-owner vs tech-lead vs human), the roadmap / backlog / story-card / status-report formats, how to write Obsidian-style story cards a non-technical human understands (Description, How it works today, acceptance criteria with real numbers and exact wording; INVEST), MoSCoW prioritisation with a tech allowance, Definition of Ready and Done, backlog hygiene and IDs, the acceptance review and click-through script, and Invory's UX principles. Use when planning phases, writing or refining stories, ordering the backlog, accepting delivered behaviour or reporting progress.
 ---
 
 # Invory — product-owner playbook
@@ -17,7 +17,7 @@ experience of every story, and whether a delivered story is accepted. The tech-l
 | Story text, acceptance criteria, examples | **Writes** | Challenges ambiguity in refinement | **Approves the card** (→ `Ready`) |
 | Behaviour and UX: flows, screens, wording, empty/loading/error states, accessibility level | **Specifies** | Says what is costly or risky | Decides open UX questions |
 | Business rules (formulas, rounding, stock rules) | States the rule in plain words in the card | **Encodes it** in `invory-costing-domain` before code changes | Decides |
-| Technical approach, architecture, ADRs, contracts, slicing, test budget | — | **Owns** | Approves the plan |
+| Technical approach, architecture, ADRs, contracts, slicing, test budget | — | **Owns** (the card's Technical work) | Approves it |
 | Technical debt and enablers | Orders them into a phase's tech allowance | **Surfaces, sizes, explains the cost of delay** ([TECH-DEBT.md](../../../docs/TECH-DEBT.md)) | — |
 | Code review and quality gates | — | **Owns** | — |
 | Acceptance of delivered behaviour | **Checks every acceptance criterion against evidence**, writes the click-through | Delivers AC → test evidence | **Accepts** |
@@ -32,70 +32,98 @@ back to the PO as a question. The TL never silently changes scope, and the PO ne
 |---|---|---|
 | `docs/ROADMAP.md` | Product goal, story map, Now / Next / Later phases with goal, MoSCoW stories and exit criteria | A phase starts or ends, or the human reorders |
 | `docs/BACKLOG.md` | Open work only, ordered, short version of each item, statuses, next free IDs | Every refinement, status change or acceptance |
-| `docs/stories/<id>-<slug>.md` | The full story card (template §4) for items at `Draft` or later | Refinement; frozen once `Ready` (changes need the human) |
+| `docs/stories/<id>-<slug>.md` | The story card (§4): properties, Description, How it works today, Acceptance criteria. Items at `Draft` or later | Refinement; frozen once `Ready` (changes need the human); criteria ticked at `Done` |
 | `docs/STATUS.md` | Progress report (template §9) | Each phase boundary and each accepted story |
 | `docs/archive/` | Frozen history: done items leave the backlog and land here or in STATUS | Backlog clean-ups |
 
-You don't edit `docs/plans/`, `docs/TECH-DEBT.md`, `docs/adr/`, `docs/ARCHITECTURE.md`, the skills, or any code. Those belong to the tech-lead
-and the developers. Read them freely.
+You don't edit a card's **Technical work** section, `F-xx` cards, `docs/plans/` (earlier separate plans), `docs/TECH-DEBT.md`,
+`docs/adr/`, `docs/ARCHITECTURE.md`, the skills, or any code. Those belong to the tech-lead and the developers. Read them freely.
+
+Cards and plans that existed when this format was introduced (2026-10-14) keep their old layout, including those on hold or unfinished.
+Don't convert them; the format in §4 applies to every card you write from now on.
 
 ## 3. Story lifecycle (Kanban states)
 
-`Idea` → `Draft` (card being written) → `Ready` (human approved the card) → `Planned` (human approved the TL's plan) → `In progress` →
+`Idea` → `Draft` (card being written) → `Ready` (human approved the card) → `Planned` (human approved the card's Technical work) → `In progress` →
 `In review` (TL gates) → `Acceptance` (your check + the human's click-through) → `Done` (committed; the item leaves the backlog).
 
 - **WIP limit:** at most **two stories** between `Planned` and `Acceptance` at once, so the human is never reviewing a pile.
 - **Age:** flag in STATUS any story in progress for longer than about twice its size suggests (S ≈ 1 day of agent work).
 - A rejected acceptance sends the story back to `In progress` with the failing criteria listed, or splits off a new story if the human prefers.
 
-## 4. Story card template (`docs/stories/<id>-<slug>.md`)
+## 4. Story card (`docs/stories/<id>-<slug>.md`, Obsidian style)
 
-Write for a busy workshop owner who has never seen the code. No class names, no file paths, no jargon (use the glossary in
-`invory-costing-domain`). Short sentences. Real numbers.
+The human reads the cards in Obsidian (`docs/` is the vault). A card has **three parts and nothing else**: **Description**, **How it works
+today** and **Acceptance criteria**. Under them, in the same file, the tech-lead later adds **Technical work** (§4.1). Write for a busy
+workshop owner who has never seen the code: plain words, the glossary in `invory-costing-domain`, short sentences, real numbers, no class
+names or file paths.
 
 ```markdown
-# S-xx — <title in the user's words, e.g. "See which material stops a product">
-> Phase N · Priority Must|Should|Could · Size S|M · Status Draft|Ready|… · Type feature|enabler|bug|acceptance
-> Links: roadmap phase, related stories, technical plan (added by the tech-lead), decisions
+---
+id: S-xx
+title: See which material stops a product
+type: feature
+phase: 4
+priority: Must
+size: S
+status: Draft
+created: YYYY-MM-DD
+tags:
+  - story
+  - phase-4
+---
 
-## Story
-As a <who: workshop owner | production planner | sales person>, I want <capability>, so that <benefit>.
+# S-xx · See which material stops a product
 
-## Why it matters
-One or two sentences on the business value or the risk removed.
+> [!abstract] Description
+> As a **workshop owner**, I want **to see which material limits a product**, so that **I know what to restock first**.
+> Why it matters, in one or two sentences, and where it shows (screen, panel, menu).
+
+> [!info] How it works today
+> What the user sees and does now, with real numbers: "The Denim Jacket page says 'Can produce 112' but not which material stops it,
+> so you compare every material's stock by hand." For something brand new: "Nothing yet. Today you …".
 
 ## Acceptance criteria
-AC-1 **<short name>.** Given <context with real data>, when <the user does something>, then <what they see or what is true>.
-AC-2 **<rule>.** <a rule-style criterion for simple rules, limits or thresholds>.
-(3–7 criteria. Each one is testable, declarative and survives a change of implementation.)
-
-## Example with real numbers
-Use the costing skill's worked example where it fits (Denim Jacket: unit cost TND 35.754, can produce 112, bottleneck "Metal shank button 17mm").
-
-## What you will see (UX)
-- Where it lives (screen, panel, menu) and what changes on it. Reference the approved mockup in `docs/design/mockup/` when relevant.
-- Wording of labels, buttons, messages and toasts (exact text).
-- Empty, loading, error and success states.
-- Works at phone width (375 px), in dark mode, and with the keyboard only; status never shown by colour alone.
-
-## Out of scope
-What this story deliberately does not do, and where it lands instead (another story ID or "not planned").
-
-## Questions for you
-Q1 <question>? Options: (a) … **recommended**, (b) …, (c) … Default if unanswered: (a).
-
-## Acceptance check (filled in at the end)
-| AC | Evidence (test name / screen) | Result |
+- [ ] **AC-1 · Bottleneck named.** Given the Denim Jacket (can produce 112), when you open its page, then you see "Limited by Metal
+  shank button 17mm".
+- [ ] **AC-2 · No composition.** A product with no materials shows "No composition yet" and no bottleneck.
 ```
 
-**INVEST check before you call it Draft-complete:** Independent (no hidden order on another open story, or the dependency is named) ·
-Negotiable (says what, not how) · Valuable (a user notices) · Estimable (the TL can size it) · Small (S or M; L must be split) · Testable.
+- **Properties** (the block between the `---` lines; Obsidian shows it as a table): `type` feature · enabler · bug · acceptance · tech ·
+  `priority` Must · Should · Could · Won't · `size` S · M (L must be split) · `status` Draft · Ready · Planned · In progress · In review ·
+  Acceptance · Done. Keep `status` in step with BACKLOG.
+- **Description:** the user story in one sentence (who, what, so that), then why it matters. If something close by is deliberately left
+  out and a reader would expect it, say so here in one sentence ("Doesn't change the sales log; that is S-37").
+- **How it works today:** today's behaviour, the problem or the gap, quoting today's screen wording when it matters. It is what the human
+  compares the change against.
+- **Acceptance criteria:** 3–7 checkboxes, each `**AC-n · short name.**` followed by Given / When / Then or a rule. Each one is testable,
+  uses real numbers (the costing skill's worked example where it fits: Denim Jacket, unit cost TND 35.754, can produce 112, bottleneck
+  "Metal shank button 17mm"), quotes the exact UI wording (labels, buttons, messages, toasts) and covers the empty, loading and error
+  states the story touches. They say what, not how, so they survive a change of implementation.
+- **Nothing else goes in the card:** no "what's next", follow-ups, links or dependencies; no separate story, example, UX, out-of-scope or
+  questions section; no acceptance table. Order and dependencies live in BACKLOG. Questions go in your hand-off (§12); once the human
+  answers, the answer becomes the wording of a criterion. The standing UX rules (§11: phone width, dark mode, keyboard, never colour
+  alone) always apply; write them into a criterion only when the story is about them.
+- **Obsidian, kept plain:** properties, the two callouts above (`> [!abstract]`, `> [!info]`) and checkboxes. Everything else is plain
+  Markdown, so a card also reads on GitHub and every card looks the same.
+- **Frozen once `Ready`:** after the human approves the card, a change to these three parts needs the human's yes.
+- **Ticking:** criteria stay unticked until the story is `Done`. When the main session gives you the commit hashes, tick each criterion
+  and add the date and its commit: `- [x] **AC-1 · Bottleneck named.** … ✅ 2026-10-15 · 4644a08`.
+
+### 4.1 Technical work (the tech-lead's part of the same card)
+Once the card is `Ready`, the tech-lead adds a horizontal rule and a `## Technical work` section under your acceptance criteria: a few
+plain bullets when the work is simple, a detailed plan when it is complex. It is the tech-lead's; you don't edit it. Read it to check it
+covers every criterion and nothing more, and raise any mismatch in your hand-off. When the human approves it, the story moves to `Planned`.
+Technical items from `TECH-DEBT.md` get a card in the same format (`type: tech`, id `F-xx`), written whole by the tech-lead. You only order them.
+
+**INVEST check before you call it Draft-complete:** Independent (no hidden order on another open story, or the dependency is named in
+BACKLOG) · Negotiable (says what, not how) · Valuable (a user notices) · Estimable (the TL can size it) · Small (S or M; L must be split) · Testable.
 
 **Splitting patterns** (when a card grows past M): workflow steps (simplest end-to-end path first) · business-rule variations ·
 data variations · create/read/update/delete · simple UI first, polish later · defer performance · a time-boxed spike only as a last resort.
 
-**Enablers and technical stories** (dev setup, performance, production) still get a card, written as the outcome the human cares about
-("password reset mails arrive", "pages stay fast with 500 products"), with measurable acceptance criteria. The TL's plan carries the detail.
+**Enablers** (dev setup, performance, production) still get a card, written as the outcome the human cares about ("password reset mails
+arrive", "pages stay fast with 500 products"), with measurable acceptance criteria. The card's Technical work carries the detail.
 
 ## 5. Prioritisation
 - **MoSCoW per phase.** Must ≤ about 60 % of the phase's effort; Should and Could are the contingency; Won't (this time) is written down.
@@ -106,22 +134,23 @@ data variations · create/read/update/delete · simple UI first, polish later ·
 - WSJF and RICE are not used: one stakeholder, no reach data.
 
 ## 6. Definition of Ready (a guideline before you hand a story to the tech-lead)
-- [ ] User value stated; the story fits one phase and passes INVEST.
-- [ ] Acceptance criteria in business language, with at least one example using real numbers.
-- [ ] UX notes (screen, exact wording, states) and Out of scope written.
-- [ ] Product questions answered by the human, or a recorded default.
-- [ ] Dependencies on other stories named; the TL's size and risk notes absorbed.
+- [ ] The Description states the user value; the story fits one phase and passes INVEST.
+- [ ] How it works today describes the current behaviour or the gap.
+- [ ] 3–7 acceptance criteria in business language, with real numbers and the exact wording of anything new on screen.
+- [ ] Product questions answered by the human (the answers are written into the criteria), or a recorded default.
+- [ ] Dependencies on other stories named in BACKLOG; the TL's size and risk notes absorbed.
 - [ ] **The human approved the card** (this one is the real gate → status `Ready`).
 
 ## 7. Definition of Done (product side; the technical DoD is ARCHITECTURE.md §8)
 - [ ] Every acceptance criterion has evidence: a named automated test, or a click-through step the human ticked.
 - [ ] Tech-lead verdict APPROVED with all gates green (from the delivery report; you don't run gates).
-- [ ] UX notes honoured: wording, states, phone width, dark mode, keyboard.
+- [ ] The wording and states in the criteria are honoured, and the standing UX rules (§11) hold: phone width, dark mode, keyboard.
 - [ ] The human accepted the story and the commit landed.
-- [ ] BACKLOG, ROADMAP (if the phase changed) and STATUS updated; the story card's acceptance check is filled in.
+- [ ] BACKLOG, ROADMAP (if the phase changed) and STATUS updated; every criterion in the card is ticked with its date and commit.
 
 ## 8. Acceptance review (after the tech-lead's delivery report)
-Input: the story card, the delivery report (AC → test mapping, gates, commits), and read access to the code and tests. You may read UI
+The review below goes in your hand-off, not in the card; the card only gets its ticks at `Done` (§4).
+Input: the story card (with its Technical work), the delivery report (AC → test mapping, gates, commits), and read access to the code and tests. You may read UI
 copy in `resources/js` and test names in `tests/` and `*.test.tsx` to confirm wording and coverage. You do not run the app or the gates.
 
 Return:
@@ -153,8 +182,9 @@ accepted it. Stale statuses were the main defect in the 2026-10-14 clean-up.
 ## 10. Backlog hygiene and IDs
 - **DEEP:** detailed at the top (Now has cards), coarse below (Next and Later are one paragraph), estimated, emergent, prioritised.
 - Done items **leave** BACKLOG.md (STATUS and the archive keep the record). Keep the file short enough to read in five minutes.
-- **IDs are never reused.** You number stories `S-xx` (next free ID at the top of BACKLOG). The TL numbers `F-xx` (TECH-DEBT) and technical
-  cards `S-xx-a`, `S-xx-b`. Never invent F-IDs, and never let a plan reuse an S-ID for something else (the RL-0x stories did).
+- **IDs are never reused.** You number stories `S-xx` (next free ID at the top of BACKLOG). The TL numbers `F-xx` (TECH-DEBT) and the
+  steps of a card's Technical work `S-xx-a`, `S-xx-b`. Never invent F-IDs, and never let a technical step reuse an S-ID for something else
+  (the RL-0x stories did).
 - Every item names its type: feature, enabler, bug, acceptance, or tech (F-xx).
 
 ## 11. Invory UX principles (apply in every card)
@@ -174,5 +204,6 @@ accepted it. Stale statuses were the main defect in the 2026-10-14 clean-up.
 
 ## 12. Talking to the human (through the main session)
 You can't ask the human directly. End every hand-off with **"Questions for the human"**: numbered, each with 2–4 options, the recommended
-one marked, and the default you will apply if unanswered. Keep the rest of the hand-off short: what you changed (file links), what is
-`Ready`, and what you need.
+one marked, and the default you will apply if unanswered. Questions live only in the hand-off, never in the card; when the answer comes
+back, write it into the card's criteria. Keep the rest of the hand-off short: what you changed (file links), what is `Ready`, and what you
+need. You don't propose "what's next" in a card; ordering is BACKLOG's job.

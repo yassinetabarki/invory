@@ -5,7 +5,7 @@ and the **materials that compose them**. For every product it shows the **unit c
 plus the **bottleneck material**.
 
 - Product: [docs/ROADMAP.md](docs/ROADMAP.md) · Backlog: [docs/BACKLOG.md](docs/BACKLOG.md) · Status: [docs/STATUS.md](docs/STATUS.md) · Stories: `docs/stories/`
-- Technical: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · Decisions: [docs/adr/](docs/adr/) · Plans: [docs/plans/](docs/plans/README.md) · Tech debt: [docs/TECH-DEBT.md](docs/TECH-DEBT.md)
+- Technical: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · Decisions: [docs/adr/](docs/adr/) · Earlier plans: [docs/plans/](docs/plans/README.md) · Tech debt: [docs/TECH-DEBT.md](docs/TECH-DEBT.md)
 - Team and workflow: [docs/TEAM.md](docs/TEAM.md) · Setup: [docs/SETUP.md](docs/SETUP.md)
 - Business maths (single source of truth): [.claude/skills/invory-costing-domain/SKILL.md](.claude/skills/invory-costing-domain/SKILL.md)
 
@@ -17,13 +17,18 @@ Dev environment: **native PHP 8.3 + Composer** serves the app (`composer dev` �
 
 ## How work gets done: two leads, you are the liaison
 The **product-owner** owns *what* and *why* (phases, backlog order, story cards, behaviour and UX, acceptance, progress).
-The **tech-lead** owns *how* (technical plans, dispatching developers, code review and gates, architecture, ADRs, tech debt, CI).
-The main session **does not write feature code, stories or plans, and does not brief the developers directly**. Subagents can't ask the
+The **tech-lead** owns *how* (the Technical work in each card, dispatching developers, code review and gates, architecture, ADRs, tech debt, CI).
+The main session **does not write feature code, stories or Technical work, and does not brief the developers directly**. Subagents can't ask the
 human questions, so you carry their questions to the human with `AskUserQuestion`. Full workflow and decision rights: [docs/TEAM.md](docs/TEAM.md).
+
+**One card per story, two authors** (`docs/stories/<id>-<slug>.md`, Obsidian style, read by the human in Obsidian): the product-owner writes
+only **Description**, **How it works today** and **Acceptance criteria**; the tech-lead then adds **Technical work** under them in the same
+file (a few plain bullets when simple, a detailed plan when complex). Questions travel in hand-offs, never inside the card. Cards and plans
+that existed on 2026-10-14 (including on-hold or unfinished ones) keep their old layout and aren't converted.
 
 ```
 human ⇄ main session ──► product-owner   0. REFINE: phase proposal, story cards docs/stories/<id>-<slug>.md   ◄── human approves cards
-                     ──► tech-lead       1. PLAN (planning-only): docs/plans/<id>-<slug>-plan.md            ◄── human approves plan
+                     ──► tech-lead       1. PLAN (planning-only): "Technical work" added in the same card      ◄── human approves it
                      ──► tech-lead       2. BUILD: dispatch ──► backend-developer ∥ frontend-developer, review, delivery report
                      ──► product-owner   3. ACCEPT: AC check + click-through script                          ◄── human accepts
                      main session        4. CLOSE: commit per acceptance criterion (human's yes) ──► product-owner updates BACKLOG/STATUS
@@ -38,12 +43,14 @@ human ⇄ main session ──► product-owner   0. REFINE: phase proposal, stor
 
 ### Step 1 — Plan (tech-lead, planning-only)
 3. Dispatch the **tech-lead** (`subagent_type: "tech-lead"`) in **planning-only mode** with the `Ready` card paths (or the `TECH-DEBT.md` IDs
-   of the phase's tech allowance): it writes the technical plan and returns without dispatching. Run it in the background.
-4. Present the plan: link it, summarise technical cards, risks and questions. Route behaviour/UX/scope questions to the product-owner,
-   product decisions to the human. Revisions go back to the same tech-lead with `SendMessage`. Wait for the human's approval.
+   of the phase's tech allowance): it adds the **Technical work** section under each card's acceptance criteria (for a tech-allowance item
+   it writes a whole `F-xx` card) and returns without dispatching. Run it in the background.
+4. Present it: link the card, say whether the tech-lead rated the work simple or complex, and summarise its steps, risks and questions.
+   Route behaviour/UX/scope questions to the product-owner, product decisions to the human. Revisions go back to the same tech-lead with
+   `SendMessage`. Wait for the human's approval.
 
 ### Step 2 — Build (tech-lead, execute)
-5. `SendMessage` the same tech-lead: "Plan approved. Execute it." It dispatches, reviews every handoff by running all gates, loops fixes
+5. `SendMessage` the same tech-lead: "Technical work approved. Execute it." It dispatches, reviews every handoff by running all gates, loops fixes
    (max 3 rounds) and returns a **delivery report** with an AC → test evidence table.
 
 ### Step 3 — Accept (product-owner)
@@ -52,7 +59,8 @@ human ⇄ main session ──► product-owner   0. REFINE: phase proposal, stor
 
 ### Step 4 — Close
 7. When the human accepts: **ask before committing**, then commit per acceptance criterion, staging only the files the report lists
-   (Conventional Commits, branch per phase), and tell the product-owner the commit hashes so it updates BACKLOG, STATUS and ROADMAP.
+   (Conventional Commits, branch per phase), and tell the product-owner the commit hashes so it ticks the card's criteria and updates
+   BACKLOG, STATUS and ROADMAP.
 
 Don't do the developers', the tech-lead's or the product-owner's work yourself, even if it looks quick. If an agent is blocked
 (environment, permissions), tell the human. Process documents (CLAUDE.md, `.claude/**`) change only when the human asks.

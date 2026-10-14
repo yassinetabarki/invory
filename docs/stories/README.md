@@ -1,12 +1,19 @@
-# Story cards (product-owner)
+# Story cards (product-owner + tech-lead)
 
-One file per story, `<id>-<slug>.md` (e.g. `S-31-deferred-retry.md`), written by the **product-owner** for the human to read and approve.
-Template, writing rules, Definition of Ready and Done: [`invory-product-owner` skill](../../.claude/skills/invory-product-owner/SKILL.md) §4–§7.
+One file per story, `<id>-<slug>.md` (e.g. `S-31-deferred-retry.md`), styled for Obsidian (`docs/` is the vault). Each card has two parts:
+
+1. **The product-owner's part**, for the human to read and approve: properties, **Description**, **How it works today** and
+   **Acceptance criteria**, and nothing else. Rules: [`invory-product-owner` skill](../../.claude/skills/invory-product-owner/SKILL.md) §4–§7.
+2. **Technical work**, added by the **tech-lead** under the criteria after a horizontal rule: a few plain bullets when the work is simple,
+   a detailed plan when it is complex. Rules: [tech-lead agent](../../.claude/agents/tech-lead.md) §Technical work.
 
 - A card is `Draft` while the product-owner writes it, and `Ready` once **the human approves it**. Only `Ready` cards go to the tech-lead.
-- After `Ready`, a change to the acceptance criteria needs the human's yes.
-- The tech-lead links its technical plan (`docs/plans/<id>-<slug>-plan.md`) at the top of the card. The product-owner fills in the
-  card's "Acceptance check" at the end.
+- After `Ready`, a change to the acceptance criteria needs the human's yes. The story is `Planned` once the human approves its Technical work.
+- Questions from either lead come to the human through the main session, never inside the card.
+- When a story is `Done`, the product-owner ticks each criterion with its date and commit.
+- Technical items from `TECH-DEBT.md` get an `F-xx-<slug>.md` card in the same format, written whole by the tech-lead.
+- Cards that existed on 2026-10-14, including those on hold or unfinished, keep their old layout (story, UX, out of scope, questions,
+  acceptance check, plan in `docs/plans/`). They aren't converted.
 
 | Card | Phase · priority · size | Status |
 |---|---|---|

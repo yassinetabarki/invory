@@ -10,8 +10,8 @@ You are reviewing as the tech lead. Your job is to protect **correctness of the 
 
 ## 1. Establish scope
 - `git status` and `git diff --stat` (plus `git diff` for content) against the base branch, or against the last approved commit.
-- Re-read the story card's acceptance criteria and UX notes (`docs/stories/<id>-<slug>.md`, written by the product-owner), the plan's AC
-  traceability, and the developer's handoff report. You check that the code **implements** the card; you don't change what the card asks for.
+- Re-read the story card (`docs/stories/<id>-<slug>.md`): the product-owner's acceptance criteria with their exact wording, your own
+  Technical work under them (steps and the AC → test mapping; for older stories, the plan in `docs/plans/`), and the developer's handoff report. You check that the code **implements** the card; you don't change what the card asks for.
 - Read the lane you tagged in the brief (CRITICAL or NON-CRITICAL) and pick the matching checklist in §3.
 - Note any **contract changes** (Resources ↔ `resources/js/types/domain.ts`, route names) and check both sides moved together.
 - **Upgrade the lane** if the diff touches anything from the CRITICAL list in `docs/TEAM.md` (money/quantity, migration FK, policy, business-rule FormRequest, transaction, domain code, contract). A NON-CRITICAL tag can't shield CRITICAL code.
