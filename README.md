@@ -37,8 +37,10 @@ You need the following installed and reachable from your terminal before startin
 | Node | 20 | `node -v` |
 | Docker Desktop | any recent | `docker version` |
 
-PHP must have these extensions enabled: `pdo_pgsql`, `pgsql`, `pdo_sqlite`, `sqlite3`, `intl`, `mbstring`, `zip`.  
-Check: `php -m | grep -E "pdo_pgsql|intl|zip"`
+PHP must have these extensions enabled: `pdo_pgsql`, `pgsql`, `pdo_sqlite`, `sqlite3`, `intl`, `mbstring`, `zip`, `sockets`.  
+Check: `php -m | grep -E "pdo_pgsql|intl|zip|sockets"`
+
+`sockets` is needed by every Pest run (not only the browser test): since S-08 the browser plugin opens a socket at the end of each run.
 
 **Windows:** install PHP and Composer natively (any source: the php.net zip, Laragon's `bin\php` folder, Scoop…) and make sure `php` and
 `composer` are on your PATH. Restart the terminal after changing the PATH.
@@ -185,22 +187,25 @@ photos don't load (404/403). `composer setup` runs it for you; running it again 
 php artisan db:seed
 ```
 
-Run this **once, on a new, empty database**. It resets the stock and costs of the 12 demo materials to their demo values, and a second run fails
-because the test user already exists. Never run it (or `php artisan migrate:fresh`) on a database with real data.
+Use this for a **new, empty database only**. Never run it on a database with your own data: it resets the stock and costs of the 12 demo
+materials to their demo values.
 
-It populates the app with realistic sample data so every screen has something to show:
+It is safe to run again: nothing is created twice, a demo product you deleted stays deleted, and the demo sales are added only when there are
+no sales yet.
 
-| What | Count | Details |
-|---|---|---|
-| User account | 1 | email `test@example.com`, password `password` |
-| Materials | 12 | fabrics, leather, trims, hardware, thread, labels, sole |
-| Products | 7 | apparel, footwear, bags, accessories; mix of active and draft |
-| Sales | 60 | spread across the demo products |
+It populates the app with realistic sample data so every screen has something to show. Sign in with `test@example.com` and password
+`password`, and you will see:
 
-**Demo materials** include four restock alerts (3 low stock, 1 out of stock) so the dashboard cards are populated on first load.
+- **12 materials**, inventory value **TND 10,544.300**, and **4** that need a restock (3 low, 1 out of stock).
+- **7 products**, including *Denim Jacket* at unit cost **TND 35.754**, can produce **112**, bottleneck **Metal shank button 17mm**, margin
+  **59.83%** at TND 89.000.
+- **60 sales**. The dashboard's "Last 30 days" shows Total sales **TND 16,850.000** from **48 sales**, **296** units sold, and the top 5 by
+  units: Classic White T-shirt 142, Denim Jeans 5-pocket 64, Denim Jacket 38, Leather Belt 31, Leather Tote 12.
+- A history on every demo material: each one has its "Created" entry, and three of them (Metal shank button 17mm, Woven brand label and
+  Denim 12oz Indigo) also have a restock and a price change.
 
-**Demo products** include the worked costing example: *Denim Jacket* costs **TND 35.754** per unit and can be produced **112** times,
-limited by the bottleneck **Metal shank button 17mm** (900 in stock, 8 per jacket).
+The worked costing example: *Denim Jacket* costs **TND 35.754** per unit and can be produced **112** times, limited by the bottleneck
+**Metal shank button 17mm** (900 in stock, 8 per jacket).
 
 ---
 
@@ -246,9 +251,17 @@ npx vp test           # Vitest (React component tests)
 npm run check         # Oxfmt + Oxlint
 npm run types:check   # TypeScript
 npm run build         # production bundle
+composer test:browser # the golden path in Chromium (needs the build above)
 ```
 
-All five gates must be green before committing.
+All six gates must be green before committing.
+
+`composer test:browser` runs one browser test, from sign-in to a sale on the dashboard, in Chromium, on its own throwaway database. Run it
+after `npm run build`: it loads the built assets. Install the browser once first (about 110 MB, not part of `composer setup`):
+
+```bash
+npx playwright install chromium
+```
 
 PostgreSQL parity (Docker running):
 
@@ -260,7 +273,7 @@ It never touches your dev database `laravel` (the run stops if the database isn'
 the `testing` database.
 
 CI (GitHub Actions) runs on every push to `main` and `phase/**` and on pull requests: lint, types, Vitest, build and Pest on SQLite, plus the
-PostgreSQL suite on PHP 8.3 and 8.5.
+PostgreSQL suite on PHP 8.3 and 8.5. The golden-path browser test runs in its own `golden-path` job.
 
 ---
 

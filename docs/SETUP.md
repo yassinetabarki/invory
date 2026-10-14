@@ -15,7 +15,8 @@ Only PHP 8.3 runs locally. CI also runs the suite on PHP 8.5 (`.github/workflows
 **PHP ≥ 8.3 and Composer, natively.** Laravel 13 supports PHP 8.3, 8.4 and 8.5. Any Windows build works (php.net zip, Laragon's `bin\php`,
 Scoop…). On a new machine:
 1. Install PHP ≥ 8.3 (**Thread Safe x64** zip from https://windows.php.net/download, or the PHP folder of an existing tool).
-2. Enable in `php.ini`: `curl, fileinfo, intl, mbstring, openssl, pdo_sqlite, sqlite3, pdo_pgsql, pgsql, zip`.
+2. Enable in `php.ini`: `curl, fileinfo, intl, mbstring, openssl, pdo_sqlite, sqlite3, pdo_pgsql, pgsql, sockets, zip` (`sockets`: every Pest
+   run needs it since S-08, §6; Laragon's PHP 8.3 ships it commented out).
 3. Install Composer 2 (https://getcomposer.org/download/).
 4. Put PHP and Composer on the PATH, then restart the terminal **and Claude Code**. On this machine, if `php` isn't found, prefix the command:
    `$env:PATH = 'C:\laragon\bin\php\php-8.3.33-Win32-vs16-x64;C:\laragon\bin\composer;' + $env:PATH`.
@@ -27,7 +28,7 @@ Scoop…). On a new machine:
 Verify:
 ```powershell
 php -v              # 8.3.x or newer
-php -m              # includes pdo_sqlite, pdo_pgsql, intl, mbstring, zip
+php -m              # includes pdo_sqlite, pdo_pgsql, intl, mbstring, sockets, zip
 composer -V
 docker version
 ```
@@ -49,8 +50,10 @@ composer setup                # composer install, .env from .env.example, key, m
 `DB_HOST=127.0.0.1`, `DB_PORT=5432`, `DB_DATABASE=laravel`, `DB_USERNAME=sail`, `DB_PASSWORD=password` (the volume's existing credentials),
 `MAIL_HOST=127.0.0.1`, `MAIL_PORT=1026`, `FORWARD_MAILPIT_PORT=1026`, `FORWARD_MAILPIT_DASHBOARD_PORT=8026`.
 
-Demo data (an **empty** database only): `php artisan db:seed` (the test user, 12 materials, 7 products, 60 sales; see README). Never run it,
-`migrate:fresh` or `DemoCatalogSeeder` on a database with real data: it resets the 12 demo materials' stock and costs.
+Demo data (a **new, empty** database only): `php artisan db:seed`, README Step 6 (sign-in `test@example.com` / `password`, the figures you
+should see). It is safe to run again (nothing is created twice, a deleted demo product stays deleted, demo sales only when there are none),
+but never run it, `migrate:fresh` or `DemoCatalogSeeder` on a database with your own data: it resets the 12 demo materials' stock and costs to
+their demo values. Agents never run it on the dev database `laravel`.
 
 ## 4. Run it
 ### 4.1 Daily use
@@ -102,6 +105,7 @@ npx vp test             # Vitest
 npm run check           # Oxfmt + Oxlint
 npm run types:check     # TypeScript
 npm run build
+composer test:browser   # golden path (S-08): one Pest browser test in Chromium; needs the build above (§6)
 composer test:pgsql     # PostgreSQL parity: the same Pest suite against Docker PostgreSQL, database `testing` (Docker up)
 ```
 `composer test:pgsql` clears the config cache and sets `DB_CONNECTION=pgsql` and `DB_DATABASE=testing` for the run; host, port and credentials
@@ -110,14 +114,24 @@ Never run two parity suites at once (they share `testing`). The `testing` databa
 when the volume is first initialised.
 
 CI (GitHub Actions, `.github/workflows/tests.yml`) runs on every push to `main` and `phase/**` and on pull requests: the `ci` job (SQLite suite,
-lint, types, Vitest, build; PHP 8.3) and the `pgsql` job (parity suite on PHP 8.3 and 8.5).
+lint, types, Vitest, build; PHP 8.3; it also runs the demo-data step twice on its fresh SQLite file and `invory:stock:verify`), the
+`golden-path` job (the browser test, PHP 8.3; on failure it uploads the screenshot as the artifact `golden-path-screenshots`) and the `pgsql` job
+(parity suite on PHP 8.3 and 8.5).
 
-## 6. Optional: browser (E2E) tests for S-08
+## 6. Golden path (browser test, S-08)
+`pestphp/pest-plugin-browser` 4.x (the 5.x line needs Pest 5) drives Playwright's Chromium. It serves the app **inside the test process**, so the
+browser sees the test's own in-memory SQLite database (RefreshDatabase) and never `laravel`. One-time setup per machine (H-3: not part of
+`composer setup`):
 ```powershell
-composer require pestphp/pest-plugin-browser --dev
-npm install playwright@latest
-npx playwright install
+npx playwright install chromium   # ~110 MB into %LOCALAPPDATA%\ms-playwright (Chrome headless shell)
 ```
+Then `npm run build` and `composer test:browser` (~5–10 s). The test lives in `tests/Browser/GoldenPathTest.php`; it is not part of
+`composer test` (phpunit.xml's suites are Unit, Feature, Arch). It always loads the built `public/build`, even while `composer dev` runs.
+A failure names the step (`Golden path failed at step "dashboard: Total sales": …`) and leaves a screenshot in `tests/Browser/Screenshots`
+(git-ignored). `--headed` or `--debug` (e.g. `php artisan test tests/Browser --headed`) shows the browser.
+
+**`ext-sockets` is required for every Pest run** once the plugin is installed (it opens a socket at the end of each run), including
+`composer test` and `composer test:pgsql`. Enable `extension=sockets` in the `php.ini` of the PHP you run tools with (§1 step 2).
 
 ## Troubleshooting
 - **`php` or `composer` not found**: PATH (§1 step 4); restart the terminal and Claude Code.
