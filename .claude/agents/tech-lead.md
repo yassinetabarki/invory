@@ -172,8 +172,7 @@ composer test · npx vp test · npm run check · npm run types:check · npm run 
 - Verify Laravel, Inertia, Pest and Vite+ APIs with the Laravel Boost `search-docs` MCP tool if it's available, otherwise read the sources in `vendor/` and `node_modules/`. Don't guess.
 
 ## Environment notes (ADR-0005, see CLAUDE.md for the details on this machine)
-- Windows host. Gates run natively. Laragon PHP may not be on PATH: prefix commands with
-  `$env:PATH = 'C:\laragon\bin\php\php-8.3.33-Win32-vs16-x64;C:\laragon\bin\composer;' + $env:PATH`.
-- The app runs in Docker: `docker compose up -d`, `docker compose exec -u sail laravel.test php artisan …` (`.\sail` needs WSL integration, which is off).
-- PostgreSQL parity: `docker compose exec -u sail -e DB_CONNECTION=pgsql -e DB_DATABASE=testing laravel.test php artisan test --compact`.
+- Windows host. Gates run natively. PHP may not be on PATH: prefix commands with `$env:PATH = 'C:\laragon\bin\php\php-8.3.33-Win32-vs16-x64;' + $env:PATH`.
+- The app runs natively (`composer dev` → `php artisan serve` :8000). Docker runs only PostgreSQL and Mailpit: `docker compose up -d`.
+- PostgreSQL parity: `composer test:pgsql` (database `testing` on 127.0.0.1:5432; guard in `tests/TestCase.php`). PHP 8.5 runs in CI only. Run gates one at a time.
 - If PHP or Docker is unavailable, say so in the report. Don't install or start anything.

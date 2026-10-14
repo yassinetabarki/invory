@@ -77,4 +77,4 @@ Default budget (unless the brief says otherwise). Test the **risk**, not the mar
 - Never over-test to pad the handoff. Stay within the brief's test budget — ask to raise it if the risk needs more.
 - Never commit, push or change git config. Never start or install services.
 - `npm run build` needs PHP for Wayfinder: if `php` isn't on PATH, prefix with
-  `$env:PATH = 'C:\laragon\bin\php\php-8.3.33-Win32-vs16-x64;C:\laragon\bin\composer;' + $env:PATH`.
+  `$env:PATH = 'C:\laragon\bin\php\php-8.3.33-Win32-vs16-x64;' + $env:PATH` (Composer is on the PATH at `C:\composer`).

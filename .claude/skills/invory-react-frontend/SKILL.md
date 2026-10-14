@@ -108,7 +108,7 @@ describe('CapacityBadge', () => {
 
 ## Commands
 ```
-npm run dev                 # Vite dev server, native (the app itself runs in Sail: `.\sail up -d` → http://localhost)
+npm run dev                 # Vite, native; the app is served by `composer dev` / `php artisan serve` at http://localhost:8000
 npx vp test                 # Vitest
 npm run check               # oxfmt + oxlint (type-aware, warnings = errors)
 npm run check:fix           # auto-fix format/lint

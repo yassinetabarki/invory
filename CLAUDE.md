@@ -12,7 +12,8 @@ plus the **bottleneck material**.
 ## Stack
 Laravel 13 (PHP 8.3+) · Inertia 3 · React 19 + TypeScript + React Compiler · Tailwind 4 + shadcn/ui · Wayfinder · Fortify auth ·
 Pest 4 + Larastan + Pint · Vite+ (Vitest, Oxlint, Oxfmt) · PostgreSQL · Laravel Boost. Single company, no teams.
-Dev environment: **Laravel Sail** (Docker: app + PostgreSQL + Mailpit) runs the app. **Laragon** provides native PHP 8.3 + Composer for tooling and agents.
+Dev environment: **native PHP 8.3 + Composer** serves the app (`composer dev` → `php artisan serve` on :8000, plus Vite) and runs all tooling and agents.
+**Docker Compose** runs only **PostgreSQL** and **Mailpit** (ADR-0012).
 
 ## How work gets done: two leads, you are the liaison
 The **product-owner** owns *what* and *why* (phases, backlog order, story cards, behaviour and UX, acceptance, progress).
@@ -65,13 +66,14 @@ Don't do the developers', the tech-lead's or the product-owner's work yourself, 
 - Agents never commit or push. The human approves git operations.
 
 ## Environment
-Windows 10, PowerShell 5.1 + Git Bash. Node 24, Git 2.54, Docker Desktop + WSL2 (Ubuntu-24.04), Laragon in `C:\laragon`.
-**Laragon's PHP (`C:\laragon\bin\php\php-8.3.33-Win32-vs16-x64`) and Composer are not on the PATH by default** (docs/SETUP.md, step 1). If `php` isn't found,
-prepend them to `$env:PATH` for the command (`C:\laragon\bin\php\php-8.3.33-Win32-vs16-x64;C:\laragon\bin\composer`).
-- Code tooling runs **natively**: `composer …`, `composer test` (Pest on SQLite in-memory, no Docker needed), `npm …`, `npx vp test`.
-- Anything touching the **database or the running app** goes through Sail: `.\sail up -d`, `.\sail artisan migrate`, `.\sail artisan tinker`.
-  `.\sail` (root `sail.cmd`) forwards to `vendor/bin/sail` inside WSL2, which needs Docker Desktop's WSL integration. **It is not enabled on this machine**,
-  so use the equivalent Compose commands from the repo root: `docker compose up -d`, `docker compose exec -u sail laravel.test php artisan <cmd>`
-  (table in docs/SETUP.md §4). If Docker isn't running, say so; don't try to start or install anything.
-- Local ports on this machine (`.env`, git-ignored): app http://localhost:8000 · Mailpit http://localhost:8026 · PostgreSQL 127.0.0.1:5432 · Vite `npm run dev` (native, 5174).
-  Port 80 and Mailpit's 1025/8025 are taken by Laragon, and other Docker projects (`odysseus-*`) are running. Never stop or remove containers that aren't `invory-*`.
+Windows 10, PowerShell 5.1 + Git Bash. Node 24, Git 2.54, Docker Desktop. PHP 8.3 lives in `C:\laragon\bin\php\php-8.3.33-Win32-vs16-x64` (only as a
+PATH entry; the Laragon app isn't used) and Composer in `C:\composer`. If `php` isn't found, prepend it for the command:
+`$env:PATH = 'C:\laragon\bin\php\php-8.3.33-Win32-vs16-x64;' + $env:PATH`.
+- Code tooling and **database commands** run natively: `composer test` (Pest on SQLite in-memory, no Docker needed), `npm …`, `npx vp test`,
+  `php artisan migrate`, `php artisan tinker` (`.env` points at `127.0.0.1`). Never `migrate:fresh` or seed the dev database `laravel`.
+- Docker runs only `pgsql` and `mailpit`: `docker compose up -d`. If Docker isn't running, say so; don't try to start or install anything.
+- PostgreSQL parity suite: `composer test:pgsql` (database `testing`; a guard aborts runs on any other database; never two runs at once).
+  PHP 8.5 is tested in CI only (GitHub Actions on every push to `main`). Run the gates one at a time.
+- Local ports (`.env`, git-ignored): app http://localhost:8000 (`composer dev` / `php artisan serve`, single-process) · Mailpit SMTP 1026, inbox
+  http://localhost:8026 · PostgreSQL 127.0.0.1:5432 · Vite (native, 5173/5174). A stray Laragon Mailpit holds 1025/8025; port 80 is an unrelated nginx.
+  Other Docker projects (`odysseus-*`) are running. Never stop or remove containers that aren't `invory-*`.

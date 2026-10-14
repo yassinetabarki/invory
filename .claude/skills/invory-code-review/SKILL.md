@@ -26,7 +26,7 @@ npm run build                 # production bundle
 ```
 For stories touching migrations, queries or seeders, also run the **PostgreSQL parity suite** when Docker is up (`docs/SETUP.md` §5):
 ```
-docker compose exec -u sail -e DB_CONNECTION=pgsql -e DB_DATABASE=testing laravel.test php artisan test --compact
+composer test:pgsql           # database `testing` only; never two runs at once
 ```
 A red gate is an automatic **BLOCKER**. Record each gate's result in the report. Write "not run (Docker down)" for parity if that applies.
 

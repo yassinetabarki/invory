@@ -300,7 +300,7 @@ arch('actions expose a handle method')
 - `DemoCatalogSeeder` seeds the worked example from the domain skill plus 3 more products (t-shirt, sneaker, leather tote), so the UI is reviewable right after `php artisan migrate:fresh --seed`.
 
 ## Commands
-Native (Laragon PHP, no Docker; tests use SQLite in-memory):
+Native (PHP on the PATH; tests use SQLite in-memory):
 ```
 php artisan test --compact                        # all tests
 php artisan test --compact --filter=Material      # focused
@@ -309,11 +309,11 @@ vendor/bin/phpstan analyse --memory-limit=1G      # Larastan
 composer test                                     # full gate (pint --test + phpstan + tests), must be green before handoff
 php artisan route:list --path=materials
 ```
-Through Sail (Docker running; the real PostgreSQL dev DB):
+Natively, with Docker running for PostgreSQL (the dev DB `laravel`):
 ```
-.\sail artisan migrate:fresh --seed               # after changing migrations/seeders (local dev DB only)
-.\sail artisan tinker
-docker compose exec -u sail -e DB_CONNECTION=pgsql -e DB_DATABASE=testing laravel.test php artisan test --compact   # PostgreSQL parity
+php artisan migrate
+php artisan tinker
+composer test:pgsql      # PostgreSQL parity (database `testing` only)
 ```
 Portability: no SQLite- or PostgreSQL-only SQL. `whereLike` is fine (Laravel handles case-insensitivity per driver), and so are the migration column types used above.
 

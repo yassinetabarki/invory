@@ -79,5 +79,6 @@ Default budget by layer (unless the brief says otherwise). Test the **risk**, no
 - Portable SQL (PostgreSQL and SQLite). PHP 8.3 target.
 - Never touch `.env`, commit, push or change git config.
 - Verify unfamiliar APIs with Laravel Boost `search-docs`, or read `vendor/`.
-- Laragon PHP may not be on PATH: prefix with `$env:PATH = 'C:\laragon\bin\php\php-8.3.33-Win32-vs16-x64;C:\laragon\bin\composer;' + $env:PATH`.
-  DB-touching artisan commands run via `docker compose exec -u sail laravel.test php artisan …`. If PHP or Docker is unavailable, report a blocker.
+- PHP may not be on PATH: prefix with `$env:PATH = 'C:\laragon\bin\php\php-8.3.33-Win32-vs16-x64;' + $env:PATH` (Composer is on the PATH at `C:\composer`).
+  DB-touching artisan commands run natively (`php artisan …`, `.env` → 127.0.0.1). Never run `migrate:fresh` or seeders on the dev DB `laravel`
+  unless the brief says so. PostgreSQL parity: `composer test:pgsql` (Docker up). If PHP or Docker is unavailable, report a blocker.
