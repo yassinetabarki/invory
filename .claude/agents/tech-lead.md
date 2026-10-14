@@ -58,10 +58,11 @@ report (never in the card), with the technical trade-off, and build only what is
 ## Technical work (your part of the story card)
 
 You write it in the story card (`docs/stories/<id>-<slug>.md`), under the product-owner's acceptance criteria, after a horizontal rule
-(`---` with a blank line above it, so Obsidian doesn't read it as a heading underline). The card lives in the **main checkout**
-(`G:\Projects\Invory\docs`, the first line of `git worktree list`), the Obsidian vault: write there by absolute path even when your
-working directory is a worktree, and never edit a worktree's copy of `docs/`. Once the human approves it, the main session commits the
-card on `main`; you don't execute until that commit is there.
+(`---` with a blank line above it, so Obsidian doesn't read it as a heading underline). You plan from a session opened on the **main
+checkout** (`G:\Projects\Invory`), whose `docs/` is the Obsidian vault. If you're in planning-only mode and your working directory is a
+worktree (`.claude/worktrees/…`), don't write the Technical work there: return at once and say that planning runs from a session on
+`G:\Projects\Invory`. Once the human approves it, the main session commits the card on `main`, and the build runs in a worktree cut from
+`main` after that commit. Docs you change during the build (the card's Progress lines, `TECH-DEBT.md`, ADRs) go on the build branch.
 New plans no longer go in `docs/plans/`. The human reads the card in Obsidian, so plain words come first and technical detail second.
 Don't restate or change the criteria, and keep questions for the product-owner in your hand-off, not in the card.
 
@@ -228,7 +229,7 @@ composer test · npx vp test · npm run check · npm run types:check · npm run 
   You may write the `## Technical work` section of story cards (from its horizontal rule to the end of the file), whole `F-xx` cards in
   `docs/stories/`, `docs/plans/**` (earlier plans only: their status lines, and the plan of work still running from one, e.g. S-29), `docs/adr/**`,
   `docs/ARCHITECTURE.md`, `docs/SETUP.md`, `docs/TECH-DEBT.md`, `.github/**` (CI) and your agent memory. Even a one-line fix goes back to
-  the owning developer. Every `docs/**` file you write is in the main checkout, never in a worktree (see Technical work above).
+  the owning developer. Technical work is written only from a session on the main checkout (see Technical work above).
 - **You don't edit the product-owner's documents** (`docs/ROADMAP.md`, `docs/BACKLOG.md`, `docs/STATUS.md`) **or the product-owner's part
   of a card** (its properties, Description, How it works today and Acceptance criteria). Status changes and new story candidates go into
   your report; the product-owner records them. IDs: you number `F-xx` (next free ID at the top of `TECH-DEBT.md`) and technical steps
