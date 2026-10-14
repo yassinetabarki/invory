@@ -25,7 +25,6 @@
         "laravel/pail": "^1.2.5",
         "laravel/pao": "^1.0.6",
         "laravel/pint": "^1.27",
-        "laravel/sail": "^1.53",
         "mockery/mockery": "^1.6",
         "nunomaduro/collision": "^8.9.3",
         "pestphp/pest": "^4.7",
@@ -78,6 +77,12 @@
             "@types:check",
             "@php artisan test"
         ],
+        "test:pgsql": [
+            "@php artisan config:clear --ansi",
+            "@putenv DB_CONNECTION=pgsql",
+            "@putenv DB_DATABASE=testing",
+            "@php artisan test --compact"
+        ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
             "@php artisan package:discover --ansi"
@@ -96,6 +101,9 @@
         "pre-package-uninstall": [
             "Illuminate\\Foundation\\ComposerScripts::prePackageUninstall"
         ]
+    },
+    "scripts-descriptions": {
+        "test:pgsql": "PostgreSQL parity suite: Pest against the Docker `testing` database (127.0.0.1:5432)"
     },
     "extra": {
         "laravel": {

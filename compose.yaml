@@ -1,42 +1,5 @@
+# Dev services only: the app runs natively through Laragon (ADR-0007, ADR-0012).
 services:
-    laravel.test:
-        build:
-            context: './vendor/laravel/sail/runtimes/8.5'
-            dockerfile: Dockerfile
-            args:
-                WWWGROUP: '${WWWGROUP}'
-        image: 'sail-8.5/app'
-        # Parity runs only (PostgreSQL suite, PHP 8.5): `docker compose --profile app up -d laravel.test`. ADR-0007.
-        profiles: ['app']
-        extra_hosts:
-            - 'host.docker.internal:host-gateway'
-        ports:
-            - '${APP_PORT:-8080}:80'
-            - '${VITE_PORT:-5173}:${VITE_PORT:-5173}'
-        environment:
-            WWWUSER: '${WWWUSER}'
-            LARAVEL_SAIL: 1
-            XDEBUG_MODE: '${SAIL_XDEBUG_MODE:-off}'
-            XDEBUG_CONFIG: '${SAIL_XDEBUG_CONFIG:-client_host=host.docker.internal}'
-            IGNITION_LOCAL_SITES_PATH: '${PWD}'
-            # Real environment variables win over .env (Dotenv is immutable), so the container reaches the other services by name
-            # while the same .env points the native app at 127.0.0.1.
-            DB_HOST: pgsql
-            DB_PORT: 5432
-            MAIL_HOST: mailpit
-            MAIL_PORT: 1025
-        volumes:
-            - '.:/var/www/html'
-            # On Windows, Docker does not follow NTFS junctions/symlinks in bind-mounted paths.
-            # This explicit mount makes storage/app/public accessible at public/storage inside the
-            # container (and via HTTP at /storage/*), replacing the symlink that `artisan storage:link`
-            # would normally create.
-            - './storage/app/public:/var/www/html/public/storage'
-        networks:
-            - sail
-        depends_on:
-            - pgsql
-            - mailpit
     pgsql:
         image: 'postgres:18-alpine'
         ports:
@@ -48,30 +11,28 @@ services:
             POSTGRES_PASSWORD: '${DB_PASSWORD:-secret}'
         volumes:
             - 'sail-pgsql:/var/lib/postgresql'
-            - './vendor/laravel/sail/database/pgsql/create-testing-database.sql:/docker-entrypoint-initdb.d/10-create-testing-database.sql'
-        networks:
-            - sail
+            # Creates the `testing` database for the PostgreSQL parity suite (`composer test:pgsql`) on first start.
+            - './docker/pgsql/create-testing-database.sql:/docker-entrypoint-initdb.d/10-create-testing-database.sql'
         healthcheck:
             test:
-                - CMD
-                - pg_isready
-                - '-q'
-                - '-d'
-                - '${DB_DATABASE}'
-                - '-U'
-                - '${DB_USERNAME}'
+                [
+                    'CMD',
+                    'pg_isready',
+                    '-q',
+                    '-d',
+                    '${DB_DATABASE}',
+                    '-U',
+                    '${DB_USERNAME}',
+                ]
             retries: 3
             timeout: 5s
     mailpit:
         image: 'axllent/mailpit:latest'
         ports:
-            - '${FORWARD_MAILPIT_PORT:-1025}:1025'
-            - '${FORWARD_MAILPIT_DASHBOARD_PORT:-8025}:8025'
-        networks:
-            - sail
-networks:
-    sail:
-        driver: bridge
+            # Laragon's own Mailpit holds 1025/8025, so the project defaults to 1026/8026.
+            - '${FORWARD_MAILPIT_PORT:-1026}:1025'
+            - '${FORWARD_MAILPIT_DASHBOARD_PORT:-8026}:8025'
 volumes:
+    # Name kept from Sail: renaming it would start an empty dev database.
     sail-pgsql:
         driver: local

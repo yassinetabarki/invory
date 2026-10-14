@@ -11,11 +11,10 @@ declare(strict_types=1);
  * It reports the status, the payload size, the number of queries and the number of PHP files included.
  *
  * Read-only: the session is the `array` driver and nothing is written to the database. The user is the first verified one.
- * It runs from the project root, natively (Laragon) or in the Sail container, from any working directory:
+ * It runs natively (the PHP on your PATH) from the project root or any working directory:
  *
  *   php scripts/perf-probe.php /products/create
  *   php scripts/perf-probe.php /dashboard /materials /products json q
- *   docker compose exec -T -u sail laravel.test php scripts/perf-probe.php /materials json props
  *
  * Natively the database host comes from .env (DB_HOST=127.0.0.1); override it for one run with an environment variable
  * (PowerShell: `$env:DB_HOST='127.0.0.1'; php scripts/perf-probe.php /dashboard`).
