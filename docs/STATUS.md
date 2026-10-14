@@ -13,12 +13,12 @@
 
 | | Status | In one line |
 |---|---|---|
-| **Overall** | 🟡 **AMBER** | The MVP is built and every automated check passes, but you haven't signed it off yet, no test walks a whole user journey, and it has never run anywhere but this computer. |
+| **Overall** | 🟡 **AMBER** | The MVP is built and every automated check passes on this computer. The checks now also run on GitHub, but nobody has seen a result yet. You haven't signed the MVP off, and no test walks a whole user journey. The Phase 4 cards are approved. |
 | Scope (MVP features) | 🟢 GREEN | Every feature in the MVP goal and the 2026-10-08 scope additions works on real data. The preview layer is gone. |
 | Quality (automated) | 🟢 GREEN | All automated checks pass on this computer (2026-10-14): 2 050 backend tests, 1 134 screen tests, code style, static analysis, type check and production build. |
 | Product acceptance | 🔴 RED | No screen has been signed off by the human. The Phase 2 click-through has been pending since 2026-10-08. "Done" has meant "tech-lead approved". |
-| Dev environment | 🟡 AMBER | The app runs natively, but mail is misconfigured, Sail remnants still mislead agents, and the page-speed target (S-18) was never measured. |
-| Release readiness | 🔴 RED | Missing: a test of a full user journey, automatic checks on every change (the code isn't online yet: **no git remote**), and a live server with a chosen database. |
+| Dev environment | 🟡 AMBER | The app runs on `php artisan serve` (http://localhost:8000); Docker runs PostgreSQL and the test mailbox (http://localhost:8026), and `.env` already points mail there. Laragon and Apache aren't used. S-29 (in progress) removes the Sail remnants; the page-speed target (S-18) is unmeasured and may not hold on the built-in server (tech-lead reporting). |
+| Release readiness | 🔴 RED | Missing: a test of a full user journey and a live server with a chosen database. The automatic checks now run on GitHub on every push (D-1, 2026-10-14), but **no result has been seen yet**. |
 | Process | 🟡 AMBER | Statuses in the backlog and in 9 of 10 plans were stale. Fixed today. Roles are now split: product-owner (what and why) and tech-lead (how). |
 
 **Current phase:** Phase 3 (real backend) and most of the performance track are **finished and committed**. The project now enters
@@ -31,14 +31,23 @@
 **Needed from the human now**
 | # | Decision | Recommendation |
 |---|---|---|
-| D-1 | Push the repository to a remote (e.g. GitHub) so CI runs? | Yes: today no gate runs outside this machine |
-| D-3 | Approve the Phase 4 scope in [ROADMAP.md](ROADMAP.md) (S-29, S-30, S-08, S-31, S-32)? | Yes |
 | D-4 | Three early choices were only provisional (Phase 3 plan): **Q4** records are numbered with simple counters (already used everywhere) · **Q6** currency and language are set at installation, not in a settings screen · **Q9** making products never reduces material stock (no "production runs" for now). Keep all three? (Q5 is closed: S-17 removed the preview layer) | Keep all three; confirm before Phase 6 |
 | D-5 | Production database host (needs PostgreSQL 13+ and `pg_trgm`) | Before S-26; not urgent |
 | D-6 | Delete the 5 merged branches and the stale worktree `.claude/worktrees/fix-hover-prefetch-bug`? | Yes (nothing unmerged) |
 
-**Decided on 2026-10-14:** **D-2** go ahead with S-29 (dev environment) · **D-7** keep the dashboard's KPI cards and top 5 loading just after
-the page frame (supersedes rendering plan Q3) · remove the local "frontend-design" skill, which competed with the product-owner on UX.
+**Decided on 2026-10-14:** **D-1** the repository is on GitHub (private, `yassinetabarki/invory`); `main` was pushed at `3a0785f`, and the
+automatic checks run on every push to `main` and `phase/**` (only you can see their results, in the repository's Actions tab) ·
+**D-2** go ahead with S-29 (dev environment) · **D-3** Phase 4 scope approved, together with the cards of S-30, S-08, S-31 and S-32,
+which are `Ready` with every recommended answer accepted ([stories](stories/README.md)) · **D-7** keep the dashboard's KPI cards and top 5 loading just after
+the page frame (supersedes rendering plan Q3) · remove the local "frontend-design" skill, which competed with the product-owner on UX ·
+**Low stock:** no new story. The existing "Reorder at" level, the stock badges, the "Needs restock" filter and the dashboard panel are
+accepted through the S-30 walkthrough. No email alerts for now (stock only falls when you edit it, Q8/Q9). A material with
+no "Reorder at" is never flagged as low. ·
+**Large demo catalogue** (you asked for it on 2026-10-14):
+- [S-40](stories/S-40-realistic-catalogue-100-products.md) is `Ready`: 100 products in all (the 7 demo products plus 93 new ones) and about 110 more materials, on a new, throwaway database only (never `laravel`).
+- S-40 is an optional step after the demo workshop. It adds no sales, gives the same data every run, and adds no brand or sub-category. It is a Phase 4 Could, planned after S-08.
+- Its photos are split into [S-41](stories/S-41-real-photos-for-the-catalogue.md) (`Ready`, approved 2026-10-14): real photos from Pexels only, with credits in a licence record and the setup guide, none on screens.
+- S-41 is a Phase 4 Could, right after S-40, and needs your free Pexels key first.
 
 **Recorded and still valid:** Phase 3 plan Q1 native serving (ADR-0007) · Q2 user-editable units, conversions later · Q3 any signed-in user
 edits the catalogue · Q7 unit locked while used · Q8 sales are stock-neutral and hard-deleted · F-20 restock updates the unit cost by default ·
@@ -112,7 +121,7 @@ The plan headers were corrected on 2026-10-14, and [plans/README.md](plans/READM
 | G-1 | **No product acceptance.** No screen was ever signed off by the human | We don't know that the product does what the business wants; "done" so far means "tests pass" | S-30 |
 | G-2 | **No end-to-end test** (0 browser tests) and no one-command demo data for a fresh install | A break between pages (login → material → product → sale → dashboard) would go unnoticed | S-08 |
 | G-3 | **A panel that fails to load spins forever.** Deferred panels have no error state, and the dashboard and product page are now fully deferred | One failed request leaves the user stuck on loading placeholders, with no retry | S-31 (F-48) |
-| G-4 | **Dev environment drift**: mail sends to host `mailpit`, which native PHP can't resolve (password reset and verification mails fail); `laravel.test`, Sail and `sail.cmd` are still present; CLAUDE.md and the agent files still describe Sail (F-25); port 8000 is served by `php artisan serve` (single process) instead of Apache | Broken mails; agents follow outdated commands; deferred requests queue behind each other, so S-18 can't be measured | S-29 |
+| G-4 | **Dev environment drift**: `laravel.test`, Sail and `sail.cmd` are still on `main`, and CLAUDE.md and the agent files still describe Sail (F-25); S-29 removes them (in progress). Laragon and Apache are no longer used: the app runs on `php artisan serve`, and `.env` already sends mail to Docker's test mailbox (a password-reset check is still to do). The built-in server handles one request at a time on Windows | Agents follow outdated commands; the panels that load after the page queue behind each other, so the speed target (S-18) may not hold. The tech-lead is adjusting S-29's plan and will report | S-29 |
 | G-5 | **Two people saving the same SKU at the same moment get a server error page** instead of a validation message | Rare, but it's a crash | S-32 (F-35) |
 
 ### 6.2 Not started, needed for real-world use (Phases 5–6)
@@ -122,10 +131,12 @@ The plan headers were corrected on 2026-10-14, and [plans/README.md](plans/READM
   instant delete and archive feedback (S-36).
 - **Production:** no runtime image, no production database chosen (it needs PostgreSQL 13+ with `pg_trgm`), no session or cache store
   decision, no health check, no backups (S-26).
-- **CI has never run:** `.github/workflows/tests.yml` exists, but the repository has no remote (decision D-1).
+- **CI results not seen yet:** since 2026-10-14 (D-1) the automatic checks run on GitHub on every push to `main` and `phase/**`, but nobody
+  has looked at a result yet. Phase 4's exit criterion "S-08 green in CI" no longer waits for a decision.
 
 ### 6.3 Open human steps
-- S-18 page-speed sign-off (after S-29: serve with Apache, run the probe, target p95 ≤ 150 ms).
+- S-18 page-speed sign-off (after S-29: run the probe, target p95 ≤ 150 ms). Open point: whether that target holds on `php artisan serve`
+  is pending the tech-lead's report; the criterion stays as written until you decide.
 - Dev database: demo seeding was **skipped by decision** (2026-10-14). Don't re-offer it.
 
 ---
@@ -134,15 +145,17 @@ The plan headers were corrected on 2026-10-14, and [plans/README.md](plans/READM
 
 | # | Type | Item | Severity | Mitigation / owner |
 |---|---|---|---|---|
-| R-1 | Risk | No CI execution, so a regression is only caught when someone runs the gates locally | High | D-1 (human), then the tech-lead keeps CI green |
+| R-1 | Risk | CI runs on every push since 2026-10-14 (D-1), but no result has been seen yet: the repository is private and only the human can open the Actions tab. It may already be red (the dev-Docker plan suspects the photo-storage check fails in CI) | High | Human: check the Actions tab after the next push and report the result; tech-lead: keep CI green (S-29 includes the CI photo-storage fix) |
 | R-2 | Risk | No E2E test across pages | High | S-08 |
 | R-3 | Issue | Deferred panels can hang without an error state | Medium | S-31 |
-| R-4 | Issue | Dev mail is broken and agent docs describe Sail | Medium | S-29 |
+| R-4 | Issue | Agent docs still describe Sail; the password-reset mail to Docker's test mailbox is not yet confirmed; the speed target may not hold on `php artisan serve` | Medium | S-29 (tech-lead reporting on speed) |
 | R-5 | Risk | Unmeasured performance at real catalogue sizes (whole-catalogue costing in PHP) | Medium | S-27, then S-23 |
 | R-6 | Risk | Stories counted as "done" without business acceptance | Medium | S-30; from now on the product-owner acceptance step (TEAM.md) |
 | R-7 | Issue | Stale statuses and colliding IDs (RL stories reused S-01…S-05; the dev-Docker plan reused F-41…F-43) | Low | Fixed 2026-10-14; IDs are now assigned only by their owners (product-owner: S-, tech-lead: F-) |
 | R-8 | Risk | Plans executed without a human review (fix-rl-02) | Low | The workflow now requires an approved story card and an approved technical plan |
 | R-9 | Issue | Flaky Vitest test under load (F-22) | Low | Gates run sequentially; fix in TECH-DEBT |
+| R-10 | Dependency | S-41 (real photos) can't start until you have created a free Pexels account and key and put the key in your local settings | Low | Human, before S-41 starts |
+| R-11 | Risk | About 220 Pexels photos stored in the repository are fine while it stays private. Publishing the repository would redistribute them in bulk | Low | Product-owner raises the licence conditions with you before any change to the repository's visibility (S-41 AC-6) |
 
 ---
 
@@ -158,8 +171,12 @@ The plan headers were corrected on 2026-10-14, and [plans/README.md](plans/READM
 - New **product-owner** agent; the tech-lead now owns technical planning and code review only (see [TEAM.md](TEAM.md)).
 
 ## 9. Next steps (recommended order)
-1. Human: decisions D-1, D-3 … D-6.
-2. Product-owner (started 2026-10-14): the full story cards for Phase 4 (S-30, S-08, S-31, S-32) and the S-30 click-through script.
-3. Tech-lead (started 2026-10-14): execute S-29 from its existing plan (it predates story cards and is exempt from "no card, no plan"); then
-   plan S-08, S-31 and S-32 from their approved cards.
-4. Human: S-30 walkthrough. Phase 4 closes when S-30 is accepted and the S-08 E2E test is green in CI.
+1. Human: decisions D-4 … D-6, and a first look at the CI result in GitHub's Actions tab.
+2. Tech-lead (in progress): adjust S-29's plan to `php artisan serve` (no Apache, no Laragon), report the speed consequence, then finish S-29.
+3. Tech-lead: plan S-08, S-31 and S-32 next, from their `Ready` cards (done by the product-owner on 2026-10-14).
+4. Human: walk S-30 as soon as S-29 lands. The product-owner sorts the findings into "fix in Phase 4" and "new backlog item"; you confirm.
+5. Phase 4 closes when S-30 is accepted and the S-08 test is green in the gates and in CI on GitHub.
+6. Coulds, if time allows and in this order:
+   - The tech-lead plans S-08 first; S-40's plan follows once you approve S-08's plan.
+   - S-41 (`Ready`) is planned after S-40, and its work starts once you confirm your Pexels key is in your local settings.
+   - S-40 and S-41 slip to Phase 5 before anything else.

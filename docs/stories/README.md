@@ -8,6 +8,13 @@ Template, writing rules, Definition of Ready and Done: [`invory-product-owner` s
 - The tech-lead links its technical plan (`docs/plans/<id>-<slug>-plan.md`) at the top of the card. The product-owner fills in the
   card's "Acceptance check" at the end.
 
-| Card | Status |
-|---|---|
-| _none yet: Phase 4 cards (S-30, S-08, S-31, S-32) are next; S-29 runs from its existing plan_ | |
+| Card | Phase · priority · size | Status |
+|---|---|---|
+| [S-30 — Walk through every MVP screen and sign it off](S-30-mvp-acceptance-walkthrough.md) | 4 · Must · S | `Ready` (approved 2026-10-14; walked as soon as S-29 lands) |
+| [S-08 — One automated test walks the whole journey, and a fresh install shows the demo workshop](S-08-golden-path-test-and-demo-data.md) | 4 · Must · M | `Ready` (approved 2026-10-14) |
+| [S-31 — A section that fails to load offers "Try again"](S-31-deferred-section-try-again.md) | 4 · Should · S | `Ready` (approved 2026-10-14) |
+| [S-32 — A duplicate SKU saved at the same moment shows a clear message](S-32-duplicate-sku-clear-message.md) | 4 · Should · S | `Ready` (approved 2026-10-14) |
+| [S-40 — Fill a fresh install with a realistic catalogue of 100 products](S-40-realistic-catalogue-100-products.md) | 4 · Could · M | `Ready` (approved 2026-10-14) |
+| [S-41 — A real photo on every item of the demo catalogue](S-41-real-photos-for-the-catalogue.md) | 4 · Could · M | `Ready` (approved 2026-10-14; work starts once the human's Pexels key exists) |
+
+S-29 (reliable dev environment) has no card: it runs from its plan, which predates story cards.
