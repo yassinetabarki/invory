@@ -28,6 +28,7 @@
         "mockery/mockery": "^1.6",
         "nunomaduro/collision": "^8.9.3",
         "pestphp/pest": "^4.7",
+        "pestphp/pest-plugin-browser": "^4.3.1",
         "pestphp/pest-plugin-drift": "^4.1",
         "pestphp/pest-plugin-laravel": "^4.1"
     },
@@ -84,6 +85,11 @@
             "@putenv DB_DATABASE=testing",
             "@php artisan test --compact"
         ],
+        "test:browser": [
+            "Composer\\Config::disableProcessTimeout",
+            "@php artisan config:clear --ansi",
+            "@php artisan test tests/Browser --compact"
+        ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
             "@php artisan package:discover --ansi"
@@ -104,7 +110,8 @@
         ]
     },
     "scripts-descriptions": {
-        "test:pgsql": "PostgreSQL parity suite: Pest against the Docker `testing` database (127.0.0.1:5432)"
+        "test:pgsql": "PostgreSQL parity suite: Pest against the Docker `testing` database (127.0.0.1:5432)",
+        "test:browser": "Golden path in Chromium (Pest browser plugin): needs a current `npm run build` and `npx playwright install chromium`"
     },
     "extra": {
         "laravel": {

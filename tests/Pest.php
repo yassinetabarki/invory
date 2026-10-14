@@ -12,6 +12,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Response;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Vite;
 use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
@@ -32,6 +33,16 @@ pest()->extend(TestCase::class)
     // Feature tests assert Inertia props, not assets: a stale local Vite manifest (public/build) must not fail them.
     ->beforeEach(fn () => $this->withoutVite())
     ->in('Feature');
+
+// Browser tests (S-08, `composer test:browser`, not part of `composer test`): the plugin serves the app inside the test
+// process, so the throwaway database of RefreshDatabase is the one the browser sees. No withoutVite(): the pages load the
+// built assets of `npm run build`; the hot file points nowhere, so a running `composer dev` (public/hot) can't hijack them.
+pest()->browser()->inChrome()->timeout(10000);
+
+pest()->extend(TestCase::class)
+    ->use(RefreshDatabase::class)
+    ->beforeEach(fn () => Vite::useHotFile(storage_path('framework/testing/no-vite-hot')))
+    ->in('Browser');
 
 /*
 |--------------------------------------------------------------------------

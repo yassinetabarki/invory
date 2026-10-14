@@ -14,6 +14,7 @@
 .DS_Store
 .env
 .env.backup
+.env.demo
 .env.production
 .phpactor.json
 .phpunit.result.cache
@@ -48,3 +49,7 @@ yarn-error.log
 
 # Git Bash coverage once created "C" + U+F03A (a mangled "C:") at the root (F-08)
 /C
+
+# Pest browser tests: failure screenshots and traces (S-08)
+/tests/Browser/Screenshots
+/tests/Browser/Traces
