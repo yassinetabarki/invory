@@ -29,6 +29,8 @@ jobs:
         uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
         with:
           php-version: '8.3'
+          # sockets: since S-08 the Pest browser plugin opens a socket at the end of every Pest run.
+          extensions: sockets
           tools: composer:v2
           coverage: none
 
@@ -46,12 +48,73 @@ jobs:
           DB_CONNECTION: sqlite
           DB_DATABASE: ${{ github.workspace }}/database/database.sqlite
 
+      # S-08 (AC-6, AC-7): the documented demo-data step on the fresh SQLite file `composer setup` just migrated, run twice (nothing
+      # is created twice), then the stock ledger must balance. Never PostgreSQL, never a real database.
+      - name: Demo data on a fresh database
+        run: |
+          php artisan db:seed --force
+          php artisan db:seed --force
+          php artisan invory:stock:verify
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ${{ github.workspace }}/database/database.sqlite
+
       - name: Frontend tests (Vitest)
         run: npx vp test
 
       # npm run check · npm run types:check · composer test (pint --test, larastan, pest incl. arch)
       - name: Run CI Checks
         run: composer ci:check
+
+  # Golden path (S-08): one Pest browser test in Chromium, from sign-in to a sale on the dashboard, on its own in-memory database.
+  golden-path:
+    runs-on: ubuntu-latest
+
+    name: golden path
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+        with:
+          php-version: '8.3'
+          extensions: sockets
+          tools: composer:v2
+          coverage: none
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+
+      # As in the ci job: dependencies (including the playwright npm package), .env, key, storage:link and the production build the
+      # browser test loads. The setup migration runs on a SQLite file; the test itself uses phpunit.xml's in-memory SQLite.
+      - name: Setup Application
+        run: composer setup
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ${{ github.workspace }}/database/database.sqlite
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Golden path
+        run: composer test:browser
+
+      # AC-3: the screenshot of the screen where the golden path failed.
+      - name: Upload failure screenshots
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: golden-path-screenshots
+          path: |
+            tests/Browser/Screenshots
+            tests/Browser/Traces
+          if-no-files-found: ignore
 
   # PostgreSQL parity: the Pest suite against a real PostgreSQL, on the lowest PHP we support (8.3, Laragon) and the newest (8.5,
   # covered by CI only since ADR-0012). Locally the same suite runs with `composer test:pgsql`.
@@ -98,7 +161,7 @@ jobs:
         uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
         with:
           php-version: ${{ matrix.php }}
-          extensions: pdo_pgsql, pgsql
+          extensions: pdo_pgsql, pgsql, sockets
           tools: composer:v2
           coverage: none
 
