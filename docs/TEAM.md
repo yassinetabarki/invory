@@ -60,11 +60,12 @@ Project skills live in `.claude/skills/invory-*` and are committed. `invory-cost
               │
    0. REFINE  ├──► product-owner: phase proposal + story cards (docs/stories/<id>-<slug>.md, Obsidian style)
               │       Description · How it works today · Acceptance criteria — questions with options in its hand-off
-              │◄── cards ──► human approves each card ──► status Ready
+              │◄── cards ──► human approves each card ──► status Ready ──► main session commits the docs on main
               │
    1. PLAN    ├──► tech-lead (planning-only): "Technical work" added under the card's criteria, same file
               │       simple → a few plain bullets · complex → steps S-xx-a, -b…, contract, order, risks
-              │◄── card ──► human approves the Technical work ──► status Planned (questions for the PO go back through step 0)
+              │◄── card ──► human approves the Technical work ──► status Planned ──► main session commits the card on main
+              │       (questions for the PO go back through step 0)
               │
    2. BUILD   ├──► tech-lead (execute): dispatch ──► backend-developer ┐ same message = parallel
               │                                   ──► frontend-developer ┘
@@ -82,8 +83,17 @@ the whole card (`F-xx`, same format), you approve it once, and it's built, revie
 
 **Flow limits:** at most two stories between `Planned` and `Acceptance` at once. The product-owner flags any story older than its size suggests.
 
+### Docs live in the main checkout, and approved docs are committed before development
+You read `docs/` in Obsidian from the **main checkout** (`G:\Projects\Invory\docs`). Sessions often run in a worktree under
+`.claude/worktrees/`, whose copy of `docs/` Obsidian can't see, so both leads always write `docs/**` in the main checkout, by absolute
+path, and never in a worktree.
+
+Each time you approve cards (→ `Ready`) or a card's Technical work (→ `Planned`), the main session commits exactly those doc files on
+`main`, in the main checkout, straight away: your approval is the yes for that commit. Development (step 2) starts only once the card
+and its Technical work are committed, and a worktree that builds the story merges `main` first.
+
 ### One card, two authors (`docs/stories/<id>-<slug>.md`)
-You read cards in Obsidian (`docs/` is the vault). Each card is one file with two parts:
+You read cards in Obsidian (`docs/` in the main checkout is the vault). Each card is one file with two parts:
 
 | Part | Written by | What it holds |
 |---|---|---|
@@ -147,6 +157,7 @@ about behaviour go to the product-owner.
    The tech-lead runs the full gates once the wave is complete.
 3. **Git:** one branch per phase (`phase/4-release-readiness`), **one commit per acceptance criterion** (not per story), staged from that
    criterion's file list. Conventional Commits (`feat(materials): …`, `test(costing): …`). You approve every commit, push and merge. Agents never commit.
+   Docs are the exception to the phase branch: `docs/**` is written in the main checkout and committed straight to `main` (see above).
 4. **Handoff reports are mandatory** and use the exact template in each agent file. The tech-lead re-runs every gate. Pasted output is not proof.
 5. **Disagreements:** technical ones are settled by the tech-lead; behaviour, UX, scope and priority by the product-owner, with you deciding
    anything the card doesn't settle. Neither lead edits the other's documents, or the other's part of a card.

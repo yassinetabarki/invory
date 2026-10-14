@@ -26,9 +26,21 @@ only **Description**, **How it works today** and **Acceptance criteria**; the te
 file (a few plain bullets when simple, a detailed plan when complex). Questions travel in hand-offs, never inside the card. Cards and plans
 that existed on 2026-10-14 (including on-hold or unfinished ones) keep their old layout and aren't converted.
 
+**Docs live in the main checkout, never in a worktree.** The Obsidian vault is the main checkout's `docs/` (`G:\Projects\Invory\docs`, the
+first line of `git worktree list`). Every `docs/**` change (cards, Technical work, BACKLOG, ROADMAP, STATUS, TECH-DEBT, ADRs) is written
+there, even when this session runs in a worktree: a worktree's copy of `docs/` is never edited, because Obsidian can't see it. Give both
+leads that absolute path in every brief.
+
+**Approved docs are committed before development.** As soon as the human approves cards (→ `Ready`) or a card's Technical work
+(→ `Planned`), commit exactly the doc files the hand-off lists, in the main checkout on `main` (`docs(phase-N): S-xx card`,
+`docs(phase-N): S-xx technical work`). That approval is the human's yes for this docs commit; don't ask again. If the main checkout isn't
+on `main`, or has staged changes that aren't these files, stop and ask. BUILD starts only once the card and its Technical work are
+committed on `main`; a worktree that builds the story merges `main` first.
+
 ```
 human ⇄ main session ──► product-owner   0. REFINE: phase proposal, story cards docs/stories/<id>-<slug>.md   ◄── human approves cards
                      ──► tech-lead       1. PLAN (planning-only): "Technical work" added in the same card      ◄── human approves it
+                     main session        ↳ after each approval: commit the approved docs on main (main checkout) ── before BUILD
                      ──► tech-lead       2. BUILD: dispatch ──► backend-developer ∥ frontend-developer, review, delivery report
                      ──► product-owner   3. ACCEPT: AC check + click-through script                          ◄── human accepts
                      main session        4. CLOSE: commit per acceptance criterion (human's yes) ──► product-owner updates BACKLOG/STATUS
@@ -40,6 +52,7 @@ human ⇄ main session ──► product-owner   0. REFINE: phase proposal, stor
    Don't pick stories yourself.
 2. Present its output: link the cards, summarise each in two lines, and ask its "Questions for the human" with `AskUserQuestion` (keep its
    options and recommendation; don't add rules it didn't propose). Send the answers back with `SendMessage`. Only the human makes a card `Ready`.
+   When they do, commit the approved cards and the backlog/roadmap changes on `main` right away (docs commit rule above).
 
 ### Step 1 — Plan (tech-lead, planning-only)
 3. Dispatch the **tech-lead** (`subagent_type: "tech-lead"`) in **planning-only mode** with the `Ready` card paths (or the `TECH-DEBT.md` IDs
@@ -47,10 +60,10 @@ human ⇄ main session ──► product-owner   0. REFINE: phase proposal, stor
    it writes a whole `F-xx` card) and returns without dispatching. Run it in the background.
 4. Present it: link the card, say whether the tech-lead rated the work simple or complex, and summarise its steps, risks and questions.
    Route behaviour/UX/scope questions to the product-owner, product decisions to the human. Revisions go back to the same tech-lead with
-   `SendMessage`. Wait for the human's approval.
+   `SendMessage`. Wait for the human's approval, then commit the card with its Technical work on `main` (docs commit rule above).
 
 ### Step 2 — Build (tech-lead, execute)
-5. `SendMessage` the same tech-lead: "Technical work approved. Execute it." It dispatches, reviews every handoff by running all gates, loops fixes
+5. Once the docs commit is on `main`: `SendMessage` the same tech-lead: "Technical work approved. Execute it." It dispatches, reviews every handoff by running all gates, loops fixes
    (max 3 rounds) and returns a **delivery report** with an AC → test evidence table.
 
 ### Step 3 — Accept (product-owner)
@@ -59,8 +72,8 @@ human ⇄ main session ──► product-owner   0. REFINE: phase proposal, stor
 
 ### Step 4 — Close
 7. When the human accepts: **ask before committing**, then commit per acceptance criterion, staging only the files the report lists
-   (Conventional Commits, branch per phase), and tell the product-owner the commit hashes so it ticks the card's criteria and updates
-   BACKLOG, STATUS and ROADMAP.
+   (Conventional Commits, branch per phase; doc files are committed in the main checkout on `main`), and tell the product-owner the
+   commit hashes so it ticks the card's criteria and updates BACKLOG, STATUS and ROADMAP.
 
 Don't do the developers', the tech-lead's or the product-owner's work yourself, even if it looks quick. If an agent is blocked
 (environment, permissions), tell the human. Process documents (CLAUDE.md, `.claude/**`) change only when the human asks.

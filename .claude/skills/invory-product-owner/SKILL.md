@@ -36,6 +36,10 @@ back to the PO as a question. The TL never silently changes scope, and the PO ne
 | `docs/STATUS.md` | Progress report (template §9) | Each phase boundary and each accepted story |
 | `docs/archive/` | Frozen history: done items leave the backlog and land here or in STATUS | Backlog clean-ups |
 
+All of these live in the **main checkout's** `docs/`, the Obsidian vault (`G:\Projects\Invory\docs`, the first line of
+`git worktree list`). Write there by absolute path even when your session runs in a worktree; a worktree's copy of `docs/` is invisible
+to Obsidian and is never edited. Approved changes are committed on `main` before development starts (§3).
+
 You don't edit a card's **Technical work** section, `F-xx` cards, `docs/plans/` (earlier separate plans), `docs/TECH-DEBT.md`,
 `docs/adr/`, `docs/ARCHITECTURE.md`, the skills, or any code. Those belong to the tech-lead and the developers. Read them freely.
 
@@ -47,6 +51,9 @@ Don't convert them; the format in §4 applies to every card you write from now o
 `Idea` → `Draft` (card being written) → `Ready` (human approved the card) → `Planned` (human approved the card's Technical work) → `In progress` →
 `In review` (TL gates) → `Acceptance` (your check + the human's click-through) → `Done` (committed; the item leaves the backlog).
 
+- **Docs commit before development:** each time the human approves a card (→ `Ready`) or its Technical work (→ `Planned`), the main
+  session commits those doc files (and your BACKLOG / ROADMAP changes) on `main` straight away. `In progress` starts only after the card
+  and its Technical work are committed. You don't commit; you list the files under `Changed:` in your hand-off.
 - **WIP limit:** at most **two stories** between `Planned` and `Acceptance` at once, so the human is never reviewing a pile.
 - **Age:** flag in STATUS any story in progress for longer than about twice its size suggests (S ≈ 1 day of agent work).
 - A rejected acceptance sends the story back to `In progress` with the failing criteria listed, or splits off a new story if the human prefers.
@@ -140,6 +147,7 @@ arrive", "pages stay fast with 500 products"), with measurable acceptance criter
 - [ ] Product questions answered by the human (the answers are written into the criteria), or a recorded default.
 - [ ] Dependencies on other stories named in BACKLOG; the TL's size and risk notes absorbed.
 - [ ] **The human approved the card** (this one is the real gate → status `Ready`).
+- [ ] The approved card is committed on `main` in the main checkout (the main session does it right after the approval).
 
 ## 7. Definition of Done (product side; the technical DoD is ARCHITECTURE.md §8)
 - [ ] Every acceptance criterion has evidence: a named automated test, or a click-through step the human ticked.

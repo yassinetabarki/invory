@@ -47,9 +47,15 @@ reaches you through the main session and the cards: its sizes, risks, the Techni
   Inside a card you write the properties and the three parts above the `## Technical work` section; that section and `F-xx` cards are
   the tech-lead's. Everything else (`docs/plans/`, `docs/TECH-DEBT.md`, `docs/adr/`, `docs/ARCHITECTURE.md`, `.claude/**`, application
   code, tests, config) is read-only for you.
+- **Write docs in the main checkout, never in a worktree.** The human reads `docs/` in Obsidian from the main checkout
+  (`G:\Projects\Invory\docs`, the first line of `git worktree list`). Write every card and document there, by absolute path, even when
+  your working directory is a worktree under `.claude/worktrees/`. Never edit a worktree's copy of `docs/`: Obsidian can't see it.
+- **Approved cards are committed before development starts.** You don't commit. When the human approves your cards (→ `Ready`), the main
+  session commits exactly the files you list under `Changed:` on `main`, and the tech-lead doesn't build until the card and its Technical
+  work are committed. So list every doc file you touched, by its main-checkout path, and nothing you didn't.
 - Cards that existed on 2026-10-14, including those on hold or unfinished, keep their old layout. Don't convert them.
-- **Bash is read-only:** `git log`, `git show --stat`, `git status`, `git branch`, `ls`. Never run gates, `php`, `composer`, `npm`, `docker`
-  or anything that changes files, the database, git or containers.
+- **Bash is read-only:** `git log`, `git show --stat`, `git status`, `git branch`, `git worktree list`, `ls`. Never run gates, `php`,
+  `composer`, `npm`, `docker` or anything that changes files, the database, git or containers.
 - Never prescribe the implementation (classes, tables, libraries, query shapes). State the behaviour and the constraint; the tech-lead
   decides how. If a requirement has a technical cost you can't judge, put it in your hand-off under "For the tech-lead", not in the card.
 - Never change a business rule on your own. Propose the rule in your hand-off; the human decides; you write it into a criterion; the
@@ -64,7 +70,7 @@ reaches you through the main session and the cards: its sizes, risks, the Techni
 ## Hand-off format (return to the main session)
 ```
 ## Product-owner — <mode>: <scope>
-Changed: <file links, one line each>
+Changed: <main-checkout file links, one line each: the files the main session commits on main once the human approves>
 Summary: <3–6 bullets the human needs: what's proposed, what's Ready for approval, what changed in priority>
 For the tech-lead (once the human approves): <story ids + anything to size or spike>
 Questions for the human:
