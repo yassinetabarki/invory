@@ -12,8 +12,9 @@ Template, writing rules, Definition of Ready and Done: [`invory-product-owner` s
 |---|---|---|
 | [S-30 — Walk through every MVP screen and sign it off](S-30-mvp-acceptance-walkthrough.md) | 4 · Must · S | `Ready` (approved 2026-10-14; walked as soon as S-29 lands) |
 | [S-08 — One automated test walks the whole journey, and a fresh install shows the demo workshop](S-08-golden-path-test-and-demo-data.md) | 4 · Must · M | `Acceptance` (delivered 2026-10-14; waits for the click-through and the green `golden-path` job) |
-| [S-31 — A section that fails to load offers "Try again"](S-31-deferred-section-try-again.md) | 4 · Should · S | `Ready` (approved 2026-10-14) |
-| [S-32 — A duplicate SKU saved at the same moment shows a clear message](S-32-duplicate-sku-clear-message.md) | 4 · Should · S | `Ready` (approved 2026-10-14) |
+| [S-31 — A section that fails to load offers "Try again"](S-31-deferred-section-try-again.md) | 4 · Should · S | `Ready` (approved 2026-10-14), on hold since 2026-10-14 |
+| [S-32 — A duplicate SKU saved at the same moment shows a clear message](S-32-duplicate-sku-clear-message.md) | 4 · Should · S | `Ready` (approved 2026-10-14), on hold since 2026-10-14 |
+| [S-43 — Save a product without filling in the overhead cost](S-43-overhead-cost-optional.md) | 4 · Should (next) · S | `Acceptance` (delivered 2026-10-14; waits for the human's click-through) |
 | [S-40 — Fill a fresh install with a realistic catalogue of 100 products](S-40-realistic-catalogue-100-products.md) | 4 · Could · M | `Ready` (approved 2026-10-14) |
 | [S-41 — A real photo on every item of the demo catalogue](S-41-real-photos-for-the-catalogue.md) | 4 · Could · M | `Ready` (approved 2026-10-14; work starts once the human's Pexels key exists) |
 | [S-42 — Screen readers hear "112 units", not "112units"](S-42-screen-readers-hear-units.md) | 4 · Could · S | `Ready` (approved 2026-10-14) |

@@ -10,7 +10,7 @@
 - **Priority** (MoSCoW, per phase): Must · Should · Could · Won't (this time). **Size:** S (≤ 1 day of agent work) · M · L (split it).
 - **Card:** the full story card (story, acceptance criteria with examples, what you will see, out of scope, questions) lives in
   `docs/stories/<id>-<slug>.md` once the product-owner writes it. Items below show the short version.
-- **IDs:** `S-` stories are numbered by the product-owner, `F-` technical items by the tech-lead. IDs are never reused. Next free: **S-43**, **F-58** (F-IDs: see [TECH-DEBT.md](TECH-DEBT.md)).
+- **IDs:** `S-` stories are numbered by the product-owner, `F-` technical items by the tech-lead. IDs are never reused. Next free: **S-44**, **F-58** (F-IDs: see [TECH-DEBT.md](TECH-DEBT.md)).
 
 ---
 
@@ -48,7 +48,20 @@ loads the demo workshop (12 materials, 7 products, 60 sales, material history) w
 **Done when:** the test passes in the tech-lead's gates and is green on GitHub (CI runs on every push since D-1, 2026-10-14); the demo-data
 step gives the documented figures on an empty database. Never load demo data into the existing development database (your decision, 2026-10-14).
 
-### S-31 · A section that fails to load offers "Try again" · Should · S · feature · `Ready` (card approved 2026-10-14; was F-48)
+### S-43 · Save a product without filling in the overhead cost · Should · S · feature · `Acceptance` (card approved 2026-10-14; delivered 2026-10-14, not committed yet; product-owner review done, waits for your click-through)
+Card: [stories/S-43-overhead-cost-optional.md](stories/S-43-overhead-cost-optional.md).
+**You get:** "Overhead cost (optional)" on "Add product" and "Edit <product>". Leave it empty and the product saves, with an overhead of 0:
+the Denim Jacket without overhead costs TND 32.254 instead of TND 35.754 and still makes 112 units. Labor cost stays required; existing
+products keep their overhead.
+**Why:** today a blank overhead is refused ("The overhead cost field is required."), so workshops that don't track overhead must type 0 on
+every product.
+**Done when:** a product saves with the field empty on create and on edit, its cost breakdown shows Overhead TND 0.000, typed values are
+checked as before, and existing products don't change.
+**Your decisions (2026-10-14):** it goes next, ahead of S-31 and S-32 ("stop S-31 and S-32 for now"). You chose to start it even though
+S-29 and S-08 already fill the two-story limit. New rule for the tech-lead to bring into the costing rules: overhead is optional, a blank
+is saved as 0, the formula doesn't change.
+
+### S-31 · A section that fails to load offers "Try again" · Should · S · feature · `Ready`, on hold (your decision 2026-10-14: "stop S-31 and S-32 for now"; paused, not dropped) (card approved 2026-10-14; was F-48)
 Card: [stories/S-31-deferred-section-try-again.md](stories/S-31-deferred-section-try-again.md).
 **You get:** if a part of a page that loads after the frame fails (dashboard figure cards and top 5, dashboard panels and alerts, the
 product page, the materials list's History panel), you see a message such as "Couldn't load the key figures." with a **Try again** button,
@@ -56,7 +69,7 @@ instead of loading placeholders that never go away.
 **Why:** the dashboard and the product page now load their content after the page appears. One failed request leaves you stuck.
 **Done when:** for each of the four places, a failed load shows its message and "Try again" reloads only that section.
 
-### S-32 · A duplicate SKU saved at the same moment shows a clear message · Should · S · bug · `Ready` (card approved 2026-10-14; was F-35)
+### S-32 · A duplicate SKU saved at the same moment shows a clear message · Should · S · bug · `Ready`, on hold (your decision 2026-10-14: "stop S-31 and S-32 for now"; paused, not dropped) (card approved 2026-10-14; was F-35)
 Card: [stories/S-32-duplicate-sku-clear-message.md](stories/S-32-duplicate-sku-clear-message.md).
 **You get:** if two people save a material or product with the same SKU at the same moment, the second one sees "This SKU is already used
 by another material." (or "…another product.") on the SKU field, not a server error page, and keeps what they typed.
@@ -97,7 +110,10 @@ checks "Can produce now 112 units".
 **Phase 4 tech allowance** (tech-lead picks these up alongside the stories): F-22 flaky form test · F-12 frontend skill wording ·
 F-45 stale "preview" test names (F-08, F-25 and F-51 ride with S-29). Details in [TECH-DEBT.md](TECH-DEBT.md).
 **Sizing note:** the Musts are about 70 % of this phase, above the usual 60 % guideline, because the phase is a release gate. S-31 and S-32
-are the contingency and slip to Phase 5 first.
+are the contingency and slip to Phase 5 first; they are on hold since 2026-10-14 so S-43 goes first. S-42 is planned after S-32, so it
+waits too.
+**Work-in-progress limit:** S-43 starts while S-29 (in progress) and S-08 (in acceptance) are open, three stories instead of two. This was
+your explicit choice on 2026-10-14.
 
 ---
 
@@ -163,6 +179,7 @@ cost history snapshots · production runs that consume stock (Q9) · REST API / 
 Q1 native serving · Q2 units editable, conversions later · Q3 any signed-in user edits the catalogue · Q4 bigint keys (provisional) ·
 Q6 currency/locale in config (provisional) · Q7 unit locked while used · Q8 sales stock-neutral, hard delete · Q9 no production runs (provisional) ·
 F-20 restock updates unit cost by default · F-37 deleted demo products stay deleted · F-39 no thumbnails · F-40 no correction reason ·
-dev DB demo seed skipped (2026-10-14) · D-1 repository on GitHub, CI on every push (2026-10-14) · D-3 Phase 4 scope approved with its four cards (2026-10-14) · low stock: no new story, no email alerts, no flag without "Reorder at" (2026-10-14) · large demo catalogue: new throwaway database only,
+dev DB demo seed skipped (2026-10-14) · D-1 repository on GitHub, CI on every push (2026-10-14) · D-3 Phase 4 scope approved with its four cards (2026-10-14) · D-8 S-43 added to Phase 4 and goes next; overhead optional, blank = 0;
+S-31 and S-32 on hold; started over the two-story limit (2026-10-14) · low stock: no new story, no email alerts, no flag without "Reorder at" (2026-10-14) · large demo catalogue: new throwaway database only,
 add-on after the demo workshop, no sales, same every run, no brand or sub-category, real Pexels photos with credits off-screen (S-40 Q1–Q7,
 S-41 Q1–Q4, 2026-10-14). Pending: [STATUS.md §2](STATUS.md#2-decisions-needed-from-you).

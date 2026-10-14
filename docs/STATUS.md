@@ -49,6 +49,15 @@ no "Reorder at" is never flagged as low. ·
 - Its photos are split into [S-41](stories/S-41-real-photos-for-the-catalogue.md) (`Ready`, approved 2026-10-14): real photos from Pexels only, with credits in a licence record and the setup guide, none on screens.
 - S-41 is a Phase 4 Could, right after S-40, and needs your free Pexels key first.
 
+**D-8 Overhead cost optional** (you asked for it on 2026-10-14):
+- [S-43](stories/S-43-overhead-cost-optional.md) is `Ready` (card approved 2026-10-14 with every recommended answer).
+- New business rule: overhead is optional. A blank overhead is saved as 0, and the unit-cost formula doesn't change. The tech-lead adds the
+  rule to the costing rules before any code changes.
+- It applies to "Add product" and "Edit <product>". Existing products keep their overhead, and labor cost stays required.
+- S-43 joins Phase 4 as a Should and goes next. S-31 and S-32 are on hold, not dropped ("stop S-31 and S-32 for now"), and S-42 waits
+  behind S-32.
+- You chose to start S-43 now, even though S-29 (in progress) and S-08 (in acceptance) already fill the two-story work-in-progress limit.
+
 **Recorded and still valid:** Phase 3 plan Q1 native serving (ADR-0007) · Q2 user-editable units, conversions later · Q3 any signed-in user
 edits the catalogue · Q7 unit locked while used · Q8 sales are stock-neutral and hard-deleted · F-20 restock updates the unit cost by default ·
 F-37 deleted demo products stay deleted · F-39 no photo thumbnails · F-40 corrections have no reason field · F-31 q3 "Manage units" link: not now ·

@@ -1,5 +1,5 @@
 # S-31 — A section that fails to load offers "Try again"
-> Phase 4 · Priority Should · Size S · Status **Ready** (approved by the human 2026-10-14) · Type feature (was F-48)
+> Phase 4 · Priority Should · Size S · Status **Ready** (approved by the human 2026-10-14), on hold since 2026-10-14 so S-43 goes first (D-8) · Type feature (was F-48)
 > Links: [Roadmap, Phase 4](../ROADMAP.md#now--phase-4-mvp-release-readiness) · [Backlog](../BACKLOG.md) · Related: D-7 (dashboard figures load
 > just after the frame), S-33 and S-35 (later pages that will load the same way and must reuse this) · Technical plan: added by the tech-lead
 

@@ -1,5 +1,5 @@
 # S-32 — A duplicate SKU saved at the same moment shows a clear message
-> Phase 4 · Priority Should · Size S · Status **Ready** (approved by the human 2026-10-14) · Type bug (was F-35)
+> Phase 4 · Priority Should · Size S · Status **Ready** (approved by the human 2026-10-14), on hold since 2026-10-14 so S-43 goes first (D-8) · Type bug (was F-35)
 > Links: [Roadmap, Phase 4](../ROADMAP.md#now--phase-4-mvp-release-readiness) · [Backlog](../BACKLOG.md) · Related: F-33 (the same protection
 > for catalogue names, done 2026-10-09) · Technical plan: added by the tech-lead
 
