@@ -45,3 +45,6 @@ yarn-error.log
 /boost.json
 /opencode.json
 /opencode.jsonc
+
+# Git Bash coverage once created "C" + U+F03A (a mangled "C:") at the root (F-08)
+/C

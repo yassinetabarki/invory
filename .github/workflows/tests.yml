@@ -37,7 +37,7 @@ jobs:
         with:
           node-version: '24'
 
-      # composer install, .env, key, migrate (SQLite), npm install and `npm run build` (also regenerates Wayfinder).
+      # composer install, .env, key, migrate (SQLite), storage:link, npm install and `npm run build` (also regenerates Wayfinder).
       - name: Setup Application
         run: composer setup
         # .env.example is the native-dev template (PostgreSQL on 127.0.0.1, ADR-0007). This job has no database service, so the setup
@@ -53,7 +53,8 @@ jobs:
       - name: Run CI Checks
         run: composer ci:check
 
-  # PostgreSQL parity: the Pest suite against a real PostgreSQL, on every PHP version we run (Laragon 8.3, Sail 8.5).
+  # PostgreSQL parity: the Pest suite against a real PostgreSQL, on the lowest PHP we support (8.3, Laragon) and the newest (8.5,
+  # covered by CI only since ADR-0012). Locally the same suite runs with `composer test:pgsql`.
   pgsql:
     runs-on: ubuntu-latest
 
@@ -113,6 +114,10 @@ jobs:
         run: |
           cp .env.example .env
           php artisan key:generate --ansi
+
+      # public/storage -> storage/app/public, checked by tests/Feature/Photos/StorageSetupTest.php (the ci job gets it from `composer setup`).
+      - name: Link public storage
+        run: php artisan storage:link
 
       # Inertia's page-existence check and the Vite manifest need the built frontend.
       - name: Build frontend
