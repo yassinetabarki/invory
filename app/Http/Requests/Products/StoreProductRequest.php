@@ -18,10 +18,26 @@ class StoreProductRequest extends FormRequest
         return $this->user()?->can('create', Product::class) ?? false;
     }
 
+    protected function prepareForValidation(): void
+    {
+        self::defaultOverheadToZero($this);
+    }
+
     /** @return array<string, mixed> */
     public function rules(): array
     {
         return self::fieldRules(product: null);
+    }
+
+    /**
+     * A blank overhead is saved as 0 (S-43, D-8). A blank field arrives as null (TrimStrings + ConvertEmptyStringsToNull), a missing
+     * key means the same. Any other value, even a wrong one, is left alone so the rules still reject it. Shared with UpdateProductRequest.
+     */
+    public static function defaultOverheadToZero(FormRequest $request): void
+    {
+        if ($request->input('overhead_cost') === null) {
+            $request->merge(['overhead_cost' => '0']);
+        }
     }
 
     /**
@@ -43,7 +59,7 @@ class StoreProductRequest extends FormRequest
             'status' => ['required', Rule::enum(ProductStatus::class)],
             'description' => ['nullable', 'string', 'max:2000'],
             'labor_cost' => ['required', 'decimal:0,4', 'min:0', 'max:99999999.9999'],
-            'overhead_cost' => ['required', 'decimal:0,4', 'min:0', 'max:99999999.9999'],
+            'overhead_cost' => ['nullable', 'decimal:0,4', 'min:0', 'max:99999999.9999'],
             'selling_price' => ['nullable', 'decimal:0,4', 'min:0', 'max:99999999.9999'],
             'photo' => ['nullable', File::image()->types(['jpg', 'jpeg', 'png', 'webp'])->max(4096)],
             'remove_photo' => ['nullable', 'boolean'],

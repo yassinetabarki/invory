@@ -86,7 +86,7 @@ dataset('invalidProductInput', [
     'text labor cost' => [['labor_cost' => 'abc'], 'labor_cost'],
     'exponent labor cost' => [['labor_cost' => '1e3'], 'labor_cost'],
     'labor cost over the column' => [['labor_cost' => '100000000'], 'labor_cost'],
-    'missing overhead cost' => [['overhead_cost' => null], 'overhead_cost'],
+    'text overhead cost' => [['overhead_cost' => 'abc'], 'overhead_cost'],
     'negative overhead cost' => [['overhead_cost' => '-0.0001'], 'overhead_cost'],
     'overhead cost with 5 decimals' => [['overhead_cost' => '2.00001'], 'overhead_cost'],
     'negative selling price' => [['selling_price' => '-1'], 'selling_price'],
@@ -153,6 +153,17 @@ function withRealMaterials(array $payload): array
     return $payload;
 }
 
+/** The four composition lines of the Denim Jacket of the costing skill's worked example, on the seeded materials. */
+function denimJacketLines(): array
+{
+    return [
+        ['material_id' => demoMaterial('MAT-DEN-012')->id, 'quantity' => '1.8', 'waste_percent' => '10', 'notes' => 'Body, sleeves, collar'],
+        ['material_id' => demoMaterial('MAT-BTN-017')->id, 'quantity' => '8', 'waste_percent' => '0', 'notes' => 'Front placket (6), cuffs (2)'],
+        ['material_id' => demoMaterial('MAT-THR-PES')->id, 'quantity' => '120', 'waste_percent' => '5', 'notes' => 'All seams'],
+        ['material_id' => demoMaterial('MAT-LBL-WOV')->id, 'quantity' => '1', 'waste_percent' => '0', 'notes' => 'Inside back yoke'],
+    ];
+}
+
 /** The materials and quantities of a product's stored lines, in position order. */
 function storedComposition(Product $product): array
 {
@@ -193,13 +204,6 @@ describe('store', function () {
     });
 
     it('creates the Denim Jacket of the worked example, and its page sends the golden figures', function () {
-        $lines = [
-            ['material_id' => demoMaterial('MAT-DEN-012')->id, 'quantity' => '1.8', 'waste_percent' => '10', 'notes' => 'Body, sleeves, collar'],
-            ['material_id' => demoMaterial('MAT-BTN-017')->id, 'quantity' => '8', 'waste_percent' => '0', 'notes' => 'Front placket (6), cuffs (2)'],
-            ['material_id' => demoMaterial('MAT-THR-PES')->id, 'quantity' => '120', 'waste_percent' => '5', 'notes' => 'All seams'],
-            ['material_id' => demoMaterial('MAT-LBL-WOV')->id, 'quantity' => '1', 'waste_percent' => '0', 'notes' => 'Inside back yoke'],
-        ];
-
         actingAs($this->user)->post(route('products.store'), validProductPayload([
             'sku' => 'PRD-JKT-NEW',
             'name' => 'Denim Jacket',
@@ -208,7 +212,7 @@ describe('store', function () {
             'labor_cost' => '12',
             'overhead_cost' => '3.5',
             'selling_price' => '89',
-            'components' => $lines,
+            'components' => denimJacketLines(),
         ]))->assertSessionHasNoErrors();
 
         $created = demoProduct('PRD-JKT-NEW');
@@ -233,6 +237,39 @@ describe('store', function () {
 
         expect($strip(loadedPageProp($response, 'product')))->toBe($strip(loadedPageProp($seeded, 'product')));
     });
+
+    it('saves a blank overhead as 0, and the Denim Jacket then costs 32.2540', function (mixed $overhead, bool $sent) {
+        $payload = validProductPayload([
+            'sku' => 'PRD-JKT-NEW',
+            'name' => 'Denim Jacket',
+            'status' => 'active',
+            'labor_cost' => '12',
+            'overhead_cost' => $overhead,
+            'selling_price' => '89',
+            'components' => denimJacketLines(),
+        ]);
+
+        $created = actingAs($this->user)
+            ->post(route('products.store'), $sent ? $payload : Arr::except($payload, 'overhead_cost'))
+            ->assertSessionHasNoErrors()
+            ->assertInertiaFlash('toast', PRODUCT_CREATED_TOAST);
+
+        $product = demoProduct('PRD-JKT-NEW');
+        $created->assertRedirect(route('products.show', $product));
+
+        expect($product->overhead_cost)->toBe('0.0000');
+
+        actingAs($this->user)->get(route('products.show', $product))
+            ->assertInertia(fn (Assert $page) => $page->loadDeferredProps('default', fn (Assert $reloaded) => $reloaded
+                ->where('product.cost', ['material_cost' => '20.2540', 'labor_cost' => '12.0000', 'overhead_cost' => '0.0000', 'unit_cost' => '32.2540'])
+                ->where('product.margin', ['amount' => '56.7460', 'percent' => '63.76'])
+                ->where('product.capacity.max_producible', 112)
+                ->where('product.capacity.bottleneck.sku', 'MAT-BTN-017')));
+    })->with([
+        'a null overhead' => [null, true],
+        'an empty overhead' => ['', true],
+        'no overhead key' => [null, false],
+    ]);
 
     it('rejects invalid input with an error on the field, no toast and nothing saved', function (array $override, string $field) {
         $before = Product::query()->count();
@@ -332,7 +369,8 @@ describe('store', function () {
     it('reports every broken field at once', function () {
         actingAs($this->user)
             ->post(route('products.store'), ['sku' => '', 'components' => [['material_id' => 'x']]])
-            ->assertSessionHasErrors(['sku', 'name', 'category', 'status', 'labor_cost', 'overhead_cost', 'components.0.material_id', 'components.0.quantity']);
+            ->assertSessionHasErrors(['sku', 'name', 'category', 'status', 'labor_cost', 'components.0.material_id', 'components.0.quantity'])
+            ->assertSessionDoesntHaveErrors('overhead_cost');
     });
 
     it('rejects a soft-deleted material in the composition', function () {
@@ -415,6 +453,29 @@ describe('update', function () {
             // Created by nobody (the seeder), updated by the user.
             ->and($product->created_by)->toBeNull()
             ->and($product->updated_by)->toBe($this->user->id);
+    });
+
+    it('clears the overhead to 0 and the unit cost drops by the old overhead', function () {
+        $jacket = pid(1);
+        $unitCost = fn (): string => loadedPageProp(actingAs($this->user)->get(route('products.show', $jacket)), 'product.cost.unit_cost');
+
+        expect($unitCost())->toBe('35.7540');
+
+        actingAs($this->user)
+            ->put(route('products.update', $jacket), validProductPayload([
+                'sku' => 'PRD-JKT-001',
+                'name' => 'Denim Jacket',
+                'status' => 'active',
+                'labor_cost' => '12',
+                'overhead_cost' => '',
+                'selling_price' => '89',
+                'components' => denimJacketLines(),
+            ]))
+            ->assertSessionHasNoErrors()
+            ->assertInertiaFlash('toast', PRODUCT_UPDATED_TOAST);
+
+        expect(Product::query()->findOrFail($jacket)->overhead_cost)->toBe('0.0000')
+            ->and($unitCost())->toBe('32.2540');
     });
 
     it('replaces the composition: lines kept, added, removed and reordered', function () {

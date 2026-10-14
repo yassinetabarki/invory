@@ -181,8 +181,8 @@ it('sends an invalid write back to where it came from, with its errors', functio
         ->assertRedirect(route('sales.index'))
         ->assertSessionHasErrors($errors);
 })->with([
-    'products.store' => ['post', 'products.store', null, ['sku', 'name', 'category', 'status', 'labor_cost', 'overhead_cost']],
-    'products.update' => ['put', 'products.update', 'product', ['sku', 'name', 'category', 'status', 'labor_cost', 'overhead_cost']],
+    'products.store' => ['post', 'products.store', null, ['sku', 'name', 'category', 'status', 'labor_cost']], // overhead_cost is optional (S-43)
+    'products.update' => ['put', 'products.update', 'product', ['sku', 'name', 'category', 'status', 'labor_cost']], // overhead_cost is optional (S-43)
     'sales.store' => ['post', 'sales.store', null, ['product_id', 'quantity', 'unit_price', 'sold_on']],
     'sales.update' => ['put', 'sales.update', 'sale', ['product_id', 'quantity', 'unit_price', 'sold_on']],
     'restock' => ['post', 'materials.restocks.store', 'material', ['quantity', 'unit_price', 'received_on']], // update_unit_cost is optional (F-20)

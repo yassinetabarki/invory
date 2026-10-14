@@ -21,6 +21,11 @@ class UpdateProductRequest extends FormRequest
             && ($this->user()?->can('update', $product) ?? false);
     }
 
+    protected function prepareForValidation(): void
+    {
+        StoreProductRequest::defaultOverheadToZero($this);
+    }
+
     /** @return array<string, mixed> */
     public function rules(): array
     {
