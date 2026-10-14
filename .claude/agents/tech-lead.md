@@ -34,7 +34,7 @@ report (never in the card), with the technical trade-off, and build only what is
    approved card, return and ask for one. For an item from `TECH-DEBT.md` you write an `F-xx` card yourself (below). Work that already has
    a plan in `docs/plans/` (S-29 and any story planned before 2026-10-14) runs from that plan; don't convert it.
 2. **Write the Technical work.** In the card itself, under the acceptance criteria, add the `## Technical work` section (format below).
-   First rate the work **simple** or **complex**: simple gets a few plain bullets, complex gets a detailed plan with the **slicing table**,
+   First rate the work **simple** or **complex**: simple gets a few plain bullets, complex gets a detailed plan with the **Steps** (overview table + a block per step),
    frozen contract, order and risks. Either way every acceptance criterion maps to the step(s) and test(s) that prove it, each step is sized
    for one commit (3–8 files, ~100–400 lines of production code), and each step is tagged **CRITICAL** or **NON-CRITICAL** (rubric below):
    the tag drives the brief's test budget, the pre-flight ack and the review template. In planning-only mode, stop here and return the
@@ -100,7 +100,7 @@ Don't restate or change the criteria, and keep questions for the product-owner i
 3–5 plain sentences a non-technical reader can follow: what changes behind the screen, in what order, and why this way.
 
 ### Steps
-<the slicing table below; every acceptance criterion appears in at least one row's AC column>
+<the overview table, then one block per step (see "Steps" below); every acceptance criterion appears in at least one row's Proves column>
 
 ### Contract (frozen before dispatch)
 Routes, props shape and `domain.ts` types the backend delivers and the frontend consumes.
@@ -160,19 +160,51 @@ When in doubt, tag CRITICAL.
 - Removing a half-made feature in one revert beats two.
 
 **Commit sweet spot:** 3–8 files, 100–400 lines of production code, one coherent concern that reads top-to-bottom in a diff.
-`composer test` and `npx vp test` must stay green at every row of the slicing table.
+`composer test` and `npx vp test` must stay green after every step.
 
-## Slicing table (the Steps of a complex card)
+## Steps (how a complex card lays out its slicing)
 
-| # | Card id | AC | Lane | Files (exact paths) | Line budget | Tests allowed | Owner | Commit label |
-|---|---|---|---|---|---|---|---|---|
-| 1 | S-xx-a | AC-1 | CRITICAL | `database/migrations/…`, `app/Models/Foo.php`, `database/factories/FooFactory.php`, `app/Policies/FooPolicy.php` | ~200 | 1 arch rule, 1 policy dataset (guest/denied/allowed) | BE | `feat(foo): …` |
-| 2 | S-xx-b | AC-2, AC-3 | CRITICAL | `app/Actions/CreateFoo.php`, `app/Http/Requests/StoreFooRequest.php`, `tests/Feature/Foo/CreateFooTest.php` | ~250 | 1 happy, 1 rollback if transactional, 1-per-business-rule | BE | `feat(foo): …` |
-| 3 | S-xx-c | AC-1 | NON-CRITICAL | `app/Http/Controllers/FooController.php`, `app/Http/Resources/FooResource.php`, `resources/js/types/domain.ts`, `tests/Feature/Foo/IndexFooTest.php` | ~200 | 1 happy per route, 1 validation dataset, 1 guest, 1 contract | BE | `feat(foo): …` |
-| 4 | S-xx-d | AC-4 | NON-CRITICAL | `resources/js/pages/foo/index.tsx`, `resources/js/components/foo/foo-table.tsx` | ~300 | 1 render-with-props smoke | FE | `feat(foo): …` |
+The human reads cards in Obsidian, so *Steps* has two parts: a short overview table, then one block per step. Never put file paths,
+test lists or commit labels in a table cell.
 
-Put the table under *Steps* in a complex card's Technical work and reference it in each brief. A simple card has no table: its bullets
-and the callout's lane and owner are enough, and the brief carries the file list. If a row's budget doesn't fit, split or re-lump — don't let it grow.
+**1. Overview table.** One row per step; every cell a few plain words, with no paths and no backticks. Pad every column to the width of its
+longest cell and write the separator as dashes of that width, the way Obsidian's own table editor does:
+
+```markdown
+| Step       | What it does                          | Proves     | Lane         | Who      | Size       |
+| ---------- | ------------------------------------- | ---------- | ------------ | -------- | ---------- |
+| **S-xx-a** | A new Foo table, its model and policy | AC-1       | CRITICAL     | Backend  | ~200 lines |
+| **S-xx-b** | Create a Foo; refused when …          | AC-2, AC-3 | CRITICAL     | Backend  | ~250 lines |
+| **S-xx-c** | The Foo list page                     | AC-4       | NON-CRITICAL | Frontend | ~300 lines |
+```
+
+Under it, one plain sentence on the gates every step keeps green and any extra suites some steps run (parity, golden path).
+
+**2. One block per step**, in order:
+
+```markdown
+#### S-xx-a · A new Foo table, its model and policy
+**Commit:** `feat(foo): …`
+
+**Tests**
+- 1 arch rule.
+- 1 policy dataset: guest · denied · allowed.
+
+> [!example]- Files (4)
+> - `app/Models/Foo.php`
+> - `app/Policies/FooPolicy.php`
+> - `database/migrations/…_create_foos_table.php`
+> - `database/factories/FooFactory.php`
+```
+
+- The `-` after `[!example]` folds the file list: the human sees the steps first and opens the files only when needed. One path per line,
+  grouped `app/` → `database/` → `resources/` → `tests/`; a brace group (`app/Models/{Foo,Bar}.php`) may stay on one line.
+- Every acceptance criterion appears in at least one row's *Proves* column. Elsewhere in the card, name a step by its id (S-xx-b),
+  never "row 2". Each brief points at its step's block.
+- If a step's budget doesn't fit, split or re-lump; don't let it grow. A simple card has no Steps: its bullets and the callout's lane
+  and owner are enough, and the brief carries the file list.
+- **Every table you write** (cards, `TECH-DEBT.md`, ADRs, `ARCHITECTURE.md`) uses the padded style above, with a blank line before and
+  after it. When a cell would need a list or a path, it belongs in a block under the table instead.
 
 ## Brief template (send this to a developer)
 ```

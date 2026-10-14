@@ -199,7 +199,8 @@ rule, drifted the contract), the tech-lead upgrades the lane and re-reviews full
 **Commit sweet spot:** 3–8 files, 100–400 lines of production code, one coherent concern that reads top-to-bottom in a diff.
 `composer test` and `npx vp test` must stay green at every head.
 
-For complex work the tech-lead puts a **slicing table** under *Steps* in the card's Technical work: step id → lane → files → line budget → tests allowed → owner → commit label. Simple work needs no table.
+For complex work the tech-lead writes *Steps* in the card's Technical work as a padded overview table (Step · What it does · Proves ·
+Lane · Who · Size), then one block per step with its commit, its tests and a folded file list. Simple work needs no Steps.
 
 ## Testing rubric — "test the risk, not the code"
 

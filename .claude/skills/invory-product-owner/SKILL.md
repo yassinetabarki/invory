@@ -115,14 +115,26 @@ tags:
   alone) always apply; write them into a criterion only when the story is about them.
 - **Obsidian, kept plain:** properties, the two callouts above (`> [!abstract]`, `> [!info]`) and checkboxes. Everything else is plain
   Markdown, so a card also reads on GitHub and every card looks the same.
+- **Tables, everywhere you write** (cards, ROADMAP, BACKLOG, STATUS, the archive): pad every column to the width of its longest cell and
+  write the separator as dashes of that width, the way Obsidian's own table editor does, with a blank line before and after the table.
+  Keep cells to a few words; a list, a long sentence or a file path goes in a bullet under the table, never in a cell.
+
+  ```markdown
+  | Story | What changes                         | Status |
+  | ----- | ------------------------------------ | ------ |
+  | S-44  | Each workshop sees only its own data | Ready  |
+  | S-46  | Name your workshop                   | Draft  |
+  ```
 - **Frozen once `Ready`:** after the human approves the card, a change to these three parts needs the human's yes.
 - **Ticking:** criteria stay unticked until the story is `Done`. When the main session gives you the commit hashes, tick each criterion
   and add the date and its commit: `- [x] **AC-1 · Bottleneck named.** … ✅ 2026-10-15 · 4644a08`.
 
 ### 4.1 Technical work (the tech-lead's part of the same card)
 Once the card is `Ready`, the tech-lead adds a horizontal rule and a `## Technical work` section under your acceptance criteria: a few
-plain bullets when the work is simple, a detailed plan when it is complex. It is the tech-lead's; you don't edit it. Read it to check it
-covers every criterion and nothing more, and raise any mismatch in your hand-off. When the human approves it, the story moves to `Planned`.
+plain bullets when the work is simple, a detailed plan when it is complex. In a complex plan, *Steps* is an overview table (Step · What
+it does · Proves · Lane · Who · Size) followed by one block per step with its commit, its tests and a folded file list. It is the
+tech-lead's; you don't edit it. Read it to check it covers every criterion and nothing more (the *Proves* column), and raise any
+mismatch in your hand-off. When the human approves it, the story moves to `Planned`.
 Technical items from `TECH-DEBT.md` get a card in the same format (`type: tech`, id `F-xx`), written whole by the tech-lead. You only order them.
 
 **INVEST check before you call it Draft-complete:** Independent (no hidden order on another open story, or the dependency is named in
