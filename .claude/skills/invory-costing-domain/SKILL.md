@@ -28,10 +28,25 @@ If a rule here is wrong or incomplete, stop and ask the tech-lead to update it (
 | Units covered | Units of a product that one material's stock covers on its own | `units_covered` |
 | Next limit | The bottleneck and capacity a product would have if its current bottleneck were unlimited | `next_limit` |
 | Stock movement | A history entry of a material: `created`, `restock`, `correction`, `price_change` | `StockMovement` / `StockMovementType` enum |
+| Workshop | The business account. Every user belongs to one; every material, product, composition, stock movement, sale, photo, unit and category belongs to one | `Workshop` / `workshops`, `workshop_id` |
+
+## Workshops (added 2026-10-14, D-9, ADR-0013)
+
+- **R1** Every account belongs to exactly one workshop. Every material, product, composition line, stock movement, sale, photo, unit and
+  category belongs to exactly one workshop.
+- **R2** You see and change only your workshop's records. Another workshop's record behaves as if it doesn't exist: **404, never 403**.
+- **R3** SKUs, and unit and category names, are unique per workshop (not per installation).
+- **R4** A composition uses only materials of its product's workshop; a sale only products of its workshop.
+- **R5** Every figure (unit cost, can produce, bottleneck, inventory value, sales totals, dashboard) is computed over one workshop's
+  records. The costing formulas don't change.
+- **R6** Signing up creates a new, empty workshop with the new account as its only member.
+
+The formulas below always run over one workshop's records; they don't change.
 
 ## Units and categories
 
-Units and categories are **database tables** managed in Settings by any signed-in user (ADR-0008, S-21). Each row has an immutable `code`
+Units and categories are **database tables** managed in Settings by any member of the workshop. Each workshop has its own lists, starting
+from the defaults below (S-45; ADR-0008, S-21). Each row has an immutable `code`
 (used in forms, filters and URLs), an editable `name`, a `position` and `archived_at`. Archived rows are hidden from pickers but still show on
 existing records. A row can be deleted only when nothing references it.
 - `units` (seeded defaults, `is_system`): `m, cm, yd, sqm, sqft, kg, g, l, ml, pc, pair, roll, cone`. Users may add, rename and archive units.
@@ -66,7 +81,7 @@ bottleneck(P)         = the material m with the smallest units_possible(m)
                         (tie → lowest material name in byte order (`strcmp`), then lowest id)
 
 stock_value(m)        = m.quantity_on_hand × m.unit_cost
-inventory_value       = Σ stock_value(m) over non-deleted materials
+inventory_value       = Σ stock_value(m) over the workshop's non-deleted materials
 ```
 
 ### Material usage and next limit (added 2026-10-08, decision 3)
@@ -97,9 +112,9 @@ Worked example: Denim Jacket at selling price `89.0000` → `margin.amount = "53
 
 ```
 sale_total(S)         = S.quantity × S.unit_price                            scale 4 (quantity is a whole number ≥ 1)
-revenue               = Σ sale_total(S) over the period
-units_sold            = Σ S.quantity over the period
-sales_count           = number of sales in the period
+revenue               = Σ sale_total(S) over the workshop's sales in the period
+units_sold            = Σ S.quantity over the workshop's sales in the period
+sales_count           = number of the workshop's sales in the period
 average_sale          = revenue ÷ sales_count                                scale 4, HalfUp; null when sales_count = 0
 products_sold_count   = number of distinct products sold in the period
 top products          = per product: units_sold and revenue over the period; ranked by the chosen metric descending
@@ -112,7 +127,7 @@ top by units T-shirt 142 (`100.00`), Jeans 64 (`45.07`), Denim Jacket 38 (`26.76
 Periods are inclusive calendar-day ranges ending today (app timezone): `last_7_days` = today − 6 … today, `last_30_days` = today − 29 … today,
 `this_month` = 1st of this month … today, `this_year` = 1 January … today. A sale's date can't be in the future.
 "Sold (30 d)" on products always uses `last_30_days`. Recording, editing or deleting a sale **never** changes material stock.
-"Can't produce" counts products (any status) whose `max_producible = 0`; products with an empty BOM (`null`) are not counted.
+"Can't produce" counts the workshop's products (any status) whose `max_producible = 0`; products with an empty BOM (`null`) are not counted.
 
 ### Restock and price history (added 2026-10-08, decision 4)
 
@@ -161,16 +176,19 @@ History is listed newest first (date, then entry order) with who did it.
 ## Validation rules (inputs)
 
 - Material: `unit_cost` ≥ 0 (max 4 decimals), `quantity_on_hand` ≥ 0 (max 4 decimals), `reorder_level` nullable ≥ 0.
-- BOM line: `quantity` > 0 (max 4 decimals); `waste_percent` 0 ≤ x < 100 (max 2 decimals); `material_id` exists, not soft-deleted, `distinct` within the product.
+- BOM line: `quantity` > 0 (max 4 decimals); `waste_percent` 0 ≤ x < 100 (max 2 decimals); `material_id` exists in the product's workshop, not soft-deleted, `distinct` within the product.
 - Product: `labor_cost` required, ≥ 0 (max 4 decimals). `overhead_cost` **optional**, ≥ 0 (max 4 decimals): blank or missing is saved as `0`
   and counts as 0 in the unit cost; a typed value follows the same rules (decided 2026-10-14, D-8, S-43). An empty BOM is allowed (e.g. a draft).
   `selling_price` nullable ≥ 0 (max 4 decimals).
 - A material referenced by any non-deleted product **cannot be deleted** (`MaterialInUseException`).
-- Sale: `product_id` exists, not soft-deleted, status `active`; `quantity` integer 1 … 1 000 000; `unit_price` ≥ 0 (max 4 decimals);
+- Sale: `product_id` exists in the workshop, not soft-deleted, status `active`; `quantity` integer 1 … 1 000 000; `unit_price` ≥ 0 (max 4 decimals);
   `sold_on` a date ≤ today; `note` nullable, ≤ 255 chars.
 - Restock: `quantity` > 0 (max 4 decimals); `unit_price` ≥ 0 (max 4 decimals); `received_on` a date ≤ today; `reference` nullable, ≤ 64 chars;
   `update_unit_cost` boolean (default true).
 - Photo (material or product): optional file, JPG / PNG / WebP only (no SVG), max 4 MB (4096 KB); `remove_photo` boolean. One photo per item.
+- SKUs are unique per workshop among non-deleted items; unit and category names per workshop, ignoring capitals (S-45). An id of another
+  workshop is refused exactly like an id that doesn't exist.
+- Deleting an account deletes only the person; the workshop's records stay.
 
 ## Worked example — use as a golden test (backend unit test + frontend display test)
 

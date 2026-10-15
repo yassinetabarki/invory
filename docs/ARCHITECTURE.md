@@ -1,7 +1,7 @@
 # Invory — Architecture
 
 > Owner: **tech-lead** agent. Any change to this document goes through an ADR in [`docs/adr/`](adr/).
-> Last updated: 2026-10-09 (reference data in the database, S-21, [ADR-0008](adr/0008-reference-data-in-database.md); earlier: UI-first track, [ADR-0006](adr/0006-ui-first-preview-data.md))
+> Last updated: 2026-10-14 (one workshop per account, S-44/S-45/S-46, [ADR-0013](adr/0013-one-workshop-per-account.md); earlier: reference data in the database, S-21, [ADR-0008](adr/0008-reference-data-in-database.md))
 
 ## 1. Product in one paragraph
 
@@ -23,7 +23,7 @@ The app then answers two questions for every product:
 | Frontend | **React 19** + **TypeScript** (strict) + **React Compiler** | From the official Laravel React starter kit. |
 | Styling/UI | **Tailwind CSS 4** + **shadcn/ui** (Radix) + lucide icons + sonner toasts | |
 | Typed routes | **Laravel Wayfinder** | Generates TypeScript functions for every controller action and named route. |
-| Auth | **Laravel Fortify** (starter kit) | Login, registration, password reset, 2FA. Single company: no teams. |
+| Auth | **Laravel Fortify** (starter kit) | Login, registration, password reset, 2FA. One workshop per account ([ADR-0013](adr/0013-one-workshop-per-account.md)): registration creates the workshop. |
 | Tooling (FE) | **Vite+** (`vp`): Vite 8, Oxlint, Oxfmt, **Vitest** | `npm run check`, `npm run types:check`, `npx vp test` |
 | Tooling (BE) | **Pest 4**, **Larastan**, **Pint** | `composer test` |
 | Database | **PostgreSQL** (Docker in dev, and production). SQLite in-memory for the fast test suite only. | Write portable SQL only. The parity suite runs on PostgreSQL locally (`composer test:pgsql`) and in CI. |
@@ -70,11 +70,15 @@ code testable and ready to scale.
 | `Http/Controllers` | Actions, Services, Resources, Requests | contain business rules, run raw queries, call `DB::` |
 | `Http/Requests` | Enums, Rules, Policies | mutate data |
 | `Http/Resources` | Models, Domain result objects | run queries (relations must be eager-loaded first) |
+| `Models` | Workshop models use `BelongsToWorkshop` (global scope + stamping); workshop-limited validation goes through `App\Validation\WorkshopRule` | bypass the scope (`withoutGlobalScope(s)`, raw `DB::table()` on workshop tables, `Rule::exists/unique` on them outside `WorkshopRule`) |
 | React `pages/` | components, hooks, types, Wayfinder | contain business maths (cost/capacity come from the server) |
 
 ## 4. Domain model
 
 ```
+ ┌──────────────┐ 1      * ┌──────────────┐
+ │   Workshop   │──────────│     User     │   Every row below also belongs to exactly one workshop (`workshop_id`, ADR-0013)
+ └──────────────┘          └──────────────┘
  ┌──────────────┐ 1      * ┌────────────────────┐ *      1 ┌──────────────┐ 1      * ┌────────────────┐
  │   Product    │──────────│  ProductComponent  │──────────│   Material   │──────────│ StockMovement  │
  │ (final item) │          │     (BOM line)     │          │(primary item)│          │   (history)    │
@@ -92,11 +96,24 @@ Earlier status (2026-10-08): `materials` is real. `products`, `product_component
 **designed here and served from preview fixtures** (`App\Mock`, [ADR-0006](adr/0006-ui-first-preview-data.md)) until their Phase 3 stories
 (S-04, S-14-BE, S-16-BE, S-15-BE) create them.
 
+### `workshops` and `workshop_id` (S-44, [ADR-0013](adr/0013-one-workshop-per-account.md))
+| Table / column | Type | Rules |
+|---|---|---|
+| `workshops` | id, timestamps (S-46 adds `name` string(100)) | the business account; created by registration (`CreateWorkshop`) |
+| `users.workshop_id` | FK → workshops, NOT NULL | `restrictOnDelete`; one workshop per account, many accounts per workshop |
+| `workshop_id` on `materials`, `products`, `product_components`, `stock_movements`, `sales` (S-45: `units`, `material_categories`, `product_categories`) | FK → workshops, NOT NULL | `restrictOnDelete`; never mass-assignable; stamped from the current workshop, children take their parent's |
+
+Every query on these tables is limited to the current workshop by the `BelongsToWorkshop` global scope (route-model binding included, so
+another workshop's record is a 404). PostgreSQL also has `unique(workshop_id, id)` on `materials` and `products` and composite foreign keys
+`product_components (workshop_id, product_id | material_id)`, `sales (workshop_id, product_id)`, `stock_movements (workshop_id, material_id)`
+→ `(workshop_id, id)`, so a composition or a sale can never cross workshops (R4).
+
 ### `materials` (primary items)
 | Column | Type | Rules |
 |---|---|---|
 | id | bigint PK | |
-| sku | string(64) | required, unique among non-deleted rows |
+| workshop_id | FK → workshops | see above |
+| sku | string(64) | required, unique per workshop among non-deleted rows |
 | name | string(150) | required |
 | category_id | FK → material_categories | `restrictOnDelete`; forms and filters use the category **code** (S-21, ADR-0008) |
 | unit_id | FK → units | `restrictOnDelete`; forms use the unit **code**; can't change while a BOM uses the material |
@@ -111,7 +128,8 @@ Earlier status (2026-10-08): `materials` is real. `products`, `product_component
 | photo_path | string(255) nullable | S-15-BE: public-disk path of the one photo (JPG/PNG/WebP, ≤ 4 MB); `photo_url` derived |
 | timestamps, deleted_at | | soft deletes |
 
-Indexes: `unique(sku)` (partial unique `WHERE deleted_at IS NULL`, on PostgreSQL and SQLite), `index(category_id)`, `index(unit_id)`, `index(name)`.
+Indexes: `materials_sku_unique` on `(workshop_id, sku)` (partial unique `WHERE deleted_at IS NULL`, on PostgreSQL and SQLite), `index(category_id)`,
+`index(unit_id)`, `index(name)`, `materials_restock_idx` on `(workshop_id, name, id)` (partial, the "needs restock" predicate).
 
 ### Reference tables (S-21, [ADR-0008](adr/0008-reference-data-in-database.md))
 | Table | Columns |
@@ -126,7 +144,8 @@ Defaults are inserted by the migration (frozen snapshot, `insertOrIgnore` by cod
 | Column | Type | Rules |
 |---|---|---|
 | id | bigint PK | |
-| sku | string(64) | required, unique among non-deleted rows |
+| workshop_id | FK → workshops | see above |
+| sku | string(64) | required, unique per workshop among non-deleted rows (`products_sku_unique` on `(workshop_id, sku)`) |
 | name | string(150) | required |
 | category_id | FK → product_categories | `restrictOnDelete`; forms and filters use the category **code** |
 | status | string(16) | `ProductStatus` enum: draft, active, archived (default active) |
@@ -141,6 +160,7 @@ Defaults are inserted by the migration (frozen snapshot, `insertOrIgnore` by cod
 | Column | Type | Rules |
 |---|---|---|
 | id | bigint PK | |
+| workshop_id | FK → workshops | the product's workshop (composite FK to products and materials on PostgreSQL) |
 | product_id | FK → products | `cascadeOnDelete` |
 | material_id | FK → materials | `restrictOnDelete` |
 | quantity | decimal(14,4) | > 0, **per 1 unit of product**, in the material's unit |
@@ -156,7 +176,8 @@ aggregates by material defensively.
 | Column | Type | Rules |
 |---|---|---|
 | id | bigint PK | |
-| product_id | FK → products | `restrictOnDelete`; only `active` products can be sold |
+| workshop_id | FK → workshops | the product's workshop |
+| product_id | FK → products | `restrictOnDelete`; only `active` products of the same workshop can be sold |
 | quantity | unsigned integer | whole units, 1 … 1 000 000 |
 | unit_price | decimal(12,4) | ≥ 0; pre-filled from `products.selling_price`, editable |
 | sold_on | date | ≤ today |
@@ -164,12 +185,13 @@ aggregates by material defensively.
 | user_id | FK → users nullable | who recorded it (`nullOnDelete`) |
 | timestamps | | |
 
-Indexes: `index(sold_on)`, `index(product_id, sold_on)`. `total = quantity × unit_price` is computed, never stored. Recording a sale never changes stock.
+Indexes: `index(workshop_id, sold_on, id)`, `index(product_id, sold_on)`. `total = quantity × unit_price` is computed, never stored. Recording a sale never changes stock.
 
 ### `stock_movements` (S-16-BE, material history)
 | Column | Type | Rules |
 |---|---|---|
 | id | bigint PK | |
+| workshop_id | FK → workshops | the material's workshop |
 | material_id | FK → materials | `cascadeOnDelete` |
 | type | string(16) | `StockMovementType`: created, restock, correction, price_change |
 | occurred_on | date | receipt / count date |
@@ -211,7 +233,8 @@ app/
 ├── Actions/
 │   ├── Fortify/                         # starter kit
 │   ├── Materials/  CreateMaterial · UpdateMaterial · DeleteMaterial
-│   └── Products/   CreateProduct · UpdateProduct · DeleteProduct · SyncProductComponents
+│   ├── Products/   CreateProduct · UpdateProduct · DeleteProduct · SyncProductComponents
+│   └── Workshops/  CreateWorkshop   (registration; S-45 adds the standard units and categories)
 ├── Domain/
 │   └── Costing/    BomLine · LineCost · CostBreakdown · ProductionCapacity · CostingCalculator
 ├── Enums/          ProductStatus · StockStatus · StockMovementType · SalesPeriod · UnitDimension   (each has label() + options())
@@ -220,10 +243,12 @@ app/
 │   ├── Controllers/  DashboardController · MaterialController · ProductController
 │   ├── Requests/     Materials/{Store,Update}MaterialRequest · Products/{Store,Update}ProductRequest
 │   └── Resources/    MaterialResource · ProductListResource · ProductResource · ProductComponentResource · CostBreakdownResource
-├── Models/         Material · Product · ProductComponent · User
-├── Policies/       MaterialPolicy · ProductPolicy          (MVP: any authenticated user; roles in phase 2)
+├── Models/         Material · Product · ProductComponent · Sale · StockMovement · User · Workshop · Concerns/BelongsToWorkshop · Scopes/WorkshopScope
+├── Policies/       MaterialPolicy · ProductPolicy · SalePolicy   (any member of the record's workshop; another workshop → 404, never 403)
 └── Services/
-    └── Costing/    ProductCostingService                   (Eloquent → BomLine adapter; calls the calculator)
+    ├── Costing/    ProductCostingService                   (Eloquent → BomLine adapter; calls the calculator)
+    └── Workshops/  CurrentWorkshop                         (the current workshop: explicit, else the signed-in user's)
+app/Validation/WorkshopRule  exists / unique limited to the current workshop
 config/invory.php   currency (APP_CURRENCY, default TND), pagination size, decimal scales
 database/
 ├── factories/      MaterialFactory · ProductFactory · ProductComponentFactory
@@ -367,7 +392,8 @@ every acceptance criterion of the story card has evidence, the product-owner's a
 - `DB::prohibitDestructiveCommands(app()->isProduction())`.
 - All multi-row writes (product + BOM sync) run inside `DB::transaction`.
 - Mass assignment only from `$request->validated()`. Every model has explicit `$fillable`.
-- Authorization goes through Policies on every action, including reads, even though the MVP allows all authenticated users.
+- Authorization goes through Policies on every action, including reads. Every query on workshop data is limited to the current workshop by a
+  shared rule (the `BelongsToWorkshop` global scope, ADR-0013); Policies check the workshop again and answer 404 for another workshop's record.
 - No raw SQL with interpolated input. No `dangerouslySetInnerHTML`.
 - Money and quantities are never floats, on either side of the wire.
 - Foreign keys are enforced. Delete protections apply to referenced materials.
@@ -382,7 +408,7 @@ every acceptance criterion of the story card has evidence, the product-owner's a
 | Sizes and variants | `product_variants` with per-size consumption factors | BOM lines are an isolated table |
 | Sub-assemblies (multi-level BOM) | Polymorphic component (material **or** product), recursive costing in the domain | Calculator works on `BomLine` value objects, not models |
 | Suppliers and purchasing | `suppliers` table, purchase orders, reorder suggestions from `reorder_level` | `supplier_*` fields already captured |
-| Multi-company SaaS | Starter-kit teams, `team_id` + global scope on every model | Single entry points (actions/policies) to add scoping ([ADR-0003](adr/0003-single-tenant-mvp.md)) |
+| Several people per workshop | Invitations and roles on `users.workshop_id`; no data moves ([ADR-0013](adr/0013-one-workshop-per-account.md)) | Data already belongs to the workshop, not the person |
 | Integrations / mobile | `/api/v1` with Sanctum, reusing Actions and Resources | Controllers are thin and Resources already exist |
 | Roles | Policies gain role checks (owner, planner, viewer) | Policies already wired everywhere |
 | Cost history | Snapshot `CostBreakdown` per product on change | The breakdown is already an immutable value object |

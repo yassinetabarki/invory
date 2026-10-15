@@ -17,20 +17,26 @@ A small fashion workshop knows, at any moment, **what each product costs to make
 | **Know cost and capacity** | Unit cost, can produce, bottleneck, next limit, margin, "what you can make with it" | Acceptance, E2E (S-08) | Fast at 500 products (S-23, S-27) | | Live cost preview (S-09), production planner (S-10), cost history |
 | **Sell** | Sales log, totals, filters, record/edit/delete | Acceptance | Instant delete feedback (S-36) | | Custom date range (S-37) |
 | **Monitor** | Dashboard: KPIs, top 5, restock list, alerts | Panels offer "Try again" after an error (S-31) | Loading states (S-34) | | |
-| **Run the business on it** | Login, 2FA, catalogue settings | Reliable dev setup (S-29), crash-free SKU saves (S-32) | | Production server, backups (S-26) | Roles and permissions, multi-company |
+| **Run the business on it** | Login, 2FA, catalogue settings | Reliable dev setup (S-29), crash-free SKU saves (S-32), each workshop sees only its own data (S-44, S-45), workshop name (S-46) | | Production server, backups (S-26) | Several people in one workshop (invitations, roles and permissions) |
 
 ---
 
 ## NOW — Phase 4: MVP release readiness
-**Goal:** the business owner has accepted every MVP screen, and one automated test proves the golden path end to end.
+**Goal:** the business owner has accepted every MVP screen, one automated test proves the golden path end to end, and each workshop sees
+only its own data.
 **Scope approved** by the human on 2026-10-14 (decision D-3), together with the cards of S-30, S-08, S-31 and S-32 ([stories](stories/README.md)).
+**Added on 2026-10-14 (D-9):** each account gets its own workshop (S-44, S-45, S-46, cards approved), so the release can serve more than one
+business. S-44 started at once, over the two-story limit, by the human's choice; S-45 follows right after it, and the two ship together.
 
 | Priority | Story | Size |
 |---|---|---|
 | Must | S-29 Reliable dev environment (Docker = database + mail only; Sail removed). Open point: speed target on `php artisan serve`, see BACKLOG | M |
 | Must | S-30 MVP acceptance walkthrough (`Ready`) | S |
 | Must | S-08 End-to-end golden-path test + demo data on a fresh install (`Ready`) | M |
+| Must (your request 2026-10-14, D-9) | S-44 Each workshop sees only its own materials, products and sales (`Acceptance`: delivered 2026-10-15, waits for your click-through; started over the two-story limit) | M |
+| Must (your request 2026-10-14, D-9) | S-45 Each workshop has its own units and categories (`Ready`; right after S-44, ships with it) | S |
 | Should (your choice 2026-10-14, D-8) | S-43 Save a product without filling in the overhead cost (✅ `Done` 2026-10-14: `6179d52`, `4644a08`, `9fc8e98`, `9df0ca0`, close-out `eccb09a`) | S |
+| Should (D-9) | S-46 Name your workshop (`Ready`; after S-45) | S |
 | Should | S-31 A section that fails to load offers "Try again" (`Ready`, on hold since 2026-10-14, D-8) | S |
 | Should | S-32 Saving a duplicate SKU at the same moment shows a clear message, not a crash (`Ready`, on hold since 2026-10-14, D-8) | S |
 | Could (your choice 2026-10-14) | S-42 Screen readers hear "112 units", not "112units" (`Ready`, after S-32; found in the S-08 review) | S |
@@ -38,17 +44,19 @@ A small fashion workshop knows, at any moment, **what each product costs to make
 | Could (your choice 2026-10-14, S-41 Q4) | S-41 A real photo on every item of the demo catalogue, from Pexels (`Ready`, after S-40; needs your Pexels key; slips to Phase 5 first) | M |
 | Tech allowance (~15 %) | F-22 flaky form test · F-12 frontend skill wording · F-45 stale "preview" test names (F-08, F-25, F-51 ride with S-29) | — |
 
-Musts are about 70 % of the phase (above the 60 % guideline) because the phase is a release gate; S-31 and S-32 slip first.
+Musts are about 70 % of the phase (above the 60 % guideline) because the phase is a release gate; S-31 and S-32 slip first. With S-44 and
+S-45 (D-9) the Musts grow further; S-46 and the Coulds slip before them.
 
 **Exit criteria:** S-30 accepted by the human · S-08 green in the tech-lead's gates and in CI on GitHub (D-1 done 2026-10-14; the human
-reads the result) · S-18 page-speed target measured (p95 ≤ 150 ms; open point, see S-29 in BACKLOG) · every gate green.
+reads the result) · S-18 page-speed target measured (p95 ≤ 150 ms; open point, see S-29 in BACKLOG) · S-44 and S-45 accepted by the human ·
+every gate green.
 
 ## NEXT — Phase 5: Fast at real catalogue sizes
 **Goal:** every page stays within its speed budget with 2 000 materials, 500 products and 50 000 sales.
 
 | Priority | Story | Size |
 |---|---|---|
-| Must | S-27 Performance dataset and measured budgets (measure first) | S |
+| Must | S-27 Performance dataset and measured budgets (measure first; per workshop once S-44 lands) | S |
 | Must | S-23 Pre-computed product figures (`product_metrics`), if S-27 shows the need | M |
 | Should | S-33 Material history loads on demand, with "Load more" | S |
 | Should | S-35 The product edit page opens instantly | S |
@@ -64,7 +72,7 @@ reads the result) · S-18 page-speed target measured (p95 ≤ 150 ms; open point
 | Priority | Story | Size |
 |---|---|---|
 | Must | S-26 Production runtime (needs decision D-5: database host with PostgreSQL 13+ and `pg_trgm`) | M |
-| Must | Confirm the provisional decisions Q4 (bigint keys), Q6 (currency and locale in config) and Q9 (no production runs) | — |
+| Must | Confirm the provisional decisions Q4 (bigint keys), Q6 (currency and locale in config) and Q9 (no production runs), and confirm again that sign-up stays open to anyone once the server is public (D-9) | — |
 | Tech allowance | F-43 · F-46 · F-52 · F-53 | — |
 
 ## LATER — Phase 7: Planning features (order to be confirmed with the human)
@@ -79,8 +87,10 @@ reads the result) · S-18 page-speed target measured (p95 ≤ 150 ms; open point
 
 ## VISION — not scheduled
 Suppliers and purchase orders · unit conversions in compositions (columns exist, Q2) · sizes and variants · sub-assemblies
-(multi-level BOM) · roles and permissions · cost history snapshots · production runs that consume stock (Q9) · REST API / mobile ·
-multi-company. Design notes: [ARCHITECTURE.md §10](ARCHITECTURE.md#10-scalability-path-post-mvp-designed-for-but-not-built).
+(multi-level BOM) · **several people in one workshop**: inviting people, removing them, roles and permissions, and history that still
+names a person after their account is deleted (e.g. "by a former member") (S-44 keeps the data with the workshop, so this adds people
+without moving data) · cost history snapshots · production runs that consume stock (Q9) · REST API / mobile.
+Design notes: [ARCHITECTURE.md §10](ARCHITECTURE.md#10-scalability-path-post-mvp-designed-for-but-not-built).
 
 ## Done (Phases 1–3)
 Phase 1 foundation + materials · Phase 2 UI-first build of the approved mockup · Phase 3 real backend, reference data, performance quick wins,

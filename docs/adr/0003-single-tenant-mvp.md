@@ -1,6 +1,6 @@
 # ADR-0003 — Single company (single tenant) for the MVP
 
-- **Status:** Accepted · 2026-10-07 (decided by the product owner)
+- **Status:** Superseded by [ADR-0013](0013-one-workshop-per-account.md) · 2026-10-14 (D-9). Accepted 2026-10-07 (decided by the product owner)
 
 ## Context
 The starter kit can generate team (multi-company) support. That scopes every route to `/{team}/…` and needs a `team_id` plus a global

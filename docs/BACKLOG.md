@@ -10,7 +10,7 @@
 - **Priority** (MoSCoW, per phase): Must · Should · Could · Won't (this time). **Size:** S (≤ 1 day of agent work) · M · L (split it).
 - **Card:** the full story card (story, acceptance criteria with examples, what you will see, out of scope, questions) lives in
   `docs/stories/<id>-<slug>.md` once the product-owner writes it. Items below show the short version.
-- **IDs:** `S-` stories are numbered by the product-owner, `F-` technical items by the tech-lead. IDs are never reused. Next free: **S-44**, **F-58** (F-IDs: see [TECH-DEBT.md](TECH-DEBT.md)).
+- **IDs:** `S-` stories are numbered by the product-owner, `F-` technical items by the tech-lead. IDs are never reused. Next free: **S-48** (S-47 was dropped on 2026-10-14), **F-58** (F-IDs: see [TECH-DEBT.md](TECH-DEBT.md)).
 
 ---
 
@@ -48,6 +48,37 @@ loads the demo workshop (12 materials, 7 products, 60 sales, material history) w
 **Done when:** the test passes in the tech-lead's gates and is green on GitHub (CI runs on every push since D-1, 2026-10-14); the demo-data
 step gives the documented figures on an empty database. Never load demo data into the existing development database (your decision, 2026-10-14).
 
+### S-44 · Each workshop sees only its own materials, products and sales · Must · M · feature · `Acceptance` (delivered 2026-10-15, not committed yet; product-owner review: every criterion met by tests; waits for your backup, migration and click-through on `laravel`) (started over the two-story limit, your choice 2026-10-14, D-9)
+Card: [stories/S-44-each-workshop-sees-only-its-own-data.md](stories/S-44-each-workshop-sees-only-its-own-data.md). You asked for it on
+2026-10-14 ("each user must only see HIS products and materials"). Delivered by the tech-lead on 2026-10-15 (all five steps approved,
+every gate green). Next: your click-through, then the commits, then S-45.
+**You get:** every account belongs to one workshop. Signing up stays open to anyone and creates a new, empty workshop. You see and change
+only your workshop's materials, products, compositions, stock and history, sales, photos and dashboard figures. Another workshop's page
+shows the plain "404 Not Found". Two workshops may use the same SKU. Deleting your account deletes only you: the workshop's data stays, and
+the "Delete account" wording says so.
+**Why:** today every account shares one catalogue, so Invory can serve only one business. The data belongs to the workshop, not the person,
+so several people can later share one workshop without reworking it.
+**Done when:** a new account sees empty lists while `test@example.com` keeps its 12 materials, 7 products and 60 sales; no screen, search,
+picker, filter or address shows or changes the other workshop's records; every existing account joins one workshop with everything that
+exists today, and nothing is lost.
+**Changes recorded decisions (approved 2026-10-14, D-9):** ADR-0003 "single company, no teams" and Q3 (now "any member of a workshop
+edits that workshop's catalogue"). The tech-lead writes the business rules R1–R6 into the costing rules and a new decision record before
+any code changes.
+
+### S-45 · Each workshop has its own units and categories · Must · S · feature · `Ready` (card approved 2026-10-14; right after S-44)
+Card: [stories/S-45-each-workshop-has-its-own-units-and-categories.md](stories/S-45-each-workshop-has-its-own-units-and-categories.md).
+Depends on S-44 and goes right after it. **S-44 and S-45 ship together:** no second real workshop signs up until both are done.
+**You get:** each workshop starts with the standard 13 units, 12 material categories and 6 product categories, and adds, renames or
+archives them without touching any other workshop. Two workshops may use the same name.
+**Why:** with shared lists, one workshop renaming "Fabric" would change another workshop's screens.
+**Done when:** changes in one workshop's Settings → Catalogue never show in another's; today's lists stay exactly as they are.
+
+### S-46 · Name your workshop · Should · S · feature · `Ready` (card approved 2026-10-14; after S-45)
+Card: [stories/S-46-name-your-workshop.md](stories/S-46-name-your-workshop.md). Depends on S-44.
+**You get:** a "Workshop name" field when you sign up, the name under yours in the sidebar's account menu, and a Settings → "Workshop" page
+to rename it ("Workshop updated."). Existing workshops are called "My workshop" and the demo one "Demo workshop" until renamed.
+**Why:** once accounts have their own workshop, nothing on screen says which one you are in.
+
 ### S-31 · A section that fails to load offers "Try again" · Should · S · feature · `Ready`, on hold (your decision 2026-10-14: "stop S-31 and S-32 for now"; paused, not dropped) (card approved 2026-10-14; was F-48)
 Card: [stories/S-31-deferred-section-try-again.md](stories/S-31-deferred-section-try-again.md).
 **You get:** if a part of a page that loads after the frame fails (dashboard figure cards and top 5, dashboard panels and alerts, the
@@ -62,6 +93,7 @@ Card: [stories/S-32-duplicate-sku-clear-message.md](stories/S-32-duplicate-sku-c
 by another material." (or "…another product.") on the SKU field, not a server error page, and keeps what they typed.
 **Why:** it's rare, but today it's a crash. The same protection already exists for catalogue names (F-33).
 **Done when:** the race is covered by a test for materials and products, both show the field error, and nothing half-saved is left behind.
+**Note (2026-10-14):** once S-44 lands, "the same SKU" means the same SKU inside one workshop (S-44 AC-5). The card's criteria still hold.
 
 ### S-40 · A realistic catalogue of 100 products on a fresh install · Could (after S-08; slips to Phase 5 first) · M · enabler · `Ready` (card approved 2026-10-14; next: tech-lead plan after S-08)
 Card: [stories/S-40-realistic-catalogue-100-products.md](stories/S-40-realistic-catalogue-100-products.md). Depends on S-08 (its demo-data step).
@@ -99,7 +131,8 @@ F-45 stale "preview" test names (F-08, F-25 and F-51 ride with S-29). Details in
 **Sizing note:** the Musts are about 70 % of this phase, above the usual 60 % guideline, because the phase is a release gate. S-31 and S-32
 are the contingency and slip to Phase 5 first. They have been on hold since 2026-10-14 (D-8) so S-43 could go first. S-43 is done
 (on `main` since 2026-10-14, see [STATUS.md](STATUS.md)), but they stay on hold until you lift it. S-42 is planned after S-32, so it waits
-too.
+too. **Since 2026-10-14 (D-9):** S-44 and S-45 are Phase 4 Musts, because a release that serves more than one workshop needs them. That
+pushes the Musts well above 70 %. S-44 started at once, over the two-story limit (S-29 in progress, S-08 in acceptance), by your choice.
 
 ---
 
@@ -109,6 +142,8 @@ too.
 **You get:** a report of how fast every page is with 2 000 materials, 500 products, 50 000 sales and 20 000 stock movements, against
 agreed targets (development-only data, never on your database).
 **Why:** today's pages are fast on small data. The dashboard and the "can't produce" filter cost every product, which may not scale.
+**Note (2026-10-14):** once S-44 lands, the figures are per workshop, so the dataset should sit in one workshop, with a few other workshops
+beside it.
 
 ### S-23 · Pre-computed product figures · Must (if S-27 shows the need) · M · `Idea`
 **You get:** the products list, its "can't produce" filter and the dashboard stay fast at any catalogue size, because each product's
@@ -138,7 +173,8 @@ cost and capacity are kept up to date when something changes instead of being re
 **You get:** Invory running on a production server: fast page loads, compressed and cached static files, a health check, and a decided
 home for sessions and cache. Backups and the database host are part of the card.
 **Needs from you first:** decision D-5 (database host with PostgreSQL 13+, where the app can install `pg_trgm`, or a one-time
-`CREATE EXTENSION pg_trgm;` by an administrator). Confirm the provisional decisions Q4 and Q6.
+`CREATE EXTENSION pg_trgm;` by an administrator). Confirm the provisional decisions Q4 and Q6. Confirm again that sign-up stays open to
+anyone before the server is public (D-9, 2026-10-14).
 
 **Phase 6 tech allowance:** F-43 · F-46 · F-52 · F-53.
 
@@ -156,16 +192,23 @@ home for sessions and cache. Backups and the database host are part of the card.
 | S-39 | **"Manage units" link** in the material form (F-31 q3; you said "not now" on 2026-10-09) | Won't (this time) |
 
 ## VISION — not scheduled
-Suppliers and purchase orders · unit conversions in compositions · sizes and variants · sub-assemblies · roles and permissions ·
-cost history snapshots · production runs that consume stock (Q9) · REST API / mobile · multi-company. See [ROADMAP.md](ROADMAP.md).
+Suppliers and purchase orders · unit conversions in compositions · sizes and variants · sub-assemblies · **several people in one workshop**
+(inviting people, removing them, roles and permissions, and history that still says who did it after that person's account is deleted,
+e.g. "by a former member", where today the "by <name>" line just disappears; S-44 already keeps the data with the workshop) · cost history snapshots ·
+production runs that consume stock (Q9) · REST API / mobile. See [ROADMAP.md](ROADMAP.md).
 
 ---
 
 ## Decisions that shape the backlog (still valid)
-Q1 native serving · Q2 units editable, conversions later · Q3 any signed-in user edits the catalogue · Q4 bigint keys (provisional) ·
+Q1 native serving · Q2 units editable, conversions later · Q3 any member of a workshop edits that workshop's catalogue (was "any signed-in
+user", changed by D-9) · Q4 bigint keys (provisional) ·
 Q6 currency/locale in config (provisional) · Q7 unit locked while used · Q8 sales stock-neutral, hard delete · Q9 no production runs (provisional) ·
 F-20 restock updates unit cost by default · F-37 deleted demo products stay deleted · F-39 no thumbnails · F-40 no correction reason ·
 dev DB demo seed skipped (2026-10-14) · D-1 repository on GitHub, CI on every push (2026-10-14) · D-3 Phase 4 scope approved with its four cards (2026-10-14) · D-8 overhead cost optional, blank = 0 (S-43, done 2026-10-14);
 S-31 and S-32 on hold (2026-10-14) · low stock: no new story, no email alerts, no flag without "Reorder at" (2026-10-14) · large demo catalogue: new throwaway database only,
 add-on after the demo workshop, no sales, same every run, no brand or sub-category, real Pexels photos with credits off-screen (S-40 Q1–Q7,
-S-41 Q1–Q4, 2026-10-14). Pending: [STATUS.md §2](STATUS.md#2-decisions-needed-from-you).
+S-41 Q1–Q4, 2026-10-14) · **D-9 one workshop per account** (2026-10-14; S-44, S-45, S-46): the screen says "Workshop"; business rules
+R1–R6 approved; every existing account joins one workshop holding today's data; sign-up stays open (confirm again before S-26); each
+workshop has its own units and categories; another workshop's address shows the plain "404 Not Found"; deleting an account deletes only the
+person and the workshop's data stays (so S-47 was dropped; its ID is not reused); photos need only an unguessable address; S-44 starts
+over the two-story limit. Pending: [STATUS.md §2](STATUS.md#2-decisions-needed-from-you).

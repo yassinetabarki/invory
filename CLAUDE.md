@@ -11,7 +11,8 @@ plus the **bottleneck material**.
 
 ## Stack
 Laravel 13 (PHP 8.3+) · Inertia 3 · React 19 + TypeScript + React Compiler · Tailwind 4 + shadcn/ui · Wayfinder · Fortify auth ·
-Pest 4 + Larastan + Pint · Vite+ (Vitest, Oxlint, Oxfmt) · PostgreSQL · Laravel Boost. Single company, no teams.
+Pest 4 + Larastan + Pint · Vite+ (Vitest, Oxlint, Oxfmt) · PostgreSQL · Laravel Boost.
+**One workshop per account** (ADR-0013): every record belongs to the signed-in account's workshop; several accounts may share a workshop; no invitations or roles yet.
 Dev environment: **native PHP 8.3 + Composer** serves the app (`composer dev` → `php artisan serve` on :8000, plus Vite) and runs all tooling and agents.
 **Docker Compose** runs only **PostgreSQL** and **Mailpit** (ADR-0012).
 
@@ -86,6 +87,8 @@ Don't do the developers', the tech-lead's or the product-owner's work yourself, 
 ## Non-negotiables
 - Money and quantities are **decimal strings + `Brick\Math\BigDecimal`**. Never floats, in PHP or TS. The UI formats numbers and never computes them.
 - Costing maths lives only in `app/Domain/Costing` (pure PHP). Controllers stay thin. Writes go through `app/Actions`. Policies are checked on every route.
+- Every model of workshop data uses `BelongsToWorkshop`. In `app/` never call `withoutGlobalScope(s)`, raw `DB::table()` on workshop tables, or
+  `Rule::exists/unique` on them outside `App\Validation\WorkshopRule`. Another workshop's record is a 404, never a 403 (ADR-0013).
 - `resources/js/types/domain.ts` mirrors the API Resources and changes in the same commit as them.
 - Every change ships with tests. All gates must be green: `composer test`, `npx vp test`, `npm run check`, `npm run types:check`, `npm run build`.
 - Never edit generated code (`resources/js/actions|routes|wayfinder`, `resources/js/components/ui`). Never commit `.env`.
