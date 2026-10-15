@@ -2,7 +2,7 @@
 
 > Owner: **product-owner** (order, wording, acceptance criteria) · Technical detail: **tech-lead** ([TECH-DEBT.md](TECH-DEBT.md), [plans/](plans/README.md))
 > Phases and goals: [ROADMAP.md](ROADMAP.md) · Progress: [STATUS.md](STATUS.md) · Done work and full history: [archive/backlog-2026-10-14.md](archive/backlog-2026-10-14.md)
-> Last cleaned: 2026-10-15 (D-12: Phase 5 starts now, the rest of Phase 4 is on hold; D-13: S-08 and S-29 done, so they left this file). **Open work only**, top = next.
+> Last cleaned: 2026-10-15 (S-48 done and accepted, so it left this file; before that, D-12: Phase 5 starts now, the rest of Phase 4 is on hold; D-13: S-08 and S-29 done). **Open work only**, top = next.
 > Done items leave this file; they are recorded in STATUS.md and the archive.
 
 ## How to read an item
@@ -12,7 +12,7 @@
 - **Priority** (MoSCoW, per phase): Must · Should · Could · Won't (this time). **Size:** S (≤ 1 day of agent work) · M · L (split it).
 - **Card:** the full story card (story, acceptance criteria with examples, what you will see, out of scope, questions) lives in
   `docs/stories/<id>-<slug>.md` once the product-owner writes it. Items below show the short version.
-- **IDs:** `S-` stories are numbered by the product-owner, `F-` technical items by the tech-lead. IDs are never reused. Next free: **S-56** (S-47 was dropped on 2026-10-14), **F-58** (F-IDs: see [TECH-DEBT.md](TECH-DEBT.md)).
+- **IDs:** `S-` stories are numbered by the product-owner, `F-` technical items by the tech-lead. IDs are never reused. Next free: **S-56** (S-47 was dropped on 2026-10-14), **F-62** (F-IDs: see [TECH-DEBT.md](TECH-DEBT.md)).
 
 ---
 
@@ -27,20 +27,13 @@ You started it on 2026-10-15: "we will start focusing more on the orders … we 
 - the client is typed on each order, and the delivery date goes in the note;
 - only active products can go on an order, and an order never sets stock aside (S-48, approved 2026-10-15).
 
-Order of work: S-48, then S-49 and S-53 together, then S-50. The other cutting rules (D-11) wait until S-49 and S-53 are refined.
-
-### S-48 · Record customer orders with one or more products · Must · M · feature · `Planned` (card approved 2026-10-15; Technical work approved 2026-10-15; next: the build)
-Card: [stories/S-48-record-customer-orders.md](stories/S-48-record-customer-orders.md). Depends on S-44 (done).
-**You get:** "Orders" in the sidebar, between Products and Sales. A "New order" page records a client, an order date, an optional note
-and one or more product lines ("Add product", quantity per line). The list shows date, client, products, units and note, 25 orders a
-page, with search, edit and delete.
-**Why:** today orders live on paper and in messages, so nothing in Invory says what you've promised to make.
-**Done when:** you record "Boutique Lina, 15 Oct 2026, 50 × Denim Jacket and 30 × Denim Jeans 5-pocket", find it, edit it and delete it;
-another workshop never sees it; stock, sales and every figure stay as they were.
+Order of work: S-49 and S-53 together, then S-50. The other cutting rules (D-11) wait until S-49 and S-53 are refined.
+**S-48 is done** (accepted 2026-10-15 after your click-through; `e3b7ae7`, `5af8ed1`): you can record, find, edit and delete an order
+of one or more products, and nothing else in Invory changes. Its record is in [STATUS.md §4](STATUS.md#4-delivery-history).
 
 ### S-49 · Track each product of an order through cutting, ready to ship and shipped · Must · M · feature · `Draft` (rewritten 2026-10-15)
-Card: [stories/S-49-track-cutting-ready-shipped.md](stories/S-49-track-cutting-ready-shipped.md). Depends on S-48; **ships together
-with S-53**.
+Card: [stories/S-49-track-cutting-ready-shipped.md](stories/S-49-track-cutting-ready-shipped.md). Depends on S-48 (done); **ships
+together with S-53**.
 **You get:** each order's own page. Every product line has four counts that add up to its quantity: To start, In cutting, Ready to ship
 and Shipped. "Start cutting", "Mark ready" and "Ship" move a number of units on; "Move back" fixes a mistake. Each line and the order read
 "Not started", "In progress" or "Shipped".
@@ -201,8 +194,9 @@ anyone before the server is public (D-9, 2026-10-14). The rest of Phase 4 (at le
 
 - S-38 bundles: sale panel layout at 1024 px (F-14), a clearer "Filter by product" label for screen readers (F-16), unit price shown the
   same way everywhere (F-17), the darker button hover from the mockup (F-18), a clearer sentence when two materials tie as the limit (F-21).
-- S-55 (feature, size S–M, added 2026-10-15 during S-48's planning): the product pickers on "New order" and "Record a sale" let you type
-  part of a product's name to find it, so a large catalogue doesn't mean scrolling a long list.
+- S-55 (feature, `Idea`, size S–M, added 2026-10-15 during S-48's planning, raised again at its delivery): the product pickers on "New
+  order" and "Record a sale" let you type part of a product's name to find it, so a large catalogue doesn't mean scrolling a long list.
+  Today both pickers are plain lists, sorted by name.
 
 ## VISION — not scheduled
 Suppliers and purchase orders · unit conversions in compositions · sizes and variants · sub-assemblies · **several people in one workshop**
@@ -229,5 +223,6 @@ over the two-story limit · **D-10 customer orders** (2026-10-15; S-48 to S-54):
 with its own stages (To start, In cutting, Ready to ship, Shipped); "Start cutting" takes the materials out of stock (replaces Q9);
 shipping doesn't record a sale (S-54 later); client typed on each order; delivery date in the note · **D-12 Phase 5 starts now**
 (2026-10-15): the rest of Phase 4 (S-45, S-30, S-46, S-31, S-32) is on hold for later; S-40, S-41 and S-42 are postponed and kept for
-later; S-48 approved: only active products on an order, and an order never sets stock aside (the one part of D-11 decided so far) ·
+later; S-48 approved: only active products on an order, and an order never sets stock aside (the one part of D-11 decided so far);
+S-48 done 2026-10-15: a deleted order is hidden, with no way back on screen; a product no longer active stays on the orders that have it ·
 **D-13 S-08 and S-29 closed as they stood** (2026-10-15): Done on the commits on `main`; their open checks are known gaps for go-live. Pending: [STATUS.md §2](STATUS.md#2-decisions-needed-from-you).

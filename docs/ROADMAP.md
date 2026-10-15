@@ -1,6 +1,6 @@
 # Invory — product roadmap
 
-> Owner: **product-owner** · Approved by: the human · Last updated: 2026-10-15 (D-12: Phase 5 "Customer orders" started; the rest of Phase 4 on hold)
+> Owner: **product-owner** · Approved by: the human · Last updated: 2026-10-15 (S-48 done, the first Phase 5 story; D-12: Phase 5 "Customer orders" started, the rest of Phase 4 on hold)
 > Format: **Now / Next / Later**, organised by outcomes, not dates. Each phase is one slice of the story map with one goal, a MoSCoW-labelled
 > set of stories and exit criteria. Detailed stories live in [BACKLOG.md](BACKLOG.md); progress lives in [STATUS.md](STATUS.md).
 
@@ -14,7 +14,7 @@ A small fashion workshop knows, at any moment, **what each product costs to make
 |---|---|---|---|---|---|---|
 | **Keep stock of materials** | List, filters, CRUD, photo, restock, history, status badges | Acceptance | | History on demand (S-33) | | Suppliers and purchase orders, CSV import (S-11) |
 | **Define products** | Product CRUD, composition editor, selling price, photo | Acceptance; overhead cost optional (S-43, done) | Units on order on the product page (S-51) | Instant edit page (S-35) | | Sizes and variants, sub-assemblies, unit conversions |
-| **Take client orders** | Nothing yet | | Orders with several products (S-48); to start, in cutting, ready to ship, shipped per line (S-49); cutting takes materials out of stock (S-53); progress and totals on the list (S-50); history of moves (S-52); shipping can record the sale (S-54) | | | A client list |
+| **Take client orders** | Nothing yet | | Orders with several products (S-48, done); to start, in cutting, ready to ship, shipped per line (S-49); cutting takes materials out of stock (S-53); progress and totals on the list (S-50); history of moves (S-52); shipping can record the sale (S-54) | | | A client list |
 | **Know cost and capacity** | Unit cost, can produce, bottleneck, next limit, margin, "what you can make with it" | Acceptance, E2E (S-08) | | Fast at 500 products (S-23, S-27) | | Live cost preview (S-09), production planner (S-10), cost history |
 | **Sell** | Sales log, totals, filters, record/edit/delete | Acceptance | | Instant delete feedback (S-36) | | Custom date range (S-37) |
 | **Monitor** | Dashboard: KPIs, top 5, restock list, alerts | Panels offer "Try again" after an error (S-31) | Units in cutting on the dashboard (S-51) | Loading states (S-34) | | |
@@ -30,18 +30,19 @@ Cards written before that day say "Phase 5" for speed (S-27, S-23), and "slips t
 ready to ship and shipped, and how many units are being made across all open orders.
 You asked for it on 2026-10-15 ("design the order management UI") and answered the scope questions the same day (D-10). The same day you
 started it ahead of Phase 4: "we will start with S-48" (D-12). Orders belong to a workshop, and S-44 is done, so nothing blocks it.
-S-48 is `Planned` (card and Technical work approved 2026-10-15); S-49, S-53 and S-50 are `Draft` ([stories](stories/README.md)).
+**S-48 is done** (accepted 2026-10-15 after your click-through): the Orders page records, finds, edits and deletes orders of one or more
+products. S-49, S-53 and S-50 are `Draft` ([stories](stories/README.md)).
 
-| Priority               | Story                                               | Size |
-| ---------------------- | --------------------------------------------------- | ---- |
-| Must                   | S-48 Record customer orders with several products   | M    |
-| Must                   | S-49 Track each product line through the stages     | M    |
-| Must                   | S-53 Cutting takes materials out of stock           | M    |
-| Must                   | S-50 Orders list: progress of each order and totals | S    |
-| Should                 | S-51 Product page and dashboard show units on order | S    |
-| Could                  | S-52 Each order keeps a history of its moves        | S    |
-| Could                  | S-54 "Ship" can also record the sale                | S    |
-| Tech allowance (~15 %) | F-41 only (each material's total need, for S-53)    | —    |
+| Priority               | Story                                                    | Size |
+| ---------------------- | -------------------------------------------------------- | ---- |
+| Must                   | S-48 Record customer orders with several products (done) | M    |
+| Must                   | S-49 Track each product line through the stages          | M    |
+| Must                   | S-53 Cutting takes materials out of stock                | M    |
+| Must                   | S-50 Orders list: progress of each order and totals      | S    |
+| Should                 | S-51 Product page and dashboard show units on order      | S    |
+| Could                  | S-52 Each order keeps a history of its moves             | S    |
+| Could                  | S-54 "Ship" can also record the sale                     | S    |
+| Tech allowance (~15 %) | F-41 only (each material's total need, for S-53)         | —    |
 
 The Musts are about 60 % of the phase. S-54, then S-52, then S-51 slip first.
 
@@ -53,7 +54,7 @@ The Musts are about 60 % of the phase. S-54, then S-52, then S-51 slip first.
 - Shipping doesn't record a sale (S-54 may add that later). Clients are typed on each order; the delivery date goes in the note.
 - Won't (this time): a client list, order numbers, a "Cancelled" status, setting stock aside for orders not yet cut.
 
-**Exit criteria:** you have accepted S-48, S-49, S-53 and S-50 in a click-through · cutting an order changes stock exactly as the cards
+**Exit criteria:** you have accepted S-48 (done 2026-10-15), S-49, S-53 and S-50 in a click-through · cutting an order changes stock exactly as the cards
 say · another workshop never sees your orders · every gate green.
 
 ## ON HOLD — Phase 4: MVP release readiness (postponed 2026-10-15, D-12)

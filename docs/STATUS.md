@@ -13,16 +13,17 @@
 
 | | Status | In one line |
 |---|---|---|
-| **Overall** | 🟡 **AMBER** | The MVP is built and every automated check passes on this computer. The checks now also run on GitHub, but nobody has seen a result yet. You haven't signed the MVP off. Since 2026-10-15 Phase 5 (customer orders) is under way with S-48, and the rest of Phase 4 is on hold (D-12). |
-| Scope (MVP features) | 🟡 AMBER | Every feature in the MVP goal and the 2026-10-08 scope additions works on real data. The preview layer is gone. Since 2026-10-15 every account sees only its own workshop's materials, products and sales (S-44, D-9). Units and categories are still shared until S-45. |
-| Quality (automated) | 🟢 GREEN | All automated checks pass on this computer (2026-10-14): 2 050 backend tests, 1 134 screen tests, code style, static analysis, type check and production build. |
-| Product acceptance | 🔴 RED | No screen has been signed off by the human. The Phase 2 click-through has been pending since 2026-10-08, and the MVP walkthrough (S-30) is on hold since 2026-10-15 (D-12). S-43 and S-44 were accepted one by one. |
+| **Overall** | 🟡 **AMBER** | The MVP is built and every automated check passes on this computer. The checks now also run on GitHub, but nobody has seen a result yet. You haven't signed the MVP off. Since 2026-10-15 Phase 5 (customer orders) is under way: its first story, S-48, is done. The rest of Phase 4 is on hold (D-12). |
+| Scope (MVP features) | 🟡 AMBER | Every feature in the MVP goal and the 2026-10-08 scope additions works on real data. The preview layer is gone. Since 2026-10-15 every account sees only its own workshop's materials, products and sales (S-44, D-9), and records its clients' orders (S-48). Units and categories are still shared until S-45. |
+| Quality (automated) | 🟢 GREEN | All automated checks pass on this computer (tech-lead's S-48 delivery report, 2026-10-15): 2 216 backend tests, the same 2 216 on PostgreSQL, 1 155 screen tests, 2 browser tests, code style, static analysis, type check and production build. |
+| Product acceptance | 🔴 RED | The MVP as a whole isn't signed off: the Phase 2 click-through has been pending since 2026-10-08, and the MVP walkthrough (S-30) is on hold since 2026-10-15 (D-12). S-43, S-44 and S-48 were accepted one by one. |
 | Dev environment | 🟡 AMBER | The app runs on `php artisan serve` (http://localhost:8000); Docker runs PostgreSQL and the test mailbox (http://localhost:8026). Sail is gone (S-29, done 2026-10-15). Not yet seen: a password-reset email in the test mailbox, and the page-speed target (S-18), which may not hold on the built-in server (known gaps K-3, K-4). |
 | Release readiness | 🔴 RED | Missing: the MVP sign-off (S-30), a live server with a chosen database, and separate units and categories for each workshop (S-45). Both S-30 and S-45 are on hold (D-12) and must be done before go-live. S-08 and S-29 were closed as they stood (D-13), leaving four known gaps for go-live (§6.4). |
 | Process | 🟡 AMBER | Roles are split: product-owner (what and why) and tech-lead (how). Phase 5 started before Phase 4 closed, by your choice (D-12). S-08 and S-29 were closed without their last checks, by your choice (D-13). |
 
-**Current phase:** **Phase 5: Customer orders** (started 2026-10-15, D-12). S-48 is `Planned` (its Technical work approved 2026-10-15); the build is next.
-Phase 5 tech allowance: F-41 only (moved from Phase 6, 2026-10-15).
+**Current phase:** **Phase 5: Customer orders** (started 2026-10-15, D-12). **S-48 is done** (accepted 2026-10-15 after your
+click-through; `e3b7ae7`, `5af8ed1` on the build branch, on `main` once it merges). Next: D-11's cutting rules, then the cards S-49, S-53
+and S-50. Phase 5 tech allowance: F-41 only (moved from Phase 6, 2026-10-15).
 **Phase 4: MVP release readiness** is on hold for later; S-08 and S-29 are done (closed as they stood, D-13; see [ROADMAP.md](ROADMAP.md)).
 
 ---
@@ -36,6 +37,11 @@ Phase 5 tech allowance: F-41 only (moved from Phase 6, 2026-10-15).
 | D-5 | Production database host (needs PostgreSQL 13+ and `pg_trgm`) | Before S-26; not urgent |
 | D-6 | Delete the 5 merged branches and the stale worktree `.claude/worktrees/fix-hover-prefetch-bug`? | Yes (nothing unmerged) |
 | D-11 | **How cutting changes stock** (S-53, 2026-10-15): what happens when stock is short, whether moving back returns materials, whether deleting an order returns them, the date of the history entries, low-stock alerts, and whether S-49 and S-53 ship together. Then approve the cards S-49, S-53 and S-50. (Decided 2026-10-15 with S-48: open orders never set stock aside) | Refuse to cut more than stock allows; moving back returns exactly what was taken; deleting returns nothing; history dated the day of the move; no alerts yet; ship S-49 and S-53 together |
+
+**Decided on 2026-10-15 (S-48 acceptance):** you accepted S-48 after your click-through · a line whose product no longer exists
+reads "The selected product is invalid." (close to the Sales form) · that message and a " (not active)" mark in the Edit order picker
+were fixed before the commit · the product-owner kept the extra sentence under "No orders match your search" and "80 units" on the phone
+cards.
 
 **Decided on 2026-10-15 (S-48 planning):** S-48's Technical work approved (`Planned`) · a product added twice to an order is flagged
 ("… is already on this order.") only after Save, not while you pick · Phase 5 tech allowance is F-41 only, moved from Phase 6.
@@ -125,6 +131,7 @@ Q1 (prefetch removed), Q4 (pulse placeholders).
 | **Products and composition** | List products with photo, unit cost, price and margin, "can produce", bottleneck, status and units sold (30 days), with a "can't produce" filter. Create and edit a product with its composition (bill of materials): material search, quantity, waste %, notes, reordering, no duplicates. Selling price and photo. Overhead cost is optional: left empty, it counts as 0 (S-43). |
 | **Costing** | For every product: unit cost, how many units can be produced from stock, the bottleneck material, the next limit, and the margin. All amounts are exact decimals (never floating point), computed on the server. Worked example: Denim Jacket costs **35.754 TND**, **112** can be made, bottleneck "Metal shank button 17mm". |
 | **Sales** | Record, edit and delete sales (product, quantity, unit price pre-filled from the selling price, date, note). Sales never change stock. Totals and filters: search, period presets, product. |
+| **Orders** | Record a client's order of one or more products (client, order date, note, a quantity per product), then find it by client, product, SKU or note, edit it and delete it. 25 orders a page, newest first; cards at phone width. Orders never change stock, sales or any figure. A product that is archived or deleted later stays on the orders that have it (S-48). |
 | **Dashboard** | Period selector, KPI cards, top 5 products by units or revenue, materials that need a restock, recent sales, and "can't produce" alerts. The page appears at once and its panels fill in. |
 | **Settings: Catalogue** | Manage units, material categories and product categories without a deploy: create, rename, archive, restore, delete when unused. Names are unique regardless of case. A material's unit is locked while a product uses it. |
 | **Account** | Starter-kit authentication: register, login, email verification, password reset, two-factor, passkeys, profile, password, light/dark appearance. Every account belongs to one workshop and sees only that workshop's materials, products, sales and figures. Signing up creates a new, empty workshop, another workshop's address shows "404 Not Found", and "Delete account" keeps the workshop's data (S-44). Units and categories stay shared until S-45. |
@@ -150,6 +157,7 @@ a PostgreSQL parity suite (last green: 2 074 passed on 2026-10-13, during RL-01)
 | **4 — MVP release readiness** | S-29 reliable dev environment | 2026-10-14 (`d351514`, `7b0fb05`, `c70109f`, `a68043e`; on `main`) | ✅ Done 2026-10-15, closed as it stood (D-13). Docker runs only PostgreSQL and the test mailbox; Sail removed; instructions updated. Open: gaps K-3, K-4 |
 | **4 — MVP release readiness** | S-08 golden-path test + demo data on a fresh install | 2026-10-14 (`723f57a`, `932f01a`, `1b40f75`, `af3d6de`, `5241147`; docs `6e776f0`, `6cbfb01`, `a368d8c`; on `main`) | ✅ Done 2026-10-15, closed as it stood (D-13). AC-1–4, 7, 8 accepted on test evidence. Open: gaps K-1, K-2 |
 | **4 — MVP release readiness** | S-44 each workshop sees only its own data (D-9) | 2026-10-15 (`672937f` cards, ADR-0013, rules and project instructions; `a54856f` workshops, S-44-a–d; `9a48cd3` delete-account wording, S-44-e; on `main`, not pushed) | ✅ Done. Tech-lead APPROVED in round 1 (2 132 backend tests, PostgreSQL parity 2 132, 1 137 screen tests, check, types, build, golden path). You backed up and migrated `laravel` yourself; click-through passed 2026-10-15 |
+| **5 — Customer orders** | S-48 record customer orders with one or more products (D-10, D-12) | 2026-10-15 (`57ab45b` card, `5ff800f` Technical work, on `main`; `e3b7ae7` saving and rules, S-48-a–c; `5af8ed1` screens, S-48-d–e; on the build branch, on `main` once it merges) | ✅ Done. Tech-lead APPROVED (every gate green, including PostgreSQL parity 2 216 and 2 browser tests). One fix round after the product-owner review: the "product is invalid" message and the " (not active)" mark. Your click-through passed 2026-10-15. New tech debt F-60, F-61 |
 
 All phase branches (`phase/1-materials`, `phase/2-ui-first-preview`, `phase/3-performance-spa-data`, `fix/rl-02-product-show-loading`,
 `worktree-fix-hover-prefetch-bug`) are fully merged into `main`. They and the worktree under `.claude/worktrees/` can be deleted (human decision D-6).
@@ -232,7 +240,7 @@ The plan headers were corrected on 2026-10-14, and [plans/README.md](plans/READM
 | R-13 | Risk | When someone deletes the only account of a workshop, that workshop's materials, products and sales stay in the database with nobody able to reach them (D-9). That may matter for privacy once other businesses use a public server | Low now, higher at go-live | The "Delete account" wording says the data stays (S-44 AC-6). Product-owner raises it with you again before S-26 |
 | R-14 | Dependency (closed 2026-10-15) | The project instructions, ADR-0003 and ARCHITECTURE.md said "single company, no teams" | — | Closed: updated in `672937f` (ADR-0003 superseded by ADR-0013) |
 | R-16 | Risk | With S-45 on hold (D-12), units and categories stay shared by every workshop. If a second real workshop signs up, its renames would change your screens | Medium | No second real workshop signs up until S-45 is done (D-9); S-45 is done before go-live. Product-owner raises it again before S-26 |
-| R-17 | Risk | Orders are built on screens nobody has signed off: the MVP walkthrough (S-30) is on hold (D-12) | Medium | Each Phase 5 story gets its own click-through; S-30 is walked before go-live |
+| R-17 | Risk | Orders are built on screens nobody has signed off: the MVP walkthrough (S-30) is on hold (D-12) | Medium | Each Phase 5 story gets its own click-through (S-48's passed 2026-10-15); S-30 is walked before go-live |
 | R-15 | Risk | With S-53, Invory changes material stock by itself for the first time (D-10). A wrong amount would quietly spoil stock, "Can produce" and the inventory value | Medium | S-53 shows the materials before you confirm, writes a history entry per material, and "Move back" returns what was taken; the tech-lead encodes the rule before code and tests it against the worked example (30 Denim Jackets → Inventory value TND 9,936.680) |
 
 ---
@@ -250,9 +258,10 @@ The plan headers were corrected on 2026-10-14, and [plans/README.md](plans/READM
 
 ## 9. Next steps (recommended order)
 **From 2026-10-15 (D-12): Phase 5 first.**
-1. Main session: commit S-48's approved Technical work and these documents on `main` (the card itself is on `main` since `57ab45b`).
-2. Tech-lead: build S-48 in a worktree cut from `main` (`Planned` since 2026-10-15). F-41 is Phase 5's tech allowance.
-3. Product-owner: D-11's remaining cutting rules, then the cards S-49, S-53 and S-50.
+1. Main session: commit these closing documents on the build branch, then merge it into `main` (S-48 done 2026-10-15). Push when you choose;
+   CI runs on the push, and only you can see the result.
+2. Human and product-owner: D-11's remaining cutting rules, then the cards S-49, S-53 and S-50 (from a session on the main checkout).
+3. Tech-lead: F-41 (Phase 5's tech allowance) before S-53; F-60 and F-61 (new from S-48) are offered for a tech allowance.
 4. Tech-lead: mark the S-29 plan done (D-13) and close what it carried (S-18 moves to the known gaps, K-4).
 5. The rest of Phase 4 waits; S-45, S-30 and the known gaps K-1 to K-4 are dealt with before go-live (Phase 7).
 
