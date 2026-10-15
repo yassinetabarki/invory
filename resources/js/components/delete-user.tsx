@@ -24,7 +24,7 @@ export default function DeleteUser() {
             <Heading
                 variant="small"
                 title="Delete account"
-                description="Delete your account and all of its resources"
+                description="Delete your account. Your workshop's data stays."
             />
             <div className="space-y-4 rounded-lg border border-red-100 bg-red-50 p-4 dark:border-red-200/10 dark:bg-red-700/10">
                 <div className="relative space-y-0.5 text-red-600 dark:text-red-100">
@@ -48,10 +48,11 @@ export default function DeleteUser() {
                             Are you sure you want to delete your account?
                         </DialogTitle>
                         <DialogDescription>
-                            Once your account is deleted, all of its resources
-                            and data will also be permanently deleted. Please
-                            enter your password to confirm you would like to
-                            permanently delete your account.
+                            Once your account is deleted, you can no longer sign
+                            in with it. Your workshop's materials, products and
+                            sales are not deleted. Please enter your password to
+                            confirm you would like to permanently delete your
+                            account.
                         </DialogDescription>
 
                         <Form
