@@ -2,124 +2,142 @@
 
 > Owner: **product-owner** (order, wording, acceptance criteria) · Technical detail: **tech-lead** ([TECH-DEBT.md](TECH-DEBT.md), [plans/](plans/README.md))
 > Phases and goals: [ROADMAP.md](ROADMAP.md) · Progress: [STATUS.md](STATUS.md) · Done work and full history: [archive/backlog-2026-10-14.md](archive/backlog-2026-10-14.md)
-> Last cleaned: 2026-10-14. **Open work only**, top = next. Done items leave this file; they are recorded in STATUS.md and the archive.
+> Last cleaned: 2026-10-15 (D-12: Phase 5 starts now, the rest of Phase 4 is on hold; D-13: S-08 and S-29 done, so they left this file). **Open work only**, top = next.
+> Done items leave this file; they are recorded in STATUS.md and the archive.
 
 ## How to read an item
 - **Status:** `Idea` → `Draft` (product-owner writing the card) → `Ready` (you approved the card) → `Planned` (you approved the tech-lead's plan)
   → `In progress` → `In review` (tech-lead gates) → `Acceptance` (product-owner check + your click-through) → `Done` (committed).
+  A paused item reads "`Ready`, on hold since <date>".
 - **Priority** (MoSCoW, per phase): Must · Should · Could · Won't (this time). **Size:** S (≤ 1 day of agent work) · M · L (split it).
 - **Card:** the full story card (story, acceptance criteria with examples, what you will see, out of scope, questions) lives in
   `docs/stories/<id>-<slug>.md` once the product-owner writes it. Items below show the short version.
-- **IDs:** `S-` stories are numbered by the product-owner, `F-` technical items by the tech-lead. IDs are never reused. Next free: **S-48** (S-47 was dropped on 2026-10-14), **F-58** (F-IDs: see [TECH-DEBT.md](TECH-DEBT.md)).
+- **IDs:** `S-` stories are numbered by the product-owner, `F-` technical items by the tech-lead. IDs are never reused. Next free: **S-55** (S-47 was dropped on 2026-10-14), **F-58** (F-IDs: see [TECH-DEBT.md](TECH-DEBT.md)).
 
 ---
 
-## NOW — Phase 4: MVP release readiness
+## NOW — Phase 5: Customer orders (started 2026-10-15, D-12)
+You started it on 2026-10-15: "we will start focusing more on the orders … we will start with S-48". The rest of Phase 4 is on hold
+(see below), and S-08 and S-29 were closed as they stood (D-13). You answered the scope questions the same day (D-10 in
+[STATUS.md](STATUS.md#2-decisions-needed-from-you)):
+- an order holds **several products**, each with its own quantity and its own four stages;
+- **"Start cutting" takes the materials out of stock**, which replaces Q9;
+- shipping doesn't record a sale (S-54 may add it later);
+- the stages are To start, In cutting, Ready to ship and Shipped;
+- the client is typed on each order, and the delivery date goes in the note;
+- only active products can go on an order, and an order never sets stock aside (S-48, approved 2026-10-15).
 
-### S-29 · Reliable dev environment · Must · M · enabler · `In progress` (you gave the go on 2026-10-14, D-2)
-**You get:** sign-up and password-reset emails that arrive in the test mailbox (http://localhost:8026), pages that open in under 0.15 s,
-and AI-team instructions that no longer mention retired tools.
-**Why:** those emails fail today, and the AI team still reads instructions for a tool we retired (F-25). The page-speed target (S-18) can't
-be measured until this lands.
-**Done when:** you reset a password and see the email in the test mailbox; the speed check passes (S-18); the database test suite runs with
-one command; no document mentions the retired tool (Sail).
-Technical plan (written before story cards existed, so it needs no card; its questions were answered on 2026-10-14):
-[plans/dev-docker-db-mail-only-plan.md](plans/dev-docker-db-mail-only-plan.md). Includes F-51 (the `composer dev` script would clash with
-the new server). Closes S-18, F-08 (rewritten), F-25 and F-51.
-**Open point (2026-10-14, waiting for the tech-lead's report):** the plan assumed Laragon's Apache serves the app. You no longer use
-Laragon: the app runs on `php artisan serve` (http://localhost:8000), and Docker runs PostgreSQL and the test mailbox. That built-in server
-handles one request at a time on Windows, so "pages open in under 0.15 s" (S-18) may not hold. The tech-lead is adjusting the plan and will
-report the speed consequence. This criterion stays as written until then; you decide any change.
+Order of work: S-48, then S-49 and S-53 together, then S-50. The other cutting rules (D-11) wait until S-49 and S-53 are refined.
 
-### S-30 · MVP acceptance walkthrough · Must · S · acceptance · `Ready` (card approved 2026-10-14; walk it as soon as S-29 lands)
-Card: [stories/S-30-mvp-acceptance-walkthrough.md](stories/S-30-mvp-acceptance-walkthrough.md) (the card is the click-through script).
-**You get:** a step-by-step script (about 35 minutes, 30 without the optional steps) over every MVP screen on your own data. You type the
-worked example (Denim Jacket: TND 35.754, can produce 112, bottleneck "Metal shank button 17mm") with `WT-` SKUs, then remove it at the end.
-**Why:** no screen has ever been signed off. Phase 2's click-through has been pending since 2026-10-08, so "done" has only meant "tests pass".
-**Done when:** you have walked the script; every finding is either fixed or recorded as a new backlog item; you declare the MVP accepted.
-Step 8.1 checks decision D-7 (2026-10-14): the dashboard numbers fill in just after the page frame appears. Best walked right after S-29.
+### S-48 · Record customer orders with one or more products · Must · M · feature · `Ready` (card approved 2026-10-15; next: the tech-lead's Technical work)
+Card: [stories/S-48-record-customer-orders.md](stories/S-48-record-customer-orders.md). Depends on S-44 (done).
+**You get:** "Orders" in the sidebar, between Products and Sales. A "New order" page records a client, an order date, an optional note
+and one or more product lines ("Add product", quantity per line). The list shows date, client, products, units and note, 25 orders a
+page, with search, edit and delete.
+**Why:** today orders live on paper and in messages, so nothing in Invory says what you've promised to make.
+**Done when:** you record "Boutique Lina, 15 Oct 2026, 50 × Denim Jacket and 30 × Denim Jeans 5-pocket", find it, edit it and delete it;
+another workshop never sees it; stock, sales and every figure stay as they were.
 
-### S-08 · End-to-end golden-path test + demo data on a fresh install · Must · M · feature (quality) · `Acceptance` (delivered 2026-10-14, not committed yet; product-owner review done: AC-5 waits for your look at GitHub, AC-6 for your click-through)
-Card: [stories/S-08-golden-path-test-and-demo-data.md](stories/S-08-golden-path-test-and-demo-data.md).
-**You get:** one automated browser test that does what a new user does: sign in → add two materials → add Denim Jacket with its
-composition → see TND 35.130, 112 units, bottleneck "Metal shank button 17mm" → record a sale → see it on the dashboard. A fresh install
-loads the demo workshop (12 materials, 7 products, 60 sales, material history) with one documented step.
-**Why:** no test covers the whole journey across pages today.
-**Done when:** the test passes in the tech-lead's gates and is green on GitHub (CI runs on every push since D-1, 2026-10-14); the demo-data
-step gives the documented figures on an empty database. Never load demo data into the existing development database (your decision, 2026-10-14).
+### S-49 · Track each product of an order through cutting, ready to ship and shipped · Must · M · feature · `Draft` (rewritten 2026-10-15)
+Card: [stories/S-49-track-cutting-ready-shipped.md](stories/S-49-track-cutting-ready-shipped.md). Depends on S-48; **ships together
+with S-53**.
+**You get:** each order's own page. Every product line has four counts that add up to its quantity: To start, In cutting, Ready to ship
+and Shipped. "Start cutting", "Mark ready" and "Ship" move a number of units on; "Move back" fixes a mistake. Each line and the order read
+"Not started", "In progress" or "Shipped".
+**Why:** this is what you asked for: how many units are ready to ship, and how many are in cutting.
+**Done when:** Boutique Lina's Denim Jacket line can show 20 · 20 · 10 · 0 while its jeans line shows 30 · 0 · 0 · 0; a move never takes
+more than the stage holds; a started line can't drop below its started units or be removed.
 
-### S-45 · Each workshop has its own units and categories · Must · S · feature · `Ready` (card approved 2026-10-14; right after S-44)
+### S-53 · Starting to cut an order takes its materials out of stock · Must · M · feature · `Draft` (card written 2026-10-15; waits for D-11)
+Card: [stories/S-53-cutting-takes-materials-out-of-stock.md](stories/S-53-cutting-takes-materials-out-of-stock.md). Ships together with
+S-49. **Changes a recorded decision:** Q9 "making products never reduces stock" is replaced (D-10). The tech-lead writes the new rule into
+the business rules, with a decision record, before any code changes.
+**You get:** "Start cutting" shows each material needed, in stock and left after, then takes it out of stock. You can't cut more than the
+stock allows. "Move back to To start" returns what was taken. Each material's history shows "Cutting" and "Returned" entries.
+**Why:** stock, "Can produce" and the restock list then match the shelves without correcting four materials by hand.
+**Done when:** cutting 30 Denim Jackets leaves Denim 12oz Indigo at 190.6 m, Denim Jacket at "Can produce now 82" and Inventory value at
+TND 9,936.680; cutting 20 with 100 buttons is refused ("at most 12").
+
+### S-50 · The Orders list shows each order's progress and the totals · Must · S · feature · `Draft` (rewritten 2026-10-15)
+Card: [stories/S-50-orders-list-progress-and-totals.md](stories/S-50-orders-list-progress-and-totals.md). Depends on S-49.
+**You get:** every order's four counts (the sums of its lines) and its status, the list opening on "Open orders", and totals for all open
+orders at the top: "Open orders 2", "To start 170 units", "In cutting 20 units", "Ready to ship 10 units".
+**Why:** "so we have an idea of how many products will be produced": one look, without opening every order.
+
+### S-51 · Units on order and in cutting show on the product page and the dashboard · Should · S · feature · `Idea`
+**You get:** Denim Jacket's page shows how many units are still to start on open orders, in cutting and ready to ship, next to "Can produce
+now 82"; the dashboard gets an "In cutting" figure.
+**Why:** "Can produce" doesn't set stock aside for orders not yet cut (S-48, S-53 AC-7), so you need the demand next to it to see a
+shortage coming.
+
+### S-52 · Each order keeps a history of its moves · Could · S · feature · `Idea`
+**You get:** the order page lists every move, newest first, with who did it: "15 Oct 2026 · 30 units of Denim Jacket moved to In cutting ·
+by Sami".
+**Why:** when two people update the same order, you can see what happened. (Each material's history already shows cutting, S-53.)
+
+### S-54 · "Ship" can also record the sale · Could · S · feature · `Idea` (your answer of 2026-10-15: "not now", later story)
+**You get:** "Ship" offers "Also record a sale", pre-filled with the product, the units shipped, the selling price and today's date.
+**Why:** today you would type the same sale again on the Sales page.
+
+**Phase 5 tech allowance (~15 %):** the tech-lead proposes items from [TECH-DEBT.md](TECH-DEBT.md) when it sizes S-48 to S-53. Phase 4's
+allowance (F-22 flaky form test, F-12 frontend skill wording, F-45 stale "preview" test names) can move here if the tech-lead proposes it.
+
+---
+
+## ON HOLD — rest of Phase 4: MVP release readiness (postponed 2026-10-15, D-12)
+You postponed it on 2026-10-15: "phase 4 will [be postponed] now for [a] late[r] time". Every card stays approved. S-08 and S-29 were
+closed as they stood the same day (D-13) and left this list; their unfinished checks are known gaps for go-live (see Phase 7 below and
+[STATUS.md §6](STATUS.md#6-what-is-missing-or-incomplete)). Two things still hold while Phase 4 waits:
+- **No second real workshop signs up until S-45 is done** (D-9): units and categories are still shared by every workshop.
+- **Phase 4 closes before the production server goes live** (Phase 7): the MVP sign-off (S-30) and S-45 are release Musts.
+
+### S-45 · Each workshop has its own units and categories · Must · S · feature · `Ready`, on hold since 2026-10-15
 Card: [stories/S-45-each-workshop-has-its-own-units-and-categories.md](stories/S-45-each-workshop-has-its-own-units-and-categories.md).
-Depends on S-44 and goes right after it. **S-44 and S-45 ship together:** no second real workshop signs up until both are done.
+Depends on S-44 (done). No Technical work yet.
 **You get:** each workshop starts with the standard 13 units, 12 material categories and 6 product categories, and adds, renames or
 archives them without touching any other workshop. Two workshops may use the same name.
 **Why:** with shared lists, one workshop renaming "Fabric" would change another workshop's screens.
-**Done when:** changes in one workshop's Settings → Catalogue never show in another's; today's lists stay exactly as they are.
 
-### S-46 · Name your workshop · Should · S · feature · `Ready` (card approved 2026-10-14; after S-45)
-Card: [stories/S-46-name-your-workshop.md](stories/S-46-name-your-workshop.md). Depends on S-44.
+### S-30 · MVP acceptance walkthrough · Must · S · acceptance · `Ready`, on hold since 2026-10-15
+Card: [stories/S-30-mvp-acceptance-walkthrough.md](stories/S-30-mvp-acceptance-walkthrough.md) (the card is the click-through script).
+**You get:** a step-by-step script (about 35 minutes) over every MVP screen on your own data, with the worked example typed under `WT-`
+SKUs and removed at the end.
+**Why:** no screen has ever been signed off. Phase 2's click-through has been pending since 2026-10-08.
+
+### S-46 · Name your workshop · Should · S · feature · `Ready`, on hold since 2026-10-15
+Card: [stories/S-46-name-your-workshop.md](stories/S-46-name-your-workshop.md). Depends on S-44; after S-45.
 **You get:** a "Workshop name" field when you sign up, the name under yours in the sidebar's account menu, and a Settings → "Workshop" page
-to rename it ("Workshop updated."). Existing workshops are called "My workshop" and the demo one "Demo workshop" until renamed.
-**Why:** once accounts have their own workshop, nothing on screen says which one you are in.
+to rename it ("Workshop updated.").
 
-### S-31 · A section that fails to load offers "Try again" · Should · S · feature · `Ready`, on hold (your decision 2026-10-14: "stop S-31 and S-32 for now"; paused, not dropped) (card approved 2026-10-14; was F-48)
+### S-31 · A section that fails to load offers "Try again" · Should · S · feature · `Ready`, on hold since 2026-10-14
 Card: [stories/S-31-deferred-section-try-again.md](stories/S-31-deferred-section-try-again.md).
-**You get:** if a part of a page that loads after the frame fails (dashboard figure cards and top 5, dashboard panels and alerts, the
-product page, the materials list's History panel), you see a message such as "Couldn't load the key figures." with a **Try again** button,
-instead of loading placeholders that never go away.
-**Why:** the dashboard and the product page now load their content after the page appears. One failed request leaves you stuck.
-**Done when:** for each of the four places, a failed load shows its message and "Try again" reloads only that section.
+**You get:** if a part of a page that loads after the frame fails, you see a message such as "Couldn't load the key figures." with a
+**Try again** button, instead of loading placeholders that never go away.
 
-### S-32 · A duplicate SKU saved at the same moment shows a clear message · Should · S · bug · `Ready`, on hold (your decision 2026-10-14: "stop S-31 and S-32 for now"; paused, not dropped) (card approved 2026-10-14; was F-35)
+### S-32 · A duplicate SKU saved at the same moment shows a clear message · Should · S · bug · `Ready`, on hold since 2026-10-14
 Card: [stories/S-32-duplicate-sku-clear-message.md](stories/S-32-duplicate-sku-clear-message.md).
-**You get:** if two people save a material or product with the same SKU at the same moment, the second one sees "This SKU is already used
-by another material." (or "…another product.") on the SKU field, not a server error page, and keeps what they typed.
-**Why:** it's rare, but today it's a crash. The same protection already exists for catalogue names (F-33).
-**Done when:** the race is covered by a test for materials and products, both show the field error, and nothing half-saved is left behind.
-**Note (2026-10-14):** once S-44 lands, "the same SKU" means the same SKU inside one workshop (S-44 AC-5). The card's criteria still hold.
+**You get:** if two people save the same SKU at the same moment, the second one sees "This SKU is already used by another material." (or
+"…another product.") on the SKU field, not a server error page. Since S-44, "the same SKU" means the same SKU inside one workshop.
 
-### S-40 · A realistic catalogue of 100 products on a fresh install · Could (after S-08; slips to Phase 5 first) · M · enabler · `Ready` (card approved 2026-10-14; next: tech-lead plan after S-08)
-Card: [stories/S-40-realistic-catalogue-100-products.md](stories/S-40-realistic-catalogue-100-products.md). Depends on S-08 (its demo-data step).
-**You get:** an optional setup step, after the demo workshop, on a new, empty database only (never `laravel`). It adds 93 believable
-products (100 with the demo's 7) and about 110 materials, with compositions grounded in real garment, shoe and bag costing figures, and
-prices in TND. It covers every situation a workshop meets: low stock, out of stock, can't produce, drafts without a composition and
-negative margins. It adds no sales and the same data every run. Pictures come with S-41; until then rows show today's placeholder.
-**Why:** 12 materials and 7 products can't show how lists, filters and pages behave with a real-size catalogue.
-**Done when:** the step gives the documented figures on a new database, the demo workshop's figures (S-08 AC-6) still hold, and running it
-twice changes nothing.
-
-### S-41 · A real photo on every item of the demo catalogue · Could (right after S-40; first to slip to Phase 5) · M · enabler · `Ready` (card approved 2026-10-14; tech-lead plans it after S-40; work starts once you confirm your Pexels key is in your local settings)
-Card: [stories/S-41-real-photos-for-the-catalogue.md](stories/S-41-real-photos-for-the-catalogue.md). Depends on S-40, and on **your
-Pexels key**: you create a free Pexels account and key and put the key in your local settings (never committed). The work can't start
-until it exists.
-**You get:** about 220 real photos from Pexels, one per catalogue material and product. Each photo is 80 KB or less, about 18 MB in total,
-stored with the app so the step works offline. A licence record lists every photo, and the setup guide reads "Photos provided by Pexels".
-No credit appears on screens. No faces and no brand logos. Where no close photo exists, the closest photo of the same kind is used, and
-one photo may serve at most 3 items.
-**Why:** you chose real photos (S-40 Q3). Unsplash's rules don't allow storing its photos with the app without hand-picking, so Pexels
-only (Q1).
-**Done when:** every catalogue item has a fitting photo, every photo is in the licence record, the size limits hold, and your spot-check of
-20 photos passes.
-
-### S-42 · Screen readers hear "112 units", not "112units" · Could (after S-32; your choice 2026-10-14) · S · bug (accessibility) · `Ready` (card approved 2026-10-14; tech-lead plans it after S-32; any place beyond the two product-page cards only with your agreement)
-Card: [stories/S-42-screen-readers-hear-units.md](stories/S-42-screen-readers-hear-units.md).
+### S-42 · Screen readers hear "112 units", not "112units" · Could · S · bug (accessibility) · `Ready`, on hold since 2026-10-15 (postponed, kept for later)
+Card: [stories/S-42-screen-readers-hear-units.md](stories/S-42-screen-readers-hear-units.md). After S-32.
 **You get:** on the product page, "Can produce now 112 units" and "Sold · last 30 days 38 units" are read aloud with a space between the
-number and its unit. The screen looks the same.
-**Why:** today assistive technology reads "112units": the gap is only visual. Invory aims at WCAG 2.2 AA.
-**Done when:** every number shown with a unit word on the product page reaches screen readers with a space, and the golden-path test
-checks "Can produce now 112 units".
+number and its unit.
 
-**Phase 4 tech allowance** (tech-lead picks these up alongside the stories): F-22 flaky form test · F-12 frontend skill wording ·
-F-45 stale "preview" test names (F-08, F-25 and F-51 ride with S-29). Details in [TECH-DEBT.md](TECH-DEBT.md).
-**Sizing note:** the Musts are about 70 % of this phase, above the usual 60 % guideline, because the phase is a release gate. S-31 and S-32
-are the contingency and slip to Phase 5 first. They have been on hold since 2026-10-14 (D-8) so S-43 could go first. S-43 is done
-(on `main` since 2026-10-14, see [STATUS.md](STATUS.md)), but they stay on hold until you lift it. S-42 is planned after S-32, so it waits
-too. **Since 2026-10-14 (D-9):** S-44 and S-45 are Phase 4 Musts, because a release that serves more than one workshop needs them. That
-pushes the Musts well above 70 %. S-44 started at once, over the two-story limit, by your choice, and is done (on `main` since 2026-10-15: `672937f`, `a54856f`, `9a48cd3`).
+### S-40 · A realistic catalogue of 100 products on a fresh install · Could · M · enabler · `Ready`, on hold since 2026-10-15 (postponed, kept for later)
+Card: [stories/S-40-realistic-catalogue-100-products.md](stories/S-40-realistic-catalogue-100-products.md). Depends on S-08.
+**You get:** an optional setup step on a new, empty database only (never `laravel`) that adds 93 believable products and about 110
+materials, covering low stock, out of stock, can't produce, drafts and negative margins. No sales; the same data every run.
+
+### S-41 · A real photo on every item of the demo catalogue · Could · M · enabler · `Ready`, on hold since 2026-10-15 (postponed, kept for later)
+Card: [stories/S-41-real-photos-for-the-catalogue.md](stories/S-41-real-photos-for-the-catalogue.md). Depends on S-40 and on **your
+Pexels key** in your local settings (never committed).
+**You get:** about 220 real Pexels photos, one per catalogue item, 80 KB or less each, with a licence record and "Photos provided by
+Pexels" in the setup guide.
 
 ---
 
-## NEXT — Phase 5: Fast at real catalogue sizes
+## NEXT — Phase 6: Fast at real catalogue sizes (was Phase 5 until 2026-10-15)
 
 ### S-27 · Measure speed on a realistic dataset · Must · S · `Idea`
 **You get:** a report of how fast every page is with 2 000 materials, 500 products, 50 000 sales and 20 000 stock movements, against
@@ -146,46 +164,55 @@ cost and capacity are kept up to date when something changes instead of being re
 ### S-36 · Deleting a sale or archiving a catalogue item feels instant · Could · S · `Idea` (was part of S-24)
 **You get:** the row disappears at once, and comes back with an error message if the server refuses.
 
-**Phase 5 tech allowance:** F-26 · F-38 · F-41 · F-42 · F-49.
+**Phase 6 tech allowance:** F-26 · F-38 · F-41 · F-42 · F-49.
 
 ---
 
-## NEXT — Phase 6: Production go-live
+## NEXT — Phase 7: Production go-live (was Phase 6 until 2026-10-15)
 
 ### S-26 · Production server · Must · M · `Idea`
 **You get:** Invory running on a production server: fast page loads, compressed and cached static files, a health check, and a decided
 home for sessions and cache. Backups and the database host are part of the card.
 **Needs from you first:** decision D-5 (database host with PostgreSQL 13+, where the app can install `pg_trgm`, or a one-time
 `CREATE EXTENSION pg_trgm;` by an administrator). Confirm the provisional decisions Q4 and Q6. Confirm again that sign-up stays open to
-anyone before the server is public (D-9, 2026-10-14).
+anyone before the server is public (D-9, 2026-10-14). The rest of Phase 4 (at least S-45 and S-30) is done first (D-12).
+**Known gaps to close before go-live** (left open when S-08 and S-29 were closed as they stood, D-13, 2026-10-15):
+- nobody has seen the `golden-path` check green on GitHub (S-08 AC-5);
+- the fresh-install demo click-through wasn't walked; an automated test covers its figures (S-08 AC-6);
+- nobody has seen a password-reset email arrive in the test mailbox (S-29);
+- the page-speed target, pages under 0.15 s (S-18), was never measured, and may not hold on the built-in server `php artisan serve` (S-29).
 
-**Phase 6 tech allowance:** F-43 · F-46 · F-52 · F-53.
+**Phase 7 tech allowance:** F-43 · F-46 · F-52 · F-53.
 
 ---
 
-## LATER — Phase 7: Planning features (candidates; order to confirm with you)
+## LATER — Phase 8: Planning features (was Phase 7 until 2026-10-15; candidates; order to confirm with you)
 
-| ID | You get | Priority (proposed) |
-|---|---|---|
-| S-10 | **Production planner:** "Plan N units" on a product shows, per material, what's needed, what's in stock and the shortage to buy | Should |
-| S-09 | **Live cost preview:** the cost updates while you edit a product's composition (calculated on the server) | Could |
-| S-11 | **CSV import/export** of materials | Could |
-| S-37 | **Custom date range** ("from – to") for the sales log and the dashboard (was F-11) | Could |
-| S-38 | **UX polish bundle:** sale panel layout at 1024 px (F-14), clearer "Filter by product" label for screen readers (F-16), unit price shown the same way everywhere (F-17), darker button hover from the mockup (F-18), a clearer sentence when two materials tie as the limit (F-21) | Could |
-| S-39 | **"Manage units" link** in the material form (F-31 q3; you said "not now" on 2026-10-09) | Won't (this time) |
+| ID   | You get                                                                                                         | Priority (proposed) |
+| ---- | --------------------------------------------------------------------------------------------------------------- | ------------------- |
+| S-10 | **Production planner:** "Plan N units" shows, per material, what's needed, what's in stock and the shortage     | Should              |
+| S-09 | **Live cost preview:** the cost updates while you edit a product's composition                                  | Could               |
+| S-11 | **CSV import/export** of materials                                                                              | Could               |
+| S-37 | **Custom date range** ("from – to") for the sales log and the dashboard (was F-11)                              | Could               |
+| S-38 | **UX polish bundle** (F-14, F-16, F-17, F-18, F-21)                                                             | Could               |
+| S-39 | **"Manage units" link** in the material form (F-31 q3; you said "not now" on 2026-10-09)                        | Won't (this time)   |
+
+- S-38 bundles: sale panel layout at 1024 px (F-14), a clearer "Filter by product" label for screen readers (F-16), unit price shown the
+  same way everywhere (F-17), the darker button hover from the mockup (F-18), a clearer sentence when two materials tie as the limit (F-21).
 
 ## VISION — not scheduled
 Suppliers and purchase orders · unit conversions in compositions · sizes and variants · sub-assemblies · **several people in one workshop**
 (inviting people, removing them, roles and permissions, and history that still says who did it after that person's account is deleted,
 e.g. "by a former member", where today the "by <name>" line just disappears; S-44 already keeps the data with the workshop) · cost history snapshots ·
-production runs that consume stock (Q9) · REST API / mobile. See [ROADMAP.md](ROADMAP.md).
+setting stock aside for orders not yet cut · a client list · REST API / mobile. See [ROADMAP.md](ROADMAP.md). (Production that takes
+materials out of stock moved to Phase 5 as S-53, D-10.)
 
 ---
 
 ## Decisions that shape the backlog (still valid)
 Q1 native serving · Q2 units editable, conversions later · Q3 any member of a workshop edits that workshop's catalogue (was "any signed-in
 user", changed by D-9) · Q4 bigint keys (provisional) ·
-Q6 currency/locale in config (provisional) · Q7 unit locked while used · Q8 sales stock-neutral, hard delete · Q9 no production runs (provisional) ·
+Q6 currency/locale in config (provisional) · Q7 unit locked while used · Q8 sales stock-neutral, hard delete · ~~Q9 no production runs~~ replaced by D-10 (2026-10-15): "Start cutting" on an order takes its materials out of stock ·
 F-20 restock updates unit cost by default · F-37 deleted demo products stay deleted · F-39 no thumbnails · F-40 no correction reason ·
 dev DB demo seed skipped (2026-10-14) · D-1 repository on GitHub, CI on every push (2026-10-14) · D-3 Phase 4 scope approved with its four cards (2026-10-14) · D-8 overhead cost optional, blank = 0 (S-43, done 2026-10-14);
 S-31 and S-32 on hold (2026-10-14) · low stock: no new story, no email alerts, no flag without "Reorder at" (2026-10-14) · large demo catalogue: new throwaway database only,
@@ -194,4 +221,9 @@ S-41 Q1–Q4, 2026-10-14) · **D-9 one workshop per account** (2026-10-14; S-44,
 R1–R6 approved; every existing account joins one workshop holding today's data; sign-up stays open (confirm again before S-26); each
 workshop has its own units and categories; another workshop's address shows the plain "404 Not Found"; deleting an account deletes only the
 person and the workshop's data stays (so S-47 was dropped; its ID is not reused); photos need only an unguessable address; S-44 started
-over the two-story limit. Pending: [STATUS.md §2](STATUS.md#2-decisions-needed-from-you).
+over the two-story limit · **D-10 customer orders** (2026-10-15; S-48 to S-54): several products per order, each
+with its own stages (To start, In cutting, Ready to ship, Shipped); "Start cutting" takes the materials out of stock (replaces Q9);
+shipping doesn't record a sale (S-54 later); client typed on each order; delivery date in the note · **D-12 Phase 5 starts now**
+(2026-10-15): the rest of Phase 4 (S-45, S-30, S-46, S-31, S-32) is on hold for later; S-40, S-41 and S-42 are postponed and kept for
+later; S-48 approved: only active products on an order, and an order never sets stock aside (the one part of D-11 decided so far) ·
+**D-13 S-08 and S-29 closed as they stood** (2026-10-15): Done on the commits on `main`; their open checks are known gaps for go-live. Pending: [STATUS.md §2](STATUS.md#2-decisions-needed-from-you).

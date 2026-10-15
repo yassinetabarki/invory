@@ -1,6 +1,6 @@
 # Invory — product roadmap
 
-> Owner: **product-owner** · Approved by: the human · Last updated: 2026-10-14
+> Owner: **product-owner** · Approved by: the human · Last updated: 2026-10-15 (D-12: Phase 5 "Customer orders" started; the rest of Phase 4 on hold)
 > Format: **Now / Next / Later**, organised by outcomes, not dates. Each phase is one slice of the story map with one goal, a MoSCoW-labelled
 > set of stories and exit criteria. Detailed stories live in [BACKLOG.md](BACKLOG.md); progress lives in [STATUS.md](STATUS.md).
 
@@ -10,48 +10,84 @@ A small fashion workshop knows, at any moment, **what each product costs to make
 
 ## Story map (user activities → what exists → where the rest lands)
 
-| Activity | Built (Phases 1–3) | Phase 4 | Phase 5 | Phase 6 | Phase 7 + Vision |
-|---|---|---|---|---|---|
-| **Keep stock of materials** | List, filters, CRUD, photo, restock, history, status badges | Acceptance | History on demand (S-33) | | Suppliers and purchase orders, CSV import (S-11) |
-| **Define products** | Product CRUD, composition editor, selling price, photo | Acceptance; overhead cost optional (S-43, done) | Instant edit page (S-35) | | Sizes and variants, sub-assemblies, unit conversions |
-| **Know cost and capacity** | Unit cost, can produce, bottleneck, next limit, margin, "what you can make with it" | Acceptance, E2E (S-08) | Fast at 500 products (S-23, S-27) | | Live cost preview (S-09), production planner (S-10), cost history |
-| **Sell** | Sales log, totals, filters, record/edit/delete | Acceptance | Instant delete feedback (S-36) | | Custom date range (S-37) |
-| **Monitor** | Dashboard: KPIs, top 5, restock list, alerts | Panels offer "Try again" after an error (S-31) | Loading states (S-34) | | |
-| **Run the business on it** | Login, 2FA, catalogue settings | Reliable dev setup (S-29), crash-free SKU saves (S-32), each workshop sees only its own data (S-44 done, S-45), workshop name (S-46) | | Production server, backups (S-26) | Several people in one workshop (invitations, roles and permissions) |
+| Activity | Built (Phases 1–3) | Phase 4 | Phase 5 (orders) | Phase 6 (speed) | Phase 7 (go-live) | Phase 8 + Vision |
+|---|---|---|---|---|---|---|
+| **Keep stock of materials** | List, filters, CRUD, photo, restock, history, status badges | Acceptance | | History on demand (S-33) | | Suppliers and purchase orders, CSV import (S-11) |
+| **Define products** | Product CRUD, composition editor, selling price, photo | Acceptance; overhead cost optional (S-43, done) | Units on order on the product page (S-51) | Instant edit page (S-35) | | Sizes and variants, sub-assemblies, unit conversions |
+| **Take client orders** | Nothing yet | | Orders with several products (S-48); to start, in cutting, ready to ship, shipped per line (S-49); cutting takes materials out of stock (S-53); progress and totals on the list (S-50); history of moves (S-52); shipping can record the sale (S-54) | | | A client list |
+| **Know cost and capacity** | Unit cost, can produce, bottleneck, next limit, margin, "what you can make with it" | Acceptance, E2E (S-08) | | Fast at 500 products (S-23, S-27) | | Live cost preview (S-09), production planner (S-10), cost history |
+| **Sell** | Sales log, totals, filters, record/edit/delete | Acceptance | | Instant delete feedback (S-36) | | Custom date range (S-37) |
+| **Monitor** | Dashboard: KPIs, top 5, restock list, alerts | Panels offer "Try again" after an error (S-31) | Units in cutting on the dashboard (S-51) | Loading states (S-34) | | |
+| **Run the business on it** | Login, 2FA, catalogue settings | Reliable dev setup (S-29), crash-free SKU saves (S-32), each workshop sees only its own data (S-44 done, S-45), workshop name (S-46) | | | Production server, backups (S-26) | Several people in one workshop (invitations, roles and permissions) |
+
+**Phase numbers changed on 2026-10-15:** customer orders became Phase 5, so speed is now Phase 6, go-live Phase 7 and planning Phase 8.
+Cards written before that day say "Phase 5" for speed (S-27, S-23), and "slips to Phase 5" there means "slips to the next phase".
 
 ---
 
-## NOW — Phase 4: MVP release readiness
+## NOW — Phase 5: Customer orders (started 2026-10-15, D-12)
+**Goal:** the workshop records every client order and sees at any moment how many units of each order are still to start, in cutting,
+ready to ship and shipped, and how many units are being made across all open orders.
+You asked for it on 2026-10-15 ("design the order management UI") and answered the scope questions the same day (D-10). The same day you
+started it ahead of Phase 4: "we will start with S-48" (D-12). Orders belong to a workshop, and S-44 is done, so nothing blocks it.
+S-48 is `Ready` (approved 2026-10-15); S-49, S-53 and S-50 are `Draft` ([stories](stories/README.md)).
+
+| Priority               | Story                                               | Size |
+| ---------------------- | --------------------------------------------------- | ---- |
+| Must                   | S-48 Record customer orders with several products   | M    |
+| Must                   | S-49 Track each product line through the stages     | M    |
+| Must                   | S-53 Cutting takes materials out of stock           | M    |
+| Must                   | S-50 Orders list: progress of each order and totals | S    |
+| Should                 | S-51 Product page and dashboard show units on order | S    |
+| Could                  | S-52 Each order keeps a history of its moves        | S    |
+| Could                  | S-54 "Ship" can also record the sale                | S    |
+| Tech allowance (~15 %) | Picked with the tech-lead when it sizes the stories | —    |
+
+The Musts are about 60 % of the phase. S-54, then S-52, then S-51 slip first.
+
+- An order holds one or more products, each with its own quantity and its own four stages: To start, In cutting, Ready to ship, Shipped.
+- Only active products can go on an order, and an order never sets stock aside (S-48, approved 2026-10-15).
+- **"Start cutting" takes the materials out of stock** (D-10, 2026-10-15). This replaces decision Q9 ("making products never reduces
+  stock"). S-49 and S-53 ship together, so there is never a time when cutting leaves the stock untouched. The other cutting rules (D-11)
+  are decided when S-49 and S-53 are refined.
+- Shipping doesn't record a sale (S-54 may add that later). Clients are typed on each order; the delivery date goes in the note.
+- Won't (this time): a client list, order numbers, a "Cancelled" status, setting stock aside for orders not yet cut.
+
+**Exit criteria:** you have accepted S-48, S-49, S-53 and S-50 in a click-through · cutting an order changes stock exactly as the cards
+say · another workshop never sees your orders · every gate green.
+
+## ON HOLD — Phase 4: MVP release readiness (postponed 2026-10-15, D-12)
 **Goal:** the business owner has accepted every MVP screen, one automated test proves the golden path end to end, and each workshop sees
 only its own data.
-**Scope approved** by the human on 2026-10-14 (decision D-3), together with the cards of S-30, S-08, S-31 and S-32 ([stories](stories/README.md)).
-**Added on 2026-10-14 (D-9):** each account gets its own workshop (S-44, S-45, S-46, cards approved), so the release can serve more than one
-business. S-44 started at once, over the two-story limit, by the human's choice, and is done (2026-10-15). S-45 follows right after it: no second real workshop signs up until S-45 is done too.
+**Postponed on 2026-10-15** (D-12): you put the rest of Phase 4 on hold for later. The same day you closed S-08 and S-29 as they stood
+(D-13): they are done on the commits already on `main`, and their unfinished checks are known gaps for go-live (Phase 7).
+Every card stays approved. S-44 and S-43 are done. Until S-45 is done, no second real workshop signs up (D-9), and Phase 4 closes before
+the production server goes live (Phase 7).
 
-| Priority | Story | Size |
-|---|---|---|
-| Must | S-29 Reliable dev environment (Docker = database + mail only; Sail removed). Open point: speed target on `php artisan serve`, see BACKLOG | M |
-| Must | S-30 MVP acceptance walkthrough (`Ready`) | S |
-| Must | S-08 End-to-end golden-path test + demo data on a fresh install (`Ready`) | M |
-| Must (your request 2026-10-14, D-9) | S-44 Each workshop sees only its own materials, products and sales (✅ `Done` 2026-10-15: `672937f`, `a54856f`, `9a48cd3`; started over the two-story limit) | M |
-| Must (your request 2026-10-14, D-9) | S-45 Each workshop has its own units and categories (`Ready`; right after S-44, ships with it) | S |
-| Should (your choice 2026-10-14, D-8) | S-43 Save a product without filling in the overhead cost (✅ `Done` 2026-10-14: `6179d52`, `4644a08`, `9fc8e98`, `9df0ca0`, close-out `eccb09a`) | S |
-| Should (D-9) | S-46 Name your workshop (`Ready`; after S-45) | S |
-| Should | S-31 A section that fails to load offers "Try again" (`Ready`, on hold since 2026-10-14, D-8) | S |
-| Should | S-32 Saving a duplicate SKU at the same moment shows a clear message, not a crash (`Ready`, on hold since 2026-10-14, D-8) | S |
-| Could (your choice 2026-10-14) | S-42 Screen readers hear "112 units", not "112units" (`Ready`, after S-32; found in the S-08 review) | S |
-| Could (your choice 2026-10-14, S-40 Q6) | S-40 A realistic catalogue of 100 products on a fresh install (`Ready`, after S-08; not an exit criterion) | M |
-| Could (your choice 2026-10-14, S-41 Q4) | S-41 A real photo on every item of the demo catalogue, from Pexels (`Ready`, after S-40; needs your Pexels key; slips to Phase 5 first) | M |
-| Tech allowance (~15 %) | F-22 flaky form test · F-12 frontend skill wording · F-45 stale "preview" test names (F-08, F-25, F-51 ride with S-29) | — |
+| Priority | Story                                                              | State                             | Size |
+| -------- | ------------------------------------------------------------------ | --------------------------------- | ---- |
+| Must     | S-29 Reliable dev environment                                      | ✅ Done 2026-10-15 (as is, D-13)   | M    |
+| Must     | S-08 End-to-end golden-path test + demo data on a fresh install    | ✅ Done 2026-10-15 (as is, D-13)   | M    |
+| Must     | S-44 Each workshop sees only its own materials, products and sales | ✅ Done 2026-10-15                 | M    |
+| Must     | S-45 Each workshop has its own units and categories                | On hold since 2026-10-15          | S    |
+| Must     | S-30 MVP acceptance walkthrough                                    | On hold since 2026-10-15          | S    |
+| Should   | S-43 Save a product without filling in the overhead cost           | ✅ Done 2026-10-14                 | S    |
+| Should   | S-46 Name your workshop                                            | On hold since 2026-10-15          | S    |
+| Should   | S-31 A section that fails to load offers "Try again"               | On hold since 2026-10-14          | S    |
+| Should   | S-32 A duplicate SKU saved at once shows a clear message           | On hold since 2026-10-14          | S    |
+| Could    | S-42 Screen readers hear "112 units", not "112units"               | Postponed, kept for later         | S    |
+| Could    | S-40 A realistic catalogue of 100 products on a fresh install      | Postponed, kept for later         | M    |
+| Could    | S-41 A real photo on every item of the demo catalogue              | Postponed, kept for later         | M    |
 
-Musts are about 70 % of the phase (above the 60 % guideline) because the phase is a release gate; S-31 and S-32 slip first. With S-44 and
-S-45 (D-9) the Musts grow further; S-46 and the Coulds slip before them.
+- S-44 commits: `672937f`, `a54856f`, `9a48cd3`. S-43 commits: `6179d52`, `4644a08`, `9fc8e98`, `9df0ca0`, close-out `eccb09a`.
+- S-08 commits: `723f57a`, `932f01a`, `1b40f75`, `af3d6de`, `5241147`. S-29 commits: `d351514`, `7b0fb05`, `c70109f`, `a68043e`.
+- Tech allowance: F-22 flaky form test · F-12 frontend skill wording · F-45 stale "preview" test names. They can move to Phase 5's
+  allowance if the tech-lead proposes it.
 
-**Exit criteria:** S-30 accepted by the human · S-08 green in the tech-lead's gates and in CI on GitHub (D-1 done 2026-10-14; the human
-reads the result) · S-18 page-speed target measured (p95 ≤ 150 ms; open point, see S-29 in BACKLOG) · S-44 (accepted 2026-10-15) and S-45 accepted by the human ·
-every gate green.
+**Exit criteria:** S-30 accepted by the human · S-45 accepted by the human · every gate green. The two criteria S-08 and S-29 left open
+(S-08 seen green in CI on GitHub; the S-18 page-speed target measured, p95 ≤ 150 ms) moved to Phase 7's known gaps (D-13).
 
-## NEXT — Phase 5: Fast at real catalogue sizes
+## NEXT — Phase 6: Fast at real catalogue sizes (was Phase 5 until 2026-10-15)
 **Goal:** every page stays within its speed budget with 2 000 materials, 500 products and 50 000 sales.
 
 | Priority | Story | Size |
@@ -66,16 +102,20 @@ every gate green.
 
 **Exit criteria:** S-27's report shows every page within budget, and the human has accepted S-33 and S-35.
 
-## NEXT — Phase 6: Production go-live
+## NEXT — Phase 7: Production go-live (was Phase 6 until 2026-10-15)
 **Goal:** Invory runs on a production server the business can rely on: backups, health check, fast static assets.
 
 | Priority | Story | Size |
 |---|---|---|
 | Must | S-26 Production runtime (needs decision D-5: database host with PostgreSQL 13+ and `pg_trgm`) | M |
-| Must | Confirm the provisional decisions Q4 (bigint keys), Q6 (currency and locale in config) and Q9 (no production runs), and confirm again that sign-up stays open to anyone once the server is public (D-9) | — |
+| Must | Confirm the provisional decisions Q4 (bigint keys), Q6 (currency and locale in config) (Q9 was replaced by D-10 on 2026-10-15), and confirm again that sign-up stays open to anyone once the server is public (D-9) | — |
 | Tech allowance | F-43 · F-46 · F-52 · F-53 | — |
 
-## LATER — Phase 7: Planning features (order to be confirmed with the human)
+The rest of Phase 4 (at least S-45 and the S-30 sign-off) is done before the server goes live (D-12). So are the known gaps left when
+S-08 and S-29 were closed as they stood (D-13): the `golden-path` check seen green on GitHub, the fresh-install demo click-through, a
+password-reset email seen in the test mailbox, and the page-speed target (S-18) measured.
+
+## LATER — Phase 8: Planning features (was Phase 7 until 2026-10-15; order to be confirmed with the human)
 | Candidate | Value |
 |---|---|
 | S-10 Production planner: "plan N units" shows each material's requirement, the stock and the shortage to buy | High: turns capacity into a shopping list |
@@ -89,7 +129,8 @@ every gate green.
 Suppliers and purchase orders · unit conversions in compositions (columns exist, Q2) · sizes and variants · sub-assemblies
 (multi-level BOM) · **several people in one workshop**: inviting people, removing them, roles and permissions, and history that still
 names a person after their account is deleted (e.g. "by a former member") (S-44 keeps the data with the workshop, so this adds people
-without moving data) · cost history snapshots · production runs that consume stock (Q9) · REST API / mobile.
+without moving data) · cost history snapshots · setting stock aside for orders not yet cut · REST API / mobile. (Production that takes
+materials out of stock moved to Phase 5 as S-53, D-10.)
 Design notes: [ARCHITECTURE.md §10](ARCHITECTURE.md#10-scalability-path-post-mvp-designed-for-but-not-built).
 
 ## Done (Phases 1–3)

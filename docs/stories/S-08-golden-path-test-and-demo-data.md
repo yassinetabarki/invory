@@ -1,6 +1,6 @@
 # S-08 — One automated test walks the whole journey, and a fresh install shows the demo workshop
-> Phase 4 · Priority Must · Size M · Status **Acceptance** (delivered 2026-10-14, uncommitted on `phase/4-mvp-release-readiness`; card approved 2026-10-14) · Type feature (quality)
-> Links: [Roadmap, Phase 4](../ROADMAP.md#now--phase-4-mvp-release-readiness) · [Backlog](../BACKLOG.md) · Related: S-30 (your walkthrough),
+> Phase 4 · Priority Must · Size M · Status **Done** (closed as it stands on 2026-10-15, your decision D-13; on `main`: `723f57a` … `5241147`; card approved 2026-10-14) · Type feature (quality)
+> Links: [Roadmap, Phase 4](../ROADMAP.md#on-hold--phase-4-mvp-release-readiness-postponed-2026-10-15-d-12) · [Backlog](../BACKLOG.md) · Related: S-30 (your walkthrough),
 > D-1 (decided 2026-10-14: the repository is on GitHub and the automatic checks run on every push) · Technical plan: added by the tech-lead
 
 ## Story
@@ -135,3 +135,10 @@ Found during the review (not gaps in S-08's criteria):
   `laravel`. The click-through below uses a separate settings file, which the tech-lead confirms first. S-40 AC-5 makes this part of the
   guide.
 - On the product page, "Can produce now 112 units" reaches screen readers as "112units" (no space). Proposed as S-42.
+
+## Closed on 2026-10-15 (your decision D-13: "close them as they are")
+S-08 is **Done** on the commits already on `main`: `723f57a`, `932f01a`, `1b40f75`, `af3d6de`, `5241147` (docs `6e776f0`, `6cbfb01`,
+`a368d8c`). AC-1 to AC-4, AC-7 and AC-8 are accepted on the evidence above. Two checks were not done; they are recorded as known gaps to
+close before the production server goes live ([STATUS.md §6](../STATUS.md#6-what-is-missing-or-incomplete)):
+- AC-5: nobody has seen the `golden-path` job green on GitHub yet.
+- AC-6: the fresh-install click-through (steps 4–8) wasn't walked. The automated test `FreshInstallDemoTest` covers every AC-6 figure.
