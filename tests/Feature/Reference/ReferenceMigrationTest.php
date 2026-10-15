@@ -25,12 +25,13 @@ const OLD_UNITS = ['m', 'cm', 'yd', 'sqm', 'sqft', 'kg', 'g', 'l', 'ml', 'pc', '
  * The S-04a migrations depend on its tables (`products` points at `product_categories`, and materials carry audit columns on top of
  * its shape), so a rollback of S-21 has to start with them, newest first, exactly as `migrate:rollback` does. PostgreSQL refuses to
  * drop a table that a foreign key still points at; SQLite doesn't check. Nothing here needs them again afterwards. The S-44-b migration
- * (`workshop_id` on every owned table) is the newest, so it goes first.
+ * (`workshop_id` on every owned table) and the S-48-a orders migration (it depends on `(workshop_id, id)`) are newer, so they go first.
  */
 function referenceMigration(): Migration
 {
     if (Schema::hasTable('products')) {
         foreach ([
+            '2026_10_15_200000_create_orders_and_order_lines_tables',
             '2026_10_15_100100_add_workshop_to_owned_tables',
             '2026_10_09_300200_add_postgres_checks_and_trigram_indexes',
             '2026_10_09_300100_create_products_and_product_components_tables',

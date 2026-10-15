@@ -300,6 +300,54 @@ export type SaleFormData = {
     note: string;
 };
 
+/** A product as an order shows and offers it. `deleted` = soft-deleted: shown by name, without a link. */
+export type OrderProduct = {
+    id: number;
+    sku: string;
+    name: string;
+    status: ProductStatus;
+    deleted: boolean;
+};
+
+export type OrderLine = {
+    id: number;
+    product: OrderProduct;
+    quantity: number; // whole units, 1 … 1 000 000
+};
+
+export type Order = {
+    id: number;
+    client: string;
+    ordered_on: string; // 'YYYY-MM-DD'
+    note: string | null;
+    lines: OrderLine[]; // in the order entered (position)
+    units: number; // sum of the lines' quantities, computed server-side
+};
+
+export type OrderFilters = {
+    search: string | null; // client, note, or a line's product name or SKU
+};
+
+export type OrderLineFormRow = {
+    product_id: number | '';
+    quantity: string;
+};
+
+/** Fields the order form submits. Errors come back as client, ordered_on, note, lines, lines.N.product_id, lines.N.quantity. */
+export type OrderFormData = {
+    client: string;
+    ordered_on: string; // 'YYYY-MM-DD'
+    note: string;
+    lines: OrderLineFormRow[];
+};
+
+export type OrdersIndexProps = {
+    orders: Paginated<Order>;
+    filters: OrderFilters;
+};
+export type OrderCreateProps = { products: OrderProduct[] };
+export type OrderEditProps = { order: Order; products: OrderProduct[] };
+
 export type StockMovement = {
     id: number;
     material_id: number;

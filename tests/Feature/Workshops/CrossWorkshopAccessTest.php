@@ -44,7 +44,7 @@ function crossWorkshopPng(): string
 }
 
 /**
- * Every row of the five tables of workshop data, of every workshop, plus the files of the public disk. Raw `DB::table()` reads, so the
+ * Every row of the seven tables of workshop data, of every workshop, plus the files of the public disk. Raw `DB::table()` reads, so the
  * workshop scope can't hide a change: two equal fingerprints mean nothing was written anywhere.
  *
  * @return array<string, mixed>
@@ -53,7 +53,7 @@ function crossWorkshopFingerprint(): array
 {
     $tables = [];
 
-    foreach (['materials', 'products', 'product_components', 'stock_movements', 'sales'] as $table) {
+    foreach (['materials', 'products', 'product_components', 'stock_movements', 'sales', 'orders', 'order_lines'] as $table) {
         $tables[$table] = DB::table($table)->orderBy('id')->get()->map(static fn (object $row): array => (array) $row)->all();
     }
 
@@ -65,8 +65,9 @@ it('answers 404 to every route with a record of another workshop, shows nothing 
         'material' => demoMaterial('MAT-DEN-012'),
         'product' => demoProduct('PRD-JKT-001'),
         'sale' => Sale::query()->where('product_id', pid(1))->orderBy('id')->firstOrFail(),
+        'order' => bookOrder(),
     ];
-    $secrets = ['Denim 12oz Indigo', 'MAT-DEN-012', 'Denim Jacket', 'PRD-JKT-001'];
+    $secrets = ['Denim 12oz Indigo', 'MAT-DEN-012', 'Denim Jacket', 'PRD-JKT-001', 'Boutique Lina', '2 boxes'];
 
     // The demo's two photos exist on the disk, so a request that removed or replaced one would show.
     foreach (['material' => 'materials', 'product' => 'products'] as $kind => $directory) {
@@ -81,6 +82,7 @@ it('answers 404 to every route with a record of another workshop, shows nothing 
         'materials.restocks.store' => validRestockPayload(),
         'products.update' => validProductPayload(['sku' => 'PRD-JKT-001', 'name' => 'Denim Jacket']),
         'sales.update' => validSalePayload(),
+        'orders.update' => validOrderPayload(),
     ];
     $requests = [];
 
@@ -126,9 +128,14 @@ it('answers 404 to every route with a record of another workshop, shows nothing 
         expect(crossWorkshopFingerprint())->toBe($before, "{$label} changed something.");
     }
 
-    // 11 routes carry a record (material show, edit, update, destroy, restock; product show, edit, update, destroy; sale update, destroy):
-    // 18 requests, because an update answers to PUT and PATCH, and the material and product updates also run with a photo and with remove_photo.
-    expect(count($requests))->toBeGreaterThanOrEqual(18);
+    // 14 routes carry a record (material show, edit, update, destroy, restock; product show, edit, update, destroy; sale update, destroy;
+    // order edit, update, destroy): 22 requests, because an update answers to PUT and PATCH, and the material and product updates also run with a photo and with remove_photo.
+    expect(count($requests))->toBeGreaterThanOrEqual(22);
+
+    // Sami's Orders list and its search show nothing of Boutique Lina's order (AC-7).
+    foreach ([[], ['search' => 'lina'], ['search' => 'PRD-JKT-001'], ['search' => 'jacket']] as $query) {
+        expect(pageProp($this->get(route('orders.index', $query))->assertOk(), 'orders.data'))->toBe([]);
+    }
 
     // The demo still shows what it showed: Denim Jacket at 35.7540, 112 units, 60 sales, Denim 12oz Indigo untouched.
     $this->actingAs($this->demo);
@@ -139,6 +146,7 @@ it('answers 404 to every route with a record of another workshop, shows nothing 
         ->and($jacket['capacity']['max_producible'])->toBe(112)
         ->and($jacket['capacity']['bottleneck']['name'])->toBe('Metal shank button 17mm')
         ->and(pageProp($this->get(route('sales.index', ['period' => 'this_year'])), 'sales.meta.total'))->toBe(60)
+        ->and(pageProp($this->get(route('orders.index')), 'orders.meta.total'))->toBe(1)
         ->and($denim)->toMatchArray(['quantity_on_hand' => '250.0000', 'unit_cost' => '8.5000'])
         ->and($denim['photo_url'])->toEndWith('materials/demo-material.png');
 });

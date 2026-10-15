@@ -84,11 +84,16 @@ code testable and ready to scale.
  │ (final item) │          │     (BOM line)     │          │(primary item)│          │   (history)    │
  └──────────────┘          └────────────────────┘          └──────────────┘          └────────────────┘
         │ 1
-        │ *
- ┌──────────────┐
- │     Sale     │  (does not change material stock)
- └──────────────┘
+        ├─────────────────────────────┐
+        │ *                           │ *
+ ┌──────────────┐          ┌────────────────────┐ *      1 ┌──────────────┐
+ │     Sale     │          │     OrderLine      │──────────│    Order     │  (orders change no stock, sale or figure)
+ └──────────────┘          │ (product + units)  │          │   (client)   │
+  (does not change         └────────────────────┘          └──────────────┘
+   material stock)
 ```
+Status (2026-10-15): `orders` and `order_lines` (S-48) hold a client's orders; S-49 adds stage counts to `order_lines`, S-53 the materials
+taken per line.
 Status (2026-10-13): every table above is real: `sales` (S-14-BE), `stock_movements` (S-16-BE), `photo_path` on materials and products
 (S-15-BE). The preview layer is gone (S-17). Demo data: `DemoCatalogSeeder` (materials) → `DemoProductsSeeder`, then `DemoSalesSeeder`.
 Status (2026-10-09): `materials`, `products` and `product_components` are real (S-04; demo products from `DemoProductsSeeder`).
@@ -101,12 +106,12 @@ Earlier status (2026-10-08): `materials` is real. `products`, `product_component
 |---|---|---|
 | `workshops` | id, timestamps (S-46 adds `name` string(100)) | the business account; created by registration (`CreateWorkshop`) |
 | `users.workshop_id` | FK → workshops, NOT NULL | `restrictOnDelete`; one workshop per account, many accounts per workshop |
-| `workshop_id` on `materials`, `products`, `product_components`, `stock_movements`, `sales` (S-45: `units`, `material_categories`, `product_categories`) | FK → workshops, NOT NULL | `restrictOnDelete`; never mass-assignable; stamped from the current workshop, children take their parent's |
+| `workshop_id` on `materials`, `products`, `product_components`, `stock_movements`, `sales` (S-45: `units`, `material_categories`, `product_categories`; S-48: `orders`, `order_lines`) | FK → workshops, NOT NULL | `restrictOnDelete`; never mass-assignable; stamped from the current workshop, children take their parent's |
 
 Every query on these tables is limited to the current workshop by the `BelongsToWorkshop` global scope (route-model binding included, so
-another workshop's record is a 404). PostgreSQL also has `unique(workshop_id, id)` on `materials` and `products` and composite foreign keys
-`product_components (workshop_id, product_id | material_id)`, `sales (workshop_id, product_id)`, `stock_movements (workshop_id, material_id)`
-→ `(workshop_id, id)`, so a composition or a sale can never cross workshops (R4).
+another workshop's record is a 404). PostgreSQL also has `unique(workshop_id, id)` on `materials`, `products` and `orders` and composite foreign
+keys `product_components (workshop_id, product_id | material_id)`, `sales (workshop_id, product_id)`, `stock_movements (workshop_id, material_id)`,
+`order_lines (workshop_id, order_id | product_id)` → `(workshop_id, id)`, so a composition, a sale or an order line can never cross workshops (R4).
 
 ### `materials` (primary items)
 | Column | Type | Rules |
@@ -187,6 +192,36 @@ aggregates by material defensively.
 
 Indexes: `index(workshop_id, sold_on, id)`, `index(product_id, sold_on)`. `total = quantity × unit_price` is computed, never stored. Recording a sale never changes stock.
 
+### `orders` (S-48)
+
+| Column                 | Type                  | Rules                                                                     |
+| ---------------------- | --------------------- | ------------------------------------------------------------------------- |
+| id                     | bigint PK             |                                                                           |
+| workshop_id            | FK → workshops        | see above                                                                 |
+| client                 | string(100)           | required                                                                  |
+| ordered_on             | date                  | ≤ today                                                                   |
+| note                   | string(1000) nullable | delivery date, packing, anything the client asked for                     |
+| user_id                | FK → users nullable   | who recorded it (`nullOnDelete`), not shown yet                           |
+| timestamps, deleted_at |                       | soft deletes: a deleted order is hidden everywhere, its lines stay (S-53) |
+
+Index: `index(workshop_id, ordered_on, id)` (the list: newest order date first, then the order recorded last).
+
+### `order_lines` (S-48)
+
+| Column      | Type                 | Rules                                                                     |
+| ----------- | -------------------- | ------------------------------------------------------------------------- |
+| id          | bigint PK            |                                                                           |
+| workshop_id | FK → workshops       | the order's workshop (composite FK to orders and products on PostgreSQL)  |
+| order_id    | FK → orders          | `cascadeOnDelete`                                                         |
+| product_id  | FK → products        | `restrictOnDelete`; new lines take only `active` products of the workshop |
+| quantity    | unsigned integer     | whole units, 1 … 1 000 000 (CHECK on PostgreSQL)                          |
+| position    | unsignedSmallInteger | the order entered                                                         |
+| timestamps  |                      |                                                                           |
+
+Constraints: `unique(order_id, product_id)` (one line per product per order, at most 50 lines), `index(product_id)`. Saving an order again
+matches lines **by product** (`SyncOrderLines`). A line keeps its product when that product is later archived, set back to draft or deleted.
+Orders never read or write `materials`, `stock_movements` or `sales`; totals that count open orders go through `Order` (its soft-delete scope).
+
 ### `stock_movements` (S-16-BE, material history)
 | Column | Type | Rules |
 |---|---|---|
@@ -224,7 +259,8 @@ All formulas, rounding rules, edge cases and a worked example live in the skill
 ### Deletion rules
 - A **material used in any non-deleted product's BOM cannot be deleted**: `DeleteMaterial` throws
   `MaterialInUseException`, and the controller turns it into a flash error listing the products.
-- Deleting a product soft-deletes it. Its BOM lines stay, for history and restore.
+- Deleting a product soft-deletes it. Its BOM lines stay, for history and restore. Its order lines stay too and show its name without a link.
+- Deleting an order soft-deletes it (`DeleteOrder`); its lines stay with it. Nothing else changes.
 
 ## 5. Backend structure
 
@@ -233,6 +269,7 @@ app/
 ├── Actions/
 │   ├── Fortify/                         # starter kit
 │   ├── Materials/  CreateMaterial · UpdateMaterial · DeleteMaterial
+│   ├── Orders/     RecordOrder · UpdateOrder · SyncOrderLines · DeleteOrder   (S-48)
 │   ├── Products/   CreateProduct · UpdateProduct · DeleteProduct · SyncProductComponents
 │   └── Workshops/  CreateWorkshop   (registration; S-45 adds the standard units and categories)
 ├── Domain/
@@ -240,13 +277,15 @@ app/
 ├── Enums/          ProductStatus · StockStatus · StockMovementType · SalesPeriod · UnitDimension   (each has label() + options())
 ├── Exceptions/     MaterialInUseException
 ├── Http/
-│   ├── Controllers/  DashboardController · MaterialController · ProductController
-│   ├── Requests/     Materials/{Store,Update}MaterialRequest · Products/{Store,Update}ProductRequest
-│   └── Resources/    MaterialResource · ProductListResource · ProductResource · ProductComponentResource · CostBreakdownResource
-├── Models/         Material · Product · ProductComponent · Sale · StockMovement · User · Workshop · Concerns/BelongsToWorkshop · Scopes/WorkshopScope
-├── Policies/       MaterialPolicy · ProductPolicy · SalePolicy   (any member of the record's workshop; another workshop → 404, never 403)
+│   ├── Controllers/  DashboardController · MaterialController · ProductController · SaleController · OrderController
+│   ├── Requests/     Materials/{Store,Update}MaterialRequest · Products/{Store,Update}ProductRequest · Orders/{Index,Store,Update}OrderRequest
+│   └── Resources/    MaterialResource · ProductListResource · ProductResource · ProductComponentResource · CostBreakdownResource ·
+│                     OrderResource · OrderLineResource · OrderProductResource
+├── Models/         Material · Product · ProductComponent · Sale · StockMovement · Order · OrderLine · User · Workshop · Concerns/BelongsToWorkshop · Scopes/WorkshopScope
+├── Policies/       MaterialPolicy · ProductPolicy · SalePolicy · OrderPolicy   (any member of the record's workshop; another workshop → 404, never 403)
 └── Services/
     ├── Costing/    ProductCostingService                   (Eloquent → BomLine adapter; calls the calculator)
+    ├── Orders/     OrderBook                               (orders list and search, product options for the order form)
     └── Workshops/  CurrentWorkshop                         (the current workshop: explicit, else the signed-in user's)
 app/Validation/WorkshopRule  exists / unique limited to the current workshop
 config/invory.php   currency (APP_CURRENCY, default TND), pagination size, decimal scales
@@ -284,13 +323,20 @@ tests/
 | POST | /sales | sales.store | @store | redirect back |
 | PUT | /sales/{sale} | sales.update | @update | redirect back |
 | DELETE | /sales/{sale} | sales.destroy | @destroy | redirect back |
+| GET | /orders | orders.index | OrderController@index | `orders/index` (S-48: list, search) |
+| GET | /orders/create | orders.create | @create | `orders/create` (active products only) |
+| POST | /orders | orders.store | @store | redirect → index ("Order recorded.") |
+| GET | /orders/{order}/edit | orders.edit | @edit | `orders/edit` (also the order's own non-active or deleted products) |
+| PUT | /orders/{order} | orders.update | @update | redirect → index ("Order updated.") |
+| DELETE | /orders/{order} | orders.destroy | @destroy | redirect back ("Order deleted.") |
 
 Settings › Catalogue (S-21/S-22): for each of `units`, `material-categories` and `product-categories`, `GET settings/<list>` (page `settings/<list>`),
 `POST`, `PUT …/{id}`, `DELETE …/{id}`, `PATCH …/{id}/archive` and `PATCH …/{id}/restore`, named `settings.<list>.*`. Option lists for forms and
 filters come from the shared `reference` once-prop, not from page props.
 
 The index pages accept the query parameters `search`, `category`, `status` and `cant_produce` (products), `low_stock` (materials),
-`product_id`, `period`, `record`, `record_product_id` (sales), `sort` and `page`. The dashboard accepts `period`.
+`product_id`, `period`, `record`, `record_product_id` (sales), `sort` and `page`. The dashboard accepts `period`. Orders accept `search`
+(client, note, or a line's product name or SKU) and `page`.
 Pagination: 25 per page, `->withQueryString()`. Every write persists (Phase 3).
 
 ### Preview layer (retired 2026-10-13, ADR-0006)
@@ -309,12 +355,14 @@ resources/js/
 │   ├── dashboard.tsx
 │   ├── materials/  index.tsx · create.tsx · edit.tsx · show.tsx
 │   ├── products/   index.tsx · create.tsx · edit.tsx · show.tsx
+│   ├── orders/     index.tsx · create.tsx · edit.tsx   (S-48)
 │   └── sales/      index.tsx
 ├── components/
 │   ├── ui/                 # shadcn — generated via `npx shadcn@latest add …`, never hand-edited
 │   ├── dashboard/          KPI cards, top sellers, needs restock, alerts
 │   ├── materials/          material-form · materials-table · stock-badge · restock form · history list · usage table
 │   ├── products/           product-form · bom-editor · bom-table · cost-breakdown-card
+│   ├── orders/             orders table · delete dialog · order form · order lines editor (S-48)
 │   ├── sales/              sales table · sale form
 │   ├── settings/           reference manager (units, material and product categories): table, row actions, form dialogs (S-22)
 │   └── shared/             money · quantity · page-header · empty-state · confirm-delete-dialog · pagination · filters-bar ·
@@ -337,13 +385,14 @@ Principles:
 
 ## 7. Key screens (MVP)
 
-Approved mockup (2026-10-08): [docs/design/mockup/](design/mockup/README.md). Sidebar: Dashboard, Materials, Products, Sales.
+Approved mockup (2026-10-08): [docs/design/mockup/](design/mockup/README.md). Sidebar: Dashboard, Materials, Products, Orders (S-48), Sales.
 Look: shadcn starter-kit layout, neutral surfaces, indigo "denim" primary `#2B3A86`, Instrument Sans + IBM Plex Mono for SKUs and codes,
 tabular numbers, status badges with text + icon. Light and dark mode, usable at 375 px.
 
 | Screen | Shows | Purpose |
 |---|---|---|
 | Dashboard | Period select (Last 30 days default). Alert per product that can't be produced. KPI cards: total sales, units sold, inventory value, needs restock (low · out), can't produce (of N products). **Top 5 products sold** with a Units / Revenue toggle. Needs-restock list. Recent sales. | At-a-glance status |
+| Orders (S-48) | Search box; table of orders (order date, client, "50 × Denim Jacket" per product, units, note) with Edit and Delete; cards at phone width. **New order** / **Edit order**: client, order date, note, and a products editor (one line per product with its quantity, up to 50) | What the workshop has promised to make; changes no stock, sale or figure |
 | Sales | Totals (total sales, units, count, average sale); search, period and product filters; sales table with edit / delete; **Record a sale** panel (active products only, unit price pre-filled from the selling price, date, note; stock unchanged) | Sales log (decision 1) |
 | Materials list | Thumbnail, name + SKU, category, stock + unit, reorder at, unit cost, stock value, status badge, **used in** (# products); search, category, "needs restock", sort; per-row **Restock** quick form and **History** panel | Manage inventory (decision 4) |
 | Material form | All material fields with unit-aware inputs + **photo** upload / replace / remove | Create/edit (decision 2) |

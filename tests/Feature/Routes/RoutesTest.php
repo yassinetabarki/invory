@@ -37,7 +37,7 @@ beforeEach(fn () => $this->user = prepareDemo($this));
 
 /**
  * Every new route: [method, route name, route parameter ('material' = create a Material first, 'product' = the Denim Jacket,
- * 'sale' = create a sale first)].
+ * 'sale' = create a sale first, 'order' = book Boutique Lina's order)].
  *
  * @return array<string, array{string, string, int|string|null}>
  */
@@ -56,6 +56,12 @@ function routeRows(): array
         'sales.store' => ['post', 'sales.store', null],
         'sales.update' => ['put', 'sales.update', 'sale'],
         'sales.destroy' => ['delete', 'sales.destroy', 'sale'],
+        'orders.index' => ['get', 'orders.index', null],
+        'orders.create' => ['get', 'orders.create', null],
+        'orders.store' => ['post', 'orders.store', null],
+        'orders.edit' => ['get', 'orders.edit', 'order'],
+        'orders.update' => ['put', 'orders.update', 'order'],
+        'orders.destroy' => ['delete', 'orders.destroy', 'order'],
         'materials.restocks.store' => ['post', 'materials.restocks.store', 'material'],
     ];
 }
@@ -77,6 +83,10 @@ function routeUrl(string $route, int|string|null $parameter): string
         $parameter = Sale::factory()->create();
     }
 
+    if ($parameter === 'order') {
+        $parameter = bookOrder();
+    }
+
     return route($route, $parameter === null ? [] : [$parameter]);
 }
 
@@ -91,6 +101,7 @@ function routePayload(string $kind): array
     return match ($kind) {
         'product' => validProductPayload(),
         'sale' => validSalePayload(),
+        'order' => validOrderPayload(),
         default => [],
     };
 }
@@ -126,6 +137,12 @@ it('registers the frozen routes behind auth and verified', function (string $nam
     'sales.store' => ['sales.store', 'POST', 'sales'],
     'sales.update' => ['sales.update', 'PUT', 'sales/{sale}'],
     'sales.destroy' => ['sales.destroy', 'DELETE', 'sales/{sale}'],
+    'orders.index' => ['orders.index', 'GET', 'orders'],
+    'orders.create' => ['orders.create', 'GET', 'orders/create'],
+    'orders.store' => ['orders.store', 'POST', 'orders'],
+    'orders.edit' => ['orders.edit', 'GET', 'orders/{order}/edit'],
+    'orders.update' => ['orders.update', 'PUT', 'orders/{order}'],
+    'orders.destroy' => ['orders.destroy', 'DELETE', 'orders/{order}'],
 ]);
 
 it('keeps the existing materials route names and does not add sale pages beyond the contract', function () {
@@ -136,6 +153,9 @@ it('keeps the existing materials route names and does not add sale pages beyond 
     foreach (['show', 'create', 'edit'] as $action) {
         expect(Route::has("sales.{$action}"))->toBeFalse();
     }
+
+    // S-49 adds the order's own page; until then there is none.
+    expect(Route::has('orders.show'))->toBeFalse();
 });
 
 it('renders each page component for a verified user', function (string $route, int|string|null $parameter, string $component) {
@@ -149,6 +169,9 @@ it('renders each page component for a verified user', function (string $route, i
     'products.show' => ['products.show', 'product', 'products/show'],
     'products.edit' => ['products.edit', 'product', 'products/edit'],
     'sales.index' => ['sales.index', null, 'sales/index'],
+    'orders.index' => ['orders.index', null, 'orders/index'],
+    'orders.create' => ['orders.create', null, 'orders/create'],
+    'orders.edit' => ['orders.edit', 'order', 'orders/edit'],
 ]);
 
 it('does not mistake /products/create for a product id', function () {
@@ -173,6 +196,9 @@ it('redirects valid writes to the page the contract names', function (string $me
     'sales.store goes back' => ['post', 'sales.store', null, 'sale', null, []],
     'sales.update goes back' => ['put', 'sales.update', 'sale', 'sale', null, []],
     'sales.destroy goes back' => ['delete', 'sales.destroy', 'sale', 'none', null, []],
+    'orders.store goes to the list' => ['post', 'orders.store', null, 'order', 'orders.index', []],
+    'orders.update goes to the list' => ['put', 'orders.update', 'order', 'order', 'orders.index', []],
+    'orders.destroy goes back' => ['delete', 'orders.destroy', 'order', 'none', null, []],
 ]);
 
 it('sends an invalid write back to where it came from, with its errors', function (string $method, string $route, int|string|null $parameter, array $errors) {
@@ -186,6 +212,8 @@ it('sends an invalid write back to where it came from, with its errors', functio
     'products.update' => ['put', 'products.update', 'product', ['sku', 'name', 'category', 'status', 'labor_cost']], // overhead_cost is optional (S-43)
     'sales.store' => ['post', 'sales.store', null, ['product_id', 'quantity', 'unit_price', 'sold_on']],
     'sales.update' => ['put', 'sales.update', 'sale', ['product_id', 'quantity', 'unit_price', 'sold_on']],
+    'orders.store' => ['post', 'orders.store', null, ['client', 'ordered_on', 'lines']],
+    'orders.update' => ['put', 'orders.update', 'order', ['client', 'ordered_on', 'lines']],
     'restock' => ['post', 'materials.restocks.store', 'material', ['quantity', 'unit_price', 'received_on']], // update_unit_cost is optional (F-20)
 ]);
 
@@ -238,6 +266,12 @@ it('answers 404 for a non-numeric product or sale id', function (string $method,
     'sale update, decimal' => ['put', '/sales/1.5'],
     'sale destroy, letters' => ['delete', '/sales/abc'],
     'sale destroy, negative' => ['delete', '/sales/-3'],
+    'order edit, letters' => ['get', '/orders/abc/edit'],
+    'order edit, beyond the integer range' => ['get', '/orders/99999999999999999999/edit'],
+    'order update, letters' => ['put', '/orders/abc'],
+    'order update, beyond the integer range' => ['put', '/orders/99999999999999999999'],
+    'order destroy, decimal' => ['delete', '/orders/1.5'],
+    'order destroy, beyond the integer range' => ['delete', '/orders/99999999999999999999'],
 ]);
 
 // Route model binding makes an unknown product or sale a 404.
@@ -255,6 +289,10 @@ it('answers 404 for an unknown product or sale id, before anything is validated'
     'destroy a sale' => ['delete', '/sales/900000000', 'none'],
     'sale zero' => ['put', '/sales/0', 'sale'],
     'a far away sale' => ['delete', '/sales/999999', 'none'],
+    'edit an order' => ['get', '/orders/900000000/edit', 'none'],
+    'update an order' => ['put', '/orders/900000000', 'order'],
+    'destroy an order' => ['delete', '/orders/900000000', 'none'],
+    'order zero' => ['get', '/orders/0/edit', 'none'],
 ]);
 
 it('serves the last demo product', function () {

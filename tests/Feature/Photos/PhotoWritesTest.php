@@ -171,6 +171,8 @@ it('adds and removes materials.photo_path with its migration, keeping the rows a
 
     expect(Schema::hasColumn('materials', 'photo_path'))->toBeTrue();
 
+    // Newer migrations that depend on `(workshop_id, id)` (orders) must be rolled back first.
+    ordersMigration()->down();
     $workshops->down();
     $migration->down();
 
@@ -180,6 +182,7 @@ it('adds and removes materials.photo_path with its migration, keeping the rows a
 
     $migration->up();
     $workshops->up();
+    ordersMigration()->up();
 
     expect(Schema::hasColumn('materials', 'photo_path'))->toBeTrue()
         ->and(DB::table('materials')->where('sku', 'KEEP-1')->value('photo_path'))->toBeNull()

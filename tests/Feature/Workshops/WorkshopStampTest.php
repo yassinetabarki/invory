@@ -8,6 +8,8 @@ use App\Actions\Sales\RecordSale;
 use App\Enums\StockMovementType;
 use App\Exceptions\MissingWorkshopException;
 use App\Models\Material;
+use App\Models\Order;
+use App\Models\OrderLine;
 use App\Models\Product;
 use App\Models\Sale;
 use App\Models\StockMovement;
@@ -73,6 +75,23 @@ it('stamps every owned record with the right workshop', function (Closure $scena
         expect($product->components()->pluck('workshop_id')->all())->toBe([$other->id])
             ->and($movement->workshop_id)->toBe($other->id)
             ->and($sale->workshop_id)->toBe($other->id);
+    }],
+
+    'an order takes the current workshop' => [function (Workshop $mine, Workshop $other): void {
+        $order = CurrentWorkshop::run($other, fn (): Order => Order::factory()->create(['workshop_id' => null]));
+
+        expect($order->workshop_id)->toBe($other->id)
+            ->and(DB::table('orders')->where('id', $order->id)->value('workshop_id'))->toBe($other->id);
+    }],
+
+    'an order line takes the workshop of its order' => [function (Workshop $mine, Workshop $other): void {
+        $order = Order::factory()->create(['workshop_id' => $other->id]);
+        $product = Product::factory()->create(['workshop_id' => $other->id]);
+
+        // No current workshop: a line that did not take its order's would be refused for having none.
+        $line = OrderLine::factory()->for($order)->for($product)->create();
+
+        expect($line->workshop_id)->toBe($other->id);
     }],
 
     'a root record with no workshop anywhere is refused' => [function (): void {

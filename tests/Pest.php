@@ -2,15 +2,20 @@
 
 use App\Actions\Products\CreateProduct;
 use App\Models\Material;
+use App\Models\Order;
+use App\Models\OrderLine;
 use App\Models\Product;
 use App\Models\Sale;
+use App\Models\StockMovement;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Database\Seeders\DemoCatalogSeeder;
 use Database\Seeders\DemoSalesSeeder;
+use Illuminate\Database\Migrations\Migration;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Response;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Vite;
@@ -282,6 +287,27 @@ function validSalePayload(array $overrides = []): array
 }
 
 /**
+ * A valid Store/UpdateOrderRequest payload, with overrides: Boutique Lina's order of the card (Denim Jacket 50, Denim Jeans 5-pocket 30).
+ * Needs the demo products (`prepareDemo()`). The order date is today (the frozen clock), so it is never in the future.
+ *
+ * @param  array<string, mixed>  $overrides
+ * @return array<string, mixed>
+ */
+function validOrderPayload(array $overrides = []): array
+{
+    return [
+        'client' => 'Boutique Lina',
+        'ordered_on' => now()->toDateString(),
+        'note' => 'Deliver before 30 Oct, in 2 boxes',
+        'lines' => [
+            ['product_id' => pid(1), 'quantity' => '50'],
+            ['product_id' => pid(5), 'quantity' => '30'],
+        ],
+        ...$overrides,
+    ];
+}
+
+/**
  * A valid StoreRestockRequest payload, with overrides.
  *
  * @param  array<string, mixed>  $overrides
@@ -469,4 +495,54 @@ function rawWorkshop(string $table): array
     }
 
     return ['workshop_id' => DB::table('workshops')->orderBy('id')->value('id') ?? DB::table('workshops')->insertGetId(['created_at' => now(), 'updated_at' => now()])];
+}
+
+/**
+ * The orders migration object (S-48-a). It depends on `(workshop_id, id)` of `products`, so a test that rolls an older migration back
+ * (the workshop columns, or anything below) must roll this one back first, newest first as `migrate:rollback` does, and bring it back up after.
+ */
+function ordersMigration(): Migration
+{
+    return require database_path('migrations/2026_10_15_200000_create_orders_and_order_lines_tables.php');
+}
+
+/**
+ * An order of the current workshop with its lines (S-48-b). `$lines` is a list of `[Product, quantity]` in the order they are entered
+ * (the position follows the list); by default Boutique Lina's order of the card: Denim Jacket 50 then Denim Jeans 5-pocket 30 (needs the
+ * demo products). The lines are created last-first, so their ids run against their positions: a read that sorted by id would show.
+ *
+ * @param  array<string, mixed>  $attributes
+ * @param  list<array{Product, int}>|null  $lines
+ */
+function bookOrder(array $attributes = [], ?array $lines = null): Order
+{
+    $lines ??= [[demoProduct('PRD-JKT-001'), 50], [demoProduct('PRD-JNS-005'), 30]];
+    $order = Order::factory()->create([
+        'client' => 'Boutique Lina', 'ordered_on' => '2026-10-15', 'note' => 'Deliver before 30 Oct, in 2 boxes', ...$attributes,
+    ]);
+
+    foreach (array_reverse($lines, true) as $position => [$product, $quantity]) {
+        OrderLine::factory()->create(['order_id' => $order->id, 'product_id' => $product->id, 'quantity' => $quantity, 'position' => $position]);
+    }
+
+    return $order;
+}
+
+/**
+ * Every figure an order must not touch: the Denim Jacket's capacity (112), the materials, their history, the sales and the dashboard.
+ * Compare two snapshots with `toBe()`. Needs the demo (`prepareDemo()`) and the signed-in `$this->user` of the test.
+ *
+ * @return array<string, mixed>
+ */
+function figuresOrdersLeaveAlone(): array
+{
+    $dashboard = loadedPageProps(test()->actingAs(test()->user)->get(route('dashboard'))->assertOk());
+
+    return [
+        'can produce' => loadedPageProp(test()->actingAs(test()->user)->get(route('products.show', pid(1)))->assertOk(), 'product.capacity.max_producible'),
+        'materials' => Material::query()->orderBy('id')->get()->toArray(),
+        'stock movements' => StockMovement::query()->orderBy('id')->get()->toArray(),
+        'sales' => Sale::query()->orderBy('id')->get()->toArray(),
+        'dashboard' => Arr::only($dashboard, ['stats', 'top_products', 'needs_restock', 'recent_sales', 'alerts']),
+    ];
 }

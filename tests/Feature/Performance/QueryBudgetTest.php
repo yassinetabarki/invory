@@ -119,6 +119,31 @@ it('stays within the query budget and runs the same queries with 3 and with 30 p
         ->and(count($many))->toBe(count($few), implode(PHP_EOL, $many));
 })->with('productPages');
 
+it('stays within the query budget and runs the same queries with 3 and with 25 orders of 5 lines', function () {
+    $lines = array_map(fn (int $number): array => [demoProduct(DEMO_PRODUCT_SKUS[$number]), 10 * $number], [1, 2, 3, 4, 5]);
+    $place = function (int $count) use ($lines): void {
+        for ($i = 0; $i < $count; $i++) {
+            bookOrder(['client' => "Client {$i}"], $lines);
+        }
+    };
+    $uri = route('orders.index');
+    actingAs($this->user);
+
+    $place(3);
+
+    // Warm up: the first request of a process may run one-off queries (schema introspection, the framework's own caches).
+    $this->get($uri)->assertOk();
+
+    $few = queryLog(fn () => $this->get($uri)->assertOk());
+
+    $place(22);
+
+    $many = queryLog(fn () => $this->get($uri)->assertOk());
+
+    expect(count($few))->toBeLessThanOrEqual(QUERY_BUDGET, implode(PHP_EOL, $few))
+        ->and(count($many))->toBe(count($few), implode(PHP_EOL, $many));
+});
+
 it('stays within the query budget when the deferred recent history of the materials list loads', function () {
     actingAs($this->user);
     $firstVisit = $this->get(route('materials.index'))->assertOk();

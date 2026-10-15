@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Material;
+use App\Models\Order;
 use App\Models\Product;
 use App\Models\Sale;
 use App\Models\User;
@@ -32,7 +33,7 @@ it('allows a member of the same workshop and answers Not Found for another works
         ->and($denied->allowed())->toBeFalse()
         ->and($denied->status())->toBe(404);
 })->with(function () {
-    foreach ([Material::class => ['view', 'update', 'delete'], Product::class => ['view', 'update', 'delete'], Sale::class => ['update', 'delete']] as $model => $abilities) {
+    foreach ([Material::class => ['view', 'update', 'delete'], Product::class => ['view', 'update', 'delete'], Sale::class => ['update', 'delete'], Order::class => ['update', 'delete']] as $model => $abilities) {
         foreach ($abilities as $ability) {
             yield class_basename($model)." {$ability}" => [$model, $ability];
         }
