@@ -12,7 +12,7 @@
 - **Priority** (MoSCoW, per phase): Must · Should · Could · Won't (this time). **Size:** S (≤ 1 day of agent work) · M · L (split it).
 - **Card:** the full story card (story, acceptance criteria with examples, what you will see, out of scope, questions) lives in
   `docs/stories/<id>-<slug>.md` once the product-owner writes it. Items below show the short version.
-- **IDs:** `S-` stories are numbered by the product-owner, `F-` technical items by the tech-lead. IDs are never reused. Next free: **S-55** (S-47 was dropped on 2026-10-14), **F-58** (F-IDs: see [TECH-DEBT.md](TECH-DEBT.md)).
+- **IDs:** `S-` stories are numbered by the product-owner, `F-` technical items by the tech-lead. IDs are never reused. Next free: **S-56** (S-47 was dropped on 2026-10-14), **F-58** (F-IDs: see [TECH-DEBT.md](TECH-DEBT.md)).
 
 ---
 
@@ -29,7 +29,7 @@ You started it on 2026-10-15: "we will start focusing more on the orders … we 
 
 Order of work: S-48, then S-49 and S-53 together, then S-50. The other cutting rules (D-11) wait until S-49 and S-53 are refined.
 
-### S-48 · Record customer orders with one or more products · Must · M · feature · `Ready` (card approved 2026-10-15; next: the tech-lead's Technical work)
+### S-48 · Record customer orders with one or more products · Must · M · feature · `Planned` (card approved 2026-10-15; Technical work approved 2026-10-15; next: the build)
 Card: [stories/S-48-record-customer-orders.md](stories/S-48-record-customer-orders.md). Depends on S-44 (done).
 **You get:** "Orders" in the sidebar, between Products and Sales. A "New order" page records a client, an order date, an optional note
 and one or more product lines ("Add product", quantity per line). The list shows date, client, products, units and note, 25 orders a
@@ -79,8 +79,9 @@ by Sami".
 **You get:** "Ship" offers "Also record a sale", pre-filled with the product, the units shipped, the selling price and today's date.
 **Why:** today you would type the same sale again on the Sales page.
 
-**Phase 5 tech allowance (~15 %):** the tech-lead proposes items from [TECH-DEBT.md](TECH-DEBT.md) when it sizes S-48 to S-53. Phase 4's
-allowance (F-22 flaky form test, F-12 frontend skill wording, F-45 stale "preview" test names) can move here if the tech-lead proposes it.
+**Phase 5 tech allowance (~15 %):** **F-41 only** (your choice, 2026-10-15): the costing works out, for each product, the total amount of
+each material one unit needs, ready for S-53 to take out of stock. It moved here from Phase 6's allowance. Phase 4's allowance (F-22,
+F-12, F-45) stays with Phase 4.
 
 ---
 
@@ -164,7 +165,7 @@ cost and capacity are kept up to date when something changes instead of being re
 ### S-36 · Deleting a sale or archiving a catalogue item feels instant · Could · S · `Idea` (was part of S-24)
 **You get:** the row disappears at once, and comes back with an error message if the server refuses.
 
-**Phase 6 tech allowance:** F-26 · F-38 · F-41 · F-42 · F-49.
+**Phase 6 tech allowance:** F-26 · F-38 · F-42 · F-49 (F-41 moved to Phase 5 on 2026-10-15).
 
 ---
 
@@ -195,10 +196,13 @@ anyone before the server is public (D-9, 2026-10-14). The rest of Phase 4 (at le
 | S-11 | **CSV import/export** of materials                                                                              | Could               |
 | S-37 | **Custom date range** ("from – to") for the sales log and the dashboard (was F-11)                              | Could               |
 | S-38 | **UX polish bundle** (F-14, F-16, F-17, F-18, F-21)                                                             | Could               |
+| S-55 | **Find a product by typing** in the order and sale pickers, instead of scrolling a long list                    | Could               |
 | S-39 | **"Manage units" link** in the material form (F-31 q3; you said "not now" on 2026-10-09)                        | Won't (this time)   |
 
 - S-38 bundles: sale panel layout at 1024 px (F-14), a clearer "Filter by product" label for screen readers (F-16), unit price shown the
   same way everywhere (F-17), the darker button hover from the mockup (F-18), a clearer sentence when two materials tie as the limit (F-21).
+- S-55 (feature, size S–M, added 2026-10-15 during S-48's planning): the product pickers on "New order" and "Record a sale" let you type
+  part of a product's name to find it, so a large catalogue doesn't mean scrolling a long list.
 
 ## VISION — not scheduled
 Suppliers and purchase orders · unit conversions in compositions · sizes and variants · sub-assemblies · **several people in one workshop**

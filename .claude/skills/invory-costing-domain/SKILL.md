@@ -28,12 +28,14 @@ If a rule here is wrong or incomplete, stop and ask the tech-lead to update it (
 | Units covered | Units of a product that one material's stock covers on its own | `units_covered` |
 | Next limit | The bottleneck and capacity a product would have if its current bottleneck were unlimited | `next_limit` |
 | Stock movement | A history entry of a material: `created`, `restock`, `correction`, `price_change` | `StockMovement` / `StockMovementType` enum |
-| Workshop | The business account. Every user belongs to one; every material, product, composition, stock movement, sale, photo, unit and category belongs to one | `Workshop` / `workshops`, `workshop_id` |
+| Order | A client's order: client name, order date, optional note, and one or more order lines. Recording, editing or deleting an order **never changes material stock, sales or any figure** (S-48) | `Order` / `orders` |
+| Order line | One product of an order with its whole-unit quantity (1 … 1 000 000); one line per product per order, at most 50 per order | `OrderLine` / `order_lines` |
+| Workshop | The business account. Every user belongs to one; every material, product, composition, stock movement, sale, order, order line, photo, unit and category belongs to one | `Workshop` / `workshops`, `workshop_id` |
 
 ## Workshops (added 2026-10-14, D-9, ADR-0013)
 
-- **R1** Every account belongs to exactly one workshop. Every material, product, composition line, stock movement, sale, photo, unit and
-  category belongs to exactly one workshop.
+- **R1** Every account belongs to exactly one workshop. Every material, product, composition line, stock movement, sale, order, order line,
+  photo, unit and category belongs to exactly one workshop.
 - **R2** You see and change only your workshop's records. Another workshop's record behaves as if it doesn't exist: **404, never 403**.
 - **R3** SKUs, and unit and category names, are unique per workshop (not per installation).
 - **R4** A composition uses only materials of its product's workshop; a sale only products of its workshop.

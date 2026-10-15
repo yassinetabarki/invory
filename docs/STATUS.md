@@ -21,7 +21,8 @@
 | Release readiness | 🔴 RED | Missing: the MVP sign-off (S-30), a live server with a chosen database, and separate units and categories for each workshop (S-45). Both S-30 and S-45 are on hold (D-12) and must be done before go-live. S-08 and S-29 were closed as they stood (D-13), leaving four known gaps for go-live (§6.4). |
 | Process | 🟡 AMBER | Roles are split: product-owner (what and why) and tech-lead (how). Phase 5 started before Phase 4 closed, by your choice (D-12). S-08 and S-29 were closed without their last checks, by your choice (D-13). |
 
-**Current phase:** **Phase 5: Customer orders** (started 2026-10-15, D-12). S-48 is `Ready`; the tech-lead writes its Technical work next.
+**Current phase:** **Phase 5: Customer orders** (started 2026-10-15, D-12). S-48 is `Planned` (its Technical work approved 2026-10-15); the build is next.
+Phase 5 tech allowance: F-41 only (moved from Phase 6, 2026-10-15).
 **Phase 4: MVP release readiness** is on hold for later; S-08 and S-29 are done (closed as they stood, D-13; see [ROADMAP.md](ROADMAP.md)).
 
 ---
@@ -35,6 +36,9 @@
 | D-5 | Production database host (needs PostgreSQL 13+ and `pg_trgm`) | Before S-26; not urgent |
 | D-6 | Delete the 5 merged branches and the stale worktree `.claude/worktrees/fix-hover-prefetch-bug`? | Yes (nothing unmerged) |
 | D-11 | **How cutting changes stock** (S-53, 2026-10-15): what happens when stock is short, whether moving back returns materials, whether deleting an order returns them, the date of the history entries, low-stock alerts, and whether S-49 and S-53 ship together. Then approve the cards S-49, S-53 and S-50. (Decided 2026-10-15 with S-48: open orders never set stock aside) | Refuse to cut more than stock allows; moving back returns exactly what was taken; deleting returns nothing; history dated the day of the move; no alerts yet; ship S-49 and S-53 together |
+
+**Decided on 2026-10-15 (S-48 planning):** S-48's Technical work approved (`Planned`) · a product added twice to an order is flagged
+("… is already on this order.") only after Save, not while you pick · Phase 5 tech allowance is F-41 only, moved from Phase 6.
 
 **Decided on 2026-10-15: D-12 Phase 5 starts now** (your words: "phase 4 will [be postponed] now for [a] late[r] time, S-08 and S-29
 close them"; "we will start with S-48"):
@@ -246,8 +250,8 @@ The plan headers were corrected on 2026-10-14, and [plans/README.md](plans/READM
 
 ## 9. Next steps (recommended order)
 **From 2026-10-15 (D-12): Phase 5 first.**
-1. Main session: commit the approved S-48 card and these documents on `main`.
-2. Tech-lead: S-48's Technical work (planning only), for your approval. Then the build.
+1. Main session: commit S-48's approved Technical work and these documents on `main` (the card itself is on `main` since `57ab45b`).
+2. Tech-lead: build S-48 in a worktree cut from `main` (`Planned` since 2026-10-15). F-41 is Phase 5's tech allowance.
 3. Product-owner: D-11's remaining cutting rules, then the cards S-49, S-53 and S-50.
 4. Tech-lead: mark the S-29 plan done (D-13) and close what it carried (S-18 moves to the known gaps, K-4).
 5. The rest of Phase 4 waits; S-45, S-30 and the known gaps K-1 to K-4 are dealt with before go-live (Phase 7).

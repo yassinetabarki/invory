@@ -1,6 +1,6 @@
 # Dev Docker = PostgreSQL + Mailpit only (remove `laravel.test` and Sail)
 
-> Owner: **tech-lead** · Story: **S-29** ([BACKLOG](../BACKLOG.md)) · Status: **approved 2026-10-14 (STATUS D-2), in execution.** The human answered Q1–Q4 on 2026-10-14: Q1 (a) Docker Mailpit on 1026/8026 · Q2 yes, remove `laravel/sail` and `sail.cmd` · Q3 the main session applies DK-d · Q4 (a) skip the demo seed on the dev DB.
+> Owner: **tech-lead** · Story: **S-29** ([BACKLOG](../BACKLOG.md)) · Status: **done 2026-10-15, closed as it stood (D-13)**: DK-a … DK-d committed on `main` (`d351514`, `7b0fb05`, `c70109f`, `a68043e`). Not done: runbook H-4 (password-reset mail in the Docker mailbox) and H-5 (S-18 speed measurement), now go-live gaps **K-3** and **K-4** ([STATUS](../STATUS.md) §6.4). What this plan said it closes: F-25 closed (`a68043e`), F-08 closed and F-51 void (S-29), S-18's measurement → K-4 ([TECH-DEBT.md](../TECH-DEBT.md) §"Closed on 2026-10-15"). Approved 2026-10-14 (STATUS D-2). The human answered Q1–Q4 on 2026-10-14: Q1 (a) Docker Mailpit on 1026/8026 · Q2 yes, remove `laravel/sail` and `sail.cmd` · Q3 the main session applies DK-d · Q4 (a) skip the demo seed on the dev DB.
 > ID note (2026-10-14): the follow-ups first numbered F-41…F-43 collided with existing items and are now **F-51…F-53** ([TECH-DEBT.md](../TECH-DEBT.md)). DK-c writes follow-ups to TECH-DEBT.md; backlog statuses belong to the product-owner.
 > Decision source: human, 2026-10-13: remove the `laravel.test` service from `compose.yaml` entirely. Docker keeps only `pgsql` and `mailpit`;
 > the app runs natively through Laragon. This goes further than [ADR-0007](../adr/0007-dev-runtime-native-serving.md), which kept
@@ -269,3 +269,6 @@ The human said Laragon (the application and its Apache) isn't used any more: the
 ## Progress log
 - 2026-10-14: Wave 1 DK-a (BE) delivered; DK-c (TL) written. Wave 2 DK-b (BE) + `tests.yml` (TL) delivered. Fix round 1: F-51 reverted.
   Next: TL full gates + parity, then the delivery report; DK-d (main session) after it.
+- 2026-10-14: delivered and committed on `main`: DK-a `d351514`, DK-b `7b0fb05`, DK-c `c70109f`, DK-d `a68043e` (main session; F-25).
+- 2026-10-15: closed as it stood (human, D-13). H-4 (mail check) and H-5 (speed) were not run: go-live gaps K-3 and K-4. No further work
+  runs from this plan.

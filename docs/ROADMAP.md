@@ -30,7 +30,7 @@ Cards written before that day say "Phase 5" for speed (S-27, S-23), and "slips t
 ready to ship and shipped, and how many units are being made across all open orders.
 You asked for it on 2026-10-15 ("design the order management UI") and answered the scope questions the same day (D-10). The same day you
 started it ahead of Phase 4: "we will start with S-48" (D-12). Orders belong to a workshop, and S-44 is done, so nothing blocks it.
-S-48 is `Ready` (approved 2026-10-15); S-49, S-53 and S-50 are `Draft` ([stories](stories/README.md)).
+S-48 is `Planned` (card and Technical work approved 2026-10-15); S-49, S-53 and S-50 are `Draft` ([stories](stories/README.md)).
 
 | Priority               | Story                                               | Size |
 | ---------------------- | --------------------------------------------------- | ---- |
@@ -41,7 +41,7 @@ S-48 is `Ready` (approved 2026-10-15); S-49, S-53 and S-50 are `Draft` ([stories
 | Should                 | S-51 Product page and dashboard show units on order | S    |
 | Could                  | S-52 Each order keeps a history of its moves        | S    |
 | Could                  | S-54 "Ship" can also record the sale                | S    |
-| Tech allowance (~15 %) | Picked with the tech-lead when it sizes the stories | —    |
+| Tech allowance (~15 %) | F-41 only (each material's total need, for S-53)    | —    |
 
 The Musts are about 60 % of the phase. S-54, then S-52, then S-51 slip first.
 
@@ -98,7 +98,7 @@ the production server goes live (Phase 7).
 | Should | S-35 The product edit page opens instantly | S |
 | Could | S-34 The products list shows it is loading while filters change | S |
 | Could | S-36 Deleting a sale or archiving a catalogue item feels instant | S |
-| Tech allowance | F-26 · F-38 · F-41 · F-42 · F-49 | — |
+| Tech allowance | F-26 · F-38 · F-42 · F-49 (F-41 moved to Phase 5 on 2026-10-15) | — |
 
 **Exit criteria:** S-27's report shows every page within budget, and the human has accepted S-33 and S-35.
 
@@ -123,6 +123,7 @@ password-reset email seen in the test mailbox, and the page-speed target (S-18) 
 | S-11 CSV import/export of materials | Medium: onboarding a real inventory |
 | S-37 Custom date range for sales and the dashboard (F-11) | Low |
 | S-38 UX polish bundle (F-14, F-16, F-17, F-18, F-21) | Low |
+| S-55 Find a product by typing in the order and sale pickers | Low: helps once the catalogue is large |
 | S-39 "Manage units" link in the material form (F-31 q3: "not now") | Low |
 
 ## VISION — not scheduled
