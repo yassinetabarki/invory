@@ -1,0 +1,224 @@
+import { Link } from '@inertiajs/react';
+import { Pencil, Trash2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import {
+    Table,
+    TableBody,
+    TableCaption,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
+import { useAppSettings } from '@/hooks/use-app-settings';
+import { EMPTY_VALUE, formatCount, formatDate } from '@/lib/format';
+import { edit } from '@/routes/orders';
+import { show } from '@/routes/products';
+import type { Order } from '@/types/domain';
+
+/** An order lists this many products; the rest collapse into "+ N more". */
+const VISIBLE_LINES = 3;
+
+type OrdersTableProps = {
+    orders: Order[];
+    /** The page opens the confirm dialog; this component never deletes. */
+    onDelete: (order: Order) => void;
+};
+
+type RowActionsProps = {
+    order: Order;
+    /** Formatted date, so each control names the order it acts on. */
+    date: string;
+    onDelete: (order: Order) => void;
+};
+
+/** One "50 × Denim Jacket" line per product; a deleted product has no link. */
+function ProductLines({ order }: { order: Order }) {
+    const { locale } = useAppSettings();
+    const hidden = order.lines.length - VISIBLE_LINES;
+
+    return (
+        <ul className="space-y-0.5">
+            {order.lines.slice(0, VISIBLE_LINES).map((line) => (
+                <li key={line.id} className="break-words">
+                    <span className="tabular-nums">
+                        {formatCount(line.quantity, locale)}
+                    </span>{' '}
+                    ×{' '}
+                    {line.product.deleted ? (
+                        line.product.name
+                    ) : (
+                        <Link
+                            href={show(line.product.id)}
+                            className="font-semibold hover:underline focus-visible:underline"
+                        >
+                            {line.product.name}
+                        </Link>
+                    )}
+                </li>
+            ))}
+            {hidden > 0 && (
+                <li className="text-muted-foreground">+ {hidden} more</li>
+            )}
+        </ul>
+    );
+}
+
+/** Icon-only actions for the table; every control names the client and date. */
+function IconActions({ order, date, onDelete }: RowActionsProps) {
+    const target = `order of ${order.client} on ${date}`;
+
+    return (
+        <div className="flex justify-end gap-1">
+            <Button asChild variant="ghost" size="icon" title="Edit">
+                <Link href={edit(order.id)} aria-label={`Edit ${target}`}>
+                    <Pencil aria-hidden="true" />
+                </Link>
+            </Button>
+            <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label={`Delete ${target}`}
+                title="Delete"
+                className="text-destructive-foreground hover:text-destructive-foreground"
+                onClick={() => onDelete(order)}
+            >
+                <Trash2 aria-hidden="true" />
+            </Button>
+        </div>
+    );
+}
+
+/** Labelled actions for the phone cards (larger touch targets). */
+function TextActions({ order, date, onDelete }: RowActionsProps) {
+    const target = `order of ${order.client} on ${date}`;
+
+    return (
+        <div className="flex flex-wrap gap-2">
+            <Button asChild variant="outline" size="sm">
+                <Link href={edit(order.id)} aria-label={`Edit ${target}`}>
+                    <Pencil aria-hidden="true" />
+                    Edit
+                </Link>
+            </Button>
+            <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                aria-label={`Delete ${target}`}
+                className="text-destructive-foreground hover:text-destructive-foreground"
+                onClick={() => onDelete(order)}
+            >
+                <Trash2 aria-hidden="true" />
+                Delete
+            </Button>
+        </div>
+    );
+}
+
+/**
+ * The orders list: a table from `md` up, stacked cards below. Units come from
+ * the server (the sum of the lines); this component only formats them.
+ */
+export function OrdersTable({ orders, onDelete }: OrdersTableProps) {
+    const { locale } = useAppSettings();
+
+    return (
+        <>
+            {/* >= md: table */}
+            <div className="hidden md:block">
+                <Table className="[&_td]:px-4 [&_th]:px-4">
+                    <TableCaption className="sr-only">Orders</TableCaption>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead scope="col">Order date</TableHead>
+                            <TableHead scope="col">Client</TableHead>
+                            <TableHead scope="col">Products</TableHead>
+                            <TableHead scope="col" className="text-right">
+                                Units
+                            </TableHead>
+                            <TableHead scope="col">Note</TableHead>
+                            <TableHead scope="col" className="text-right">
+                                <span className="sr-only">Actions</span>
+                            </TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {orders.map((order) => {
+                            const date = formatDate(order.ordered_on, locale);
+
+                            return (
+                                <TableRow key={order.id}>
+                                    <TableCell className="align-top whitespace-nowrap text-muted-foreground">
+                                        {date}
+                                    </TableCell>
+                                    <TableCell className="align-top font-semibold">
+                                        {order.client}
+                                    </TableCell>
+                                    <TableCell className="align-top whitespace-normal">
+                                        <ProductLines order={order} />
+                                    </TableCell>
+                                    <TableCell className="text-right align-top font-bold tabular-nums">
+                                        {formatCount(order.units, locale)}
+                                    </TableCell>
+                                    <TableCell
+                                        className="max-w-48 truncate align-top text-muted-foreground"
+                                        title={order.note ?? undefined}
+                                    >
+                                        {order.note ?? EMPTY_VALUE}
+                                    </TableCell>
+                                    <TableCell className="align-top">
+                                        <IconActions
+                                            order={order}
+                                            date={date}
+                                            onDelete={onDelete}
+                                        />
+                                    </TableCell>
+                                </TableRow>
+                            );
+                        })}
+                    </TableBody>
+                </Table>
+            </div>
+
+            {/* < md: stacked cards */}
+            <ul aria-label="Orders" className="md:hidden">
+                {orders.map((order) => {
+                    const date = formatDate(order.ordered_on, locale);
+
+                    return (
+                        <li key={order.id} className="space-y-3 border-t p-4">
+                            <div className="flex items-start justify-between gap-3">
+                                <p className="font-semibold break-words">
+                                    {order.client}
+                                </p>
+                                <span className="text-sm font-bold whitespace-nowrap tabular-nums">
+                                    {formatCount(order.units, locale)}{' '}
+                                    {order.units === 1 ? 'unit' : 'units'}
+                                </span>
+                            </div>
+                            <ProductLines order={order} />
+                            <p className="text-sm text-muted-foreground">
+                                {date}
+                            </p>
+                            {order.note && (
+                                <p
+                                    className="line-clamp-2 text-sm text-muted-foreground"
+                                    title={order.note}
+                                >
+                                    {order.note}
+                                </p>
+                            )}
+                            <TextActions
+                                order={order}
+                                date={date}
+                                onDelete={onDelete}
+                            />
+                        </li>
+                    );
+                })}
+            </ul>
+        </>
+    );
+}

@@ -79,7 +79,7 @@ tags:
 
 ## Technical work
 > [!warning] Complex · CRITICAL · backend + frontend · 5 commits
-> Tech-lead · 2026-10-15 · approved 2026-10-15
+> Tech-lead · 2026-10-15 · approved 2026-10-15 · delivered 2026-10-15
 > Why complex: two new tables with foreign keys and workshop rules, new business rules on what an order may hold, and a new contract
 > between the server and the screens (routes, page data, types).
 
@@ -378,3 +378,9 @@ types from S-48-b) · Wave 4 (frontend): S-48-d (needs the store and update rout
 - "Today" depends on the time zone → server tests fix the time with `travelTo()`, the form reads `app.today` from the shared props.
 - A product archived between opening the form and saving → refused by validation with "Only active products can be ordered."; a
   product archived in the instant between validation and the save gets through (the same tiny race as F-46, accepted).
+
+### Progress
+- 2026-10-15 · S-48-a approved (fix round 1: the older S-44 rollback tests now roll the orders migration back first).
+- 2026-10-15 · S-48-b approved (round 1). S-48-c and S-48-e approved (round 1, all gates green on the combined tree).
+- 2026-10-15 · S-48-d approved (round 1). Delivered: all gates green, PostgreSQL parity and the browser golden paths included. Follow-up F-60.
+- 2026-10-15 · Fix round after acceptance: a line's missing or deleted product reads "The selected product is invalid."; the order picker marks archived, draft and deleted products "(not active)". Approved, all gates green.

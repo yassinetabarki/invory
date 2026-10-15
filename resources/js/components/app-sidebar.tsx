@@ -1,5 +1,11 @@
 import { Link } from '@inertiajs/react';
-import { Boxes, LayoutGrid, ReceiptText, Shirt } from 'lucide-react';
+import {
+    Boxes,
+    ClipboardList,
+    LayoutGrid,
+    ReceiptText,
+    Shirt,
+} from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -14,6 +20,7 @@ import {
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
 import { index as materialsIndex } from '@/routes/materials';
+import { index as ordersIndex } from '@/routes/orders';
 import { index as productsIndex } from '@/routes/products';
 import { index as salesIndex } from '@/routes/sales';
 import type { NavItem } from '@/types';
@@ -33,6 +40,11 @@ const mainNavItems: NavItem[] = [
         title: 'Products',
         href: productsIndex(),
         icon: Shirt,
+    },
+    {
+        title: 'Orders',
+        href: ordersIndex(),
+        icon: ClipboardList,
     },
     {
         title: 'Sales',
