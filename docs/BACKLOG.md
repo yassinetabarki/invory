@@ -48,23 +48,6 @@ loads the demo workshop (12 materials, 7 products, 60 sales, material history) w
 **Done when:** the test passes in the tech-lead's gates and is green on GitHub (CI runs on every push since D-1, 2026-10-14); the demo-data
 step gives the documented figures on an empty database. Never load demo data into the existing development database (your decision, 2026-10-14).
 
-### S-44 · Each workshop sees only its own materials, products and sales · Must · M · feature · `Acceptance` (delivered 2026-10-15, not committed yet; product-owner review: every criterion met by tests; waits for your backup, migration and click-through on `laravel`) (started over the two-story limit, your choice 2026-10-14, D-9)
-Card: [stories/S-44-each-workshop-sees-only-its-own-data.md](stories/S-44-each-workshop-sees-only-its-own-data.md). You asked for it on
-2026-10-14 ("each user must only see HIS products and materials"). Delivered by the tech-lead on 2026-10-15 (all five steps approved,
-every gate green). Next: your click-through, then the commits, then S-45.
-**You get:** every account belongs to one workshop. Signing up stays open to anyone and creates a new, empty workshop. You see and change
-only your workshop's materials, products, compositions, stock and history, sales, photos and dashboard figures. Another workshop's page
-shows the plain "404 Not Found". Two workshops may use the same SKU. Deleting your account deletes only you: the workshop's data stays, and
-the "Delete account" wording says so.
-**Why:** today every account shares one catalogue, so Invory can serve only one business. The data belongs to the workshop, not the person,
-so several people can later share one workshop without reworking it.
-**Done when:** a new account sees empty lists while `test@example.com` keeps its 12 materials, 7 products and 60 sales; no screen, search,
-picker, filter or address shows or changes the other workshop's records; every existing account joins one workshop with everything that
-exists today, and nothing is lost.
-**Changes recorded decisions (approved 2026-10-14, D-9):** ADR-0003 "single company, no teams" and Q3 (now "any member of a workshop
-edits that workshop's catalogue"). The tech-lead writes the business rules R1–R6 into the costing rules and a new decision record before
-any code changes.
-
 ### S-45 · Each workshop has its own units and categories · Must · S · feature · `Ready` (card approved 2026-10-14; right after S-44)
 Card: [stories/S-45-each-workshop-has-its-own-units-and-categories.md](stories/S-45-each-workshop-has-its-own-units-and-categories.md).
 Depends on S-44 and goes right after it. **S-44 and S-45 ship together:** no second real workshop signs up until both are done.
@@ -132,7 +115,7 @@ F-45 stale "preview" test names (F-08, F-25 and F-51 ride with S-29). Details in
 are the contingency and slip to Phase 5 first. They have been on hold since 2026-10-14 (D-8) so S-43 could go first. S-43 is done
 (on `main` since 2026-10-14, see [STATUS.md](STATUS.md)), but they stay on hold until you lift it. S-42 is planned after S-32, so it waits
 too. **Since 2026-10-14 (D-9):** S-44 and S-45 are Phase 4 Musts, because a release that serves more than one workshop needs them. That
-pushes the Musts well above 70 %. S-44 started at once, over the two-story limit (S-29 in progress, S-08 in acceptance), by your choice.
+pushes the Musts well above 70 %. S-44 started at once, over the two-story limit, by your choice, and is done (on `main` since 2026-10-15: `672937f`, `a54856f`, `9a48cd3`).
 
 ---
 
@@ -210,5 +193,5 @@ add-on after the demo workshop, no sales, same every run, no brand or sub-catego
 S-41 Q1–Q4, 2026-10-14) · **D-9 one workshop per account** (2026-10-14; S-44, S-45, S-46): the screen says "Workshop"; business rules
 R1–R6 approved; every existing account joins one workshop holding today's data; sign-up stays open (confirm again before S-26); each
 workshop has its own units and categories; another workshop's address shows the plain "404 Not Found"; deleting an account deletes only the
-person and the workshop's data stays (so S-47 was dropped; its ID is not reused); photos need only an unguessable address; S-44 starts
+person and the workshop's data stays (so S-47 was dropped; its ID is not reused); photos need only an unguessable address; S-44 started
 over the two-story limit. Pending: [STATUS.md §2](STATUS.md#2-decisions-needed-from-you).

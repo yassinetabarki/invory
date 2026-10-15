@@ -17,7 +17,7 @@ A small fashion workshop knows, at any moment, **what each product costs to make
 | **Know cost and capacity** | Unit cost, can produce, bottleneck, next limit, margin, "what you can make with it" | Acceptance, E2E (S-08) | Fast at 500 products (S-23, S-27) | | Live cost preview (S-09), production planner (S-10), cost history |
 | **Sell** | Sales log, totals, filters, record/edit/delete | Acceptance | Instant delete feedback (S-36) | | Custom date range (S-37) |
 | **Monitor** | Dashboard: KPIs, top 5, restock list, alerts | Panels offer "Try again" after an error (S-31) | Loading states (S-34) | | |
-| **Run the business on it** | Login, 2FA, catalogue settings | Reliable dev setup (S-29), crash-free SKU saves (S-32), each workshop sees only its own data (S-44, S-45), workshop name (S-46) | | Production server, backups (S-26) | Several people in one workshop (invitations, roles and permissions) |
+| **Run the business on it** | Login, 2FA, catalogue settings | Reliable dev setup (S-29), crash-free SKU saves (S-32), each workshop sees only its own data (S-44 done, S-45), workshop name (S-46) | | Production server, backups (S-26) | Several people in one workshop (invitations, roles and permissions) |
 
 ---
 
@@ -26,14 +26,14 @@ A small fashion workshop knows, at any moment, **what each product costs to make
 only its own data.
 **Scope approved** by the human on 2026-10-14 (decision D-3), together with the cards of S-30, S-08, S-31 and S-32 ([stories](stories/README.md)).
 **Added on 2026-10-14 (D-9):** each account gets its own workshop (S-44, S-45, S-46, cards approved), so the release can serve more than one
-business. S-44 started at once, over the two-story limit, by the human's choice; S-45 follows right after it, and the two ship together.
+business. S-44 started at once, over the two-story limit, by the human's choice, and is done (2026-10-15). S-45 follows right after it: no second real workshop signs up until S-45 is done too.
 
 | Priority | Story | Size |
 |---|---|---|
 | Must | S-29 Reliable dev environment (Docker = database + mail only; Sail removed). Open point: speed target on `php artisan serve`, see BACKLOG | M |
 | Must | S-30 MVP acceptance walkthrough (`Ready`) | S |
 | Must | S-08 End-to-end golden-path test + demo data on a fresh install (`Ready`) | M |
-| Must (your request 2026-10-14, D-9) | S-44 Each workshop sees only its own materials, products and sales (`Acceptance`: delivered 2026-10-15, waits for your click-through; started over the two-story limit) | M |
+| Must (your request 2026-10-14, D-9) | S-44 Each workshop sees only its own materials, products and sales (✅ `Done` 2026-10-15: `672937f`, `a54856f`, `9a48cd3`; started over the two-story limit) | M |
 | Must (your request 2026-10-14, D-9) | S-45 Each workshop has its own units and categories (`Ready`; right after S-44, ships with it) | S |
 | Should (your choice 2026-10-14, D-8) | S-43 Save a product without filling in the overhead cost (✅ `Done` 2026-10-14: `6179d52`, `4644a08`, `9fc8e98`, `9df0ca0`, close-out `eccb09a`) | S |
 | Should (D-9) | S-46 Name your workshop (`Ready`; after S-45) | S |
@@ -48,7 +48,7 @@ Musts are about 70 % of the phase (above the 60 % guideline) because the phase i
 S-45 (D-9) the Musts grow further; S-46 and the Coulds slip before them.
 
 **Exit criteria:** S-30 accepted by the human · S-08 green in the tech-lead's gates and in CI on GitHub (D-1 done 2026-10-14; the human
-reads the result) · S-18 page-speed target measured (p95 ≤ 150 ms; open point, see S-29 in BACKLOG) · S-44 and S-45 accepted by the human ·
+reads the result) · S-18 page-speed target measured (p95 ≤ 150 ms; open point, see S-29 in BACKLOG) · S-44 (accepted 2026-10-15) and S-45 accepted by the human ·
 every gate green.
 
 ## NEXT — Phase 5: Fast at real catalogue sizes

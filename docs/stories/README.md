@@ -19,7 +19,7 @@ One file per story, `<id>-<slug>.md` (e.g. `S-31-deferred-retry.md`), styled for
 |---|---|---|
 | [S-30 — Walk through every MVP screen and sign it off](S-30-mvp-acceptance-walkthrough.md) | 4 · Must · S | `Ready` (approved 2026-10-14; walked as soon as S-29 lands) |
 | [S-08 — One automated test walks the whole journey, and a fresh install shows the demo workshop](S-08-golden-path-test-and-demo-data.md) | 4 · Must · M | `Acceptance` (delivered 2026-10-14; waits for the click-through and the green `golden-path` job) |
-| [S-44 — Each workshop sees only its own materials, products and sales](S-44-each-workshop-sees-only-its-own-data.md) | 4 · Must · M | `Acceptance` (delivered 2026-10-15; waits for the human's click-through on `laravel`) |
+| [S-44 — Each workshop sees only its own materials, products and sales](S-44-each-workshop-sees-only-its-own-data.md) | 4 · Must · M | `Done` (accepted 2026-10-15; on `main`: `672937f`, `a54856f`, `9a48cd3`) |
 | [S-45 — Each workshop has its own units and categories](S-45-each-workshop-has-its-own-units-and-categories.md) | 4 · Must · S | `Ready` (approved 2026-10-14; right after S-44, ships with it) |
 | [S-46 — Name your workshop](S-46-name-your-workshop.md) | 4 · Should · S | `Ready` (approved 2026-10-14; after S-45) |
 | [S-31 — A section that fails to load offers "Try again"](S-31-deferred-section-try-again.md) | 4 · Should · S | `Ready` (approved 2026-10-14), on hold since 2026-10-14 |

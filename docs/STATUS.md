@@ -14,12 +14,12 @@
 | | Status | In one line |
 |---|---|---|
 | **Overall** | 🟡 **AMBER** | The MVP is built and every automated check passes on this computer. The checks now also run on GitHub, but nobody has seen a result yet. You haven't signed the MVP off, and no test walks a whole user journey. The Phase 4 cards are approved. |
-| Scope (MVP features) | 🟡 AMBER | Every feature in the MVP goal and the 2026-10-08 scope additions works on real data. The preview layer is gone. New since 2026-10-14 (D-9): every account must see only its own workshop's data (S-44, S-45). Today all accounts share one catalogue. |
+| Scope (MVP features) | 🟡 AMBER | Every feature in the MVP goal and the 2026-10-08 scope additions works on real data. The preview layer is gone. Since 2026-10-15 every account sees only its own workshop's materials, products and sales (S-44, D-9). Units and categories are still shared until S-45. |
 | Quality (automated) | 🟢 GREEN | All automated checks pass on this computer (2026-10-14): 2 050 backend tests, 1 134 screen tests, code style, static analysis, type check and production build. |
 | Product acceptance | 🔴 RED | No screen has been signed off by the human. The Phase 2 click-through has been pending since 2026-10-08. "Done" has meant "tech-lead approved". |
 | Dev environment | 🟡 AMBER | The app runs on `php artisan serve` (http://localhost:8000); Docker runs PostgreSQL and the test mailbox (http://localhost:8026), and `.env` already points mail there. Laragon and Apache aren't used. S-29 (in progress) removes the Sail remnants; the page-speed target (S-18) is unmeasured and may not hold on the built-in server (tech-lead reporting). |
-| Release readiness | 🔴 RED | Missing: a test of a full user journey, a live server with a chosen database, and separate data for each workshop (S-44, S-45). The automatic checks now run on GitHub on every push (D-1, 2026-10-14), but **no result has been seen yet**. |
-| Process | 🟡 AMBER | Statuses in the backlog and in 9 of 10 plans were stale. Fixed today. Roles are now split: product-owner (what and why) and tech-lead (how). Three stories are in flight against a limit of two (S-29, S-08, S-44), by your choice (D-9). |
+| Release readiness | 🔴 RED | Missing: a test of a full user journey, a live server with a chosen database, and separate units and categories for each workshop (S-45; S-44 is done). The automatic checks now run on GitHub on every push (D-1, 2026-10-14), but **no result has been seen yet**. |
+| Process | 🟡 AMBER | Statuses in the backlog and in 9 of 10 plans were stale. Fixed today. Roles are now split: product-owner (what and why) and tech-lead (how). S-44 went over the two-story limit by your choice (D-9) and is done; S-45 is next. |
 
 **Current phase:** Phase 3 (real backend) and most of the performance track are **finished and committed**. The project now enters
 **Phase 4: MVP release readiness** (see [ROADMAP.md](ROADMAP.md)).
@@ -76,9 +76,9 @@ no "Reorder at" is never flagged as low. ·
 - Deleting an account deletes only the person; the workshop's data stays (not my recommendation). The proposed story S-47 was dropped, and
   its ID won't be reused. The "Delete account" wording changes so it no longer promises to delete "all of its resources and data" (S-44 AC-6).
 - Photos: an address that can't be guessed and never appears on another workshop's screens is enough for now.
-- **Over the limit:** S-44 starts now, even though S-29 (in progress) and S-08 (in acceptance) already fill the two-story
+- **Over the limit:** S-44 started at once, even though S-29 (in progress) and S-08 (in acceptance) already filled the two-story
   work-in-progress limit (not my recommendation). S-45 comes right after S-44 and they ship together: no second real workshop signs up
-  until both are done.
+  until both are done. **S-44 is Done** (accepted 2026-10-15 after your click-through; on `main`, see §4).
 
 **Recorded and still valid:** Phase 3 plan Q1 native serving (ADR-0007) · Q2 user-editable units, conversions later · Q3 any member of a
 workshop edits that workshop's catalogue (was "any signed-in user", changed by D-9) · Q7 unit locked while used · Q8 sales are stock-neutral
@@ -101,7 +101,7 @@ Q1 (prefetch removed), Q4 (pulse placeholders).
 | **Sales** | Record, edit and delete sales (product, quantity, unit price pre-filled from the selling price, date, note). Sales never change stock. Totals and filters: search, period presets, product. |
 | **Dashboard** | Period selector, KPI cards, top 5 products by units or revenue, materials that need a restock, recent sales, and "can't produce" alerts. The page appears at once and its panels fill in. |
 | **Settings: Catalogue** | Manage units, material categories and product categories without a deploy: create, rename, archive, restore, delete when unused. Names are unique regardless of case. A material's unit is locked while a product uses it. |
-| **Account** | Starter-kit authentication: register, login, email verification, password reset, two-factor, passkeys, profile, password, light/dark appearance. Every account sees the same data (one shared catalogue) until S-44 and S-45 land. |
+| **Account** | Starter-kit authentication: register, login, email verification, password reset, two-factor, passkeys, profile, password, light/dark appearance. Every account belongs to one workshop and sees only that workshop's materials, products, sales and figures. Signing up creates a new, empty workshop, another workshop's address shows "404 Not Found", and "Delete account" keeps the workshop's data (S-44). Units and categories stay shared until S-45. |
 | **Speed** | Every page runs at most 10 database queries (guarded by tests). List filters reload only what changed. Heavy panels load after the page appears, behind loading placeholders. Inventory totals use a single exact SQL aggregate on PostgreSQL. The composition picker searches on the server. |
 
 **Under the hood:** pure costing domain with 100 % branch coverage, 46 application routes behind policies, 15 migrations, architecture tests,
@@ -121,6 +121,7 @@ a PostgreSQL parity suite (last green: 2 074 passed on 2026-10-13, during RL-01)
 | **Perf — dashboard endpoint** | S-28 (+ the S-28-0 baseline fix) | 2026-10-13 (`9ea79f7`, `784ae8c`, `b2ea946`) | ✅ Done |
 | **Rendering and loading** | W-01, P-01, P-02, RL-04, RL-01, RL-02 (+ fix) | 2026-10-13 (`03cc4da` … `c809962`) | ✅ Done. RL-03 and RL-05 still open |
 | **4 — MVP release readiness** | S-43 overhead cost optional (D-8) | 2026-10-14 (`6179d52` card, `4644a08` costing rule, `9fc8e98` saving, `9df0ca0` form, `eccb09a` close-out; on `main`, not pushed) | ✅ Done. Accepted by you on the delivery report (tech-lead APPROVED; every gate green, including PostgreSQL parity and the golden path). Click-through on the card optional |
+| **4 — MVP release readiness** | S-44 each workshop sees only its own data (D-9) | 2026-10-15 (`672937f` cards, ADR-0013, rules and project instructions; `a54856f` workshops, S-44-a–d; `9a48cd3` delete-account wording, S-44-e; on `main`, not pushed) | ✅ Done. Tech-lead APPROVED in round 1 (2 132 backend tests, PostgreSQL parity 2 132, 1 137 screen tests, check, types, build, golden path). You backed up and migrated `laravel` yourself; click-through passed 2026-10-15 |
 
 All phase branches (`phase/1-materials`, `phase/2-ui-first-preview`, `phase/3-performance-spa-data`, `fix/rl-02-product-show-loading`,
 `worktree-fix-hover-prefetch-bug`) are fully merged into `main`. They and the worktree under `.claude/worktrees/` can be deleted (human decision D-6).
@@ -156,7 +157,7 @@ The plan headers were corrected on 2026-10-14, and [plans/README.md](plans/READM
 | G-3 | **A panel that fails to load spins forever.** Deferred panels have no error state, and the dashboard and product page are now fully deferred | One failed request leaves the user stuck on loading placeholders, with no retry | S-31 (F-48) |
 | G-4 | **Dev environment drift**: `laravel.test`, Sail and `sail.cmd` are still on `main`, and CLAUDE.md and the agent files still describe Sail (F-25); S-29 removes them (in progress). Laragon and Apache are no longer used: the app runs on `php artisan serve`, and `.env` already sends mail to Docker's test mailbox (a password-reset check is still to do). The built-in server handles one request at a time on Windows | Agents follow outdated commands; the panels that load after the page queue behind each other, so the speed target (S-18) may not hold. The tech-lead is adjusting S-29's plan and will report | S-29 |
 | G-5 | **Two people saving the same SKU at the same moment get a server error page** instead of a validation message | Rare, but it's a crash | S-32 (F-35) |
-| G-6 | **Every account sees and changes the same data.** A new sign-up opens on every material, product and sale of the installation | Invory can't serve a second business until each workshop sees only its own data (D-9) | S-44, S-45 |
+| G-6 | **Units and categories are still shared by every workshop.** S-44 (done 2026-10-15) separated materials, products and sales | One workshop renaming "Fabric" would change another workshop's screens, so no second real workshop signs up before S-45 (D-9) | S-45 |
 
 ### 6.2 Not started, needed for real-world use (Phases 5–6)
 - **Speed at real catalogue sizes:** the dashboard and the "can't produce" filter cost every product in PHP, and sales totals walk every row
@@ -190,9 +191,9 @@ The plan headers were corrected on 2026-10-14, and [plans/README.md](plans/READM
 | R-9 | Issue | Flaky Vitest test under load (F-22) | Low | Gates run sequentially; fix in TECH-DEBT |
 | R-10 | Dependency | S-41 (real photos) can't start until you have created a free Pexels account and key and put the key in your local settings | Low | Human, before S-41 starts |
 | R-11 | Risk | About 220 Pexels photos stored in the repository are fine while it stays private. Publishing the repository would redistribute them in bulk | Low | Product-owner raises the licence conditions with you before any change to the repository's visibility (S-41 AC-6) |
-| R-12 | Risk | S-44 changes how every screen picks its data while S-29 and S-08 are still open: three stories in flight against a limit of two (D-9). The demo data and the golden-path test must keep their figures | Medium | Tech-lead plans S-44 against S-08's demo data and golden path (S-44 AC-7); S-45 follows right after; the product-owner reviews both together |
+| R-12 | Risk (closed 2026-10-15) | S-44 ran over the two-story limit beside S-29 and S-08 (D-9). It landed with the demo data and the golden-path test unchanged (S-44 AC-7) | — | Closed: S-44 accepted 2026-10-15 |
 | R-13 | Risk | When someone deletes the only account of a workshop, that workshop's materials, products and sales stay in the database with nobody able to reach them (D-9). That may matter for privacy once other businesses use a public server | Low now, higher at go-live | The "Delete account" wording says the data stays (S-44 AC-6). Product-owner raises it with you again before S-26 |
-| R-14 | Dependency | The project instructions, ADR-0003 and ARCHITECTURE.md still say "single company, no teams" | Low | Main session and tech-lead update them with S-44 (D-9) |
+| R-14 | Dependency (closed 2026-10-15) | The project instructions, ADR-0003 and ARCHITECTURE.md said "single company, no teams" | — | Closed: updated in `672937f` (ADR-0003 superseded by ADR-0013) |
 
 ---
 
@@ -221,13 +222,13 @@ The plan headers were corrected on 2026-10-14, and [plans/README.md](plans/READM
    - Human: push when you choose. CI runs on the push, and only you can see the result.
    - Optional for you: the 10-minute S-43 click-through on its card. It also checks the look of "Overhead cost (optional)", which no test sees.
    - Human: say yes or no to changing S-30 step 4.2 from "Overhead cost 3.5" to "Overhead cost (optional) 3.5" (it works either way).
-   **Update 2026-10-14 (D-9):** S-44, S-45 and S-46 are `Ready`.
-   - Tech-lead, now: write the business rules R1–R6 into the costing rules and a decision record that replaces ADR-0003, then S-44's
-     Technical work (S-45's straight after), for your approval.
-   - Main session and tech-lead: update the project instructions and ARCHITECTURE.md ("single company, no teams").
+   **Update 2026-10-15 (D-9):** S-44 is **Done**. It was accepted after your click-through on `laravel` and is on `main` at `9a48cd3`, not pushed yet.
+   The rules, ADR-0013 and the project instructions landed with it (`672937f`).
+   - Tech-lead, now: S-45's Technical work, for your approval. No second real workshop signs up until S-45 is done.
    - S-46 follows S-45.
+   - Human: push when you choose. CI runs on the push, and only you can see the result.
 4. Human: walk S-30 as soon as S-29 lands. The product-owner sorts the findings into "fix in Phase 4" and "new backlog item"; you confirm.
-5. Phase 4 closes when S-30 is accepted, the S-08 test is green in the gates and in CI on GitHub, and S-44 and S-45 are accepted.
+5. Phase 4 closes when S-30 is accepted, the S-08 test is green in the gates and in CI on GitHub, and S-45 is accepted (S-44 was accepted on 2026-10-15).
 6. Coulds, if time allows and in this order:
    - The tech-lead plans S-08 first; S-40's plan follows once you approve S-08's plan.
    - S-41 (`Ready`) is planned after S-40, and its work starts once you confirm your Pexels key is in your local settings.

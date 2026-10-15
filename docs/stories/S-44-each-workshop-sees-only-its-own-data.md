@@ -5,7 +5,7 @@ type: feature
 phase: 4
 priority: Must
 size: M
-status: Acceptance
+status: Done
 created: 2026-10-14
 tags:
   - story
@@ -33,13 +33,13 @@ tags:
 > the person: the materials, products and sales stay.
 
 ## Acceptance criteria
-- [ ] **AC-1 · Signing up opens an empty workshop.** Given a fresh install with the demo workshop of `test@example.com` (12 materials,
+- [x] **AC-1 · Signing up opens an empty workshop.** Given a fresh install with the demo workshop of `test@example.com` (12 materials,
   7 products, 60 sales), when Sami signs up as `sami@atelier-b.test` and confirms his email address, then Materials shows "No materials
   yet", Products shows "No products yet", Sales shows "No sales yet", and the dashboard shows Total sales **TND 0.000** ("0 sales · last 30
   days"), Units sold **0**, Inventory value **TND 0.000** ("0 materials"), Needs restock **0** and Can't produce **0** ("of 0 products").
   `test@example.com` still sees its 12 materials, 7 products and 60 sales. Signing up stays open to anyone, from "Register" and "Sign up"
-  as today, and every sign-up gets its own new, empty workshop.
-- [ ] **AC-2 · Every screen shows only your workshop.** Sami adds the material "Cotton canvas natural" (SKU `B-CAN-001`, Fabric, Metre,
+  as today, and every sign-up gets its own new, empty workshop. ✅ 2026-10-15 · a54856f
+- [x] **AC-2 · Every screen shows only your workshop.** Sami adds the material "Cotton canvas natural" (SKU `B-CAN-001`, Fabric, Metre,
   unit cost 6, stock 40) and the product "Canvas Tote" (SKU `B-TOT-001`, Bag, Active, labor cost 5, overhead left empty, 0.8 m of the canvas
   with 0 % waste). Then:
   - Sami sees 1 material, Inventory value **TND 240.000** ("1 material"), and Canvas Tote at unit cost **TND 9.800**, can produce **50**,
@@ -49,33 +49,33 @@ tags:
   - `test@example.com` still sees Inventory value **TND 10,544.300** ("12 materials"), **4** materials that need a restock, and Denim Jacket
     at **TND 35.754**, **112** units, limited by "Metal shank button 17mm". None of Sami's records appear anywhere in its lists, searches,
     filters, dashboard panels (top selling products, recent sales, needs restock, can't-produce alerts), material history or "what you can
-    make with it". The same holds the other way round.
-- [ ] **AC-3 · Another workshop's page shows "Not Found".** When Sami opens the address of `test@example.com`'s Denim Jacket, its Edit page,
+    make with it". The same holds the other way round. ✅ 2026-10-15 · a54856f
+- [x] **AC-3 · Another workshop's page shows "Not Found".** When Sami opens the address of `test@example.com`'s Denim Jacket, its Edit page,
   or the page of "Denim 12oz Indigo", he sees the same "404 Not Found" page as for a product that was deleted. Nothing on it tells him the
   record exists, not even its name. The same holds when `test@example.com` opens the address of Canvas Tote. Photos follow the same rule:
-  another workshop's photos never appear on Sami's screens, and a photo's address can't be guessed from its record's name or number.
-- [ ] **AC-4 · Another workshop's records can't be changed.** Anything sent from Sami's account for `test@example.com`'s records is refused
+  another workshop's photos never appear on Sami's screens, and a photo's address can't be guessed from its record's name or number. ✅ 2026-10-15 · a54856f
+- [x] **AC-4 · Another workshop's records can't be changed.** Anything sent from Sami's account for `test@example.com`'s records is refused
   as if the record didn't exist, and changes nothing:
   - editing or deleting a material, product or sale, restocking, or changing a photo is refused with "Not Found", like AC-3;
   - adding "Denim 12oz Indigo" to the Canvas Tote composition, or recording a sale of Denim Jacket, is refused with the same field error
     as for a material or product that doesn't exist, and nothing is saved. Sami's screens never offer these records, because the picker
     and "Record a sale" list only his own workshop's items.
 
-  Afterwards the demo still shows Denim Jacket at TND 35.754, 112 units, and 60 sales.
-- [ ] **AC-5 · The same SKU in two workshops.** Sami can save a material with the SKU "MAT-DEN-012", which the demo's "Denim 12oz Indigo"
+  Afterwards the demo still shows Denim Jacket at TND 35.754, 112 units, and 60 sales. ✅ 2026-10-15 · a54856f
+- [x] **AC-5 · The same SKU in two workshops.** Sami can save a material with the SKU "MAT-DEN-012", which the demo's "Denim 12oz Indigo"
   already uses: he sees "Material created.". The same holds for product SKUs. Inside one workshop a SKU still can't be used twice, exactly as
-  today.
-- [ ] **AC-6 · The data belongs to the workshop, not to the person.** Given two accounts in the same workshop (today only the move of
+  today. ✅ 2026-10-15 · a54856f
+- [x] **AC-6 · The data belongs to the workshop, not to the person.** Given two accounts in the same workshop (today only the move of
   existing data in AC-7 creates this; inviting people comes later), a material one of them adds appears for the other at once, and its
   history says who did it ("by <name>"). Deleting an account deletes only the person: every material, product and sale of the workshop
   stays, for the other account, and also when it was the workshop's only account. Settings → "Profile" says so: under "Delete account"
   the text reads "Delete your account. Your workshop's data stays.", and the confirmation reads "Once your account is deleted, you can no
   longer sign in with it. Your workshop's materials, products and sales are not deleted. Please enter your password to confirm you would
-  like to permanently delete your account."
-- [ ] **AC-7 · Nothing that exists today is lost.** When this change is installed, every account that already exists joins one workshop that
+  like to permanently delete your account." ✅ 2026-10-15 · a54856f, wording 9a48cd3
+- [x] **AC-7 · Nothing that exists today is lost.** When this change is installed, every account that already exists joins one workshop that
   holds everything recorded so far. Each account sees exactly what it saw before, with the same figures: no material, product, composition,
   sale, history entry or photo is lost, moved or changed. On a fresh install, the demo workshop belongs to `test@example.com` and shows the
-  same figures as before (12 materials worth TND 10,544.300, 7 products, 60 sales).
+  same figures as before (12 materials worth TND 10,544.300, 7 products, 60 sales). ✅ 2026-10-15 · a54856f (your database migrated and checked in the click-through)
 
 ---
 
