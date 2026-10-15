@@ -4,6 +4,7 @@ use App\Models\Material;
 use App\Models\Sale;
 use App\Models\User;
 use App\Policies\MaterialPolicy;
+use Illuminate\Auth\Access\Response;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -26,9 +27,9 @@ use function Pest\Laravel\actingAs;
 /** A Material policy that refuses updates, to prove the restock action asks the policy. */
 class DenyMaterialUpdatePolicy extends MaterialPolicy
 {
-    public function update(User $user, Material $material): bool
+    public function update(User $user, Material $material): Response
     {
-        return false;
+        return Response::deny();
     }
 }
 

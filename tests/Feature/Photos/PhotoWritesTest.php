@@ -164,10 +164,14 @@ it('clears the composition on a multipart update that has no components (F-36) a
 it('adds and removes materials.photo_path with its migration, keeping the rows and the partial SKU index', function () {
     /** @var Migration $migration */
     $migration = require database_path('migrations/2026_10_13_200000_add_photo_path_to_materials_table.php');
+    // Newest first: the S-44-b migration re-creates the SKU index per workshop, and this older one would otherwise put the global one back.
+    /** @var Migration $workshops */
+    $workshops = require database_path('migrations/2026_10_15_100100_add_workshop_to_owned_tables.php');
     Material::factory()->create(['sku' => 'KEEP-1', 'name' => 'Survivor', 'photo_path' => 'materials/a.jpg']);
 
     expect(Schema::hasColumn('materials', 'photo_path'))->toBeTrue();
 
+    $workshops->down();
     $migration->down();
 
     expect(Schema::hasColumn('materials', 'photo_path'))->toBeFalse()
@@ -175,6 +179,7 @@ it('adds and removes materials.photo_path with its migration, keeping the rows a
         ->and(Schema::hasIndex('materials', 'materials_sku_unique'))->toBeTrue();
 
     $migration->up();
+    $workshops->up();
 
     expect(Schema::hasColumn('materials', 'photo_path'))->toBeTrue()
         ->and(DB::table('materials')->where('sku', 'KEEP-1')->value('photo_path'))->toBeNull()

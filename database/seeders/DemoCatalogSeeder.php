@@ -7,6 +7,8 @@ namespace Database\Seeders;
 use App\Models\Material;
 use App\Models\MaterialCategory;
 use App\Models\Unit;
+use App\Services\Workshops\CurrentWorkshop;
+use Database\Seeders\Concerns\ResolvesDemoWorkshop;
 use Illuminate\Database\Seeder;
 
 /**
@@ -14,11 +16,14 @@ use Illuminate\Database\Seeder;
  * them ({@see DemoProductsSeeder}). Together they give the inventory value "10544.3000", 4 materials to restock (3 low, 1 out of
  * stock) and the worked example of the costing domain skill.
  *
- * Idempotent: materials are keyed by SKU, so running it again resets these 12 materials to their values here and creates
+ * Idempotent: materials are keyed by (workshop, SKU), so running it again resets these 12 materials to their values here and creates
  * nothing twice. Other materials are left alone. The products are only created when their SKU is missing (never overwritten).
+ * Everything goes in the demo workshop ({@see ResolvesDemoWorkshop}).
  */
 class DemoCatalogSeeder extends Seeder
 {
+    use ResolvesDemoWorkshop;
+
     /**
      * @var list<array{
      *     sku: string,
@@ -208,22 +213,28 @@ class DemoCatalogSeeder extends Seeder
 
     public function run(): void
     {
+        $workshopId = $this->demoWorkshopId();
+
         // The defaults these codes point at come from the reference-data migration, so they exist in every environment.
         $categories = MaterialCategory::query()->pluck('id', 'code');
         $units = Unit::query()->pluck('id', 'code');
 
-        foreach (self::MATERIALS as $material) {
-            Material::query()->updateOrCreate(
-                ['sku' => $material['sku']],
-                [
-                    ...array_diff_key($material, ['sku' => true, 'category' => true, 'unit' => true]),
-                    'category_id' => $categories[$material['category']],
-                    'unit_id' => $units[$material['unit']],
-                ],
-            );
+        foreach (self::MATERIALS as $demo) {
+            // Keyed by (workshop, SKU): another workshop's material with the same SKU is none of this seeder's business.
+            $material = Material::query()->where('workshop_id', $workshopId)->where('sku', $demo['sku'])->first() ?? new Material;
+
+            $material->fill([
+                ...array_diff_key($demo, ['category' => true, 'unit' => true]),
+                'category_id' => $categories[$demo['category']],
+                'unit_id' => $units[$demo['unit']],
+            ]);
+
+            // Never mass-assignable. Set on a new row only: an existing one is already in the demo workshop.
+            $material->workshop_id ??= $workshopId;
+            $material->save();
         }
 
-        // After the materials: the demo compositions reference them by SKU.
-        $this->call(DemoProductsSeeder::class);
+        // After the materials: the demo compositions reference them by SKU, in the same workshop.
+        CurrentWorkshop::run($workshopId, fn () => $this->call(DemoProductsSeeder::class));
     }
 }

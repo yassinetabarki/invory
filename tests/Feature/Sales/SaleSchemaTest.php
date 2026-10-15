@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\Schema;
 
 it('creates sales with the agreed indexes, foreign keys and a plain stored day', function () {
     expect(Schema::hasColumns('sales', ['id', 'product_id', 'quantity', 'unit_price', 'sold_on', 'note', 'user_id', 'created_at', 'updated_at']))->toBeTrue()
-        ->and(Schema::hasIndex('sales', ['sold_on', 'id']))->toBeTrue()
+        ->and(Schema::hasIndex('sales', ['workshop_id', 'sold_on', 'id']))->toBeTrue()
         ->and(Schema::hasIndex('sales', ['product_id', 'sold_on']))->toBeTrue();
 
     $product = Product::factory()->create();
@@ -43,7 +43,7 @@ it('refuses out-of-range rows with the PostgreSQL CHECK constraints', function (
         $this->markTestSkipped('The CHECK constraints are PostgreSQL-only.');
     }
 
-    $row = ['product_id' => Product::factory()->create()->id, 'quantity' => 1, 'unit_price' => '1.0000', 'sold_on' => '2026-10-08', 'created_at' => now(), 'updated_at' => now(), ...$override];
+    $row = [...rawWorkshop('sales'), 'product_id' => Product::factory()->create()->id, 'quantity' => 1, 'unit_price' => '1.0000', 'sold_on' => '2026-10-08', 'created_at' => now(), 'updated_at' => now(), ...$override];
 
     // A savepoint, so the rejected row doesn't abort the surrounding transaction.
     expect(fn () => DB::transaction(fn () => DB::table('sales')->insert($row)))->toThrow(QueryException::class);

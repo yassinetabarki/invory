@@ -62,6 +62,7 @@ it('enforces a unique sku among non-deleted rows at database level', function ()
     $categoryId = DB::table('material_categories')->where('code', 'fabric')->value('id');
     $unitId = DB::table('units')->where('code', 'm')->value('id');
     $row = fn (string $sku, ?string $deletedAt = null): array => [
+        ...rawWorkshop('materials'),
         'sku' => $sku,
         'name' => 'Raw row',
         'category_id' => $categoryId,

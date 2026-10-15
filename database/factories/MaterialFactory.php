@@ -7,6 +7,7 @@ namespace Database\Factories;
 use App\Models\Material;
 use App\Models\MaterialCategory;
 use App\Models\Unit;
+use Database\Factories\Concerns\DefaultWorkshop;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use InvalidArgumentException;
 
@@ -50,6 +51,7 @@ class MaterialFactory extends Factory
         [$name, $category, $unit, $minCost, $maxCost] = fake()->randomElement(self::CATALOGUE);
 
         return [
+            'workshop_id' => static fn (): int => DefaultWorkshop::id(),
             'sku' => fake()->unique()->bothify('MAT-######'),
             'name' => $name,
             'category' => $category,

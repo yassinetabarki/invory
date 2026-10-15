@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\StockStatus;
+use App\Models\Concerns\BelongsToWorkshop;
 use App\Services\Photos\PhotoStorage;
 use Brick\Math\BigDecimal;
 use Brick\Math\RoundingMode;
@@ -24,6 +25,7 @@ use InvalidArgumentException;
 
 /**
  * @property int $id
+ * @property int $workshop_id The workshop the material belongs to. Never mass-assignable.
  * @property string $sku
  * @property string $name
  * @property int $category_id
@@ -54,7 +56,7 @@ use InvalidArgumentException;
 class Material extends Model
 {
     /** @use HasFactory<MaterialFactory> */
-    use HasFactory, SoftDeletes;
+    use BelongsToWorkshop, HasFactory, SoftDeletes;
 
     /**
      * Every Resource, option and costing line shows the category and the unit, so they are always loaded (two constant

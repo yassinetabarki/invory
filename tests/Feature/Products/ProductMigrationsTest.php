@@ -29,6 +29,12 @@ function productsMigration04(): Migration
     return require database_path('migrations/2026_10_09_300100_create_products_and_product_components_tables.php');
 }
 
+/** S-44-b: it sits on top of every table here (a `workshop_id` on each, composite keys on PostgreSQL), so a rollback of an older one starts with it. */
+function workshopMigration04(): Migration
+{
+    return require database_path('migrations/2026_10_15_100100_add_workshop_to_owned_tables.php');
+}
+
 function postgresExtrasMigration04(): Migration
 {
     return require database_path('migrations/2026_10_09_300200_add_postgres_checks_and_trigram_indexes.php');
@@ -43,6 +49,7 @@ function onPostgres04(): bool
 function materialRow04(array $overrides = []): array
 {
     return [
+        ...rawWorkshop('materials'),
         'sku' => 'MAT-'.fake()->unique()->numerify('######'),
         'name' => 'Row material',
         'category_id' => DB::table('material_categories')->where('code', 'fabric')->value('id'),
@@ -59,6 +66,7 @@ function materialRow04(array $overrides = []): array
 function productRow04(array $overrides = []): array
 {
     return [
+        ...rawWorkshop('products'),
         'sku' => 'PRD-'.fake()->unique()->numerify('######'),
         'name' => 'Row product',
         'category_id' => DB::table('product_categories')->where('code', 'apparel')->value('id'),
@@ -72,6 +80,7 @@ function productRow04(array $overrides = []): array
 function componentRow04(int $productId, int $materialId, array $overrides = []): array
 {
     return [
+        ...rawWorkshop('product_components'),
         'product_id' => $productId,
         'material_id' => $materialId,
         'quantity' => '1.0000',
@@ -214,6 +223,7 @@ describe('up, down, up', function () {
         $material = Material::factory()->create(['sku' => 'KEEP-1', 'name' => 'Survivor']);
 
         // Newest first, as `migrate:rollback` does.
+        workshopMigration04()->down();
         postgresExtrasMigration04()->down();
         productsMigration04()->down();
         auditMigration04()->down();
@@ -231,6 +241,7 @@ describe('up, down, up', function () {
         auditMigration04()->up();
         productsMigration04()->up();
         postgresExtrasMigration04()->up();
+        workshopMigration04()->up();
 
         expect(Schema::hasTable('products'))->toBeTrue()
             ->and(Schema::hasTable('product_components'))->toBeTrue()
@@ -246,6 +257,7 @@ describe('up, down, up', function () {
     it('keeps the partial SKU index of materials through the audit columns, up and down', function () {
         // SQLite rebuilds `materials` when a column is dropped, and would lose the `WHERE` of a partial index it re-creates itself.
         // The migrations before and after this one are rolled back first, so only the audit columns change.
+        workshopMigration04()->down();
         postgresExtrasMigration04()->down();
         productsMigration04()->down();
 
@@ -261,12 +273,14 @@ describe('up, down, up', function () {
     });
 
     it('runs the products migration down and up more than once', function () {
+        workshopMigration04()->down();
         postgresExtrasMigration04()->down();
         productsMigration04()->down();
         productsMigration04()->up();
         productsMigration04()->down();
         productsMigration04()->up();
         postgresExtrasMigration04()->up();
+        workshopMigration04()->up();
 
         expect(Schema::hasIndex('products', 'products_sku_unique'))->toBeTrue();
 

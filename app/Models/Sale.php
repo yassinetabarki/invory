@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToWorkshop;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Database\Factories\SaleFactory;
@@ -19,6 +20,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * and its total is never stored: App\Domain\Sales\SalesCalculator computes it.
  *
  * @property int $id
+ * @property int $workshop_id The workshop of the product. Never mass-assignable: it comes from the product.
  * @property int $product_id
  * @property int $quantity Whole units, 1 to 1 000 000.
  * @property string $unit_price Decimal string, scale 4.
@@ -32,7 +34,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Sale extends Model
 {
     /** @use HasFactory<SaleFactory> */
-    use HasFactory;
+    use BelongsToWorkshop, HasFactory;
 
     /**
      * `date:Y-m-d` stores the plain day (a bare `date` cast writes "Y-m-d H:i:s", which SQLite keeps as text and then

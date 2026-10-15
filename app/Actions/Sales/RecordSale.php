@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Sales;
 
+use App\Models\Product;
 use App\Models\Sale;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -20,7 +21,9 @@ final readonly class RecordSale
         return DB::transaction(function () use ($data, $actor): Sale {
             $sale = new Sale($data);
 
-            // Never mass-assignable: who recorded it comes from the actor, not from the request.
+            // Never mass-assignable: the workshop comes from the product (null when it doesn't exist: the foreign key then refuses the sale),
+            // and who recorded it from the actor, not from the request.
+            $sale->workshop_id = Product::query()->whereKey($sale->product_id)->value('workshop_id');
             $sale->user_id = $actor->id;
             $sale->save();
 

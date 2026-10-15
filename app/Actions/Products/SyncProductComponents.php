@@ -38,7 +38,11 @@ final readonly class SyncProductComponents
                 $existing = $stale->pull((int) $line['material_id']);
 
                 if ($existing === null) {
-                    $product->components()->create([...$attributes, 'material_id' => (int) $line['material_id']]);
+                    $component = $product->components()->make([...$attributes, 'material_id' => (int) $line['material_id']]);
+
+                    // Never mass-assignable: a line belongs to its product's workshop, whatever the request says.
+                    $component->workshop_id = $product->workshop_id;
+                    $component->save();
                 } else {
                     $existing->update($attributes);
                 }

@@ -293,6 +293,7 @@ describe('the composition in the database', function () {
     it('rejects the same material twice on one product (unique index)', function () {
         $product = Product::factory()->create();
         $row = [
+            ...rawWorkshop('product_components'),
             'product_id' => $product->id, 'material_id' => $this->materials['denim']->id,
             'quantity' => '1.0000', 'waste_percent' => '0.00', 'position' => 0,
             'created_at' => now(), 'updated_at' => now(),

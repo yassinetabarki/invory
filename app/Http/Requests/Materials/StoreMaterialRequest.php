@@ -6,8 +6,8 @@ namespace App\Http\Requests\Materials;
 
 use App\Models\Material;
 use App\Services\Reference\ReferenceCode;
+use App\Validation\WorkshopRule;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\File;
 use Illuminate\Validation\Rules\Unique;
 
@@ -21,7 +21,7 @@ class StoreMaterialRequest extends FormRequest
     /** @return array<string, mixed> */
     public function rules(): array
     {
-        return self::fieldRules(Rule::unique('materials', 'sku')->withoutTrashed());
+        return self::fieldRules(WorkshopRule::unique(Material::class, 'sku'));
     }
 
     /**

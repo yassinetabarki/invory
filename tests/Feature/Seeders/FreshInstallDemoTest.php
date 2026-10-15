@@ -6,6 +6,7 @@ use App\Models\ProductComponent;
 use App\Models\Sale;
 use App\Models\StockMovement;
 use App\Models\User;
+use App\Models\Workshop;
 use App\Services\Inventory\StockLedgerVerifier;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Support\Facades\Hash;
@@ -82,6 +83,16 @@ it('a fresh install shows the demo workshop', function () {
         )
         ->and(StockMovement::query()->count())->toBe(18)
         ->and(app(StockLedgerVerifier::class)->verify()['drifts'])->toBe([]);
+
+    // The demo data belongs to the workshop of the demo user, and only that workshop exists (ADR-0013, AC-7).
+    $workshopId = User::query()->where('email', 'test@example.com')->value('workshop_id');
+
+    expect(Workshop::query()->count())->toBe(1)
+        ->and(ProductComponent::query()->count())->toBeGreaterThan(0);
+
+    foreach ([Material::class, Product::class, ProductComponent::class, StockMovement::class, Sale::class] as $model) {
+        expect($model::query()->where('workshop_id', $workshopId)->count())->toBe($model::query()->count(), $model);
+    }
 });
 
 it('running the demo step again creates nothing twice and keeps a deleted demo product deleted', function () {

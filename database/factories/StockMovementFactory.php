@@ -25,6 +25,7 @@ class StockMovementFactory extends Factory
     {
         return [
             'material_id' => Material::factory(),
+            'workshop_id' => static fn (array $attributes): mixed => Material::withTrashed()->without('category', 'unit')->whereKey($attributes['material_id'])->value('workshop_id'),
             'type' => StockMovementType::Restock,
             'occurred_on' => now()->toDateString(),
             'quantity' => '100.0000',

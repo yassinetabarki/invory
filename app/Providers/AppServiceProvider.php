@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Services\Workshops\CurrentWorkshop;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -17,7 +18,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // One per request, queue job and test: the workshop set with CurrentWorkshop::run() never outlives it.
+        $this->app->scoped(CurrentWorkshop::class);
     }
 
     /**

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\StockMovementType;
+use App\Models\Concerns\BelongsToWorkshop;
 use Carbon\CarbonInterface;
 use Database\Factories\StockMovementFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -22,6 +23,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * - `price_change`: `unit_cost_before` and `unit_cost_after`, `quantity_after` = stock at that moment (the props send null for it)
  *
  * @property int $id
+ * @property int $workshop_id The workshop of the material. Never mass-assignable: it comes from the material.
  * @property int $material_id
  * @property StockMovementType $type
  * @property CarbonInterface $occurred_on
@@ -45,7 +47,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class StockMovement extends Model
 {
     /** @use HasFactory<StockMovementFactory> */
-    use HasFactory;
+    use BelongsToWorkshop, HasFactory;
 
     /** @return array<string, string> */
     protected function casts(): array

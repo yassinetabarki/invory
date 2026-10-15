@@ -5,17 +5,19 @@ declare(strict_types=1);
 namespace App\Http\Requests\Materials;
 
 use App\Models\Material;
+use Illuminate\Auth\Access\Response;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Gate;
 
 class StoreRestockRequest extends FormRequest
 {
     /** Books a receipt of stock: the right to update the material (MaterialPolicy). */
-    public function authorize(): bool
+    public function authorize(): Response
     {
         $material = $this->route('material');
 
-        return $material instanceof Material
-            && ($this->user()?->can('update', $material) ?? false);
+        // The Gate's own response, so a policy's `denyAsNotFound()` stays a 404 (ADR-0013 decision 5).
+        return $material instanceof Material ? Gate::inspect('update', $material) : Response::denyAsNotFound();
     }
 
     /**

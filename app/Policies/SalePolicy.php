@@ -6,9 +6,11 @@ namespace App\Policies;
 
 use App\Models\Sale;
 use App\Models\User;
+use Illuminate\Auth\Access\Response;
 
 /**
- * MVP: a single company without roles, so every authenticated user may do everything (ADR-0003).
+ * Any member of a workshop edits that workshop's sales (ADR-0013, decision Q3). A sale of another workshop answers 404, never 403:
+ * through HTTP the workshop scope already hides it, this is the second layer.
  */
 class SalePolicy
 {
@@ -22,13 +24,18 @@ class SalePolicy
         return true;
     }
 
-    public function update(User $user, Sale $sale): bool
+    public function update(User $user, Sale $sale): Response
     {
-        return true;
+        return $this->sameWorkshop($user, $sale);
     }
 
-    public function delete(User $user, Sale $sale): bool
+    public function delete(User $user, Sale $sale): Response
     {
-        return true;
+        return $this->sameWorkshop($user, $sale);
+    }
+
+    private function sameWorkshop(User $user, Sale $sale): Response
+    {
+        return $user->workshop_id === $sale->workshop_id ? Response::allow() : Response::denyAsNotFound();
     }
 }

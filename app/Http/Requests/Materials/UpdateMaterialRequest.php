@@ -7,18 +7,20 @@ namespace App\Http\Requests\Materials;
 use App\Models\Material;
 use App\Models\Product;
 use App\Models\ProductComponent;
+use App\Validation\WorkshopRule;
+use Illuminate\Auth\Access\Response;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Validator;
 
 class UpdateMaterialRequest extends FormRequest
 {
-    public function authorize(): bool
+    public function authorize(): Response
     {
         $material = $this->route('material');
 
-        return $material instanceof Material
-            && ($this->user()?->can('update', $material) ?? false);
+        // The Gate's own response, so a policy's `denyAsNotFound()` stays a 404 (ADR-0013 decision 5).
+        return $material instanceof Material ? Gate::inspect('update', $material) : Response::denyAsNotFound();
     }
 
     /** @return array<string, mixed> */
@@ -27,7 +29,7 @@ class UpdateMaterialRequest extends FormRequest
         $material = $this->route('material');
 
         return StoreMaterialRequest::fieldRules(
-            Rule::unique('materials', 'sku')->ignore($material)->withoutTrashed(),
+            WorkshopRule::unique(Material::class, 'sku')->ignore($material),
             // An archived category or unit stays valid on the material that already has it.
             currentCategory: $material instanceof Material ? $material->category->code : null,
             currentUnit: $material instanceof Material ? $material->unit->code : null,

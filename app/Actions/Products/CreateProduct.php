@@ -28,7 +28,8 @@ final readonly class CreateProduct
         return $this->photos->persist('products', $data, null, fn (array $attributes, array $photo): Product => DB::transaction(function () use ($attributes, $photo, $actor): Product {
             $product = (new Product($this->resolveCategory->handle(Arr::except($attributes, ['components']))))->forceFill($photo);
 
-            // Audit columns are never mass-assignable: they come from the actor, not from the request.
+            // Audit columns and the workshop are never mass-assignable: they come from the actor, not from the request.
+            $product->workshop_id = $actor->workshop_id;
             $product->created_by = $actor->id;
             $product->updated_by = $actor->id;
             $product->save();

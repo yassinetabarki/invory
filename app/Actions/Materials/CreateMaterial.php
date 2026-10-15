@@ -28,7 +28,8 @@ final readonly class CreateMaterial
         return $this->photos->persist('materials', $data, null, fn (array $attributes, array $photo): Material => DB::transaction(function () use ($attributes, $photo, $actor): Material {
             $material = (new Material($this->resolveCodes->handle($attributes)))->forceFill($photo);
 
-            // Audit columns are never mass-assignable: they come from the actor, not from the request.
+            // Audit columns and the workshop are never mass-assignable: they come from the actor, not from the request.
+            $material->workshop_id = $actor->workshop_id;
             $material->created_by = $actor->id;
             $material->updated_by = $actor->id;
             $material->save();

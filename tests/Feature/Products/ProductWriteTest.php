@@ -6,6 +6,7 @@ use App\Models\ProductCategory;
 use App\Models\ProductComponent;
 use App\Models\User;
 use App\Policies\ProductPolicy;
+use Illuminate\Auth\Access\Response;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Gate;
@@ -41,9 +42,9 @@ class DenyAllProductPolicy extends ProductPolicy
         return false;
     }
 
-    public function view(User $user, Product $product): bool
+    public function view(User $user, Product $product): Response
     {
-        return false;
+        return Response::deny();
     }
 
     public function create(User $user): bool
@@ -51,14 +52,14 @@ class DenyAllProductPolicy extends ProductPolicy
         return false;
     }
 
-    public function update(User $user, Product $product): bool
+    public function update(User $user, Product $product): Response
     {
-        return false;
+        return Response::deny();
     }
 
-    public function delete(User $user, Product $product): bool
+    public function delete(User $user, Product $product): Response
     {
-        return false;
+        return Response::deny();
     }
 }
 

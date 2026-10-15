@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Http\Requests\Products;
 
 use App\Enums\ProductStatus;
+use App\Models\Material;
 use App\Models\Product;
 use App\Services\Reference\ReferenceCode;
+use App\Validation\WorkshopRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\File;
@@ -53,7 +55,7 @@ class StoreProductRequest extends FormRequest
     public static function fieldRules(?Product $product): array
     {
         return [
-            'sku' => ['required', 'string', 'max:64', Rule::unique('products', 'sku')->ignore($product)->withoutTrashed()],
+            'sku' => ['required', 'string', 'max:64', WorkshopRule::unique(Product::class, 'sku')->ignore($product)],
             'name' => ['required', 'string', 'max:150'],
             'category' => ['required', 'string', ReferenceCode::active('product_categories', $product?->category->code)],
             'status' => ['required', Rule::enum(ProductStatus::class)],
@@ -67,7 +69,7 @@ class StoreProductRequest extends FormRequest
             // (a photo is attached) cannot carry an empty array: the key is simply absent, and on update a missing or null list is an empty
             // composition (F-36: the composition is always replaced).
             'components' => ['nullable', 'array'],
-            'components.*.material_id' => ['required', 'integer', 'distinct', Rule::exists('materials', 'id')->withoutTrashed()],
+            'components.*.material_id' => ['required', 'integer', 'distinct', WorkshopRule::exists(Material::class)],
             'components.*.quantity' => ['required', 'decimal:0,4', 'gt:0', 'max:9999999999.9999'],
             'components.*.waste_percent' => ['nullable', 'decimal:0,2', 'min:0', 'lt:100'],
             'components.*.notes' => ['nullable', 'string', 'max:100'],

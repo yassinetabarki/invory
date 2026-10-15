@@ -8,6 +8,8 @@ use App\Enums\ProductStatus;
 use App\Models\Material;
 use App\Models\Product;
 use App\Models\ProductCategory;
+use App\Models\ProductComponent;
+use Database\Factories\Concerns\DefaultWorkshop;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use InvalidArgumentException;
 
@@ -47,6 +49,7 @@ class ProductFactory extends Factory
         [$name, $category] = fake()->randomElement(self::CATALOGUE);
 
         return [
+            'workshop_id' => static fn (): int => DefaultWorkshop::id(),
             'sku' => fake()->unique()->bothify('PRD-######'),
             'name' => $name,
             'category' => $category,
@@ -87,14 +90,16 @@ class ProductFactory extends Factory
         return $this->afterCreating(function (Product $product) use ($lines): void {
             if (is_int($lines)) {
                 $lines = array_map(fn (): array => [
-                    'material' => Material::factory()->create(),
+                    'material' => Material::factory()->create(['workshop_id' => $product->workshop_id]),
                     'quantity' => $this->decimal(fake()->numberBetween(0, 3), fake()->numberBetween(1, 9999)),
                     'waste_percent' => fake()->randomElement(['0.00', '5.00', '10.00']),
                 ], range(1, $lines));
             }
 
             foreach ($lines as $position => $line) {
-                $product->components()->create([
+                // The factory takes the line into the product's workshop (a line can't be made through `components()`: it is never mass-assignable).
+                ProductComponent::factory()->create([
+                    'product_id' => $product->id,
                     'material_id' => $line['material'] instanceof Material ? $line['material']->id : $line['material'],
                     'quantity' => $line['quantity'],
                     'waste_percent' => $line['waste_percent'] ?? '0.00',

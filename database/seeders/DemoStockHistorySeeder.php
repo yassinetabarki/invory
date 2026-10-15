@@ -9,6 +9,7 @@ use App\Enums\StockMovementType;
 use App\Models\Material;
 use App\Models\User;
 use Carbon\CarbonImmutable;
+use Database\Seeders\Concerns\ResolvesDemoWorkshop;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -30,6 +31,8 @@ use Illuminate\Support\Facades\DB;
  */
 final class DemoStockHistorySeeder extends Seeder
 {
+    use ResolvesDemoWorkshop;
+
     /** The user every entry is credited to. */
     public const ACTOR_EMAIL = 'test@example.com';
 
@@ -79,7 +82,8 @@ final class DemoStockHistorySeeder extends Seeder
         }
 
         $seeded = array_column(DemoCatalogSeeder::MATERIALS, null, 'sku');
-        $materials = Material::query()->without('category', 'unit')->whereIn('sku', array_keys(self::HISTORY))->get()->keyBy('sku');
+        $materials = Material::query()->without('category', 'unit')->where('workshop_id', $this->demoWorkshopId())
+            ->whereIn('sku', array_keys(self::HISTORY))->get()->keyBy('sku');
         $today = CarbonImmutable::today();
 
         foreach (self::HISTORY as $sku => $history) {

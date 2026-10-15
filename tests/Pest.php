@@ -12,6 +12,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Response;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia;
@@ -453,4 +454,19 @@ function createDenimJacket(array $materials, array $overrides = [], ?User $actor
     );
 
     return Product::query()->with('components.material')->findOrFail($product->id);
+}
+
+/**
+ * `workshop_id` for a raw DB::table() insert (S-44-b): the oldest workshop, created when there is none. Empty when the table has no
+ * such column, because a test rolled the migration that adds it back: the same row helper then also serves the older shape.
+ *
+ * @return array<string, int>
+ */
+function rawWorkshop(string $table): array
+{
+    if (! Schema::hasColumn($table, 'workshop_id')) {
+        return [];
+    }
+
+    return ['workshop_id' => DB::table('workshops')->orderBy('id')->value('id') ?? DB::table('workshops')->insertGetId(['created_at' => now(), 'updated_at' => now()])];
 }

@@ -24,7 +24,8 @@ final readonly class AppendStockMovement
     {
         $movement = $material->stockMovements()->make([...$values, 'type' => $type, 'occurred_on' => $occurredOn]);
 
-        // Never mass-assignable: who did it comes from the actor, not from the request.
+        // Never mass-assignable: the workshop comes from the material, and who did it from the actor, not from the request.
+        $movement->workshop_id = $material->workshop_id;
         $movement->user_id = $actor->id;
         $movement->save();
 

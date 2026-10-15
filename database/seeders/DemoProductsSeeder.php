@@ -8,6 +8,7 @@ use App\Actions\Products\SyncProductComponents;
 use App\Models\Material;
 use App\Models\Product;
 use App\Models\ProductCategory;
+use Database\Seeders\Concerns\ResolvesDemoWorkshop;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -16,13 +17,15 @@ use Illuminate\Support\Facades\DB;
  * rows on the demo materials of {@see DemoCatalogSeeder}. With those materials they give the worked example of the costing domain
  * skill (Denim Jacket: unit cost 35.7540, 112 units, limited by the button).
  *
- * Idempotent and never destructive: a product is created only when no product at all has its SKU, so running it again
+ * Idempotent and never destructive: a product is created only when no product of the demo workshop has its SKU, so running it again
  * creates nothing, a product the user edited is left alone, and one the user deleted stays deleted (F-37: a soft-deleted
  * demo product is not recreated). A composition line whose material is missing (deleted, or never
  * seeded) is skipped; the product is still created, with the lines that exist.
  */
 class DemoProductsSeeder extends Seeder
 {
+    use ResolvesDemoWorkshop;
+
     /**
      * Line quantities are in the material's own unit; materials are referenced by SKU.
      *
@@ -157,7 +160,8 @@ class DemoProductsSeeder extends Seeder
 
     public function run(SyncProductComponents $syncComponents): void
     {
-        $existing = Product::query()->withTrashed()->whereIn('sku', array_column(self::PRODUCTS, 'sku'))->pluck('sku')->all();
+        $workshopId = $this->demoWorkshopId();
+        $existing = Product::query()->withTrashed()->where('workshop_id', $workshopId)->whereIn('sku', array_column(self::PRODUCTS, 'sku'))->pluck('sku')->all();
         $missing = array_filter(self::PRODUCTS, static fn (array $product): bool => ! in_array($product['sku'], $existing, true));
 
         if ($missing === []) {
@@ -165,7 +169,7 @@ class DemoProductsSeeder extends Seeder
         }
 
         $categories = ProductCategory::query()->pluck('id', 'code');
-        $materials = Material::query()->without('category', 'unit')->pluck('id', 'sku');
+        $materials = Material::query()->without('category', 'unit')->where('workshop_id', $workshopId)->pluck('id', 'sku');
 
         foreach ($missing as $demo) {
             // A default category the user has since deleted (it was unused) can't be resolved: that product is skipped.
@@ -173,11 +177,13 @@ class DemoProductsSeeder extends Seeder
                 continue;
             }
 
-            DB::transaction(function () use ($demo, $categories, $materials, $syncComponents): void {
+            DB::transaction(function () use ($demo, $categories, $materials, $syncComponents, $workshopId): void {
                 $product = new Product([
                     ...array_diff_key($demo, ['category' => true, 'lines' => true]),
                     'category_id' => $categories[$demo['category']],
                 ]);
+                // Never mass-assignable.
+                $product->workshop_id = $workshopId;
                 $product->save();
 
                 $lines = [];

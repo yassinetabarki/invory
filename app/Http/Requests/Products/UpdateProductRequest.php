@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Http\Requests\Products;
 
 use App\Models\Product;
+use Illuminate\Auth\Access\Response;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Gate;
 
 class UpdateProductRequest extends FormRequest
 {
@@ -13,12 +15,12 @@ class UpdateProductRequest extends FormRequest
      * `{product}` is route-model bound (an unknown or soft-deleted product is a 404 before anything is validated), then the
      * policy decides.
      */
-    public function authorize(): bool
+    public function authorize(): Response
     {
         $product = $this->route('product');
 
-        return $product instanceof Product
-            && ($this->user()?->can('update', $product) ?? false);
+        // The Gate's own response, so a policy's `denyAsNotFound()` stays a 404 (ADR-0013 decision 5).
+        return $product instanceof Product ? Gate::inspect('update', $product) : Response::denyAsNotFound();
     }
 
     protected function prepareForValidation(): void

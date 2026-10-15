@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\ProductStatus;
+use App\Models\Concerns\BelongsToWorkshop;
 use App\Services\Costing\ProductCosting;
 use App\Services\Photos\PhotoStorage;
 use Carbon\CarbonInterface;
@@ -26,6 +27,7 @@ use Illuminate\Support\Facades\Storage;
  * Cost, capacity and margin are never stored here: App\Services\Costing\ProductCostingService computes them.
  *
  * @property int $id
+ * @property int $workshop_id The workshop the product belongs to. Never mass-assignable.
  * @property string $sku
  * @property string $name
  * @property int $category_id
@@ -48,7 +50,7 @@ use Illuminate\Support\Facades\Storage;
 class Product extends Model
 {
     /** @use HasFactory<ProductFactory> */
-    use HasFactory, SoftDeletes;
+    use BelongsToWorkshop, HasFactory, SoftDeletes;
 
     /**
      * The database defaults, so a freshly created model reads like a stored one without a refresh.

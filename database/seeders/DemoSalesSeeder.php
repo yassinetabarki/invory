@@ -6,6 +6,7 @@ namespace Database\Seeders;
 
 use App\Models\Product;
 use Carbon\CarbonImmutable;
+use Database\Seeders\Concerns\ResolvesDemoWorkshop;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -14,12 +15,14 @@ use Illuminate\Support\Facades\DB;
  * relative to today so the "last 30 days" figures of the costing domain skill hold whenever it runs (48 sales, 296 units,
  * revenue 16850.0000 over the last 30 days).
  *
- * Self-contained data (no dependency on the preview layer). Sales have no natural key, so it inserts ONLY when the `sales`
- * table is empty: running it again, or after the user recorded or deleted sales, changes nothing. A sale whose demo product is
+ * Self-contained data (no dependency on the preview layer). Sales have no natural key, so it inserts ONLY when the demo
+ * workshop has no sale yet: running it again, or after the user recorded or deleted sales, changes nothing. A sale whose demo product is
  * missing (never seeded, or soft-deleted) is skipped. `user_id` stays null: nobody recorded them. Stock is untouched (decision Q8).
  */
 class DemoSalesSeeder extends Seeder
 {
+    use ResolvesDemoWorkshop;
+
     /**
      * The unit price of a sale is the price its product was sold at (the demo selling price), so editing a product's selling
      * price later doesn't rewrite this history.
@@ -65,11 +68,13 @@ class DemoSalesSeeder extends Seeder
 
     public function run(): void
     {
-        if (DB::table('sales')->exists()) {
+        $workshopId = $this->demoWorkshopId();
+
+        if (DB::table('sales')->where('workshop_id', $workshopId)->exists()) {
             return;
         }
 
-        $products = Product::query()->whereIn('sku', array_keys(self::PRICES))->pluck('id', 'sku');
+        $products = Product::query()->where('workshop_id', $workshopId)->whereIn('sku', array_keys(self::PRICES))->pluck('id', 'sku');
         $today = CarbonImmutable::today();
         $now = now();
         $rows = [];
@@ -80,6 +85,7 @@ class DemoSalesSeeder extends Seeder
             }
 
             $rows[] = [
+                'workshop_id' => $workshopId,
                 'product_id' => $products[$sku],
                 'quantity' => $quantity,
                 'unit_price' => self::PRICES[$sku],

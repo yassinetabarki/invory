@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToWorkshop;
 use Carbon\CarbonInterface;
 use Database\Factories\ProductComponentFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -16,6 +17,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * material's own unit, plus the expected waste. One line per material per product (database-unique).
  *
  * @property int $id
+ * @property int $workshop_id The workshop of the product (and of its material). Never mass-assignable: it comes from the product.
  * @property int $product_id
  * @property int $material_id
  * @property string $quantity Decimal string, scale 4, > 0.
@@ -29,7 +31,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class ProductComponent extends Model
 {
     /** @use HasFactory<ProductComponentFactory> */
-    use HasFactory;
+    use BelongsToWorkshop, HasFactory;
 
     /** @var array<string, mixed> */
     protected $attributes = [

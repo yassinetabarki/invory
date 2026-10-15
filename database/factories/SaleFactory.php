@@ -22,6 +22,7 @@ class SaleFactory extends Factory
     {
         return [
             'product_id' => Product::factory(),
+            'workshop_id' => static fn (array $attributes): mixed => Product::withTrashed()->whereKey($attributes['product_id'])->value('workshop_id'),
             'quantity' => fake()->numberBetween(1, 5),
             'unit_price' => sprintf('%d.%04d', fake()->numberBetween(20, 120), fake()->numberBetween(0, 9999)),
             'sold_on' => now()->toDateString(),
