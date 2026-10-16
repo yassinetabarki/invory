@@ -1,6 +1,6 @@
 import { Link } from '@inertiajs/react';
 import { useId } from 'react';
-import { MOVES } from '@/components/orders/move-units-dialog';
+import { lineHeadingId, MOVES } from '@/components/orders/move-units-dialog';
 import { ProgressStatus } from '@/components/orders/progress-status';
 import { formatUnits, StageFigure } from '@/components/orders/stage-figure';
 import { Button } from '@/components/ui/button';
@@ -60,13 +60,14 @@ export function OrderLineCard({ line, onMove }: OrderLineCardProps) {
 
     return (
         <section
-            aria-labelledby={`${uid}-title`}
+            aria-labelledby={lineHeadingId(line.id)}
             className="flex flex-col gap-4 rounded-xl border bg-card p-4 text-card-foreground"
         >
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <h3
-                    id={`${uid}-title`}
-                    className="text-base font-bold break-words"
+                    id={lineHeadingId(line.id)}
+                    tabIndex={-1}
+                    className="rounded-sm text-base font-bold break-words"
                 >
                     {product.deleted ? (
                         product.name

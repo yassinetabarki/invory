@@ -20,7 +20,7 @@ final readonly class OrderMessages
     public static function deleteRefusal(string $client, int $held): string
     {
         return trans_choice(
-            "{1} :client can't be deleted: :count unit is in cutting or ready to ship. Move them back to To start first."
+            "{1} :client can't be deleted: :count unit is in cutting or ready to ship. Move it back to To start first."
             ."|[2,*] :client can't be deleted: :count units are in cutting or ready to ship. Move them back to To start first.",
             $held,
             ['client' => $client],

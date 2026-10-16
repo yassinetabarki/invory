@@ -1,4 +1,4 @@
-import { act, render, screen, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import OrdersShow from '@/pages/orders/show';
@@ -134,6 +134,90 @@ describe('orders/show page', () => {
         expect(
             screen.queryByRole('heading', { name: 'Note' }),
         ).not.toBeInTheDocument();
+    });
+
+    describe('Focus after a move (S-49 AC-2)', () => {
+        const inCutting20: OrderLine = {
+            ...notStarted(70, jacket, 50),
+            to_start: 30,
+            in_cutting: 20,
+            started: 20,
+            status: 'in_progress',
+            status_label: 'In progress',
+        };
+
+        async function moveSuccessfully(afterMove: OrderLine) {
+            const user = userEvent.setup();
+            const order = { ...props.order, lines: [inCutting20] };
+            const { rerender } = render(<OrdersShow order={order} />);
+            const jackets = within(
+                screen.getByRole('region', {
+                    name: 'Denim Jacket · PRD-JKT-001 · 50 units',
+                }),
+            );
+
+            await user.click(
+                jackets.getByRole('button', { name: 'Mark ready' }),
+            );
+            await user.type(screen.getByLabelText('How many units?'), '20');
+            await user.click(
+                screen.getByRole('button', { name: 'Move units' }),
+            );
+
+            // The page reloads with the new counts, then the move reports success.
+            rerender(<OrdersShow order={{ ...order, lines: [afterMove] }} />);
+            act(() => {
+                const onSuccess = inertiaMock.submissions[0].options
+                    ?.onSuccess as () => void;
+
+                onSuccess();
+            });
+            await waitFor(() =>
+                expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
+            );
+
+            return jackets;
+        }
+
+        it('goes back to the button that opened the window while it can still be clicked', async () => {
+            await moveSuccessfully({
+                ...inCutting20,
+                in_cutting: 10,
+                ready_to_ship: 10,
+            });
+
+            await waitFor(
+                () =>
+                    expect(
+                        screen.getAllByRole('button', {
+                            name: 'Mark ready',
+                        })[0],
+                    ).toHaveFocus(),
+                { timeout: 500 },
+            );
+        });
+
+        it("goes to the line's heading when the button is now disabled", async () => {
+            await moveSuccessfully({
+                ...inCutting20,
+                in_cutting: 0,
+                ready_to_ship: 20,
+            });
+
+            expect(
+                screen.getAllByRole('button', { name: 'Mark ready' })[0],
+            ).toBeDisabled();
+            await waitFor(
+                () =>
+                    expect(
+                        screen.getByRole('heading', {
+                            level: 3,
+                            name: 'Denim Jacket · PRD-JKT-001 · 50 units',
+                        }),
+                    ).toHaveFocus(),
+                { timeout: 500 },
+            );
+        });
     });
     describe('Delete (AC-6)', () => {
         const refusal =

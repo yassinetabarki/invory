@@ -14,7 +14,7 @@ use Illuminate\Validation\Rule;
 
 /**
  * Query of `GET orders/{order}/lines/{line}/moves/preview` (S-53-c, S-53-d): the move window's materials table. Only Start cutting and
- * Move back to To start have one. The units the stage holds are not checked: the preview shows what N units would take, and the move checks the limit.
+ * Move back to To start have one. The units the stage holds are checked by CuttingPreview (without locks); the move checks them again under locks.
  */
 final class MovePreviewRequest extends FormRequest
 {

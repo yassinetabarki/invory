@@ -106,15 +106,17 @@ it('refuses to preview Start cutting on a deleted product, under units (AC-1)', 
         ->assertJsonValidationErrors(['units' => 'Denim Jacket was deleted, so it can\'t be cut.']);
 });
 
-it('refuses a move or a number of units the window can\'t ask for (AC-1)', function (array $query, string $field) {
+it('refuses a move or a number of units the window can\'t ask for (AC-1)', function (array $query, string $field, ?string $message = null) {
     $order = bookOrder();
 
-    previewMove($order, 0, $query)->assertUnprocessable()->assertJsonValidationErrors($field);
+    $response = previewMove($order, 0, $query)->assertUnprocessable();
+
+    $message === null ? $response->assertJsonValidationErrors($field) : $response->assertJsonValidationErrors([$field => $message]);
 })->with([
     'zero units' => [['move' => 'start_cutting', 'units' => 0], 'units'],
     'a decimal' => [['move' => 'start_cutting', 'units' => '2.5'], 'units'],
     'more than a line can hold' => [['move' => 'start_cutting', 'units' => 1000001], 'units'],
-    'no units' => [['move' => 'start_cutting', 'units' => ''], 'units'],
+    'no units' => [['move' => 'start_cutting', 'units' => ''], 'units', 'Enter a whole number of units, at least 1.'],
     'letters' => [['move' => 'start_cutting', 'units' => 'abc'], 'units'],
     'a move with no table' => [['move' => 'mark_ready', 'units' => 5], 'move'],
     'Move back to To start with zero units' => [['move' => 'back_to_start', 'units' => 0], 'units'],
@@ -122,6 +124,30 @@ it('refuses a move or a number of units the window can\'t ask for (AC-1)', funct
     'a move that doesn\'t exist' => [['move' => 'teleport', 'units' => 5], 'move'],
     'no move' => [['units' => 5], 'move'],
 ]);
+
+it('refuses more units than the stage holds now, under units, the deleted product first, and changes nothing (AC-4)', function (string $move, array $stages, bool $deleted, int $units, string $message) {
+    $order = bookOrderAtStages($stages);
+    $deleted && demoProduct('PRD-JKT-001')->delete();
+    $before = $deleted ? null : figuresOrdersLeaveAlone();
+
+    previewMove($order, 0, ['move' => $move, 'units' => $units])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['units' => $message])
+        ->assertJsonMissingPath('rows');
+
+    $deleted || expect(figuresOrdersLeaveAlone())->toBe($before);
+})->with([
+    'Start cutting 60 with 50 to start' => ['start_cutting', [[50, 0, 0, 0]], false, 60, 'You can move at most 50 units.'],
+    'Move back to To start 21 with 20 in cutting' => ['back_to_start', [[50, 20, 0, 0]], false, 21, 'You can move at most 20 units.'],
+    'Start cutting 2 with 1 to start' => ['start_cutting', [[50, 49, 0, 0]], false, 2, 'You can move at most 1 unit.'],
+    'a deleted product wins over the limit' => ['start_cutting', [[50, 0, 0, 0]], true, 60, 'Denim Jacket was deleted, so it can\'t be cut.'],
+]);
+
+it('previews exactly the units the stage holds (AC-4)', function () {
+    $order = bookOrderAtStages([[50, 0, 0, 0]]);
+
+    previewMove($order, 0, ['move' => 'start_cutting', 'units' => 50])->assertOk()->assertJsonPath('units', 50);
+});
 
 it('answers 404 for a line of another order', function () {
     $order = bookOrder();

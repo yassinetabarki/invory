@@ -345,7 +345,7 @@ export type Order = {
     status: OrderProgress;
     status_label: string;
     // Set while units are in cutting or ready to ship: "Boutique Lina can't be deleted: 30 units are in cutting or ready to
-    // ship. Move them back to To start first." (30 = in_cutting + ready_to_ship; "1 unit is" for one); null when it may be deleted
+    // ship. Move them back to To start first." (30 = in_cutting + ready_to_ship; for one: "1 unit is" and "Move it back"); null when it may be deleted
     delete_refusal: string | null;
 };
 

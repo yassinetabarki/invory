@@ -45,8 +45,8 @@ it('refuses to delete an order with units in cutting or ready to ship, from its 
 })->with([
     'from the order page, 30 units' => ['page', [[50, 20, 10, 0], [30, 0, 0, 0]], "Boutique Lina can't be deleted: 30 units are in cutting or ready to ship. Move them back to To start first."],
     'from the list, 30 units' => ['list', [[50, 20, 10, 0], [30, 0, 0, 0]], "Boutique Lina can't be deleted: 30 units are in cutting or ready to ship. Move them back to To start first."],
-    'from the order page, 1 unit' => ['page', [[50, 1, 0, 0], [30, 0, 0, 0]], "Boutique Lina can't be deleted: 1 unit is in cutting or ready to ship. Move them back to To start first."],
-    'from the list, 1 unit ready to ship' => ['list', [[50, 0, 0, 0], [30, 0, 1, 0]], "Boutique Lina can't be deleted: 1 unit is in cutting or ready to ship. Move them back to To start first."],
+    'from the order page, 1 unit' => ['page', [[50, 1, 0, 0], [30, 0, 0, 0]], "Boutique Lina can't be deleted: 1 unit is in cutting or ready to ship. Move it back to To start first."],
+    'from the list, 1 unit ready to ship' => ['list', [[50, 0, 0, 0], [30, 0, 1, 0]], "Boutique Lina can't be deleted: 1 unit is in cutting or ready to ship. Move it back to To start first."],
 ]);
 
 it('deletes an order whose units are only to start or shipped, as before (AC-6)', function (array $stages) {

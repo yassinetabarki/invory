@@ -42,6 +42,11 @@ export const MOVES: Record<OrderLineMove, { from: OrderStage; title: string }> =
         back_to_ready: { from: 'shipped', title: 'Move back to Ready to ship' },
     };
 
+/** Id of a line block's heading: where focus lands when the button that opened the window is no longer usable. */
+export function lineHeadingId(lineId: number): string {
+    return `order-line-${lineId}-title`;
+}
+
 /** The move being made: the line is read from the order, so its counts follow every reload. */
 export type MoveTarget = { lineId: number; move: OrderLineMove };
 
@@ -78,6 +83,13 @@ function MoveUnitsForm({ order, line, move, onClose }: MoveUnitsFormProps) {
     });
     // The server's word on the number typed (preview) or on the move itself (refusal): the same place.
     const error = preview.status === 'invalid' ? preview.message : refusal;
+    // A refused cut repeats the table's short-stock sentence: show it once, in the table,
+    // and let the field point at it (aria-invalid, aria-describedby).
+    const shortMessageId = `${uid}-short`;
+    const refusedAsShown =
+        preview.status === 'ready' &&
+        preview.preview.short_message !== null &&
+        preview.preview.short_message === refusal;
     // The count saved now: it follows the page's reload after a refused move.
     const held = line[MOVES[move].from];
 
@@ -114,11 +126,21 @@ function MoveUnitsForm({ order, line, move, onClose }: MoveUnitsFormProps) {
                 id={`${uid}-units`}
                 label="How many units?"
                 hint={`Up to ${formatUnits(held, locale)}.`}
-                error={error}
+                error={refusedAsShown ? undefined : error}
             >
                 {(control) => (
                     <Input
                         {...control}
+                        aria-invalid={
+                            refusedAsShown ? true : control['aria-invalid']
+                        }
+                        aria-describedby={
+                            refusedAsShown
+                                ? [control['aria-describedby'], shortMessageId]
+                                      .filter(Boolean)
+                                      .join(' ')
+                                : control['aria-describedby']
+                        }
                         ref={inputRef}
                         type="text"
                         inputMode="numeric"
@@ -137,6 +159,7 @@ function MoveUnitsForm({ order, line, move, onClose }: MoveUnitsFormProps) {
                     <MaterialsMoveTable
                         state={preview}
                         productName={line.product.name}
+                        shortMessageId={shortMessageId}
                     />
                 </div>
             )}
@@ -173,6 +196,14 @@ export function MoveUnitsDialog({
     const line = target
         ? order.lines.find((candidate) => candidate.id === target.lineId)
         : undefined;
+    // The line the window was last open for: the window has no target any more once it closes.
+    const lastLineId = useRef<number | null>(null);
+
+    useEffect(() => {
+        if (target) {
+            lastLineId.current = target.lineId;
+        }
+    }, [target]);
 
     return (
         <Dialog
@@ -186,9 +217,27 @@ export function MoveUnitsDialog({
             <DialogContent
                 aria-describedby={undefined}
                 onCloseAutoFocus={(event) => {
-                    if (returnFocusTo?.current) {
+                    const opener = returnFocusTo?.current;
+
+                    // Back to the button that opened the window; when a move emptied its stage (or the
+                    // product went away) the button is disabled, so focus goes to the line's heading.
+                    if (opener?.isConnected && !opener.matches(':disabled')) {
                         event.preventDefault();
-                        returnFocusTo.current.focus();
+                        opener.focus();
+
+                        return;
+                    }
+
+                    const heading =
+                        lastLineId.current === null
+                            ? null
+                            : document.getElementById(
+                                  lineHeadingId(lastLineId.current),
+                              );
+
+                    if (heading) {
+                        event.preventDefault();
+                        heading.focus();
                     }
                 }}
             >

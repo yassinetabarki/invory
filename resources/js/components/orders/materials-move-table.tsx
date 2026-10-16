@@ -68,9 +68,17 @@ function AfterCell({ row }: { row: MaterialMoveRow }) {
     return <Quantity value={row.after} unit={unit} />;
 }
 
-type MaterialsTableProps = { preview: MovePreview; productName: string };
+type MaterialsTableProps = {
+    preview: MovePreview;
+    productName: string;
+    shortMessageId?: string;
+};
 
-function MaterialsTable({ preview, productName }: MaterialsTableProps) {
+function MaterialsTable({
+    preview,
+    productName,
+    shortMessageId,
+}: MaterialsTableProps) {
     const headingId = useId();
     const { locale } = useAppSettings();
     const copy = COPY[preview.move];
@@ -145,7 +153,10 @@ function MaterialsTable({ preview, productName }: MaterialsTableProps) {
                 </p>
             )}
             {preview.short_message && (
-                <p className="text-sm font-medium text-destructive-foreground">
+                <p
+                    id={shortMessageId}
+                    className="text-sm font-medium text-destructive-foreground"
+                >
                     {preview.short_message}
                 </p>
             )}
@@ -156,6 +167,8 @@ function MaterialsTable({ preview, productName }: MaterialsTableProps) {
 type MaterialsMoveTableProps = {
     state: PreviewState;
     productName: string;
+    /** Id for the short-stock sentence, so the field can be described by it. */
+    shortMessageId?: string;
 };
 
 /**
@@ -167,6 +180,7 @@ type MaterialsMoveTableProps = {
 export function MaterialsMoveTable({
     state,
     productName,
+    shortMessageId,
 }: MaterialsMoveTableProps) {
     switch (state.status) {
         case 'loading':
@@ -197,6 +211,7 @@ export function MaterialsMoveTable({
                 <MaterialsTable
                     preview={state.preview}
                     productName={productName}
+                    shortMessageId={shortMessageId}
                 />
             );
         default:

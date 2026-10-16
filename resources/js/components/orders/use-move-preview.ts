@@ -16,7 +16,7 @@ export function hasPreview(move: OrderLineMove): move is PreviewMove {
 
 /** What the window knows about the materials of the move for the number typed now. */
 export type PreviewState =
-    | { status: 'idle' } // no table for this move, or no number typed yet
+    | { status: 'idle' } // no table for this move, or nothing typed in the field yet
     | { status: 'loading' } // the number is waiting out the debounce, or its request is in flight
     | { status: 'failed'; retry: () => void } // network, server error or an invalid reply
     | { status: 'invalid'; message: string } // the server refused the number (422)
@@ -56,7 +56,10 @@ function isMovePreview(data: unknown): data is MovePreview {
  *
  * It stays `loading` until the answer for the number typed now is in, so the
  * window never shows (or lets someone confirm) a table of another number.
- * Moves without a table, and an empty field, are `idle` and ask nothing.
+ * Moves without a table, and a field nobody has typed in yet, are `idle` and
+ * ask nothing. Once a number has been typed, emptying the field is asked like
+ * any other value, so the server's own words ("Enter a whole number of units,
+ * at least 1.") come back as `invalid`.
  */
 export function useMovePreview({
     order,
@@ -67,11 +70,18 @@ export function useMovePreview({
     const { get, cancel } = useHttp<Record<string, never>, MovePreview>();
     const typed = units.trim();
     const term = useDebouncedValue(typed, PREVIEW_DEBOUNCE_MS);
+    // Once something has been typed, the field counts as touched: emptying it is then a value to ask about (422).
+    const [touched, setTouched] = useState(false);
     const [attempt, setAttempt] = useState(0);
     const [settled, setSettled] = useState<Settled | null>(null);
 
+    if (typed !== '' && !touched) {
+        setTouched(true);
+    }
+
+    // The empty value is asked once it is the number typed (not while a number waits out the debounce).
     const url =
-        hasPreview(move) && term !== ''
+        hasPreview(move) && (term !== '' || (touched && typed === ''))
             ? previewRoute.url(
                   { order, line },
                   { query: { move, units: term } },
@@ -127,7 +137,8 @@ export function useMovePreview({
         };
     }, [get, cancel, url, key]);
 
-    if (!hasPreview(move) || typed === '') {
+    // Before the first keystroke nothing is asked; after it, an empty field is asked like any number.
+    if (!hasPreview(move) || (typed === '' && !touched)) {
         return { status: 'idle' };
     }
 

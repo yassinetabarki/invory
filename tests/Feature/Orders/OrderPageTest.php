@@ -92,6 +92,6 @@ it('carries the refusal to delete while units are in cutting or ready to ship, a
         ->and(pageProp(actingAs($this->user)->get(route('orders.index')), 'orders.data.0.delete_refusal'))->toBe($refusal);
 })->with([
     '20 in cutting and 10 ready to ship, in two lines' => [[[50, 20, 0, 0], [30, 0, 10, 5]], 'Boutique Lina can\'t be deleted: 30 units are in cutting or ready to ship. Move them back to To start first.'],
-    'one unit in cutting' => [[[50, 1, 0, 0], [30, 0, 0, 0]], 'Boutique Lina can\'t be deleted: 1 unit is in cutting or ready to ship. Move them back to To start first.'],
+    'one unit in cutting' => [[[50, 1, 0, 0], [30, 0, 0, 0]], 'Boutique Lina can\'t be deleted: 1 unit is in cutting or ready to ship. Move it back to To start first.'],
     'only shipped units' => [[[50, 0, 0, 50], [30, 0, 0, 12]], null],
 ]);

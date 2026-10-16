@@ -36,7 +36,8 @@ final readonly class CuttingPreview
      *
      * @return array{move: OrderLineMove, units: int, plan: CutPlan, materials: array<int, Material>, short_message: string|null}
      *
-     * @throws ValidationException under `units` when the product was deleted (a deleted product can't start cutting)
+     * @throws ValidationException under `units` when the product was deleted (a deleted product can't start cutting), checked first like the
+     *                             move does, or when the line has fewer units to start (read without locks; the move re-checks under them)
      */
     public function forStartCutting(OrderLine $line, int $units): array
     {
@@ -45,6 +46,8 @@ final readonly class CuttingPreview
         if ($product->trashed()) {
             throw ValidationException::withMessages(['units' => OrderMessages::productDeleted($product->name)]);
         }
+
+        $this->assertHolds($line->to_start, $units);
 
         ['plan' => $plan, 'materials' => $materials] = $this->plan($product, $units);
 
@@ -62,12 +65,24 @@ final readonly class CuttingPreview
      * first, on the stock saved now. A deleted product's line previews like any other.
      *
      * @return array{move: OrderLineMove, units: int, plan: ReturnPlan, materials: array<int, Material>, short_message: null}
+     *
+     * @throws ValidationException under `units` when the line has fewer units in cutting (read without locks; the move re-checks under them)
      */
     public function forBackToStart(OrderLine $line, int $units): array
     {
+        $this->assertHolds($line->in_cutting, $units);
+
         ['plan' => $plan, 'materials' => $materials] = $this->returnPlan($line, $units);
 
         return ['move' => OrderLineMove::BackToStart, 'units' => $units, 'plan' => $plan, 'materials' => $materials, 'short_message' => null];
+    }
+
+    /** Refuses more units than the from-stage holds now, with the message the move itself gives. */
+    private function assertHolds(int $held, int $units): void
+    {
+        if ($units > $held) {
+            throw ValidationException::withMessages(['units' => OrderMessages::moveLimit($held)]);
+        }
     }
 
     /**

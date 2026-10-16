@@ -270,10 +270,10 @@ describe('<MoveUnitsDialog> materials table (S-53)', () => {
         vi.useRealTimers();
     });
 
-    function setup(move: MoveTarget['move']) {
+    function setup(move: MoveTarget['move'], shown: Order = order) {
         render(
             <MoveUnitsDialog
-                order={order}
+                order={shown}
                 target={{ lineId: 70, move }}
                 onClose={vi.fn()}
             />,
@@ -432,7 +432,7 @@ describe('<MoveUnitsDialog> materials table (S-53)', () => {
         await answer(0, cutting20Short);
 
         expect(screen.getByText('Short by 60 pc')).toBeInTheDocument();
-        expect(screen.getByText(shortMessage)).toBeInTheDocument();
+        expect(screen.getAllByText(shortMessage)).toHaveLength(1);
         expect(moveUnits()).toBeEnabled();
 
         fireEvent.click(moveUnits());
@@ -442,12 +442,110 @@ describe('<MoveUnitsDialog> materials table (S-53)', () => {
             data: { move: 'start_cutting', units: '20' },
         });
 
-        // The server refuses and the page reloads with its message.
+        // The server refuses and the page reloads with its message: still one sentence on screen,
+        // and the field is invalid and described by it.
         setFormState({ errors: { units: shortMessage } });
 
+        expect(screen.getAllByText(shortMessage)).toHaveLength(1);
+        expect(field()).toBeInvalid();
         expect(field()).toHaveAccessibleDescription(
             `Up to 20 units. ${shortMessage}`,
         );
+    });
+
+    it('still shows any other refusal under the field (AC-4)', async () => {
+        const { field } = setup('start_cutting');
+
+        type(field(), '20');
+        await rest();
+        await answer(0, cutting20Short);
+        fireEvent.click(screen.getByRole('button', { name: 'Move units' }));
+        setFormState({ errors: { units: 'You can move at most 5 units.' } });
+
+        expect(
+            screen.getByText('You can move at most 5 units.'),
+        ).toBeInTheDocument();
+        expect(field()).toBeInvalid();
+        expect(field()).toHaveAccessibleDescription(
+            'Up to 20 units. You can move at most 5 units.',
+        );
+    });
+
+    it.each(['start_cutting', 'back_to_start'] as const)(
+        'asks nothing and shows no error when the %s window opens (S-49 AC-4)',
+        async (move) => {
+            const { field, moveUnits } = setup(move);
+
+            await rest();
+
+            expect(inertiaMock.http.requests).toHaveLength(0);
+            expect(field()).not.toBeInvalid();
+            expect(field()).toHaveAccessibleDescription('Up to 20 units.');
+            expect(moveUnits()).toBeDisabled();
+        },
+    );
+
+    it('asks the server about the field once it is emptied, and shows its message under the field (S-49 AC-4)', async () => {
+        const { field, moveUnits } = setup('start_cutting');
+
+        type(field(), '30');
+        await rest();
+        await answer(0, cutting30);
+        expect(screen.getByRole('table')).toBeInTheDocument();
+
+        type(field(), '');
+
+        // Nothing stale while the empty value waits to be asked.
+        expect(screen.queryByRole('table')).not.toBeInTheDocument();
+        expect(moveUnits()).toBeDisabled();
+
+        await rest();
+
+        expect(inertiaMock.http.requests).toHaveLength(2);
+        expect(inertiaMock.http.requests[1].params.units).toBe('');
+
+        await answer(1, {
+            errors: { units: 'Enter a whole number of units, at least 1.' },
+        });
+
+        expect(field()).toBeInvalid();
+        expect(field()).toHaveAccessibleDescription(
+            'Up to 20 units. Enter a whole number of units, at least 1.',
+        );
+        expect(screen.queryByRole('table')).not.toBeInTheDocument();
+        expect(moveUnits()).toBeDisabled();
+    });
+
+    it('shows the server\'s "at most" message as you type more than the stage holds, never a table (S-49 AC-4, S-53 AC-1)', async () => {
+        const fifty: Order = {
+            ...order,
+            lines: [{ ...jacketLine, to_start: 50, in_cutting: 0 }],
+        };
+        const { field, moveUnits } = setup('start_cutting', fifty);
+
+        type(field(), '30');
+        await rest();
+        await answer(0, cutting30);
+        expect(screen.getByRole('table')).toBeInTheDocument();
+
+        type(field(), '60');
+
+        expect(screen.queryByRole('table')).not.toBeInTheDocument();
+
+        await rest();
+        await answer(1, {
+            errors: { units: 'You can move at most 50 units.' },
+        });
+
+        expect(
+            screen.getByText('You can move at most 50 units.'),
+        ).toBeVisible();
+        expect(field()).toBeInvalid();
+        expect(field()).toHaveAccessibleDescription(
+            'Up to 50 units. You can move at most 50 units.',
+        );
+        expect(screen.queryByRole('table')).not.toBeInTheDocument();
+        expect(moveUnits()).toBeDisabled();
     });
 
     it('shows what Move back to To start returns (AC-5)', async () => {
