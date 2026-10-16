@@ -36,7 +36,7 @@ final class CostingCalculator
         // Pass 1: exact figures per line, and the exact requirement per material.
         $exactMaterialCost = BigDecimal::zero();
         $exactLines = [];
-        /** @var array<int, array{name: string, stock: BigDecimal, required: BigDecimal}> $materials */
+        /** @var array<int, array{name: string, unit: string, stock: BigDecimal, required: BigDecimal}> $materials */
         $materials = [];
 
         foreach ($lines as $line) {
@@ -49,9 +49,10 @@ final class CostingCalculator
             $exactMaterialCost = $exactMaterialCost->plus($cost);
             $exactLines[] = ['line' => $line, 'effective' => $effective, 'cost' => $cost];
 
-            // The material's name and stock come from its first line.
+            // The material's name, unit and stock come from its first line.
             $materials[$line->materialId] ??= [
                 'name' => $line->materialName,
+                'unit' => $line->unit,
                 'stock' => BigDecimal::of($line->stockOnHand),
                 'required' => BigDecimal::zero(),
             ];
@@ -92,6 +93,22 @@ final class CostingCalculator
             );
         }
 
+        // One requirement per material, in the order each first appears in the BOM.
+        $requirements = [];
+
+        foreach ($materials as $materialId => $material) {
+            $requirements[] = new MaterialRequirement(
+                materialId: $materialId,
+                materialName: $material['name'],
+                unit: $material['unit'],
+                perUnit: self::money($material['required']),
+                perUnitExact: $material['required']->toString(),
+                stockOnHand: self::money($material['stock']),
+                unitsPossible: $unitsPossible[$materialId],
+                isBottleneck: $materialId === $bottleneckId,
+            );
+        }
+
         return new CostingResult(
             cost: new CostBreakdown(
                 lines: $lineCosts,
@@ -105,6 +122,7 @@ final class CostingCalculator
                 bottleneckMaterialId: $bottleneckId,
                 bottleneckMaterialName: $bottleneckId === null ? null : $materials[$bottleneckId]['name'],
             ),
+            requirements: $requirements,
         );
     }
 

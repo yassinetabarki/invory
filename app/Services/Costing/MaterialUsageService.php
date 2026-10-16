@@ -50,17 +50,17 @@ final readonly class MaterialUsageService
             $materials = $product->components->mapWithKeys(static fn ($component): array => [$component->material_id => $component->material]);
             $bottleneck = $capacity->bottleneckMaterialId === null ? null : $materials->get($capacity->bottleneckMaterialId);
 
-            // A material is on one line per product (database-unique), and the domain already floored `unitsPossible` over it.
-            $line = null;
+            // The domain sums every line of the material (F-41); read its total instead of picking a line.
+            $requirement = null;
 
-            foreach ($costing->result->cost->lines as $candidate) {
+            foreach ($costing->result->requirements as $candidate) {
                 if ($candidate->materialId === $material->id) {
-                    $line = $candidate;
+                    $requirement = $candidate;
                     break;
                 }
             }
 
-            if ($line === null || $capacity->maxProducible === null || $bottleneck === null) {
+            if ($requirement === null || $capacity->maxProducible === null || $bottleneck === null) {
                 continue;
             }
 
@@ -70,11 +70,11 @@ final readonly class MaterialUsageService
 
             $usages[] = new MaterialUsage(
                 product: $product,
-                effectiveQuantity: $line->effectiveQuantity,
-                unitsCovered: $line->unitsPossible,
+                effectiveQuantity: $requirement->perUnit,
+                unitsCovered: $requirement->unitsPossible,
                 maxProducible: $capacity->maxProducible,
                 bottleneck: $bottleneck,
-                isBottleneck: $bottleneck->id === $material->id,
+                isBottleneck: $requirement->isBottleneck,
                 nextLimit: $next?->maxProducible === null || $limiting === null ? null : ['material' => $limiting, 'max_producible' => $next->maxProducible],
             );
         }
