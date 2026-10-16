@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Services\Orders;
 
+use App\Domain\Stock\CutPlan;
 use App\Enums\OrderLineMove;
+use LogicException;
 
 /**
  * The sentences of the order pages (S-49), built in one place so the order's `delete_refusal` and the refusal of the delete itself
@@ -43,6 +45,35 @@ final readonly class OrderMessages
             );
     }
 
+    /** What Start cutting adds to the toast, only when at least one material's stock changed (S-53). */
+    public static function materialsTaken(): string
+    {
+        return __('Materials taken out of stock.');
+    }
+
+    /**
+     * Why a cut of `$plan->units` is refused, and the same text the preview shows (S-53, ADR-0014): the plan's maximum and its
+     * bottleneck, which is named also when several materials are short.
+     *
+     * @throws LogicException If the plan is allowed (there is nothing to refuse).
+     */
+    public static function notEnoughStock(CutPlan $plan): string
+    {
+        if ($plan->allowed || $plan->maxCuttable === null || $plan->bottleneckMaterialName === null) {
+            throw new LogicException('A cut that is allowed has no short-stock message.');
+        }
+
+        $replace = ['material' => $plan->bottleneckMaterialName, 'max' => $plan->maxCuttable];
+
+        return $plan->maxCuttable >= 1
+            ? __('Not enough stock to cut :units units. You can cut at most :max now: :material runs short. Restock it first, or cut :max or fewer.', [...$replace, 'units' => $plan->units])
+            : trans_choice(
+                '{1} Not enough stock to cut :count unit. You can\'t cut any now: restock :material first.|[2,*] Not enough stock to cut :count units. You can\'t cut any now: restock :material first.',
+                $plan->units,
+                $replace,
+            );
+    }
+
     /** Why a move is refused: the stage holds `$held` units now (the saved count, which may differ from the screen's). */
     public static function moveLimit(int $held): string
     {
@@ -53,5 +84,25 @@ final readonly class OrderMessages
     public static function productDeleted(string $product): string
     {
         return __(':product was deleted, so it can\'t be cut.', ['product' => $product]);
+    }
+
+    /** Why a started line's quantity can't go lower: `$started` units are in cutting, ready to ship or shipped. */
+    public static function quantityBelowStarted(int $started): string
+    {
+        return trans_choice(
+            "{1} The quantity can't be less than the :count unit already in cutting, ready to ship or shipped."
+            ."|[2,*] The quantity can't be less than the :count units already in cutting, ready to ship or shipped.",
+            $started,
+        );
+    }
+
+    /** Why a started line can't leave the order (also when its product is swapped, since lines are matched by product). */
+    public static function startedLineRemoved(string $product, int $started): string
+    {
+        return trans_choice(
+            "{1} :product can't be removed: :count unit has started.|[2,*] :product can't be removed: :count units have started.",
+            $started,
+            ['product' => $product],
+        );
     }
 }

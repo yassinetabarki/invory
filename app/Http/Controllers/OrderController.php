@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Actions\Orders\DeleteOrder;
 use App\Actions\Orders\RecordOrder;
 use App\Actions\Orders\UpdateOrder;
+use App\Exceptions\OrderDeleteRefusedException;
 use App\Http\Requests\Orders\IndexOrderRequest;
 use App\Http\Requests\Orders\StoreOrderRequest;
 use App\Http\Requests\Orders\UpdateOrderRequest;
@@ -93,7 +94,13 @@ final class OrderController extends Controller
     {
         Gate::authorize('delete', $order);
 
-        $deleteOrder->handle($order);
+        try {
+            $deleteOrder->handle($order);
+        } catch (OrderDeleteRefusedException $e) {
+            Inertia::flash('toast', ['type' => 'error', 'message' => $e->getMessage()]);
+
+            return back();
+        }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Order deleted.')]);
 

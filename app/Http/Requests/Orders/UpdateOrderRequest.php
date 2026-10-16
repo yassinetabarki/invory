@@ -4,19 +4,22 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Orders;
 
+use App\Actions\Orders\SyncOrderLines;
 use App\Models\Order;
 use App\Models\OrderLine;
 use Illuminate\Auth\Access\Response;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\Validator;
 
 /**
  * Edit an order (S-48-c): the rules of {@see StoreOrderRequest}, and a product already on the order stays valid even once it is no
- * longer active or was deleted.
+ * longer active or was deleted. A line that has started (S-49) keeps its product and a quantity of at least its started units.
  */
 class UpdateOrderRequest extends StoreOrderRequest
 {
-    /** @var array<int, int>|null */
-    private ?array $currentProducts = null;
+    /** @var Collection<int, OrderLine>|null The order's saved lines by product id, read once per request. */
+    private ?Collection $currentLines = null;
 
     /**
      * `{order}` is route-model bound (an unknown or other workshop's order is a 404 before anything is validated), then the policy decides.
@@ -29,17 +32,42 @@ class UpdateOrderRequest extends StoreOrderRequest
         return $order instanceof Order ? Gate::inspect('update', $order) : Response::denyAsNotFound();
     }
 
+    /**
+     * The started-line rules, once the lines themselves are valid. This runs on unlocked data, to answer early; `UpdateOrder` repeats
+     * it on the counts read under the order lock, which is the check that counts.
+     *
+     * @return list<callable(Validator): void>
+     */
+    public function after(): array
+    {
+        return [function (Validator $validator): void {
+            $lines = $this->input('lines');
+
+            if ($validator->errors()->isNotEmpty() || ! is_array($lines)) {
+                return;
+            }
+
+            foreach (app(SyncOrderLines::class)->refusals($this->currentLines(), $lines) as $key => $messages) {
+                foreach ($messages as $message) {
+                    $validator->errors()->add($key, $message);
+                }
+            }
+        }];
+    }
+
     /** @return array<int, int> */
     protected function currentProductIds(): array
     {
+        return $this->currentLines()->keys()->map(intval(...))->all();
+    }
+
+    /** @return Collection<int, OrderLine> */
+    private function currentLines(): Collection
+    {
         $order = $this->route('order');
 
-        if ($this->currentProducts === null) {
-            $this->currentProducts = $order instanceof Order
-                ? OrderLine::query()->where('order_id', $order->id)->pluck('product_id')->map(intval(...))->all()
-                : [];
-        }
-
-        return $this->currentProducts;
+        return $this->currentLines ??= $order instanceof Order
+            ? OrderLine::query()->where('order_id', $order->id)->get()->keyBy('product_id')
+            : new Collection;
     }
 }
