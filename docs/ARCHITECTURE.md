@@ -87,13 +87,21 @@ code testable and ready to scale.
         ├─────────────────────────────┐
         │ *                           │ *
  ┌──────────────┐          ┌────────────────────┐ *      1 ┌──────────────┐
- │     Sale     │          │     OrderLine      │──────────│    Order     │  (orders change no stock, sale or figure)
- └──────────────┘          │ (product + units)  │          │   (client)   │
-  (does not change         └────────────────────┘          └──────────────┘
-   material stock)
+ │     Sale     │          │     OrderLine      │──────────│    Order     │
+ └──────────────┘          │ (product + units,  │          │   (client)   │
+  (does not change         │  stage counts)     │          └──────────────┘
+   material stock)         └────────────────────┘
+                                    │ 1
+                                    │ *
+                           ┌────────────────────┐ 1      * ┌──────────────────────┐ *      1  Material
+                           │    OrderLineCut    │──────────│ OrderLineCutMaterial │──────────
+                           │ (one Start cutting)│          │ (per unit + taken)   │
+                           └────────────────────┘          └──────────────────────┘
 ```
-Status (2026-10-15): `orders` and `order_lines` (S-48) hold a client's orders; S-49 adds stage counts to `order_lines`, S-53 the materials
-taken per line.
+Status (2026-10-16): S-49 adds stage counts to `order_lines` (To start is derived); S-53 makes "Start cutting" take materials out of stock
+and "Move back to To start" return them, remembering each cut in `order_line_cuts` / `order_line_cut_materials` (ADR-0014). Nothing else
+an order does touches stock, sales or any figure.
+Status (2026-10-15): `orders` and `order_lines` (S-48) hold a client's orders.
 Status (2026-10-13): every table above is real: `sales` (S-14-BE), `stock_movements` (S-16-BE), `photo_path` on materials and products
 (S-15-BE). The preview layer is gone (S-17). Demo data: `DemoCatalogSeeder` (materials) → `DemoProductsSeeder`, then `DemoSalesSeeder`.
 Status (2026-10-09): `materials`, `products` and `product_components` are real (S-04; demo products from `DemoProductsSeeder`).
@@ -208,19 +216,41 @@ Index: `index(workshop_id, ordered_on, id)` (the list: newest order date first, 
 
 ### `order_lines` (S-48)
 
-| Column      | Type                 | Rules                                                                     |
-| ----------- | -------------------- | ------------------------------------------------------------------------- |
-| id          | bigint PK            |                                                                           |
-| workshop_id | FK → workshops       | the order's workshop (composite FK to orders and products on PostgreSQL)  |
-| order_id    | FK → orders          | `cascadeOnDelete`                                                         |
-| product_id  | FK → products        | `restrictOnDelete`; new lines take only `active` products of the workshop |
-| quantity    | unsigned integer     | whole units, 1 … 1 000 000 (CHECK on PostgreSQL)                          |
-| position    | unsignedSmallInteger | the order entered                                                         |
-| timestamps  |                      |                                                                           |
+| Column                             | Type                        | Rules                                                                     |
+| ---------------------------------- | --------------------------- | ------------------------------------------------------------------------- |
+| id                                 | bigint PK                   |                                                                           |
+| workshop_id                        | FK → workshops              | the order's workshop (composite FK to orders and products on PostgreSQL)  |
+| order_id                           | FK → orders                 | `cascadeOnDelete`                                                         |
+| product_id                         | FK → products               | `restrictOnDelete`; new lines take only `active` products of the workshop |
+| quantity                           | unsigned integer            | whole units, 1 … 1 000 000 (CHECK on PostgreSQL)                          |
+| position                           | unsignedSmallInteger        | the order entered                                                         |
+| in_cutting, ready_to_ship, shipped | unsigned integer, default 0 | stage counts (S-49); To start = quantity − the three, never stored        |
+| timestamps                         |                             |                                                                           |
 
-Constraints: `unique(order_id, product_id)` (one line per product per order, at most 50 lines), `index(product_id)`. Saving an order again
-matches lines **by product** (`SyncOrderLines`). A line keeps its product when that product is later archived, set back to draft or deleted.
-Orders never read or write `materials`, `stock_movements` or `sales`; totals that count open orders go through `Order` (its soft-delete scope).
+Constraints: `unique(order_id, product_id)` (one line per product per order, at most 50 lines), `index(product_id)`. PostgreSQL only:
+CHECKs that the three counts are ≥ 0 and add up to at most `quantity`, and `unique(workshop_id, id)` (the cut tables' composite keys).
+Saving an order again matches lines **by product** (`SyncOrderLines`); a line that has started keeps its product and at least its started
+units (re-checked under the order row lock). A line keeps its product when that product is later archived, set back to draft or deleted.
+Only `MoveOrderLineUnits` changes the counts; only its `start_cutting` and `back_to_start` touch `materials` and `stock_movements`
+(ADR-0014). Orders never touch `sales`.
+
+### `order_line_cuts` and `order_line_cut_materials` (S-53, [ADR-0014](adr/0014-cutting-takes-materials-out-of-stock.md))
+
+| Table · column                               | Type                 | Rules                                                                                                    |
+| -------------------------------------------- | -------------------- | -------------------------------------------------------------------------------------------------------- |
+| `order_line_cuts`.workshop_id                | FK → workshops       | from the line; composite FK to the line on PostgreSQL                                                    |
+| `order_line_cuts`.order_line_id              | FK → order_lines     | `cascadeOnDelete` (only a line with nothing started can be removed)                                      |
+| `order_line_cuts`.units, units_returned      | unsigned integer     | one "Start cutting"; units moved back so far (CHECK `units ≥ 1`, `units_returned ≤ units` on PostgreSQL) |
+| `order_line_cuts`.user_id                    | FK → users nullable  | `nullOnDelete`                                                                                           |
+| `order_line_cut_materials`.order_line_cut_id | FK → order_line_cuts | `cascadeOnDelete`; `unique(order_line_cut_id, material_id)`                                              |
+| `order_line_cut_materials`.material_id       | FK → materials       | `restrictOnDelete` (materials are only soft-deleted)                                                     |
+| `order_line_cut_materials`.unit_id           | FK → units nullable  | the material's unit at the cut (`nullOnDelete`); a changed unit returns nothing                          |
+| `order_line_cut_materials`.quantity_per_unit | decimal(20,8)        | the exact need per unit, waste included (F-41 `perUnitExact`)                                            |
+| `order_line_cut_materials`.quantity_taken    | decimal(14,4)        | `round4(per unit × units)`, HalfUp                                                                       |
+
+Index `(order_line_id, id)`. A return walks the line's open cuts newest first and gives back `round4(per unit × r) − round4(per unit ×
+(r − k))` per material, so a cut returned in pieces gives back exactly what it took. Lock order for every writer: order row → line →
+cuts → materials in ascending id.
 
 ### `stock_movements` (S-16-BE, material history)
 | Column | Type | Rules |
@@ -228,7 +258,7 @@ Orders never read or write `materials`, `stock_movements` or `sales`; totals tha
 | id | bigint PK | |
 | workshop_id | FK → workshops | the material's workshop |
 | material_id | FK → materials | `cascadeOnDelete` |
-| type | string(16) | `StockMovementType`: created, restock, correction, price_change |
+| type | string(16) | `StockMovementType`: created, restock, correction, price_change, cutting, cutting_return ("Back from cutting") |
 | occurred_on | date | receipt / count date |
 | quantity | decimal(14,4) nullable | created: opening stock · restock: quantity received |
 | quantity_before, quantity_after | decimal(14,4) nullable | correction: before / after · others: after |
@@ -237,9 +267,11 @@ Orders never read or write `materials`, `stock_movements` or `sales`; totals tha
 | reference | string(64) nullable | PO or delivery note |
 | note | string(255) nullable | correction reason |
 | user_id | FK → users nullable | who did it |
+| order_id, product_id | FK nullable, `restrictOnDelete` | cutting / cutting_return: the order and product (both only soft-deleted) |
+| units | unsigned integer nullable | cutting / cutting_return: the units of the order line |
 | timestamps | | |
 
-Index: `index(material_id, occurred_on, id)`. A restock updates `materials.quantity_on_hand` and (by default) `materials.unit_cost` = latest price
+Index: `index(material_id, occurred_on, id)`. `cutting` counts as −quantity and `cutting_return` as +quantity in `invory:stock:verify`. A restock updates `materials.quantity_on_hand` and (by default) `materials.unit_cost` = latest price
 paid inside one transaction, and writes a `restock` + (if the cost changed) a `price_change` row. The ledger is append-only.
 
 ### Business rules (the costing engine)
@@ -260,7 +292,8 @@ All formulas, rounding rules, edge cases and a worked example live in the skill
 - A **material used in any non-deleted product's BOM cannot be deleted**: `DeleteMaterial` throws
   `MaterialInUseException`, and the controller turns it into a flash error listing the products.
 - Deleting a product soft-deletes it. Its BOM lines stay, for history and restore. Its order lines stay too and show its name without a link.
-- Deleting an order soft-deletes it (`DeleteOrder`); its lines stay with it. Nothing else changes.
+- Deleting an order soft-deletes it (`DeleteOrder`); its lines and cuts stay with it. It is **refused** while any unit is in cutting or
+  ready to ship (checked under the order row lock), so no material taken out of stock is lost by deleting (S-49, ADR-0014).
 
 ## 5. Backend structure
 
@@ -269,13 +302,15 @@ app/
 ├── Actions/
 │   ├── Fortify/                         # starter kit
 │   ├── Materials/  CreateMaterial · UpdateMaterial · DeleteMaterial
-│   ├── Orders/     RecordOrder · UpdateOrder · SyncOrderLines · DeleteOrder   (S-48)
+│   ├── Orders/     RecordOrder · UpdateOrder · SyncOrderLines · DeleteOrder   (S-48, S-49)
+│   │               MoveOrderLineUnits · TakeMaterialsForCut · ReturnMaterialsFromCuts   (S-49, S-53)
 │   ├── Products/   CreateProduct · UpdateProduct · DeleteProduct · SyncProductComponents
 │   └── Workshops/  CreateWorkshop   (registration; S-45 adds the standard units and categories)
 ├── Domain/
-│   └── Costing/    BomLine · LineCost · CostBreakdown · ProductionCapacity · CostingCalculator
-├── Enums/          ProductStatus · StockStatus · StockMovementType · SalesPeriod · UnitDimension   (each has label() + options())
-├── Exceptions/     MaterialInUseException
+│   ├── Costing/    BomLine · LineCost · CostBreakdown · ProductionCapacity · MaterialRequirement (F-41) · CostingCalculator
+│   └── Stock/      CuttingCalculator (take, giveBack) · CutPlan · MaterialTake · CutBatch · CutBatchMaterial · ReturnPlan · MaterialReturn · BatchReturn   (S-53)
+├── Enums/          ProductStatus · StockStatus · StockMovementType · SalesPeriod · UnitDimension · OrderStage · OrderProgress · OrderLineMove   (each has label() + options())
+├── Exceptions/     MaterialInUseException · OrderDeleteRefusedException
 ├── Http/
 │   ├── Controllers/  DashboardController · MaterialController · ProductController · SaleController · OrderController
 │   ├── Requests/     Materials/{Store,Update}MaterialRequest · Products/{Store,Update}ProductRequest · Orders/{Index,Store,Update}OrderRequest
@@ -286,6 +321,7 @@ app/
 └── Services/
     ├── Costing/    ProductCostingService                   (Eloquent → BomLine adapter; calls the calculator)
     ├── Orders/     OrderBook                               (orders list and search, product options for the order form)
+    │               OrderMessages · MoveResult · CuttingPreview   (every order toast and refusal text; the move window's materials table)
     └── Workshops/  CurrentWorkshop                         (the current workshop: explicit, else the signed-in user's)
 app/Validation/WorkshopRule  exists / unique limited to the current workshop
 config/invory.php   currency (APP_CURRENCY, default TND), pagination size, decimal scales
@@ -325,10 +361,13 @@ tests/
 | DELETE | /sales/{sale} | sales.destroy | @destroy | redirect back |
 | GET | /orders | orders.index | OrderController@index | `orders/index` (S-48: list, search) |
 | GET | /orders/create | orders.create | @create | `orders/create` (active products only) |
-| POST | /orders | orders.store | @store | redirect → index ("Order recorded.") |
+| POST | /orders | orders.store | @store | redirect → show ("Order recorded.") |
+| GET | /orders/{order} | orders.show | @show | `orders/show` (S-49: stage figures per line, the move window) |
 | GET | /orders/{order}/edit | orders.edit | @edit | `orders/edit` (also the order's own non-active or deleted products) |
-| PUT | /orders/{order} | orders.update | @update | redirect → index ("Order updated.") |
-| DELETE | /orders/{order} | orders.destroy | @destroy | redirect back ("Order deleted.") |
+| PUT | /orders/{order} | orders.update | @update | redirect → show ("Order updated.") |
+| DELETE | /orders/{order} | orders.destroy | @destroy | from its own page → index, from the list → back ("Order deleted."); refused while units are in cutting or ready to ship (error toast) |
+| POST | /orders/{order}/lines/{line}/moves | orders.lines.moves.store | OrderLineMoveController@store | redirect → show (S-49; S-53: Start cutting takes, Move back to To start returns stock) |
+| GET | /orders/{order}/lines/{line}/moves/preview | orders.lines.moves.preview | OrderLineMovePreviewController | JSON `MovePreview` (S-53, ADR-0009 rule 5; no locks) |
 
 Settings › Catalogue (S-21/S-22): for each of `units`, `material-categories` and `product-categories`, `GET settings/<list>` (page `settings/<list>`),
 `POST`, `PUT …/{id}`, `DELETE …/{id}`, `PATCH …/{id}/archive` and `PATCH …/{id}/restore`, named `settings.<list>.*`. Option lists for forms and
@@ -355,14 +394,15 @@ resources/js/
 │   ├── dashboard.tsx
 │   ├── materials/  index.tsx · create.tsx · edit.tsx · show.tsx
 │   ├── products/   index.tsx · create.tsx · edit.tsx · show.tsx
-│   ├── orders/     index.tsx · create.tsx · edit.tsx   (S-48)
+│   ├── orders/     index.tsx · create.tsx · edit.tsx · show.tsx   (S-48, S-49)
 │   └── sales/      index.tsx
 ├── components/
 │   ├── ui/                 # shadcn — generated via `npx shadcn@latest add …`, never hand-edited
 │   ├── dashboard/          KPI cards, top sellers, needs restock, alerts
 │   ├── materials/          material-form · materials-table · stock-badge · restock form · history list · usage table
 │   ├── products/           product-form · bom-editor · bom-table · cost-breakdown-card
-│   ├── orders/             orders table · delete dialog · order form · order lines editor (S-48)
+│   ├── orders/             orders table · delete dialog · order form · order lines editor (S-48) · order header · line card ·
+│   │                       stage figure · progress status · move-units dialog (S-49) · materials move table · use-move-preview (S-53)
 │   ├── sales/              sales table · sale form
 │   ├── settings/           reference manager (units, material and product categories): table, row actions, form dialogs (S-22)
 │   └── shared/             money · quantity · page-header · empty-state · confirm-delete-dialog · pagination · filters-bar ·

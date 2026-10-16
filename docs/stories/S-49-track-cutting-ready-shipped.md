@@ -81,7 +81,7 @@ tags:
 
 ## Technical work
 > [!warning] Complex · CRITICAL · backend + frontend · 5 commits (one build with F-41 and S-53: 12 commits)
-> Tech-lead · 2026-10-16 · approved 2026-10-16 (revised)
+> Tech-lead · 2026-10-16 · approved 2026-10-16 (revised) · delivered 2026-10-16
 > Why complex: new columns on order lines, new business rules on moving units, on editing a started order and on deleting one, a new
 > page and new routes (a new contract), and two people can move units of the same line at once. It ships with S-53 in one build (D-11).
 
@@ -370,3 +370,28 @@ Start cutting on a deleted product: "<product name> was deleted, so it can't be 
 - A started line's product swapped in Edit order could slip through, since lines are matched by product (S-48) → a swap reads as
   "removed", so the started-line rule catches it (S-49-c dataset row).
 - A status shown by colour alone → a word plus an `aria-hidden` icon, tested by role and text (S-49-d).
+
+### Build log
+Build of F-41, S-49 and S-53 in one branch (worktree `kind-haibt-05dd89`, from `6f7b53a`). Started 2026-10-16.
+
+**Adjustments made at intake (tech-lead, 2026-10-16).** None changes a criterion, a message or the contract's shape.
+- **The order contract changes once.** `Order.delete_refusal` (the field and its text) moves from S-49-c to S-49-a, so `Order` and
+  `OrderLine` change in one step. S-49-c keeps the refusal itself (`DeleteOrder` under the lock) and its tests.
+- **Frontend type fixes join the contract steps.** Adding fields to `Order`, `OrderLine` and `StockMovementType` breaks typed test
+  fixtures (5 order test files) and the `Record<StockMovementType, …>` map in the history list; the file lists above missed them. A
+  short frontend pass right after S-49-a goes into S-49-a's commit, and S-53-f runs right after S-53-a, so **S-53-a and S-53-f become
+  one commit** (each alone would leave `npm run types:check` red).
+- **One message builder:** `App\Services\Orders\OrderMessages` (S-49-a: the delete refusal; S-49-b: the move toasts and limits; S-53-c:
+  the short-stock messages and the toast suffixes). It replaces the `MoveMessages` named in S-53-c.
+- **Waves:** W1 F-41-a ∥ S-49-a, then the frontend type pass · W2 S-53-b ∥ S-49-b ∥ S-53-a, then S-49-d ∥ S-53-f · W3 S-49-c ∥ S-53-c ·
+  W4 S-53-d ∥ S-49-e · W5 S-53-e. The commits follow the review points: F-41-a, S-49-a · S-53-b, S-49-b, S-53-a + S-53-f, S-49-d ·
+  S-49-c, S-53-c · S-53-d, S-49-e · S-53-e. Every review point runs every gate on the whole tree.
+
+**Progress**
+- W1 (F-41-a, S-49-a + frontend type pass): approved 2026-10-16, round 1; every gate green, PostgreSQL parity green.
+- W2 (S-53-b, S-49-b, S-53-a, then S-49-d, S-53-f): approved 2026-10-16, round 1; every gate green, PostgreSQL parity and browser tests green.
+- W3 (S-49-c, S-53-c): first dispatch cut off by the API rate limit before any file changed (tree identical to the W2 snapshot); re-dispatched with the same briefs; approved 2026-10-16, round 1; every gate green, PostgreSQL parity and browser tests green.
+- W4 (S-53-d, S-49-e): approved 2026-10-16, round 1 (S-53-d gets its rollback test in W5); every gate green, PostgreSQL parity and browser tests green.
+- W5 (S-53-e, S-53-d rollback test): approved 2026-10-16, round 1.
+- Delivered 2026-10-16: every gate green on the final tree (composer test 2404 tests, npx vp test 1199, check, types, build), PostgreSQL parity 2404/2404, browser tests 2/2. Nothing committed; the delivery report lists the commits per step.
+- Fix round after the product-owner's acceptance review (approved by the human, 2026-10-16): the one-unit delete refusal ends "Move it back to To start first."; the preview refuses more units than the stage holds ("You can move at most N units." as you type, no table); an emptied field shows "Enter a whole number of units, at least 1."; focus goes to the line's heading when the opening button is greyed after a move; the short-stock sentence shows once after a refused cut. Approved in round 1; every gate green (composer test 2409, npx vp test 1206), PostgreSQL parity 2409/2409, browser tests 2/2.

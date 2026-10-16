@@ -91,7 +91,7 @@ tags:
 
 ## Technical work
 > [!warning] Complex · CRITICAL · backend + frontend · 6 commits (one build with F-41 and S-49: 12 commits)
-> Tech-lead · 2026-10-16 · approved 2026-10-16 (revised)
+> Tech-lead · 2026-10-16 · approved 2026-10-16 (revised) · delivered 2026-10-16
 > Why complex: Invory changes stock by itself for the first time. It needs new stock maths, two new tables, new history types, a new
 > business rule (ADR-0014, replacing Q9), row locks so two people can't use the same stock twice, and a new contract for the move window.
 > Size: **L** (about 1,650 lines of production code over 6 commits; S-49 is about 1,450). One story: the move back to To start stays in.
@@ -408,3 +408,6 @@ export type MovePreview = {
 - A failed or slow preview blocks the move → "Loading materials…", then "Couldn't load the materials for this move." with "Try again";
   the other four moves don't use the preview.
 - S-53 is L → it is cut into six steps that each stay within one commit's budget; S-53-e, the largest, is about 420 lines.
+
+### Build log
+Built with S-49 in one branch; the adjustments made at intake and the progress are logged in [S-49](S-49-track-cutting-ready-shipped.md), section "Build log". For this card: S-53-a and S-53-f become one commit, and the toasts and short-stock messages go into `App\Services\Orders\OrderMessages` (created in S-49-a) instead of a new `MoveMessages`.

@@ -44,7 +44,7 @@ tags:
 
 ## Technical work
 > [!warning] Complex · CRITICAL · backend · 1 commit
-> Tech-lead · 2026-10-16 · approved 2026-10-16
+> Tech-lead · 2026-10-16 · approved 2026-10-16 · delivered 2026-10-16
 > Why complex: it changes what the costing domain returns (the core maths), and S-53's stock amounts are built on it.
 
 ### In short
