@@ -117,4 +117,36 @@ describe('orders/edit page', () => {
             '/orders',
         );
     });
+
+    it('locks the product and Remove of a line that has started (AC-6)', () => {
+        const started: OrderLine = {
+            ...notStarted(70, jacket, 50),
+            to_start: 20,
+            in_cutting: 30,
+            started: 30,
+            status: 'in_progress',
+            status_label: 'In progress',
+        };
+
+        render(
+            <OrdersEdit
+                {...props}
+                order={{
+                    ...props.order,
+                    lines: [started, props.order.lines[1]],
+                }}
+            />,
+        );
+
+        const first = within(screen.getByRole('group', { name: 'Line 1' }));
+        const second = within(screen.getByRole('group', { name: 'Line 2' }));
+
+        expect(first.getByRole('combobox', { name: 'Product' })).toBeDisabled();
+        expect(
+            first.getByRole('button', { name: 'Remove Denim Jacket' }),
+        ).toHaveAccessibleDescription(
+            "Denim Jacket can't be removed: 30 units have started.",
+        );
+        expect(second.getByRole('combobox', { name: 'Product' })).toBeEnabled();
+    });
 });

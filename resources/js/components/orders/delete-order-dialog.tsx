@@ -1,4 +1,13 @@
 import type { RefObject } from 'react';
+import {
+    AlertDialog,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { ConfirmDeleteDialog } from '@/components/shared/confirm-delete-dialog';
 import { useAppSettings } from '@/hooks/use-app-settings';
 import { formatCount } from '@/lib/format';
@@ -13,7 +22,12 @@ type DeleteOrderDialogProps = {
     onConfirm: () => void;
 };
 
-/** Confirmation before an order goes. Stock and sales are never touched. */
+/**
+ * Confirmation before an order goes. Stock and sales are never touched. While
+ * units are in cutting or ready to ship (`delete_refusal`), the window shows
+ * the server's refusal instead of its question, with only "Close": nothing is
+ * sent.
+ */
 export function DeleteOrderDialog({
     order,
     processing,
@@ -22,6 +36,38 @@ export function DeleteOrderDialog({
     onConfirm,
 }: DeleteOrderDialogProps) {
     const { locale } = useAppSettings();
+
+    if (order?.delete_refusal) {
+        return (
+            <AlertDialog
+                open
+                onOpenChange={(open) => {
+                    if (!open) {
+                        onCancel();
+                    }
+                }}
+            >
+                <AlertDialogContent
+                    onCloseAutoFocus={(event) => {
+                        if (returnFocusTo.current) {
+                            event.preventDefault();
+                            returnFocusTo.current.focus();
+                        }
+                    }}
+                >
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete order?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {order.delete_refusal}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Close</AlertDialogCancel>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        );
+    }
 
     return (
         <ConfirmDeleteDialog

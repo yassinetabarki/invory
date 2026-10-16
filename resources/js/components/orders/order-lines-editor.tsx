@@ -4,7 +4,10 @@ import {
     newOrderLine,
     OrderLineRowFields,
 } from '@/components/orders/order-line-row';
-import type { OrderLineRow } from '@/components/orders/order-line-row';
+import type {
+    OrderLineRow,
+    StartedLine,
+} from '@/components/orders/order-line-row';
 import { Button } from '@/components/ui/button';
 import type { OrderProduct } from '@/types/domain';
 
@@ -19,6 +22,8 @@ type OrderLinesEditorProps = {
      * `lines.N.product_id` / `lines.N.quantity` for a line (`N` counts from 0).
      */
     errors: Record<string, string | undefined>;
+    /** Saved lines that have started, by row `uid`: their product is fixed and they can't be removed. */
+    started?: ReadonlyMap<string, StartedLine>;
     onChange: (rows: OrderLineRow[]) => void;
 };
 
@@ -31,6 +36,7 @@ export function OrderLinesEditor({
     rows,
     products,
     errors,
+    started,
     onChange,
 }: OrderLinesEditorProps) {
     const idPrefix = useId();
@@ -101,6 +107,7 @@ export function OrderLinesEditor({
                                 product_id: errors[`lines.${index}.product_id`],
                                 quantity: errors[`lines.${index}.quantity`],
                             }}
+                            started={started?.get(row.uid)}
                             onChange={(patch) =>
                                 onChange(
                                     rows.map((other) =>

@@ -1,7 +1,9 @@
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import OrdersShow from '@/pages/orders/show';
-import { resetInertiaMock } from '@/test/inertia';
+import { Toaster } from '@/components/ui/sonner';
+import { inertiaMock, resetInertiaMock } from '@/test/inertia';
 import type { OrderLine, OrderProduct, OrderShowProps } from '@/types/domain';
 
 vi.mock('@inertiajs/react', async (importOriginal) => {
@@ -132,5 +134,75 @@ describe('orders/show page', () => {
         expect(
             screen.queryByRole('heading', { name: 'Note' }),
         ).not.toBeInTheDocument();
+    });
+    describe('Delete (AC-6)', () => {
+        const refusal =
+            "Boutique Lina can't be deleted: 30 units are in cutting or ready to ship. Move them back to To start first.";
+
+        it('opens the refusal window instead of the question and sends nothing', async () => {
+            const user = userEvent.setup();
+
+            render(
+                <OrdersShow
+                    order={{ ...props.order, delete_refusal: refusal }}
+                />,
+            );
+
+            await user.click(screen.getByRole('button', { name: 'Delete' }));
+
+            const dialog = screen.getByRole('alertdialog', {
+                name: 'Delete order?',
+            });
+
+            expect(dialog).toHaveTextContent(refusal);
+            expect(
+                within(dialog).queryByRole('button', { name: 'Delete order' }),
+            ).not.toBeInTheDocument();
+
+            await user.click(
+                within(dialog).getByRole('button', { name: 'Close' }),
+            );
+
+            expect(inertiaMock.router.delete).not.toHaveBeenCalled();
+            expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+        });
+
+        it('shows a refusal answered by the server as an error toast, and the order stays', async () => {
+            render(
+                <>
+                    <OrdersShow {...props} />
+                    <Toaster />
+                </>,
+            );
+
+            // The Toaster listens to the router's "flash" event, like in the app.
+            const listeners = inertiaMock.router.on.mock.calls as unknown as [
+                string,
+                (event: Event) => void,
+            ][];
+            const flash = listeners.find(([event]) => event === 'flash')?.[1];
+
+            expect(flash).toBeDefined();
+
+            act(() => {
+                flash?.(
+                    new CustomEvent('flash', {
+                        detail: {
+                            flash: {
+                                toast: { type: 'error', message: refusal },
+                            },
+                        },
+                    }),
+                );
+            });
+
+            expect(await screen.findByText(refusal)).toBeInTheDocument();
+            expect(
+                screen.getByRole('heading', {
+                    level: 1,
+                    name: 'Boutique Lina',
+                }),
+            ).toBeInTheDocument();
+        });
     });
 });

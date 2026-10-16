@@ -2,7 +2,10 @@ import { Link, useForm, usePage } from '@inertiajs/react';
 import { useEffect, useId, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { newOrderLine } from '@/components/orders/order-line-row';
-import type { OrderLineRow } from '@/components/orders/order-line-row';
+import type {
+    OrderLineRow,
+    StartedLine,
+} from '@/components/orders/order-line-row';
 import { OrderLinesEditor } from '@/components/orders/order-lines-editor';
 import { FormField } from '@/components/products/form-field';
 import { PageHeader } from '@/components/shared/page-header';
@@ -50,6 +53,25 @@ function toFormState(order: Order | undefined, today: string): OrderFormState {
     };
 }
 
+/** The rows of lines with units started, by `uid`; `rows` are the ones `toFormState` made from `order.lines`. */
+function startedLines(
+    order: Order | undefined,
+    rows: OrderLineRow[],
+): Map<string, StartedLine> {
+    const map = new Map<string, StartedLine>();
+
+    order?.lines.forEach((line, index) => {
+        if (line.started > 0) {
+            map.set(rows[index].uid, {
+                name: line.product.name,
+                count: line.started,
+            });
+        }
+    });
+
+    return map;
+}
+
 /**
  * Record or edit an order: client, date, note and its product lines. Nothing
  * is computed or validated here; every message comes from the server and shows
@@ -68,6 +90,8 @@ export function OrderForm({
     // Only seeds the form; computed once so the lines keep their keys.
     const [initial] = useState(() => toFormState(order, today));
     const form = useForm<OrderFormState>(initial);
+    // The saved lines with work started, by row key (a new line is never one).
+    const [started] = useState(() => startedLines(order, initial.lines));
     const { errors, processing } = form;
 
     const errorSignature = Object.entries(errors)
@@ -180,6 +204,7 @@ export function OrderForm({
                 rows={form.data.lines}
                 products={products}
                 errors={errors}
+                started={started}
                 onChange={(lines) => form.setData('lines', lines)}
             />
 

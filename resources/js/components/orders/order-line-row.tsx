@@ -9,6 +9,8 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { useAppSettings } from '@/hooks/use-app-settings';
+import { formatCount } from '@/lib/format';
 import type { OrderLineFormRow, OrderProduct } from '@/types/domain';
 
 /**
@@ -28,6 +30,9 @@ export function newOrderLine(
     return { uid: `line-${lineCounter}`, ...fields };
 }
 
+/** A saved line with units in cutting, ready to ship or shipped (S-49): it keeps its product and can't be removed. */
+export type StartedLine = { name: string; count: number };
+
 type OrderLineRowProps = {
     row: OrderLineRow;
     /** 1-based position, for the group's name. */
@@ -37,6 +42,8 @@ type OrderLineRowProps = {
     products: readonly OrderProduct[];
     /** The server's messages for this line, by field. */
     errors: { product_id?: string; quantity?: string };
+    /** Set when work has started on this saved line. */
+    started?: StartedLine;
     onChange: (patch: Partial<OrderLineFormRow>) => void;
     onRemove: () => void;
 };
@@ -48,11 +55,14 @@ export function OrderLineRowFields({
     idPrefix,
     products,
     errors,
+    started,
     onChange,
     onRemove,
 }: OrderLineRowProps) {
+    const { locale } = useAppSettings();
     const product = products.find((option) => option.id === row.product_id);
     const base = `${idPrefix}-${row.uid}`;
+    const removeHintId = `${base}-remove-hint`;
 
     return (
         <div
@@ -64,6 +74,10 @@ export function OrderLineRowFields({
             <FormField
                 id={`${base}-product`}
                 label="Product"
+                hint={
+                    started &&
+                    "The product can't change once work on this line has started."
+                }
                 error={errors.product_id}
             >
                 {(control) => (
@@ -71,6 +85,7 @@ export function OrderLineRowFields({
                         value={
                             row.product_id === '' ? '' : String(row.product_id)
                         }
+                        disabled={started !== undefined}
                         onValueChange={(value) =>
                             onChange({ product_id: Number(value) })
                         }
@@ -122,11 +137,25 @@ export function OrderLineRowFields({
                 size="icon"
                 aria-label={product ? `Remove ${product.name}` : 'Remove line'}
                 title="Remove"
+                disabled={started !== undefined}
+                aria-describedby={started ? removeHintId : undefined}
                 className="text-destructive-foreground hover:text-destructive-foreground sm:mt-7"
                 onClick={onRemove}
             >
                 <Trash2 aria-hidden="true" />
             </Button>
+            {started && (
+                <p
+                    id={removeHintId}
+                    className="text-xs text-muted-foreground sm:col-span-3"
+                >
+                    {started.name} can't be removed:{' '}
+                    {started.count === 1
+                        ? '1 unit has'
+                        : `${formatCount(started.count, locale)} units have`}{' '}
+                    started.
+                </p>
+            )}
         </div>
     );
 }

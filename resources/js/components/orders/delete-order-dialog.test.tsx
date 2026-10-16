@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { DeleteOrderDialog } from '@/components/orders/delete-order-dialog';
@@ -112,5 +112,43 @@ describe('<DeleteOrderDialog>', () => {
         expect(onCancel).toHaveBeenCalledOnce();
         expect(onConfirm).not.toHaveBeenCalled();
         expect(inertiaMock.router.delete).not.toHaveBeenCalled();
+    });
+
+    describe('when units are in cutting or ready to ship (AC-6)', () => {
+        const refusal =
+            "Boutique Lina can't be deleted: 30 units are in cutting or ready to ship. Move them back to To start first.";
+
+        it('shows the refusal in place of the question, with only Close, and sends nothing', async () => {
+            const { user, onCancel, onConfirm } = renderDialog({
+                ...lina,
+                delete_refusal: refusal,
+            });
+
+            const dialog = screen.getByRole('alertdialog', {
+                name: 'Delete order?',
+            });
+
+            expect(dialog).toHaveTextContent(refusal);
+            expect(dialog).not.toHaveTextContent('will be removed');
+            expect(within(dialog).getAllByRole('button')).toHaveLength(1);
+            expect(
+                screen.queryByRole('button', { name: 'Delete order' }),
+            ).not.toBeInTheDocument();
+
+            await user.click(screen.getByRole('button', { name: 'Close' }));
+
+            expect(onCancel).toHaveBeenCalledOnce();
+            expect(onConfirm).not.toHaveBeenCalled();
+            expect(inertiaMock.router.delete).not.toHaveBeenCalled();
+        });
+
+        it('shows the one-unit text as the server sent it', () => {
+            const oneUnit =
+                "Boutique Lina can't be deleted: 1 unit is in cutting or ready to ship. Move it back to To start first.";
+
+            renderDialog({ ...lina, delete_refusal: oneUnit });
+
+            expect(screen.getByRole('alertdialog')).toHaveTextContent(oneUnit);
+        });
     });
 });
