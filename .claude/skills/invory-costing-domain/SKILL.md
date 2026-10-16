@@ -27,9 +27,11 @@ If a rule here is wrong or incomplete, stop and ask the tech-lead to update it (
 | Sale | A recorded sale: product, whole-unit quantity, unit price, date, optional note. **Does not change material stock** | `Sale` / `sales` |
 | Units covered | Units of a product that one material's stock covers on its own | `units_covered` |
 | Next limit | The bottleneck and capacity a product would have if its current bottleneck were unlimited | `next_limit` |
-| Stock movement | A history entry of a material: `created`, `restock`, `correction`, `price_change` | `StockMovement` / `StockMovementType` enum |
-| Order | A client's order: client name, order date, optional note, and one or more order lines. Recording, editing or deleting an order **never changes material stock, sales or any figure** (S-48) | `Order` / `orders` |
+| Stock movement | A history entry of a material: `created`, `restock`, `correction`, `price_change`, `cutting`, `returned` | `StockMovement` / `StockMovementType` enum |
+| Order | A client's order: client name, order date, optional note, and one or more order lines. Recording, editing or deleting an order **never changes material stock or sales** (S-48); only "Start cutting" and "Move back to To start" on a line do (S-53) | `Order` / `orders` |
 | Order line | One product of an order with its whole-unit quantity (1 … 1 000 000); one line per product per order, at most 50 per order | `OrderLine` / `order_lines` |
+| Stage counts | How many units of an order line are To start, In cutting, Ready to ship and Shipped; they always add up to the line's quantity. To start = quantity − the other three (S-49) | `in_cutting`, `ready_to_ship`, `shipped` (`to_start` derived) |
+| Cut | One "Start cutting" of N units of an order line, remembering per material the exact amount per unit and the amount taken. A move back to To start returns from the newest cuts first (S-53) | `OrderLineCut` / `order_line_cuts` |
 | Workshop | The business account. Every user belongs to one; every material, product, composition, stock movement, sale, order, order line, photo, unit and category belongs to one | `Workshop` / `workshops`, `workshop_id` |
 
 ## Workshops (added 2026-10-14, D-9, ADR-0013)
@@ -61,7 +63,7 @@ existing records. A row can be deleted only when nothing references it.
 - `product_categories` (defaults): `apparel, footwear, bag, accessory, jewelry, other`.
 - `ProductStatus`: `draft, active, archived`. Only `active` products can be sold (mockup copy "Only active products can be sold").
 - `SalesPeriod`: `last_7_days, last_30_days, this_month, this_year` (default `last_30_days`).
-- `StockMovementType`: `created, restock, correction, price_change`.
+- `StockMovementType`: `created, restock, correction, price_change, cutting, returned`.
 - Each PHP enum exposes `label(): string` and `static options(): array<array{value:string,label:string}>`. The frontend gets options as props
   (or from the shared `reference` prop) and never hard-codes labels.
 
@@ -144,6 +146,41 @@ restock(m, q, price, update_unit_cost):
 A manual edit of `quantity_on_hand` is logged as a `correction` (before → after; no reason is recorded, decided 2026-10-13, F-40); a manual edit of `unit_cost` as a `price_change`.
 History is listed newest first (date, then entry order) with who did it.
 
+### Cutting and returning stock (added 2026-10-16, D-10/D-11, ADR-0014; replaces Q9)
+
+```
+start_cutting(line, N):                                   N whole, 1 ≤ N ≤ to_start(line)
+    requires: the product is not deleted                  (archived and draft products can be cut)
+    requires: BOM empty  or  N ≤ max_producible(P)        on the stock saved at that moment
+    required_exact(m)  = Σ effective_qty(L) over m's lines, unrounded (at most 8 decimals)
+    needed(m, N)       = round4( required_exact(m) × N )             HalfUp, once per material per cut
+    short_by(m, N)     = round4( N × required_exact(m) − stock(m) )  only for materials where that is > 0
+    stock'(m)          = stock(m) − needed(m, N)                     never below 0
+    remembers, per material: per_unit = required_exact(m), taken = needed(m, N), the material's unit
+    history: one `cutting` entry per material (quantity = needed), dated today; none for an empty BOM
+
+back_to_start(line, k):                                   k whole, 1 ≤ k ≤ in_cutting(line)
+    cuts of the line, newest first; from each cut c take k_c = min(k still to return, c.units − c.units_returned)
+    held(c, m, r)      = round4( per_unit(c, m) × r )                r = outstanding units of c
+    returned(c, m)     = held(c, m, r) − held(c, m, r − k_c)         a cut returned in full gives back exactly `taken`
+    stock'(m)          = stock(m) + Σ_c returned(c, m)
+    nothing back for a material deleted since, or whose unit changed since the cut
+    history: one `returned` entry per material that gets something back, dated today
+```
+- The current composition is never read for a return. Units no cut covers return nothing.
+- "You can cut at most N now" is `max_producible(P)`; the material it names is `bottleneck(P)`, also when several materials are short
+  (every short material still shows its "Short by"). When `max_producible(P) = 0`, the message reads "You can't cut any now: restock
+  <bottleneck> first."
+- Never touch stock: Mark ready, Ship, their Move back, editing or deleting an order, recording a sale. Deleting an order returns
+  nothing.
+- Open orders never set stock aside: "Can produce" uses the stock on hand only.
+
+Worked example (demo stock, Denim Jacket): cutting 30 takes 59.4 m Denim 12oz Indigo, 240 pc Metal shank button 17mm, 3,780 m
+Polyester thread and 30 pc Woven brand label; the denim goes from 250 to 190.6 m, "Can produce now" from 112 to 82 (bottleneck the
+button, ⌊660 / 8⌋), and the inventory value from TND 10,544.300 to 9,936.680. Moving 5 back returns 9.9 m, 40 pc, 630 m and 5 pc (denim
+200.5 m, can produce 87); if the jacket needs 10 buttons by then, still 40 pc. With the button at 100 pc, cutting 20 is refused (needs
+160 pc, short by 60 pc, at most 12); cutting 12 leaves 4 pc. With the button at 7 pc, at most 0.
+
 ## Precision and rounding (non-negotiable, see ADR-0002)
 
 1. **Never use floats** for money or quantities: no `float` casts, no `(float)`, no `+`/`*` on numeric strings in PHP, and no `Number(x) * y` in TypeScript.
@@ -174,6 +211,10 @@ History is listed newest first (date, then entry order) with who did it.
 | `unit_cost = 0` material | allowed, contributes 0 to cost but still limits capacity |
 | Archived / draft products | still calculated; status is display/filter only |
 | Overhead left blank on Add/Edit product | saved as `0.0000`; `unit_cost = material_cost + labor_cost`; capacity, bottleneck and next limit unaffected (decided 2026-10-14, D-8) |
+| Cut a product with an empty BOM | allowed; nothing taken, no history entry; moving those units back returns nothing |
+| Composition changed between a cut and its return | the cut's remembered amounts come back, not the new composition's |
+| Material deleted, or its unit changed, between a cut and its return | nothing back for it ("Deleted, not returned" / "Unit changed, not returned"); the other materials come back |
+| Two people cut from the same stock at once | the second check sees the stock left by the first (row locks, ADR-0014) |
 
 ## Validation rules (inputs)
 
@@ -187,6 +228,8 @@ History is listed newest first (date, then entry order) with who did it.
   `sold_on` a date ≤ today; `note` nullable, ≤ 255 chars.
 - Restock: `quantity` > 0 (max 4 decimals); `unit_price` ≥ 0 (max 4 decimals); `received_on` a date ≤ today; `reference` nullable, ≤ 64 chars;
   `update_unit_cost` boolean (default true).
+- Move units (S-49, S-53): `units` integer ≥ 1 ("Enter a whole number of units, at least 1.") and ≤ the units the stage holds now
+  ("You can move at most N units."); for Start cutting also ≤ `max_producible(P)` when the BOM isn't empty, and the product not deleted.
 - Photo (material or product): optional file, JPG / PNG / WebP only (no SVG), max 4 MB (4096 KB); `remove_photo` boolean. One photo per item.
 - SKUs are unique per workshop among non-deleted items; unit and category names per workshop, ignoring capitals (S-45). An id of another
   workshop is refused exactly like an id that doesn't exist.
@@ -227,3 +270,6 @@ Variant checks:
   Eloquent adapters (Phase 3, 2026-10-13): `App\Services\Costing\MaterialUsageService` (usage and next limit of a material),
   `App\Services\Products\ProductCatalog` (dashboard "can't produce" figures), `App\Services\Sales\SalesReport` (sales log totals, period
   summary, top products; SQL sums only the integer `quantity`). The preview layer `App\Mock` is gone (ADR-0006, S-17).
+- Added 2026-10-16 (S-53, ADR-0014): `CostingResult::$requirements` (`MaterialRequirement`, F-41: the summed need per material, rounded
+  and exact), `App\Domain\Stock\CuttingCalculator` (take and return), `App\Actions\Orders\MoveOrderLineUnits` with
+  `TakeMaterialsForCut` and `ReturnMaterialsFromCuts`, `App\Services\Orders\CuttingPreview` (the move window's materials table).

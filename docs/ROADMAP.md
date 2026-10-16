@@ -1,6 +1,6 @@
 # Invory — product roadmap
 
-> Owner: **product-owner** · Approved by: the human · Last updated: 2026-10-16 (D-11 decided, S-49, S-53 and S-50 `Ready`; 2026-10-15: S-48 done, the first Phase 5 story; D-12: Phase 5 "Customer orders" started, the rest of Phase 4 on hold)
+> Owner: **product-owner** · Approved by: the human · Last updated: 2026-10-16 (D-11 decided; S-49 and S-53 `Planned` with F-41, S-50 `Ready`; 2026-10-15: S-48 done, the first Phase 5 story; D-12: Phase 5 "Customer orders" started, the rest of Phase 4 on hold)
 > Format: **Now / Next / Later**, organised by outcomes, not dates. Each phase is one slice of the story map with one goal, a MoSCoW-labelled
 > set of stories and exit criteria. Detailed stories live in [BACKLOG.md](BACKLOG.md); progress lives in [STATUS.md](STATUS.md).
 
@@ -31,20 +31,22 @@ ready to ship and shipped, and how many units are being made across all open ord
 You asked for it on 2026-10-15 ("design the order management UI") and answered the scope questions the same day (D-10). The same day you
 started it ahead of Phase 4: "we will start with S-48" (D-12). Orders belong to a workshop, and S-44 is done, so nothing blocks it.
 **S-48 is done** (accepted 2026-10-15 after your click-through): the Orders page records, finds, edits and deletes orders of one or more
-products. S-49, S-53 and S-50 are `Ready` (approved 2026-10-16) ([stories](stories/README.md)).
+products. S-49 and S-53 are `Planned` (card and Technical work approved 2026-10-16), with F-41 built first in the same
+build; S-50 is `Ready` ([stories](stories/README.md)). S-53 stays one L story (your choice, 2026-10-16).
 
 | Priority               | Story                                                    | Size |
 | ---------------------- | -------------------------------------------------------- | ---- |
 | Must                   | S-48 Record customer orders with several products (done) | M    |
 | Must                   | S-49 Track each product line through the stages          | M    |
-| Must                   | S-53 Cutting takes materials out of stock                | M    |
+| Must                   | S-53 Cutting takes materials out of stock                | L    |
 | Must                   | S-50 Orders list: progress of each order and totals      | S    |
 | Should                 | S-51 Product page and dashboard show units on order      | S    |
 | Could                  | S-52 Each order keeps a history of its moves             | S    |
 | Could                  | S-54 "Ship" can also record the sale                     | S    |
 | Tech allowance (~15 %) | F-41 only (each material's total need, for S-53)         | —    |
 
-The Musts are about 60 % of the phase. S-54, then S-52, then S-51 slip first.
+The Musts are now about three quarters of the phase: the tech-lead sized S-53 as L on 2026-10-16 (it was M). S-54, then S-52, then
+S-51 slip first.
 
 - An order holds one or more products, each with its own quantity and its own four stages: To start, In cutting, Ready to ship, Shipped.
 - Only active products can go on an order, and an order never sets stock aside (S-48, approved 2026-10-15).

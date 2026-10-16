@@ -2,7 +2,7 @@
 
 > Owner: **product-owner** (order, wording, acceptance criteria) · Technical detail: **tech-lead** ([TECH-DEBT.md](TECH-DEBT.md), [plans/](plans/README.md))
 > Phases and goals: [ROADMAP.md](ROADMAP.md) · Progress: [STATUS.md](STATUS.md) · Done work and full history: [archive/backlog-2026-10-14.md](archive/backlog-2026-10-14.md)
-> Last cleaned: 2026-10-16 (D-11 decided; S-49, S-53 and S-50 approved and `Ready`; on 2026-10-15 S-48 done and accepted, so it left this file; before that, D-12: Phase 5 starts now, the rest of Phase 4 is on hold; D-13: S-08 and S-29 done). **Open work only**, top = next.
+> Last cleaned: 2026-10-16 (D-11 decided; S-49 and S-53 `Planned` with F-41, S-50 `Ready`; on 2026-10-15 S-48 done and accepted, so it left this file; before that, D-12: Phase 5 starts now, the rest of Phase 4 is on hold; D-13: S-08 and S-29 done). **Open work only**, top = next.
 > Done items leave this file; they are recorded in STATUS.md and the archive.
 
 ## How to read an item
@@ -27,12 +27,13 @@ You started it on 2026-10-15: "we will start focusing more on the orders … we 
 - the client is typed on each order, and the delivery date goes in the note;
 - only active products can go on an order, and an order never sets stock aside (S-48, approved 2026-10-15).
 
-Order of work (D-11, decided 2026-10-16): S-49 and S-53 are built, accepted and land on `main` together (one build, one
-click-through), then S-50. You took every recommended cutting rule; the three cards describe them.
+Order of work (D-11, decided 2026-10-16): one build in a worktree, F-41 first, then S-49 and S-53, which are accepted and land on
+`main` together (one click-through); then S-50. You took every recommended cutting rule; the cards describe them. S-53 stays one
+L story (your choice, 2026-10-16).
 **S-48 is done** (accepted 2026-10-15 after your click-through; `e3b7ae7`, `5af8ed1`): you can record, find, edit and delete an order
 of one or more products, and nothing else in Invory changes. Its record is in [STATUS.md §4](STATUS.md#4-delivery-history).
 
-### S-49 · Track each product of an order through cutting, ready to ship and shipped · Must · M · feature · `Ready` (approved 2026-10-16)
+### S-49 · Track each product of an order through cutting, ready to ship and shipped · Must · M · feature · `Planned` (card and Technical work approved 2026-10-16; next: the build)
 Card: [stories/S-49-track-cutting-ready-shipped.md](stories/S-49-track-cutting-ready-shipped.md). Depends on S-48 (done); **ships
 together with S-53** (D-11).
 **You get:** each order's own page. Every product line has four counts that add up to its quantity: To start, In cutting, Ready to ship
@@ -42,10 +43,10 @@ and Shipped. "Start cutting", "Mark ready" and "Ship" move a number of units on;
 **Done when:** Boutique Lina's Denim Jacket line can show 20 · 20 · 10 · 0 while its jeans line shows 30 · 0 · 0 · 0; a move never takes
 more than the stage holds; a started line can't drop below its started units or be removed.
 
-### S-53 · Starting to cut an order takes its materials out of stock · Must · M · feature · `Ready` (approved 2026-10-16)
+### S-53 · Starting to cut an order takes its materials out of stock · Must · L · feature · `Planned` (card and Technical work approved 2026-10-16; next: the build)
 Card: [stories/S-53-cutting-takes-materials-out-of-stock.md](stories/S-53-cutting-takes-materials-out-of-stock.md). Ships together with
-S-49 (D-11). **Changes a recorded decision:** Q9 "making products never reduces stock" is replaced (D-10). The tech-lead writes the new rule into
-the business rules, with a decision record, before any code changes.
+S-49 (D-11). **Changes a recorded decision:** Q9 "making products never reduces stock" is replaced (D-10). The new rule was written into
+the business rules, with decision record ADR-0014 (accepted 2026-10-16), before any code.
 **You get:** "Start cutting" shows each material needed, in stock and left after, then takes it out of stock. You can't cut more than the
 stock allows. "Move back to To start" returns what was taken; deleting an order returns nothing. Each material's history shows
 "Cutting" and "Returned" entries, dated the day of the move. No low-stock emails.
@@ -74,7 +75,8 @@ by Sami".
 **You get:** "Ship" offers "Also record a sale", pre-filled with the product, the units shipped, the selling price and today's date.
 **Why:** today you would type the same sale again on the Sales page.
 
-**Phase 5 tech allowance (~15 %):** **F-41 only** (your choice, 2026-10-15): the costing works out, for each product, the total amount of
+**Phase 5 tech allowance (~15 %):** **F-41 only** (your choice, 2026-10-15; `Planned`, Technical work approved 2026-10-16, built first in
+the S-49 and S-53 build; card [stories/F-41-summed-requirement-per-material.md](stories/F-41-summed-requirement-per-material.md)): the costing works out, for each product, the total amount of
 each material one unit needs, ready for S-53 to take out of stock. It moved here from Phase 6's allowance. Phase 4's allowance (F-22,
 F-12, F-45) stays with Phase 4.
 
@@ -231,4 +233,4 @@ S-48 done 2026-10-15: a deleted order is hidden, with no way back on screen; a p
 **D-11 how cutting changes stock** (2026-10-16; S-49, S-53, S-50 `Ready`): cutting more than stock allows is refused, with the most you can
 cut; "Move back to To start" returns exactly what was taken (units cut last go back first; a material deleted since gets nothing);
 deleting an order returns nothing, and "Delete order?" warns first; history entries dated the day you click, no date to choose; no
-low-stock alerts; S-49 and S-53 ship together (one build, one click-through). Pending: [STATUS.md §2](STATUS.md#2-decisions-needed-from-you).
+low-stock alerts; S-49 and S-53 ship together (one build, one click-through); S-53 stays one L story. Pending: [STATUS.md §2](STATUS.md#2-decisions-needed-from-you).

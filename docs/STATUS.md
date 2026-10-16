@@ -22,8 +22,9 @@
 | Process | 🟡 AMBER | Roles are split: product-owner (what and why) and tech-lead (how). Phase 5 started before Phase 4 closed, by your choice (D-12). S-08 and S-29 were closed without their last checks, by your choice (D-13). |
 
 **Current phase:** **Phase 5: Customer orders** (started 2026-10-15, D-12). **S-48 is done** (accepted 2026-10-15 after your
-click-through; `e3b7ae7`, `5af8ed1`, on `main`). Next: the tech-lead's Technical work for S-49 and S-53 (they ship
-together), then S-50; all three cards are `Ready` (approved 2026-10-16, D-11 decided). Phase 5 tech allowance: F-41 only (moved from Phase 6, 2026-10-15).
+click-through; `e3b7ae7`, `5af8ed1`, on `main`). Next: the build of F-41, then S-49 and S-53, in a worktree (the two
+stories land together); F-41, S-49 and S-53 are `Planned` since 2026-10-16. S-50 is `Ready` and planned after them. Phase 5 tech allowance: F-41
+only (moved from Phase 6, 2026-10-15). S-49 and S-53 fill the two-story work-in-progress limit.
 **Phase 4: MVP release readiness** is on hold for later; S-08 and S-29 are done (closed as they stood, D-13; see [ROADMAP.md](ROADMAP.md)).
 
 ---
@@ -46,6 +47,10 @@ together), then S-50; all three cards are `Ready` (approved 2026-10-16, D-11 dec
   and the dashboard's "Needs restock" panel show it.
 - S-49 and S-53 ship together: one build, one click-through, and they land on `main` together.
 - (Decided earlier, 2026-10-15 with S-48: open orders never set stock aside.)
+
+**Decided on 2026-10-16 (planning):** Technical work approved for F-41, S-49 and S-53 (`Planned`) · S-53 stays one L story, not split
+(the tech-lead sized it L, about 1,600 lines) · the edge-case wording added to S-49 AC-6 and S-53 AC-1, AC-2, AC-3, AC-5 approved as written ("Yes, as written", 2026-10-16) ·
+ADR-0014 accepted (it replaces Q9) and the stock rule written into the business rules before any code.
 
 **Decided on 2026-10-15 (S-48 acceptance):** you accepted S-48 after your click-through · a line whose product no longer exists
 reads "The selected product is invalid." (close to the Sales form) · that message and a " (not active)" mark in the Edit order picker
@@ -269,10 +274,11 @@ The plan headers were corrected on 2026-10-14, and [plans/README.md](plans/READM
 **From 2026-10-15 (D-12): Phase 5 first.**
 1. Done 2026-10-15: S-48's closing documents are on `main` (`5b9a607`). Push when you choose; CI runs on the push, and only you can
    see the result.
-2. Done 2026-10-16: you decided D-11 and approved the cards S-49, S-53 and S-50 (`Ready`). Main session: commit them on `main`.
-   Tech-lead (planning only, on the main checkout): Technical work for S-49 and S-53 together, then S-50; the D-11 stock rule goes into
-   the business rules, with a decision record, before any code.
-3. Tech-lead: F-41 (Phase 5's tech allowance) before S-53; F-60 and F-61 (new from S-48) are offered for a tech allowance.
+2. Done 2026-10-16: you decided D-11, approved the cards S-49, S-53 and S-50 (`Ready`), then approved the Technical work of F-41,
+   S-49 and S-53 (`Planned`; S-53 stays one L story). ADR-0014 is accepted and the new stock rule is in the business rules.
+   Main session: commit the approved docs on `main`, then cut a build worktree from `main`.
+3. Tech-lead (build, in the worktree): F-41 first, then S-49 and S-53, with one delivery report; then the product-owner's acceptance
+   review and your one click-through. S-50's Technical work follows. F-60 and F-61 (new from S-48) are offered for a tech allowance.
 4. Tech-lead: mark the S-29 plan done (D-13) and close what it carried (S-18 moves to the known gaps, K-4).
 5. The rest of Phase 4 waits; S-45, S-30 and the known gaps K-1 to K-4 are dealt with before go-live (Phase 7).
 
