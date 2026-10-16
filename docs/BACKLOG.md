@@ -2,7 +2,7 @@
 
 > Owner: **product-owner** (order, wording, acceptance criteria) · Technical detail: **tech-lead** ([TECH-DEBT.md](TECH-DEBT.md), [plans/](plans/README.md))
 > Phases and goals: [ROADMAP.md](ROADMAP.md) · Progress: [STATUS.md](STATUS.md) · Done work and full history: [archive/backlog-2026-10-14.md](archive/backlog-2026-10-14.md)
-> Last cleaned: 2026-10-15 (S-48 done and accepted, so it left this file; before that, D-12: Phase 5 starts now, the rest of Phase 4 is on hold; D-13: S-08 and S-29 done). **Open work only**, top = next.
+> Last cleaned: 2026-10-16 (D-11 decided; S-49, S-53 and S-50 approved and `Ready`; on 2026-10-15 S-48 done and accepted, so it left this file; before that, D-12: Phase 5 starts now, the rest of Phase 4 is on hold; D-13: S-08 and S-29 done). **Open work only**, top = next.
 > Done items leave this file; they are recorded in STATUS.md and the archive.
 
 ## How to read an item
@@ -27,13 +27,14 @@ You started it on 2026-10-15: "we will start focusing more on the orders … we 
 - the client is typed on each order, and the delivery date goes in the note;
 - only active products can go on an order, and an order never sets stock aside (S-48, approved 2026-10-15).
 
-Order of work: S-49 and S-53 together, then S-50. The other cutting rules (D-11) wait until S-49 and S-53 are refined.
+Order of work (D-11, decided 2026-10-16): S-49 and S-53 are built, accepted and land on `main` together (one build, one
+click-through), then S-50. You took every recommended cutting rule; the three cards describe them.
 **S-48 is done** (accepted 2026-10-15 after your click-through; `e3b7ae7`, `5af8ed1`): you can record, find, edit and delete an order
 of one or more products, and nothing else in Invory changes. Its record is in [STATUS.md §4](STATUS.md#4-delivery-history).
 
-### S-49 · Track each product of an order through cutting, ready to ship and shipped · Must · M · feature · `Draft` (rewritten 2026-10-15)
+### S-49 · Track each product of an order through cutting, ready to ship and shipped · Must · M · feature · `Ready` (approved 2026-10-16)
 Card: [stories/S-49-track-cutting-ready-shipped.md](stories/S-49-track-cutting-ready-shipped.md). Depends on S-48 (done); **ships
-together with S-53**.
+together with S-53** (D-11).
 **You get:** each order's own page. Every product line has four counts that add up to its quantity: To start, In cutting, Ready to ship
 and Shipped. "Start cutting", "Mark ready" and "Ship" move a number of units on; "Move back" fixes a mistake. Each line and the order read
 "Not started", "In progress" or "Shipped".
@@ -41,17 +42,18 @@ and Shipped. "Start cutting", "Mark ready" and "Ship" move a number of units on;
 **Done when:** Boutique Lina's Denim Jacket line can show 20 · 20 · 10 · 0 while its jeans line shows 30 · 0 · 0 · 0; a move never takes
 more than the stage holds; a started line can't drop below its started units or be removed.
 
-### S-53 · Starting to cut an order takes its materials out of stock · Must · M · feature · `Draft` (card written 2026-10-15; waits for D-11)
+### S-53 · Starting to cut an order takes its materials out of stock · Must · M · feature · `Ready` (approved 2026-10-16)
 Card: [stories/S-53-cutting-takes-materials-out-of-stock.md](stories/S-53-cutting-takes-materials-out-of-stock.md). Ships together with
-S-49. **Changes a recorded decision:** Q9 "making products never reduces stock" is replaced (D-10). The tech-lead writes the new rule into
+S-49 (D-11). **Changes a recorded decision:** Q9 "making products never reduces stock" is replaced (D-10). The tech-lead writes the new rule into
 the business rules, with a decision record, before any code changes.
 **You get:** "Start cutting" shows each material needed, in stock and left after, then takes it out of stock. You can't cut more than the
-stock allows. "Move back to To start" returns what was taken. Each material's history shows "Cutting" and "Returned" entries.
+stock allows. "Move back to To start" returns what was taken; deleting an order returns nothing. Each material's history shows
+"Cutting" and "Returned" entries, dated the day of the move. No low-stock emails.
 **Why:** stock, "Can produce" and the restock list then match the shelves without correcting four materials by hand.
 **Done when:** cutting 30 Denim Jackets leaves Denim 12oz Indigo at 190.6 m, Denim Jacket at "Can produce now 82" and Inventory value at
 TND 9,936.680; cutting 20 with 100 buttons is refused ("at most 12").
 
-### S-50 · The Orders list shows each order's progress and the totals · Must · S · feature · `Draft` (rewritten 2026-10-15)
+### S-50 · The Orders list shows each order's progress and the totals · Must · S · feature · `Ready` (approved 2026-10-16)
 Card: [stories/S-50-orders-list-progress-and-totals.md](stories/S-50-orders-list-progress-and-totals.md). Depends on S-49.
 **You get:** every order's four counts (the sums of its lines) and its status, the list opening on "Open orders", and totals for all open
 orders at the top: "Open orders 2", "To start 170 units", "In cutting 20 units", "Ready to ship 10 units".
@@ -223,6 +225,10 @@ over the two-story limit · **D-10 customer orders** (2026-10-15; S-48 to S-54):
 with its own stages (To start, In cutting, Ready to ship, Shipped); "Start cutting" takes the materials out of stock (replaces Q9);
 shipping doesn't record a sale (S-54 later); client typed on each order; delivery date in the note · **D-12 Phase 5 starts now**
 (2026-10-15): the rest of Phase 4 (S-45, S-30, S-46, S-31, S-32) is on hold for later; S-40, S-41 and S-42 are postponed and kept for
-later; S-48 approved: only active products on an order, and an order never sets stock aside (the one part of D-11 decided so far);
+later; S-48 approved: only active products on an order, and an order never sets stock aside (part of D-11);
 S-48 done 2026-10-15: a deleted order is hidden, with no way back on screen; a product no longer active stays on the orders that have it ·
-**D-13 S-08 and S-29 closed as they stood** (2026-10-15): Done on the commits on `main`; their open checks are known gaps for go-live. Pending: [STATUS.md §2](STATUS.md#2-decisions-needed-from-you).
+**D-13 S-08 and S-29 closed as they stood** (2026-10-15): Done on the commits on `main`; their open checks are known gaps for go-live ·
+**D-11 how cutting changes stock** (2026-10-16; S-49, S-53, S-50 `Ready`): cutting more than stock allows is refused, with the most you can
+cut; "Move back to To start" returns exactly what was taken (units cut last go back first; a material deleted since gets nothing);
+deleting an order returns nothing, and "Delete order?" warns first; history entries dated the day you click, no date to choose; no
+low-stock alerts; S-49 and S-53 ship together (one build, one click-through). Pending: [STATUS.md §2](STATUS.md#2-decisions-needed-from-you).

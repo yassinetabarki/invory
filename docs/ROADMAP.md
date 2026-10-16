@@ -1,6 +1,6 @@
 # Invory — product roadmap
 
-> Owner: **product-owner** · Approved by: the human · Last updated: 2026-10-15 (S-48 done, the first Phase 5 story; D-12: Phase 5 "Customer orders" started, the rest of Phase 4 on hold)
+> Owner: **product-owner** · Approved by: the human · Last updated: 2026-10-16 (D-11 decided, S-49, S-53 and S-50 `Ready`; 2026-10-15: S-48 done, the first Phase 5 story; D-12: Phase 5 "Customer orders" started, the rest of Phase 4 on hold)
 > Format: **Now / Next / Later**, organised by outcomes, not dates. Each phase is one slice of the story map with one goal, a MoSCoW-labelled
 > set of stories and exit criteria. Detailed stories live in [BACKLOG.md](BACKLOG.md); progress lives in [STATUS.md](STATUS.md).
 
@@ -31,7 +31,7 @@ ready to ship and shipped, and how many units are being made across all open ord
 You asked for it on 2026-10-15 ("design the order management UI") and answered the scope questions the same day (D-10). The same day you
 started it ahead of Phase 4: "we will start with S-48" (D-12). Orders belong to a workshop, and S-44 is done, so nothing blocks it.
 **S-48 is done** (accepted 2026-10-15 after your click-through): the Orders page records, finds, edits and deletes orders of one or more
-products. S-49, S-53 and S-50 are `Draft` ([stories](stories/README.md)).
+products. S-49, S-53 and S-50 are `Ready` (approved 2026-10-16) ([stories](stories/README.md)).
 
 | Priority               | Story                                                    | Size |
 | ---------------------- | -------------------------------------------------------- | ---- |
@@ -49,10 +49,12 @@ The Musts are about 60 % of the phase. S-54, then S-52, then S-51 slip first.
 - An order holds one or more products, each with its own quantity and its own four stages: To start, In cutting, Ready to ship, Shipped.
 - Only active products can go on an order, and an order never sets stock aside (S-48, approved 2026-10-15).
 - **"Start cutting" takes the materials out of stock** (D-10, 2026-10-15). This replaces decision Q9 ("making products never reduces
-  stock"). S-49 and S-53 ship together, so there is never a time when cutting leaves the stock untouched. The other cutting rules (D-11)
-  are decided when S-49 and S-53 are refined.
+  stock"). S-49 and S-53 ship together (D-11, decided 2026-10-16: one build, one click-through), so there is never a time when cutting leaves the stock untouched.
+  The cutting rules (D-11, 2026-10-16): cutting more than stock allows is refused; "Move back to To start" returns exactly what was
+  taken; deleting an order returns nothing, with a warning; history is dated the day you click; no low-stock alerts.
 - Shipping doesn't record a sale (S-54 may add that later). Clients are typed on each order; the delivery date goes in the note.
-- Won't (this time): a client list, order numbers, a "Cancelled" status, setting stock aside for orders not yet cut.
+- Won't (this time): a client list, order numbers, a "Cancelled" status, setting stock aside for orders not yet cut, low-stock
+  emails or notifications (D-11).
 
 **Exit criteria:** you have accepted S-48 (done 2026-10-15), S-49, S-53 and S-50 in a click-through · cutting an order changes stock exactly as the cards
 say · another workshop never sees your orders · every gate green.

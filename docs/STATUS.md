@@ -1,6 +1,6 @@
 # Invory — project status report
 
-> Owner: **product-owner** (updated at every phase boundary and after every accepted story) · Report date: **2026-10-15**
+> Owner: **product-owner** (updated at every phase boundary and after every accepted story) · Report date: **2026-10-16**
 > Sources: every plan in [docs/plans/](plans/README.md), the [backlog archive](archive/backlog-2026-10-14.md) and `git log` on `main`.
 > Gate results: run by the main session on 2026-10-14 for this first report. Later updates quote the tech-lead's latest delivery report
 > (the product-owner never runs gates).
@@ -22,8 +22,8 @@
 | Process | 🟡 AMBER | Roles are split: product-owner (what and why) and tech-lead (how). Phase 5 started before Phase 4 closed, by your choice (D-12). S-08 and S-29 were closed without their last checks, by your choice (D-13). |
 
 **Current phase:** **Phase 5: Customer orders** (started 2026-10-15, D-12). **S-48 is done** (accepted 2026-10-15 after your
-click-through; `e3b7ae7`, `5af8ed1` on the build branch, on `main` once it merges). Next: D-11's cutting rules, then the cards S-49, S-53
-and S-50. Phase 5 tech allowance: F-41 only (moved from Phase 6, 2026-10-15).
+click-through; `e3b7ae7`, `5af8ed1`, on `main`). Next: the tech-lead's Technical work for S-49 and S-53 (they ship
+together), then S-50; all three cards are `Ready` (approved 2026-10-16, D-11 decided). Phase 5 tech allowance: F-41 only (moved from Phase 6, 2026-10-15).
 **Phase 4: MVP release readiness** is on hold for later; S-08 and S-29 are done (closed as they stood, D-13; see [ROADMAP.md](ROADMAP.md)).
 
 ---
@@ -36,7 +36,16 @@ and S-50. Phase 5 tech allowance: F-41 only (moved from Phase 6, 2026-10-15).
 | D-4 | Two early choices are still provisional (Phase 3 plan): **Q4** records are numbered with simple counters (already used everywhere) · **Q6** currency and language are set at installation, not in a settings screen. Keep both? (Q5 is closed: S-17 removed the preview layer. Q9 was replaced by D-10 on 2026-10-15) | Keep both; confirm before Phase 7 (production go-live, was Phase 6) |
 | D-5 | Production database host (needs PostgreSQL 13+ and `pg_trgm`) | Before S-26; not urgent |
 | D-6 | Delete the 5 merged branches and the stale worktree `.claude/worktrees/fix-hover-prefetch-bug`? | Yes (nothing unmerged) |
-| D-11 | **How cutting changes stock** (S-53, 2026-10-15): what happens when stock is short, whether moving back returns materials, whether deleting an order returns them, the date of the history entries, low-stock alerts, and whether S-49 and S-53 ship together. Then approve the cards S-49, S-53 and S-50. (Decided 2026-10-15 with S-48: open orders never set stock aside) | Refuse to cut more than stock allows; moving back returns exactly what was taken; deleting returns nothing; history dated the day of the move; no alerts yet; ship S-49 and S-53 together |
+
+**Decided on 2026-10-16: D-11 how cutting changes stock** (every recommended answer; cards S-49, S-53 and S-50 approved, `Ready`):
+- Cutting more than the stock allows is refused; the window marks the short material and says how many units you can cut at most.
+- "Move back to To start" returns exactly what was taken for those units, even if the composition changed since. Units cut most
+  recently go back first; a material deleted since gets nothing back.
+- Deleting an order returns nothing; "Delete order?" warns first and tells you to move units back to To start to get them back.
+- "Cutting" and "Returned" history entries are dated the day you click; there is no date to choose. No low-stock alerts: the badges
+  and the dashboard's "Needs restock" panel show it.
+- S-49 and S-53 ship together: one build, one click-through, and they land on `main` together.
+- (Decided earlier, 2026-10-15 with S-48: open orders never set stock aside.)
 
 **Decided on 2026-10-15 (S-48 acceptance):** you accepted S-48 after your click-through · a line whose product no longer exists
 reads "The selected product is invalid." (close to the Sales form) · that message and a " (not active)" mark in the Edit order picker
@@ -65,7 +74,7 @@ close them"; "we will start with S-48"):
 - Shipping doesn't record a sale for now. A later story, S-54 (Could), may add "Also record a sale" to "Ship".
 - The client is a name typed on each order, and the delivery date goes in the note.
 - Cards S-49, S-53 and S-50 are `Draft`, rewritten with these answers; S-48 is `Ready` (D-12). The rules for cutting are still open
-  (D-11).
+  (D-11, decided on 2026-10-16, see above).
 
 **Decided on 2026-10-14:** **D-1** the repository is on GitHub (private, `yassinetabarki/invory`); `main` was pushed at `3a0785f`, and the
 automatic checks run on every push to `main` and `phase/**` (only you can see their results, in the repository's Actions tab) ·
@@ -157,7 +166,7 @@ a PostgreSQL parity suite (last green: 2 074 passed on 2026-10-13, during RL-01)
 | **4 — MVP release readiness** | S-29 reliable dev environment | 2026-10-14 (`d351514`, `7b0fb05`, `c70109f`, `a68043e`; on `main`) | ✅ Done 2026-10-15, closed as it stood (D-13). Docker runs only PostgreSQL and the test mailbox; Sail removed; instructions updated. Open: gaps K-3, K-4 |
 | **4 — MVP release readiness** | S-08 golden-path test + demo data on a fresh install | 2026-10-14 (`723f57a`, `932f01a`, `1b40f75`, `af3d6de`, `5241147`; docs `6e776f0`, `6cbfb01`, `a368d8c`; on `main`) | ✅ Done 2026-10-15, closed as it stood (D-13). AC-1–4, 7, 8 accepted on test evidence. Open: gaps K-1, K-2 |
 | **4 — MVP release readiness** | S-44 each workshop sees only its own data (D-9) | 2026-10-15 (`672937f` cards, ADR-0013, rules and project instructions; `a54856f` workshops, S-44-a–d; `9a48cd3` delete-account wording, S-44-e; on `main`, not pushed) | ✅ Done. Tech-lead APPROVED in round 1 (2 132 backend tests, PostgreSQL parity 2 132, 1 137 screen tests, check, types, build, golden path). You backed up and migrated `laravel` yourself; click-through passed 2026-10-15 |
-| **5 — Customer orders** | S-48 record customer orders with one or more products (D-10, D-12) | 2026-10-15 (`57ab45b` card, `5ff800f` Technical work, on `main`; `e3b7ae7` saving and rules, S-48-a–c; `5af8ed1` screens, S-48-d–e; on the build branch, on `main` once it merges) | ✅ Done. Tech-lead APPROVED (every gate green, including PostgreSQL parity 2 216 and 2 browser tests). One fix round after the product-owner review: the "product is invalid" message and the " (not active)" mark. Your click-through passed 2026-10-15. New tech debt F-60, F-61 |
+| **5 — Customer orders** | S-48 record customer orders with one or more products (D-10, D-12) | 2026-10-15 (`57ab45b` card, `5ff800f` Technical work, on `main`; `e3b7ae7` saving and rules, S-48-a–c; `5af8ed1` screens, S-48-d–e; on `main`, closed in `5b9a607`) | ✅ Done. Tech-lead APPROVED (every gate green, including PostgreSQL parity 2 216 and 2 browser tests). One fix round after the product-owner review: the "product is invalid" message and the " (not active)" mark. Your click-through passed 2026-10-15. New tech debt F-60, F-61 |
 
 All phase branches (`phase/1-materials`, `phase/2-ui-first-preview`, `phase/3-performance-spa-data`, `fix/rl-02-product-show-loading`,
 `worktree-fix-hover-prefetch-bug`) are fully merged into `main`. They and the worktree under `.claude/worktrees/` can be deleted (human decision D-6).
@@ -258,9 +267,11 @@ The plan headers were corrected on 2026-10-14, and [plans/README.md](plans/READM
 
 ## 9. Next steps (recommended order)
 **From 2026-10-15 (D-12): Phase 5 first.**
-1. Main session: commit these closing documents on the build branch, then merge it into `main` (S-48 done 2026-10-15). Push when you choose;
-   CI runs on the push, and only you can see the result.
-2. Human and product-owner: D-11's remaining cutting rules, then the cards S-49, S-53 and S-50 (from a session on the main checkout).
+1. Done 2026-10-15: S-48's closing documents are on `main` (`5b9a607`). Push when you choose; CI runs on the push, and only you can
+   see the result.
+2. Done 2026-10-16: you decided D-11 and approved the cards S-49, S-53 and S-50 (`Ready`). Main session: commit them on `main`.
+   Tech-lead (planning only, on the main checkout): Technical work for S-49 and S-53 together, then S-50; the D-11 stock rule goes into
+   the business rules, with a decision record, before any code.
 3. Tech-lead: F-41 (Phase 5's tech allowance) before S-53; F-60 and F-61 (new from S-48) are offered for a tech allowance.
 4. Tech-lead: mark the S-29 plan done (D-13) and close what it carried (S-18 moves to the known gaps, K-4).
 5. The rest of Phase 4 waits; S-45, S-30 and the known gaps K-1 to K-4 are dealt with before go-live (Phase 7).
