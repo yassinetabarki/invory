@@ -1,6 +1,6 @@
 # Invory — product roadmap
 
-> Owner: **product-owner** · Approved by: the human · Last updated: 2026-10-16 (D-11 decided; S-49 and S-53 `Planned` with F-41, S-50 `Ready`; 2026-10-15: S-48 done, the first Phase 5 story; D-12: Phase 5 "Customer orders" started, the rest of Phase 4 on hold)
+> Owner: **product-owner** · Approved by: the human · Last updated: 2026-10-16 (D-11 decided with your final answers: S-49, S-53 and S-50 `Ready`, F-41 `Planned`, S-56 and S-57 added; 2026-10-15: S-48 done, the first Phase 5 story; D-12: Phase 5 "Customer orders" started, the rest of Phase 4 on hold)
 > Format: **Now / Next / Later**, organised by outcomes, not dates. Each phase is one slice of the story map with one goal, a MoSCoW-labelled
 > set of stories and exit criteria. Detailed stories live in [BACKLOG.md](BACKLOG.md); progress lives in [STATUS.md](STATUS.md).
 
@@ -13,8 +13,8 @@ A small fashion workshop knows, at any moment, **what each product costs to make
 | Activity | Built (Phases 1–3) | Phase 4 | Phase 5 (orders) | Phase 6 (speed) | Phase 7 (go-live) | Phase 8 + Vision |
 |---|---|---|---|---|---|---|
 | **Keep stock of materials** | List, filters, CRUD, photo, restock, history, status badges | Acceptance | | History on demand (S-33) | | Suppliers and purchase orders, CSV import (S-11) |
-| **Define products** | Product CRUD, composition editor, selling price, photo | Acceptance; overhead cost optional (S-43, done) | Units on order on the product page (S-51) | Instant edit page (S-35) | | Sizes and variants, sub-assemblies, unit conversions |
-| **Take client orders** | Nothing yet | | Orders with several products (S-48, done); to start, in cutting, ready to ship, shipped per line (S-49); cutting takes materials out of stock (S-53); progress and totals on the list (S-50); history of moves (S-52); shipping can record the sale (S-54) | | | A client list |
+| **Define products** | Product CRUD, composition editor, selling price, photo | Acceptance; overhead cost optional (S-43, done) | Finished products in stock (S-56); units on order on the product page (S-51) | Instant edit page (S-35) | | Sizes and variants, sub-assemblies, unit conversions |
+| **Take client orders** | Nothing yet | | Orders with several products (S-48, done); to start, in cutting, ready to ship, shipped per line (S-49); cutting takes materials out of stock (S-53); progress and totals on the list (S-50); cancel an order (S-57); history of moves (S-52); shipping can record the sale (S-54) | | | A client list |
 | **Know cost and capacity** | Unit cost, can produce, bottleneck, next limit, margin, "what you can make with it" | Acceptance, E2E (S-08) | | Fast at 500 products (S-23, S-27) | | Live cost preview (S-09), production planner (S-10), cost history |
 | **Sell** | Sales log, totals, filters, record/edit/delete | Acceptance | | Instant delete feedback (S-36) | | Custom date range (S-37) |
 | **Monitor** | Dashboard: KPIs, top 5, restock list, alerts | Panels offer "Try again" after an error (S-31) | Units in cutting on the dashboard (S-51) | Loading states (S-34) | | |
@@ -31,8 +31,9 @@ ready to ship and shipped, and how many units are being made across all open ord
 You asked for it on 2026-10-15 ("design the order management UI") and answered the scope questions the same day (D-10). The same day you
 started it ahead of Phase 4: "we will start with S-48" (D-12). Orders belong to a workshop, and S-44 is done, so nothing blocks it.
 **S-48 is done** (accepted 2026-10-15 after your click-through): the Orders page records, finds, edits and deletes orders of one or more
-products. S-49 and S-53 are `Planned` (card and Technical work approved 2026-10-16), with F-41 built first in the same
-build; S-50 is `Ready` ([stories](stories/README.md)). S-53 stays one L story (your choice, 2026-10-16).
+products. S-49, S-53 and S-50 are `Ready` (S-49 and S-53 revised with your final D-11 answers, 2026-10-16); the tech-lead
+revises the Technical work of S-49 and S-53 for your approval again. F-41 stays `Planned` and is built first in the same build
+([stories](stories/README.md)).
 
 | Priority               | Story                                                    | Size |
 | ---------------------- | -------------------------------------------------------- | ---- |
@@ -41,22 +42,26 @@ build; S-50 is `Ready` ([stories](stories/README.md)). S-53 stays one L story (y
 | Must                   | S-53 Cutting takes materials out of stock                | L    |
 | Must                   | S-50 Orders list: progress of each order and totals      | S    |
 | Should                 | S-51 Product page and dashboard show units on order      | S    |
+| Should                 | S-56 Finished products in stock                          | M    |
+| Should                 | S-57 Cancel an order                                     | M    |
 | Could                  | S-52 Each order keeps a history of its moves             | S    |
 | Could                  | S-54 "Ship" can also record the sale                     | S    |
 | Tech allowance (~15 %) | F-41 only (each material's total need, for S-53)         | —    |
 
-The Musts are now about three quarters of the phase: the tech-lead sized S-53 as L on 2026-10-16 (it was M). S-54, then S-52, then
-S-51 slip first.
+The Musts are about half of the phase now that S-56 and S-57 have joined it (the tech-lead sized S-53 as L on 2026-10-16; it was
+M). S-56 and S-57 come right after S-50 (D-11). If time runs short, S-54 slips first, then S-52, then S-51.
 
 - An order holds one or more products, each with its own quantity and its own four stages: To start, In cutting, Ready to ship, Shipped.
 - Only active products can go on an order, and an order never sets stock aside (S-48, approved 2026-10-15).
 - **"Start cutting" takes the materials out of stock** (D-10, 2026-10-15). This replaces decision Q9 ("making products never reduces
   stock"). S-49 and S-53 ship together (D-11, decided 2026-10-16: one build, one click-through), so there is never a time when cutting leaves the stock untouched.
-  The cutting rules (D-11, 2026-10-16): cutting more than stock allows is refused; "Move back to To start" returns exactly what was
-  taken; deleting an order returns nothing, with a warning; history is dated the day you click; no low-stock alerts.
+  The cutting rules (D-11, your final answers of 2026-10-16): cutting more than stock allows is refused, with the most you can cut and
+  what to do; "Move back to To start" returns exactly what was taken, the latest cut first; the history reads "Cutting" and "Back from
+  cutting", dated the day you click "Move units"; a deleted product can't start cutting; no new low-stock alerts.
+- "Delete" stays for orders entered by mistake and is refused while units are in cutting or ready to ship. A cancelled order uses
+  "Cancel order" (S-57) and reads "Cancelled"; the units already cut go into the product's own stock (S-56).
 - Shipping doesn't record a sale (S-54 may add that later). Clients are typed on each order; the delivery date goes in the note.
-- Won't (this time): a client list, order numbers, a "Cancelled" status, setting stock aside for orders not yet cut, low-stock
-  emails or notifications (D-11).
+- Won't (this time): a client list, order numbers, setting stock aside for orders not yet cut, low-stock emails or notifications (D-11).
 
 **Exit criteria:** you have accepted S-48 (done 2026-10-15), S-49, S-53 and S-50 in a click-through · cutting an order changes stock exactly as the cards
 say · another workshop never sees your orders · every gate green.

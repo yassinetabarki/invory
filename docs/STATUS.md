@@ -22,9 +22,11 @@
 | Process | 🟡 AMBER | Roles are split: product-owner (what and why) and tech-lead (how). Phase 5 started before Phase 4 closed, by your choice (D-12). S-08 and S-29 were closed without their last checks, by your choice (D-13). |
 
 **Current phase:** **Phase 5: Customer orders** (started 2026-10-15, D-12). **S-48 is done** (accepted 2026-10-15 after your
-click-through; `e3b7ae7`, `5af8ed1`, on `main`). Next: the build of F-41, then S-49 and S-53, in a worktree (the two
-stories land together); F-41, S-49 and S-53 are `Planned` since 2026-10-16. S-50 is `Ready` and planned after them. Phase 5 tech allowance: F-41
-only (moved from Phase 6, 2026-10-15). S-49 and S-53 fill the two-story work-in-progress limit.
+click-through; `e3b7ae7`, `5af8ed1`, on `main`). D-11 is decided with your final answers (2026-10-16); they replace the
+version committed in `5be7b9c`. S-49 and S-53 were revised with them and are `Ready` again; S-50 is `Ready`; F-41 stays `Planned`.
+Next: the tech-lead revises the Technical work of S-49 and S-53 (and ADR-0014 and the business rules) to the final answers, for your
+approval; then the build of F-41, S-49 and S-53 in a worktree (the two stories land together); then S-50, then the new Shoulds S-56
+and S-57. Phase 5 tech allowance: F-41 only (moved from Phase 6, 2026-10-15).
 **Phase 4: MVP release readiness** is on hold for later; S-08 and S-29 are done (closed as they stood, D-13; see [ROADMAP.md](ROADMAP.md)).
 
 ---
@@ -37,20 +39,45 @@ only (moved from Phase 6, 2026-10-15). S-49 and S-53 fill the two-story work-in-
 | D-4 | Two early choices are still provisional (Phase 3 plan): **Q4** records are numbered with simple counters (already used everywhere) · **Q6** currency and language are set at installation, not in a settings screen. Keep both? (Q5 is closed: S-17 removed the preview layer. Q9 was replaced by D-10 on 2026-10-15) | Keep both; confirm before Phase 7 (production go-live, was Phase 6) |
 | D-5 | Production database host (needs PostgreSQL 13+ and `pg_trgm`) | Before S-26; not urgent |
 | D-6 | Delete the 5 merged branches and the stale worktree `.claude/worktrees/fix-hover-prefetch-bug`? | Yes (nothing unmerged) |
+**Decided on 2026-10-16: D-11 how cutting changes stock** (your final answers, given in a second session and confirmed as final; they
+replace the "every recommended answer" version committed in `5be7b9c`). S-49 and S-53 were revised with them and you approved them
+again the same day; S-50 is unchanged. All three are `Ready`. You kept "Moving back units of a deleted product still returns their
+materials." in S-53 AC-5.
+1. Short stock when cutting: **refused**. "Not enough stock to cut 20 units. You can cut at most 12 now: Metal shank button 17mm runs
+   short. Restock it first, or cut 12 or fewer."
+2. Moving units back from In cutting to To start returns **exactly what was taken; the latest cut comes back first**.
+3. Deleting an order with started units, in your words: "if and order is cancelled and we already start cutting we will continue
+   producing the product and then put them in the stock user need confirm that cutting is finished and the product is ready to put in
+   stock". This led to answers 9 to 12.
+4. S-49 and S-53 **ship together**: one build, one click-through, and they land on `main` together.
+5. History entries are **dated the day you click "Move units"**; there is no date to choose.
+6. **No new low-stock alerts**: the existing badges, the "Needs restock" filter and the dashboard panel follow the stock.
+7. Archived or draft products move as usual. A **deleted product can't start cutting** ("Denim Jacket was deleted, so it can't be
+   cut."), but "Mark ready", "Ship" and "Move back" still work.
+8. The history entries read **"Cutting"** and **"Back from cutting"**.
+9. **Two separate actions.** "Delete" stays for orders entered by mistake and is refused while units are in cutting or ready to ship:
+   "Boutique Lina can't be deleted: 30 units are in cutting or ready to ship. Move them back to To start first." "Cancel order" comes in
+   a new story, S-57.
+10. Cancelling an order (S-57): units to start are dropped; units in cutting stay on the cancelled order until "Cutting finished · Put in
+    stock" is clicked, for any number up to the units in cutting at a time, and those units go into the product's stock; units ready to
+    ship go into stock as soon as the order is cancelled; shipped units stay shipped; the order reads "Cancelled".
+11. **S-56 "Finished products in stock" and S-57 "Cancel an order" are Phase 5 Shoulds after S-50.** The Musts stay S-49, S-53 and S-50.
+12. Finished products in stock (S-56): "Can produce now" stays what the materials allow, with "In stock N units" shown next to it; the
+    Inventory value stays materials only. Left for when S-56 is refined: whether selling takes units out of that stock, and whether a new
+    order can use it.
 
-**Decided on 2026-10-16: D-11 how cutting changes stock** (every recommended answer; cards S-49, S-53 and S-50 approved, `Ready`):
-- Cutting more than the stock allows is refused; the window marks the short material and says how many units you can cut at most.
-- "Move back to To start" returns exactly what was taken for those units, even if the composition changed since. Units cut most
-  recently go back first; a material deleted since gets nothing back.
-- Deleting an order returns nothing; "Delete order?" warns first and tells you to move units back to To start to get them back.
-- "Cutting" and "Returned" history entries are dated the day you click; there is no date to choose. No low-stock alerts: the badges
-  and the dashboard's "Needs restock" panel show it.
-- S-49 and S-53 ship together: one build, one click-through, and they land on `main` together.
-- (Decided earlier, 2026-10-15 with S-48: open orders never set stock aside.)
+(Decided earlier, 2026-10-15 with S-48: open orders never set stock aside.)
 
-**Decided on 2026-10-16 (planning):** Technical work approved for F-41, S-49 and S-53 (`Planned`) · S-53 stays one L story, not split
-(the tech-lead sized it L, about 1,600 lines) · the edge-case wording added to S-49 AC-6 and S-53 AC-1, AC-2, AC-3, AC-5 approved as written ("Yes, as written", 2026-10-16) ·
-ADR-0014 accepted (it replaces Q9) and the stock rule written into the business rules before any code.
+**Superseded on 2026-10-16:** the "every recommended answer" D-11 (`5be7b9c`: deleting an order returns nothing after a warning,
+"Returned" history entries) and the planning approvals that followed it (`e8955bf`). Still standing from that planning: F-41's
+Technical work (`Planned`) and the edge-case wording you approved as written in S-49 AC-6 and S-53 AC-1, AC-2, AC-3 and AC-5, now merged
+into the revised cards in the final answers' words. Back for your approval: the Technical work of S-49 and S-53, ADR-0014 and the
+business rules, which the tech-lead revises to the final answers.
+
+**Decided on 2026-10-16 (after the D-11 merge; every recommendation):** **D-14** a material deleted after the cut, or whose unit
+changed after it, gets nothing back when units move back to To start; its row reads "Deleted, not returned" or "Unit changed, not
+returned", and the other materials come back (S-53 AC-5) · S-53 stays one L story · "Delete order?" adds no sentence for shipped units ·
+the edge-case wording is accepted as merged, and S-49 and S-53 are `Ready`.
 
 **Decided on 2026-10-15 (S-48 acceptance):** you accepted S-48 after your click-through · a line whose product no longer exists
 reads "The selected product is invalid." (close to the Sales form) · that message and a " (not active)" mark in the Edit order picker
@@ -274,11 +301,13 @@ The plan headers were corrected on 2026-10-14, and [plans/README.md](plans/READM
 **From 2026-10-15 (D-12): Phase 5 first.**
 1. Done 2026-10-15: S-48's closing documents are on `main` (`5b9a607`). Push when you choose; CI runs on the push, and only you can
    see the result.
-2. Done 2026-10-16: you decided D-11, approved the cards S-49, S-53 and S-50 (`Ready`), then approved the Technical work of F-41,
-   S-49 and S-53 (`Planned`; S-53 stays one L story). ADR-0014 is accepted and the new stock rule is in the business rules.
-   Main session: commit the approved docs on `main`, then cut a build worktree from `main`.
-3. Tech-lead (build, in the worktree): F-41 first, then S-49 and S-53, with one delivery report; then the product-owner's acceptance
-   review and your one click-through. S-50's Technical work follows. F-60 and F-61 (new from S-48) are offered for a tech allowance.
+2. Done 2026-10-16: you decided D-11 with your final answers (§2); S-49 and S-53 are revised with them and `Ready` again, S-50 is
+   `Ready`, F-41 stays `Planned`. Main session: commit the revised cards, the story index, BACKLOG, ROADMAP and this report on `main`.
+3. Tech-lead (planning only, on the main checkout): revise the Technical work of S-49 and S-53, ADR-0014 and the business rules to the
+   final answers, for your approval (→ `Planned`). Then the build in a worktree: F-41 first, then S-49 and S-53, with one delivery
+   report; then the product-owner's acceptance review and your one click-through. S-50's Technical work follows. F-60 and F-61 (new
+   from S-48) are offered for a tech allowance.
+   - Product-owner, after S-50: write the cards of S-56 and S-57 for your approval.
 4. Tech-lead: mark the S-29 plan done (D-13) and close what it carried (S-18 moves to the known gaps, K-4).
 5. The rest of Phase 4 waits; S-45, S-30 and the known gaps K-1 to K-4 are dealt with before go-live (Phase 7).
 

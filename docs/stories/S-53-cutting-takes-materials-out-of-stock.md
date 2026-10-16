@@ -5,7 +5,7 @@ type: feature
 phase: 5
 priority: Must
 size: L
-status: Planned
+status: Ready
 created: 2026-10-15
 tags:
   - story
@@ -42,20 +42,20 @@ tags:
   with the line "Waste included. Stock on hand allows 112 units." The table follows the number you type. Nothing changes until you click
   "Move units". While the table loads it shows "Loading materials…"; if it can't load, it shows "Couldn't load the materials for this
   move." with "Try again", and "Move units" can't be clicked until the table is shown. A product with no composition can still be cut,
-  and the window says "Denim Jacket has no composition, so no material is taken out of stock." A product archived since the order was taken can still be cut. A line whose product was deleted can't start
-  cutting: "Start cutting" can't be clicked, with the hint "This product was deleted, so no more units can be cut."; its units already
-  cut still move on and back.
+  and the window says "Denim Jacket has no composition, so no material is taken out of stock." A product archived or set back to draft
+  since the order was taken can still be cut. A line whose product was deleted can't start cutting: "Start cutting" can't be clicked,
+  with the hint "Denim Jacket was deleted, so it can't be cut."; its units already cut still move on and back.
 - [ ] **AC-2 · Confirming takes them out.** Clicking "Move units" shows "30 units of Denim Jacket moved to In cutting. Materials taken out
   of stock." Then Denim 12oz Indigo shows "In stock 190.6 m", Denim Jacket shows "Can produce now 82" and "Bottleneck: Metal shank button
   17mm.", and the dashboard's Inventory value reads TND 9,936.680. Unit costs don't change. When nothing is taken (no composition), the
   message is only "30 units of Denim Jacket moved to In cutting.".
 - [ ] **AC-3 · You can't cut more than the stock allows.** Given Metal shank button 17mm at 100 pc (Denim Jacket can produce 12), "Start
   cutting" with 20 marks the button's row "Short by 60 pc" (needed 160 pc, in stock 100 pc) with a warning icon and those words, and
-  shows "Not enough stock to cut 20 units. You can cut at most 12 now: Metal shank button 17mm runs short." "Move units" then changes
-  nothing. Cutting 12 works and leaves 4 pc. When several materials are short, each of their rows reads "Short by …" and the message
-  names the bottleneck. When the stock allows no unit at all (buttons at 7 pc), it reads "Not enough stock to cut 20 units. You can't
-  cut any now: restock Metal shank button 17mm first." If someone else used the stock in the meantime, the check uses the stock saved now. Stock never
-  goes below 0; amounts are exact, to 4 decimal places like all stock.
+  shows "Not enough stock to cut 20 units. You can cut at most 12 now: Metal shank button 17mm runs short. Restock it first, or cut 12 or
+  fewer." "Move units" then changes nothing. Cutting 12 works and leaves 4 pc. When several materials are short, each of their rows reads
+  "Short by …" and the message names the bottleneck. When the stock allows no unit at all (buttons at 7 pc), it reads "Not enough stock
+  to cut 20 units. You can't cut any now: restock Metal shank button 17mm first." If someone else used the stock in the meantime, the
+  check uses the stock saved now. Stock never goes below 0; amounts are exact, to 4 decimal places like all stock.
 - [ ] **AC-4 · Each material's history says why its stock fell.** After cutting 30, each of the four materials' history shows a new entry
   with the badge "Cutting", the text "−59.4 m · Boutique Lina · 30 × Denim Jacket" (the material's own quantity and unit), and "by" the
   person who clicked. The entry is dated the day you click "Move units"; there is no date to choose. The history's description reads
@@ -68,18 +68,19 @@ tags:
   - Woven brand label · 5 pc · 370 pc · 375 pc
 
   Confirming shows "5 units of Denim Jacket moved back to To start. Materials returned to stock." Denim 12oz Indigo then shows "In stock
-  200.5 m", Denim Jacket shows "Can produce now 87", and each history shows "Returned", "+9.9 m · Boutique Lina · 5 × Denim Jacket",
-  dated that day.
+  200.5 m", Denim Jacket shows "Can produce now 87", and each history shows "Back from cutting", "+9.9 m · Boutique Lina · 5 × Denim
+  Jacket", dated the day you click "Move units".
   - What comes back is what was taken for those units, even if the composition changed since: if the jacket now needs 10 buttons instead
     of 8, moving back 5 returns 40 pc, not 50.
-  - If units were cut on different days with different compositions, the units cut most recently go back first.
-  - A material deleted since then, or whose unit has changed since, gets nothing back; its row reads "Deleted, not returned" or "Unit
-    changed, not returned".
+  - If the units were cut at different times, the latest cut comes back first: after cutting 30 at 8 buttons each and then 10 at 10
+    buttons each, moving back 5 returns 50 pc of Metal shank button 17mm.
+  - Moving back units of a deleted product still returns their materials.
+  - A material deleted since the cut, or whose unit has changed since, gets nothing back; its row reads "Deleted, not returned" or
+    "Unit changed, not returned", and the other materials come back.
   - When no material was taken for those units, the window says "No material was taken out of stock for these units, so none is
     returned." When nothing comes back, the message is only "5 units of Denim Jacket moved back to To start.".
 - [ ] **AC-6 · Nothing else touches stock.** "Mark ready", "Ship" and their "Move back", editing an order's quantities, and recording a
-  sale change no stock. Deleting an order returns nothing: for an order with units already cut, "Delete order?" adds "Materials already
-  taken out of stock for 30 units are not returned. To get them back, move those units back to To start first."
+  sale change no stock. An order with units in cutting or ready to ship can't be deleted (S-49), so no material is ever lost by deleting.
 - [ ] **AC-7 · "Can produce" and the restock warnings use what is left.** "Can produce now", the bottleneck, "what you can make with it" and
   the "Needs restock" badges and panel all use the stock left on the shelves, so they fall when cutting starts. Units still to start on
   open orders are not set aside: with Boutique Lina's 20 Denim Jackets still to start, Denim Jacket shows "Can produce now 82", not 62.

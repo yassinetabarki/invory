@@ -5,7 +5,7 @@ type: feature
 phase: 5
 priority: Must
 size: M
-status: Planned
+status: Ready
 created: 2026-10-15
 tags:
   - story
@@ -43,6 +43,9 @@ tags:
   - Then "Mark ready" on Denim Jacket with 10 shows "10 units of Denim Jacket moved to Ready to ship." and Denim Jacket reads 20 · 20 · 10
     · 0.
   - A button whose stage holds 0 units can't be clicked (here "Ship" on Denim Jeans 5-pocket). One unit reads "1 unit of … moved to …".
+  - A product archived or set back to draft since the order was taken moves as usual. A line whose product was deleted can't start
+    cutting: "Start cutting" can't be clicked, with the hint "Denim Jacket was deleted, so it can't be cut."; "Mark ready", "Ship" and
+    "Move back" still work for its units.
 - [ ] **AC-3 · Ship, and the statuses.** From 20 · 20 · 10 · 0, "Ship" on Denim Jacket with 10 shows "10 units of Denim Jacket moved to
   Shipped.", the line reads 20 · 20 · 0 · 10 and "10 of 50 shipped", and the order reads "10 of 80 shipped". Each line has its own status
   ("Not started", "In progress" or "Shipped"), shown as a word with an icon, never by colour alone. The order is "Not started" while no
@@ -64,8 +67,10 @@ tags:
     (someone else started the line meanwhile), nothing is saved and the same message shows under the products. Lines that haven't
     started, and new lines, can be changed freely.
   - A fully shipped line whose quantity is raised from 50 to 60 shows To start 10 and is "In progress" again.
-  - "Delete order?" adds "Its progress (20 in cutting, 10 ready to ship, 0 shipped) is removed too.". Deleting from the order's page
-    brings you back to the Orders list with "Order deleted.".
+  - An order with units in cutting or ready to ship can't be deleted: "Delete", on the order's page or the Orders list, shows "Boutique
+    Lina can't be deleted: 30 units are in cutting or ready to ship. Move them back to To start first." and nothing is deleted. An order
+    whose units are only to start or shipped deletes as today, after "Delete order?"; deleting it from the order's page brings you back
+    to the Orders list with "Order deleted.".
 - [ ] **AC-7 · Ready and shipped are counts.** "Mark ready", "Ship" and their "Move back" never change material stock and never record a
   sale: after 10 Denim Jackets have shipped, the Sales page and the dashboard show no new sale.
 
