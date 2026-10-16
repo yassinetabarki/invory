@@ -121,11 +121,14 @@ export type SalesPeriod =
     | 'last_30_days'
     | 'this_month'
     | 'this_year';
+// `cutting_return` is labelled "Back from cutting" (it fits the 16-character `stock_movements.type` column, so no column change)
 export type StockMovementType =
     | 'created'
     | 'restock'
     | 'correction'
-    | 'price_change';
+    | 'price_change'
+    | 'cutting'
+    | 'cutting_return';
 
 export type MaterialRef = {
     id: number;
@@ -371,20 +374,38 @@ export type OrderCreateProps = { products: OrderProduct[] };
 export type OrderEditProps = { order: Order; products: OrderProduct[] };
 export type OrderShowProps = { order: Order };
 
+/**
+ * start_cutting: to_start → in_cutting · mark_ready: in_cutting → ready_to_ship · ship: ready_to_ship → shipped ·
+ * back_to_start: in_cutting → to_start · back_to_cutting: ready_to_ship → in_cutting · back_to_ready: shipped → ready_to_ship
+ */
+export type OrderLineMove =
+    | 'start_cutting'
+    | 'mark_ready'
+    | 'ship'
+    | 'back_to_start'
+    | 'back_to_cutting'
+    | 'back_to_ready';
+
+/** Fields the move window posts to `orders.lines.moves.store`. Errors come back as `units` (and `move`). */
+export type MoveUnitsFormData = { move: OrderLineMove; units: string };
+
 export type StockMovement = {
     id: number;
     material_id: number;
     type: StockMovementType;
-    type_label: string; // "Created", "Restock", "Correction", "Price change"
+    type_label: string; // "Created", "Restock", "Correction", "Price change", "Cutting", "Back from cutting"
     occurred_on: string; // 'YYYY-MM-DD'
-    quantity: Decimal | null; // created: opening stock · restock: quantity received
-    quantity_before: Decimal | null; // correction only
+    quantity: Decimal | null; // created: opening stock · restock: quantity received · cutting (taken) and cutting_return (given back): positive
+    quantity_before: Decimal | null; // correction, cutting, cutting_return only
     quantity_after: Decimal | null; // stock after the entry; null for price_change
     unit_price: Decimal | null; // created: opening unit cost · restock: unit price paid
     unit_cost_before: Decimal | null; // price_change only
     unit_cost_after: Decimal | null; // price_change only
     reference: string | null; // restock: PO or delivery note
     note: string | null; // correction: reason
+    units: number | null; // cutting / cutting_return: the units of the order line
+    order: { id: number; client: string } | null; // cutting / cutting_return (soft-deleted orders included)
+    product_name: string | null; // cutting / cutting_return (soft-deleted products included)
     user_name: string | null; // who did it
 };
 

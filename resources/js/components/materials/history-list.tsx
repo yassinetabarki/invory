@@ -22,9 +22,25 @@ const TONE: Record<StockMovementType, string> = {
     price_change: 'bg-info text-info-foreground',
     correction: 'bg-warning text-warning-foreground',
     created: 'bg-neutral text-neutral-foreground',
+    cutting: 'bg-warning text-warning-foreground',
+    cutting_return: 'bg-success text-success-foreground',
 };
 
 type Formatters = { currency: string; locale: string };
+
+/**
+ * "−59.4 m · Boutique Lina · 30 × Denim Jacket": the sign (U+2212 for cutting)
+ * is a literal prefix, the server sends the quantity positive. A missing order
+ * or product is left out, never printed as "null".
+ */
+function describeCut(entry: StockMovement, quantity: string): string {
+    const what =
+        entry.units !== null && entry.product_name
+            ? `${entry.units} × ${entry.product_name}`
+            : entry.product_name;
+
+    return [quantity, entry.order?.client, what].filter(Boolean).join(' · ');
+}
 
 /**
  * What happened, as a sentence. The `+` before a restock is a literal prefix:
@@ -55,6 +71,10 @@ function describe(
         }
         case 'price_change':
             return `${price(entry.unit_cost_before)} → ${price(entry.unit_cost_after)} per ${unit}`;
+        case 'cutting':
+            return describeCut(entry, `−${quantity(entry.quantity)}`);
+        case 'cutting_return':
+            return describeCut(entry, `+${quantity(entry.quantity)}`);
     }
 }
 

@@ -11,8 +11,8 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * `StockMovement` in resources/js/types/domain.ts. Needs the `user_name` attribute that {@see StockHistory}
- * joins in. Decimals are scale-4 strings (the model's casts), dates are 'YYYY-MM-DD'.
+ * `StockMovement` in resources/js/types/domain.ts. Needs the `user_name`, `order_client` and
+ * `product_name` attributes that {@see StockHistory} joins in. Decimals are scale-4 strings (the model's casts), dates are 'YYYY-MM-DD'.
  *
  * @mixin StockMovement
  */
@@ -36,6 +36,9 @@ final class StockMovementResource extends JsonResource
             'unit_cost_after' => $this->unit_cost_after,
             'reference' => $this->reference,
             'note' => $this->note,
+            'units' => $this->units,
+            'order' => $this->order_id === null ? null : ['id' => $this->order_id, 'client' => $this->order_client],
+            'product_name' => $this->product_name,
             'user_name' => $this->user_name,
         ];
     }

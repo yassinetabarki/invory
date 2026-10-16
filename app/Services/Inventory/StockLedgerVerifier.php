@@ -16,7 +16,11 @@ use Brick\Math\RoundingMode;
  *
  *     ledger balance = opening stock of the `created` entry
  *                    + the quantity of every `restock`
- *                    + (after - before) of every `correction`           a `price_change` moves no stock
+ *                    + (after - before) of every `correction`
+ *                    - the quantity of every `cutting`                   (S-53: materials taken out of stock)
+ *                    + the quantity of every `cutting_return`            (materials given back)
+ *
+ * A `price_change` moves no stock.
  *
  * Exact maths: the sums are BigDecimal in PHP, never SQL `SUM` (SQLite would add decimals as floats). Soft-deleted materials
  * are checked too: their stock is still stored. A material with no `created` entry has an opening stock of zero, so one that
@@ -94,6 +98,8 @@ final class StockLedgerVerifier
             StockMovementType::Restock => BigDecimal::of($movement->quantity ?? '0'),
             StockMovementType::Correction => BigDecimal::of($movement->quantity_after ?? '0')->minus($movement->quantity_before ?? '0'),
             StockMovementType::PriceChange => BigDecimal::zero(),
+            StockMovementType::Cutting => BigDecimal::of($movement->quantity ?? '0')->negated(),
+            StockMovementType::CuttingReturn => BigDecimal::of($movement->quantity ?? '0'),
         };
     }
 }

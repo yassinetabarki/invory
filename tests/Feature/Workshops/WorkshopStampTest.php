@@ -10,6 +10,8 @@ use App\Exceptions\MissingWorkshopException;
 use App\Models\Material;
 use App\Models\Order;
 use App\Models\OrderLine;
+use App\Models\OrderLineCut;
+use App\Models\OrderLineCutMaterial;
 use App\Models\Product;
 use App\Models\Sale;
 use App\Models\StockMovement;
@@ -92,6 +94,26 @@ it('stamps every owned record with the right workshop', function (Closure $scena
         $line = OrderLine::factory()->for($order)->for($product)->create();
 
         expect($line->workshop_id)->toBe($other->id);
+    }],
+
+    'a cut takes the workshop of its line' => [function (Workshop $mine, Workshop $other): void {
+        $line = OrderLine::factory()->create(['order_id' => Order::factory()->create(['workshop_id' => $other->id])->id]);
+
+        // No current workshop: a cut that did not take its line's would be refused for having none.
+        $cut = OrderLineCut::factory()->create(['order_line_id' => $line->id]);
+
+        expect($cut->workshop_id)->toBe($other->id)
+            ->and(DB::table('order_line_cuts')->where('id', $cut->id)->value('workshop_id'))->toBe($other->id);
+    }],
+
+    'a cut material takes the workshop of its cut' => [function (Workshop $mine, Workshop $other): void {
+        $cut = OrderLineCut::factory()->create(['order_line_id' => OrderLine::factory()->create(['order_id' => Order::factory()->create(['workshop_id' => $other->id])->id])->id]);
+        $material = Material::factory()->create(['workshop_id' => $other->id]);
+
+        $cutMaterial = OrderLineCutMaterial::factory()->create(['order_line_cut_id' => $cut->id, 'material_id' => $material->id]);
+
+        expect($cut->workshop_id)->toBe($other->id)
+            ->and($cutMaterial->workshop_id)->toBe($other->id);
     }],
 
     'a root record with no workshop anywhere is refused' => [function (): void {

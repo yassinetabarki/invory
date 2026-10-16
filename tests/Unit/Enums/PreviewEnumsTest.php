@@ -47,7 +47,7 @@ it('matches the domain skill values and the TypeScript unions, in order', functi
         ->and(array_column(SalesPeriod::options(), 'value'))
         ->toBe(['last_7_days', 'last_30_days', 'this_month', 'this_year'])
         ->and(array_column(StockMovementType::options(), 'value'))
-        ->toBe(['created', 'restock', 'correction', 'price_change']);
+        ->toBe(['created', 'restock', 'correction', 'price_change', 'cutting', 'cutting_return']);
 });
 
 it('uses the decided labels', function () {
@@ -56,7 +56,7 @@ it('uses the decided labels', function () {
         ->and(array_column(SalesPeriod::options(), 'label'))
         ->toBe(['Last 7 days', 'Last 30 days', 'This month', 'This year'])
         ->and(array_column(StockMovementType::options(), 'label'))
-        ->toBe(['Created', 'Restock', 'Correction', 'Price change']);
+        ->toBe(['Created', 'Restock', 'Correction', 'Price change', 'Cutting', 'Back from cutting']);
 });
 
 it('can be created from its backing value', function () {

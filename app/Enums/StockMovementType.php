@@ -10,6 +10,8 @@ enum StockMovementType: string
     case Restock = 'restock';
     case Correction = 'correction';
     case PriceChange = 'price_change';
+    case Cutting = 'cutting';
+    case CuttingReturn = 'cutting_return';
 
     public function label(): string
     {
@@ -18,6 +20,8 @@ enum StockMovementType: string
             self::Restock => __('Restock'),
             self::Correction => __('Correction'),
             self::PriceChange => __('Price change'),
+            self::Cutting => __('Cutting'),
+            self::CuttingReturn => __('Back from cutting'),
         };
     }
 

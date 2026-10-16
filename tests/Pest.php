@@ -516,6 +516,16 @@ function stageCountsMigration(): Migration
 }
 
 /**
+ * The cuts migration object (S-53-a): two tables, and three reference columns on `stock_movements`. It points at orders, order lines,
+ * materials and products, so a test that rolls the orders migration (or anything below) back must roll this one back first, newest
+ * first, and bring it back up last (the hand-kept list, F-60).
+ */
+function cutsMigration(): Migration
+{
+    return require database_path('migrations/2026_10_16_200000_create_order_line_cuts_tables.php');
+}
+
+/**
  * An order of the current workshop with its lines (S-48-b). `$lines` is a list of `[Product, quantity]` in the order they are entered
  * (the position follows the list); by default Boutique Lina's order of the card: Denim Jacket 50 then Denim Jeans 5-pocket 30 (needs the
  * demo products). The lines are created last-first, so their ids run against their positions: a read that sorted by id would show.

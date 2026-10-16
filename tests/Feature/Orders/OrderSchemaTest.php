@@ -32,7 +32,8 @@ it('creates both tables with their columns, indexes and foreign keys, and drops 
         ->and($foreignKeys('order_lines', 'orders')['on_delete'])->toBe('cascade')
         ->and($foreignKeys('order_lines', 'products')['on_delete'])->toBe('restrict');
 
-    // Newest first: the stage counts are columns of `order_lines`.
+    // Newest first: the cuts point at lines and stock movements, the stage counts are columns of `order_lines`.
+    cutsMigration()->down();
     stageCountsMigration()->down();
     ordersMigration()->down();
 
@@ -41,6 +42,7 @@ it('creates both tables with their columns, indexes and foreign keys, and drops 
 
     ordersMigration()->up();
     stageCountsMigration()->up();
+    cutsMigration()->up();
 
     $line = OrderLine::factory()->create();
 

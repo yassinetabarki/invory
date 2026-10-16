@@ -22,8 +22,8 @@ export function HistoryCard({ material, history }: HistoryCardProps) {
                     History
                 </h2>
                 <p className="text-sm text-muted-foreground">
-                    Restocks, stock corrections and unit price changes, newest
-                    first.
+                    Restocks, cutting, stock corrections and unit price changes,
+                    newest first.
                 </p>
             </div>
             <HistoryList entries={history} unit={material.unit} />

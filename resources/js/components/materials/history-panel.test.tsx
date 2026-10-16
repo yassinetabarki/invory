@@ -68,7 +68,7 @@ describe('<HistoryPanel>', () => {
         expect(panel).toHaveAttribute('id', 'panel-1');
         expect(
             within(panel).getByText(
-                'Restocks, stock corrections and unit price changes, newest first.',
+                'Restocks, cutting, stock corrections and unit price changes, newest first.',
             ),
         ).toBeInTheDocument();
     });

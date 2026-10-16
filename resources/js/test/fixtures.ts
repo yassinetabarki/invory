@@ -178,6 +178,9 @@ function movement(
         unit_cost_after: null,
         reference: null,
         note: null,
+        units: null,
+        order: null,
+        product_name: null,
         user_name: 'Admin',
         ...entry,
     };

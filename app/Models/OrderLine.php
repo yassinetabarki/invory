@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * One product of an order with its whole-unit quantity. One line per product per order (database-unique).
@@ -85,6 +86,16 @@ class OrderLine extends Model
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
+    }
+
+    /**
+     * The cuts of this line (S-53). Latest first is the caller's order.
+     *
+     * @return HasMany<OrderLineCut, $this>
+     */
+    public function cuts(): HasMany
+    {
+        return $this->hasMany(OrderLineCut::class);
     }
 
     /**

@@ -48,7 +48,7 @@ export function HistoryPanel({
         <InlinePanel
             id={id}
             title={`History · ${material.name}`}
-            description="Restocks, stock corrections and unit price changes, newest first."
+            description="Restocks, cutting, stock corrections and unit price changes, newest first."
             closeLabel="Close history"
             focusOnMount
             onClose={onClose}

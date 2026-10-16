@@ -223,6 +223,7 @@ describe('up, down, up', function () {
         $material = Material::factory()->create(['sku' => 'KEEP-1', 'name' => 'Survivor']);
 
         // Newest first, as `migrate:rollback` does: newer migrations that depend on `(workshop_id, id)` (orders) go before the workshop one.
+        cutsMigration()->down();
         stageCountsMigration()->down();
         ordersMigration()->down();
         workshopMigration04()->down();
@@ -246,6 +247,7 @@ describe('up, down, up', function () {
         workshopMigration04()->up();
         ordersMigration()->up();
         stageCountsMigration()->up();
+        cutsMigration()->up();
 
         expect(Schema::hasTable('products'))->toBeTrue()
             ->and(Schema::hasTable('product_components'))->toBeTrue()
@@ -261,6 +263,7 @@ describe('up, down, up', function () {
     it('keeps the partial SKU index of materials through the audit columns, up and down', function () {
         // SQLite rebuilds `materials` when a column is dropped, and would lose the `WHERE` of a partial index it re-creates itself.
         // The migrations before and after this one are rolled back first, so only the audit columns change.
+        cutsMigration()->down();
         stageCountsMigration()->down();
         ordersMigration()->down();
         workshopMigration04()->down();
@@ -279,6 +282,7 @@ describe('up, down, up', function () {
     });
 
     it('runs the products migration down and up more than once', function () {
+        cutsMigration()->down();
         stageCountsMigration()->down();
         ordersMigration()->down();
         workshopMigration04()->down();
@@ -291,6 +295,7 @@ describe('up, down, up', function () {
         workshopMigration04()->up();
         ordersMigration()->up();
         stageCountsMigration()->up();
+        cutsMigration()->up();
 
         expect(Schema::hasIndex('products', 'products_sku_unique'))->toBeTrue();
 

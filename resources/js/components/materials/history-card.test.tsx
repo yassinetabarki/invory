@@ -25,7 +25,7 @@ describe('<HistoryCard>', () => {
         ).toBeInTheDocument();
         expect(
             screen.getByText(
-                'Restocks, stock corrections and unit price changes, newest first.',
+                'Restocks, cutting, stock corrections and unit price changes, newest first.',
             ),
         ).toBeInTheDocument();
     });

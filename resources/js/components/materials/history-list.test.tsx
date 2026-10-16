@@ -98,6 +98,67 @@ describe('<HistoryList>', () => {
         ).toBeInTheDocument();
     });
 
+    it.each([
+        {
+            type: 'cutting',
+            label: 'Cutting',
+            quantity: '59.4000',
+            units: 30,
+            text: '−59.4 m · Boutique Lina · 30 × Denim Jacket',
+        },
+        {
+            type: 'cutting_return',
+            label: 'Back from cutting',
+            quantity: '9.9000',
+            units: 5,
+            text: '+9.9 m · Boutique Lina · 5 × Denim Jacket',
+        },
+    ] as const)(
+        'describes $label: the material quantity, the client and the units cut',
+        ({ type, label, quantity, units, text }) => {
+            render(
+                <HistoryList
+                    entries={[
+                        entry({
+                            type,
+                            type_label: label,
+                            quantity,
+                            units,
+                            order: { id: 7, client: 'Boutique Lina' },
+                            product_name: 'Denim Jacket',
+                            reference: null,
+                        }),
+                    ]}
+                    unit="m"
+                />,
+            );
+
+            expect(within(row(0)).getByText(label)).toBeInTheDocument();
+            expect(within(row(0)).getByText(text)).toBeInTheDocument();
+            expect(within(row(0)).getByText('2 Oct 2026')).toBeInTheDocument();
+            expect(within(row(0)).getByText('by Admin')).toBeInTheDocument();
+        },
+    );
+
+    it('leaves out the order or product a cutting entry no longer has', () => {
+        render(
+            <HistoryList
+                entries={[
+                    entry({
+                        type: 'cutting',
+                        type_label: 'Cutting',
+                        quantity: '59.4000',
+                        order: null,
+                        product_name: null,
+                    }),
+                ]}
+                unit="m"
+            />,
+        );
+
+        expect(screen.getByText('−59.4 m')).toBeInTheDocument();
+    });
+
     it('keeps 4 decimals for prices below one cent', () => {
         render(
             <HistoryList
