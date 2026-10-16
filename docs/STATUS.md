@@ -23,10 +23,10 @@
 
 **Current phase:** **Phase 5: Customer orders** (started 2026-10-15, D-12). **S-48 is done** (accepted 2026-10-15 after your
 click-through; `e3b7ae7`, `5af8ed1`, on `main`). D-11 is decided with your final answers (2026-10-16); they replace the
-version committed in `5be7b9c`. S-49 and S-53 were revised with them and are `Ready` again; S-50 is `Ready`; F-41 stays `Planned`.
-Next: the tech-lead revises the Technical work of S-49 and S-53 (and ADR-0014 and the business rules) to the final answers, for your
-approval; then the build of F-41, S-49 and S-53 in a worktree (the two stories land together); then S-50, then the new Shoulds S-56
-and S-57. Phase 5 tech allowance: F-41 only (moved from Phase 6, 2026-10-15).
+version committed in `5be7b9c`. S-49 and S-53 were revised with them, and you approved their revised Technical work the same day:
+F-41, S-49 and S-53 are `Planned`; S-50 is `Ready`. Next: the build of F-41, then S-49 and S-53, in the existing build worktree once
+it is synced to `main` (the two stories land together); then S-50, then the new Shoulds S-56 and S-57. Phase 5 tech allowance: F-41
+only (moved from Phase 6, 2026-10-15). S-49 and S-53 fill the two-story work-in-progress limit.
 **Phase 4: MVP release readiness** is on hold for later; S-08 and S-29 are done (closed as they stood, D-13; see [ROADMAP.md](ROADMAP.md)).
 
 ---
@@ -71,13 +71,19 @@ materials." in S-53 AC-5.
 **Superseded on 2026-10-16:** the "every recommended answer" D-11 (`5be7b9c`: deleting an order returns nothing after a warning,
 "Returned" history entries) and the planning approvals that followed it (`e8955bf`). Still standing from that planning: F-41's
 Technical work (`Planned`) and the edge-case wording you approved as written in S-49 AC-6 and S-53 AC-1, AC-2, AC-3 and AC-5, now merged
-into the revised cards in the final answers' words. Back for your approval: the Technical work of S-49 and S-53, ADR-0014 and the
-business rules, which the tech-lead revises to the final answers.
+into the revised cards in the final answers' words. The tech-lead revised the Technical work of S-49 and S-53, ADR-0014 and the
+business rules to the final answers, and you approved them the same day (see below).
 
 **Decided on 2026-10-16 (after the D-11 merge; every recommendation):** **D-14** a material deleted after the cut, or whose unit
 changed after it, gets nothing back when units move back to To start; its row reads "Deleted, not returned" or "Unit changed, not
 returned", and the other materials come back (S-53 AC-5) · S-53 stays one L story · "Delete order?" adds no sentence for shipped units ·
 the edge-case wording is accepted as merged, and S-49 and S-53 are `Ready`.
+
+**Decided on 2026-10-16 (revised planning):** S-49 AC-6 changed with your yes ("Yes, as written"): when an order can't be deleted,
+the "Delete order?" window shows the refusal in place of its question, with only "Close", and the messages read correctly for one unit
+· the revised Technical work of S-49 and S-53 approved, so F-41, S-49 and S-53 are `Planned` · the one-unit quantity message stays in
+the card but can't appear on screen (the 1 to 1,000,000 rule refuses 0 first); the tech-lead proves its wording on its own, with no
+change in behaviour (product-owner's choice).
 
 **Decided on 2026-10-15 (S-48 acceptance):** you accepted S-48 after your click-through · a line whose product no longer exists
 reads "The selected product is invalid." (close to the Sales form) · that message and a " (not active)" mark in the Edit order picker
@@ -301,10 +307,9 @@ The plan headers were corrected on 2026-10-14, and [plans/README.md](plans/READM
 **From 2026-10-15 (D-12): Phase 5 first.**
 1. Done 2026-10-15: S-48's closing documents are on `main` (`5b9a607`). Push when you choose; CI runs on the push, and only you can
    see the result.
-2. Done 2026-10-16: you decided D-11 with your final answers (§2); S-49 and S-53 are revised with them and `Ready` again, S-50 is
-   `Ready`, F-41 stays `Planned`. Main session: commit the revised cards, the story index, BACKLOG, ROADMAP and this report on `main`.
-3. Tech-lead (planning only, on the main checkout): revise the Technical work of S-49 and S-53, ADR-0014 and the business rules to the
-   final answers, for your approval (→ `Planned`). Then the build in a worktree: F-41 first, then S-49 and S-53, with one delivery
+2. Done 2026-10-16: you decided D-11 with your final answers (§2), approved the revised S-49 and S-53, then their revised Technical
+   work: F-41, S-49 and S-53 are `Planned`, S-50 is `Ready`. Main session: commit the approved docs on `main`.
+3. Tech-lead (build, in the existing build worktree once it is synced to `main`): F-41 first, then S-49 and S-53, with one delivery
    report; then the product-owner's acceptance review and your one click-through. S-50's Technical work follows. F-60 and F-61 (new
    from S-48) are offered for a tech allowance.
    - Product-owner, after S-50: write the cards of S-56 and S-57 for your approval.

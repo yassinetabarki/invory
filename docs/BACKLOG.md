@@ -2,7 +2,7 @@
 
 > Owner: **product-owner** (order, wording, acceptance criteria) · Technical detail: **tech-lead** ([TECH-DEBT.md](TECH-DEBT.md), [plans/](plans/README.md))
 > Phases and goals: [ROADMAP.md](ROADMAP.md) · Progress: [STATUS.md](STATUS.md) · Done work and full history: [archive/backlog-2026-10-14.md](archive/backlog-2026-10-14.md)
-> Last cleaned: 2026-10-16 (D-11 decided with your final answers: S-49 and S-53 revised and back to `Ready` until their Technical work is revised and approved again, S-50 `Ready`, F-41 `Planned`; S-56 and S-57 added; on 2026-10-15 S-48 done and accepted, so it left this file; before that, D-12: Phase 5 starts now, the rest of Phase 4 is on hold; D-13: S-08 and S-29 done). **Open work only**, top = next.
+> Last cleaned: 2026-10-16 (D-11 decided with your final answers: S-49 and S-53 revised, then their revised Technical work approved, so F-41, S-49 and S-53 are `Planned` and S-50 is `Ready`; S-56 and S-57 added; on 2026-10-15 S-48 done and accepted, so it left this file; before that, D-12: Phase 5 starts now, the rest of Phase 4 is on hold; D-13: S-08 and S-29 done). **Open work only**, top = next.
 > Done items leave this file; they are recorded in STATUS.md and the archive.
 
 ## How to read an item
@@ -29,13 +29,12 @@ You started it on 2026-10-15: "we will start focusing more on the orders … we 
 
 Order of work (D-11, decided 2026-10-16): one build in a worktree, F-41 first, then S-49 and S-53, which are accepted and land on
 `main` together (one click-through); then S-50, then the Shoulds S-56 and S-57. Your final D-11 answers (2026-10-16) replace the
-"every recommended answer" version committed earlier that day: S-49 and S-53 were revised with them and are `Ready` again. Their
-Technical work (and ADR-0014 and the business rules) follow the earlier answers, so the tech-lead revises them for your approval
-before the build. F-41 is unchanged and stays `Planned`.
+"every recommended answer" version committed earlier that day: S-49 and S-53 were revised with them, and you approved their
+revised Technical work the same day, so they are `Planned` with F-41. S-53 stays one L story.
 **S-48 is done** (accepted 2026-10-15 after your click-through; `e3b7ae7`, `5af8ed1`): you can record, find, edit and delete an order
 of one or more products, and nothing else in Invory changes. Its record is in [STATUS.md §4](STATUS.md#4-delivery-history).
 
-### S-49 · Track each product of an order through cutting, ready to ship and shipped · Must · M · feature · `Ready` (revised with the final D-11 answers 2026-10-16; Technical work to be revised)
+### S-49 · Track each product of an order through cutting, ready to ship and shipped · Must · M · feature · `Planned` (card and Technical work approved 2026-10-16, revised to the final D-11 answers; next: the build)
 Card: [stories/S-49-track-cutting-ready-shipped.md](stories/S-49-track-cutting-ready-shipped.md). Depends on S-48 (done); **ships
 together with S-53** (D-11).
 **You get:** each order's own page. Every product line has four counts that add up to its quantity: To start, In cutting, Ready to ship
@@ -46,11 +45,10 @@ to ship ("Move them back to To start first.").
 **Done when:** Boutique Lina's Denim Jacket line can show 20 · 20 · 10 · 0 while its jeans line shows 30 · 0 · 0 · 0; a move never takes
 more than the stage holds; a started line can't drop below its started units or be removed; that order can't be deleted.
 
-### S-53 · Starting to cut an order takes its materials out of stock · Must · L · feature · `Ready` (revised with the final D-11 answers 2026-10-16; Technical work to be revised)
+### S-53 · Starting to cut an order takes its materials out of stock · Must · L · feature · `Planned` (card and Technical work approved 2026-10-16, revised to the final D-11 answers; next: the build)
 Card: [stories/S-53-cutting-takes-materials-out-of-stock.md](stories/S-53-cutting-takes-materials-out-of-stock.md). Ships together with
 S-49 (D-11). **Changes a recorded decision:** Q9 "making products never reduces stock" is replaced (D-10). The new rule was written into
-the business rules, with decision record ADR-0014 (accepted 2026-10-16), before any code; the tech-lead brings both in line with the
-final D-11 answers before the build.
+the business rules, with decision record ADR-0014 (accepted 2026-10-16, amended the same day to the final D-11 answers), before any code.
 **You get:** "Start cutting" shows each material needed, in stock and left after, then takes it out of stock. You can't cut more than the
 stock allows, and the message says what to do. "Move back to To start" returns exactly what was taken, the latest cut first. An order
 with units in cutting or ready to ship can't be deleted, so no material is lost. Each material's history shows "Cutting" and "Back from
@@ -253,7 +251,7 @@ later; S-48 approved: only active products on an order, and an order never sets 
 S-48 done 2026-10-15: a deleted order is hidden, with no way back on screen; a product no longer active stays on the orders that have it ·
 **D-13 S-08 and S-29 closed as they stood** (2026-10-15): Done on the commits on `main`; their open checks are known gaps for go-live ·
 **D-11 how cutting changes stock** (your final answers, 2026-10-16; they replace the "every recommended answer" version committed earlier
-that day; S-49 and S-53 revised, so S-49, S-53 and S-50 are `Ready`): cutting more than stock allows is refused, with the most you can
+that day; S-49 and S-53 revised and `Planned` with their revised Technical work, S-50 `Ready`): cutting more than stock allows is refused, with the most you can
 cut and what to do; "Move back to To start" returns exactly what was taken, the latest cut first, also for a deleted product; "Delete" is
 refused while units are in cutting or ready to ship, and a cancelled order uses "Cancel order" (S-57), whose cut units go into the
 product's own stock (S-56); history entries read "Cutting" and "Back from cutting", dated the day you click "Move units"; no new

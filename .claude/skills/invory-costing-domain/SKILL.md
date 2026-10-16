@@ -27,11 +27,11 @@ If a rule here is wrong or incomplete, stop and ask the tech-lead to update it (
 | Sale | A recorded sale: product, whole-unit quantity, unit price, date, optional note. **Does not change material stock** | `Sale` / `sales` |
 | Units covered | Units of a product that one material's stock covers on its own | `units_covered` |
 | Next limit | The bottleneck and capacity a product would have if its current bottleneck were unlimited | `next_limit` |
-| Stock movement | A history entry of a material: `created`, `restock`, `correction`, `price_change`, `cutting`, `returned` | `StockMovement` / `StockMovementType` enum |
-| Order | A client's order: client name, order date, optional note, and one or more order lines. Recording, editing or deleting an order **never changes material stock or sales** (S-48); only "Start cutting" and "Move back to To start" on a line do (S-53) | `Order` / `orders` |
+| Stock movement | A history entry of a material: `created`, `restock`, `correction`, `price_change`, `cutting`, `cutting_return` ("Back from cutting") | `StockMovement` / `StockMovementType` enum |
+| Order | A client's order: client name, order date, optional note, and one or more order lines. Recording, editing or deleting an order **never changes material stock or sales** (S-48); only "Start cutting" and "Move back to To start" on a line do (S-53). An order can't be deleted while any unit is in cutting or ready to ship (S-49) | `Order` / `orders` |
 | Order line | One product of an order with its whole-unit quantity (1 … 1 000 000); one line per product per order, at most 50 per order | `OrderLine` / `order_lines` |
 | Stage counts | How many units of an order line are To start, In cutting, Ready to ship and Shipped; they always add up to the line's quantity. To start = quantity − the other three (S-49) | `in_cutting`, `ready_to_ship`, `shipped` (`to_start` derived) |
-| Cut | One "Start cutting" of N units of an order line, remembering per material the exact amount per unit and the amount taken. A move back to To start returns from the newest cuts first (S-53) | `OrderLineCut` / `order_line_cuts` |
+| Cut | One "Start cutting" of N units of an order line, remembering per material the exact amount per unit and the amount taken. A move back to To start returns from the latest cut first (S-53) | `OrderLineCut` / `order_line_cuts` |
 | Workshop | The business account. Every user belongs to one; every material, product, composition, stock movement, sale, order, order line, photo, unit and category belongs to one | `Workshop` / `workshops`, `workshop_id` |
 
 ## Workshops (added 2026-10-14, D-9, ADR-0013)
@@ -63,7 +63,7 @@ existing records. A row can be deleted only when nothing references it.
 - `product_categories` (defaults): `apparel, footwear, bag, accessory, jewelry, other`.
 - `ProductStatus`: `draft, active, archived`. Only `active` products can be sold (mockup copy "Only active products can be sold").
 - `SalesPeriod`: `last_7_days, last_30_days, this_month, this_year` (default `last_30_days`).
-- `StockMovementType`: `created, restock, correction, price_change, cutting, returned`.
+- `StockMovementType`: `created, restock, correction, price_change, cutting, cutting_return` (labelled "Back from cutting").
 - Each PHP enum exposes `label(): string` and `static options(): array<array{value:string,label:string}>`. The frontend gets options as props
   (or from the shared `reference` prop) and never hard-codes labels.
 
@@ -150,7 +150,8 @@ History is listed newest first (date, then entry order) with who did it.
 
 ```
 start_cutting(line, N):                                   N whole, 1 ≤ N ≤ to_start(line)
-    requires: the product is not deleted                  (archived and draft products can be cut)
+    requires: the product is not deleted                  (archived and draft products can be cut; a deleted product's units
+                                                          still move on and back)
     requires: BOM empty  or  N ≤ max_producible(P)        on the stock saved at that moment
     required_exact(m)  = Σ effective_qty(L) over m's lines, unrounded (at most 8 decimals)
     needed(m, N)       = round4( required_exact(m) × N )             HalfUp, once per material per cut
@@ -160,25 +161,29 @@ start_cutting(line, N):                                   N whole, 1 ≤ N ≤ t
     history: one `cutting` entry per material (quantity = needed), dated today; none for an empty BOM
 
 back_to_start(line, k):                                   k whole, 1 ≤ k ≤ in_cutting(line)
-    cuts of the line, newest first; from each cut c take k_c = min(k still to return, c.units − c.units_returned)
+    cuts of the line, latest cut first; from each cut c take k_c = min(k still to return, c.units − c.units_returned)
     held(c, m, r)      = round4( per_unit(c, m) × r )                r = outstanding units of c
     returned(c, m)     = held(c, m, r) − held(c, m, r − k_c)         a cut returned in full gives back exactly `taken`
     stock'(m)          = stock(m) + Σ_c returned(c, m)
     nothing back for a material deleted since, or whose unit changed since the cut
-    history: one `returned` entry per material that gets something back, dated today
+    a deleted product's units return their materials like any other
+    history: one `cutting_return` entry per material that gets something back, dated today
 ```
 - The current composition is never read for a return. Units no cut covers return nothing.
-- "You can cut at most N now" is `max_producible(P)`; the material it names is `bottleneck(P)`, also when several materials are short
-  (every short material still shows its "Short by"). When `max_producible(P) = 0`, the message reads "You can't cut any now: restock
-  <bottleneck> first."
-- Never touch stock: Mark ready, Ship, their Move back, editing or deleting an order, recording a sale. Deleting an order returns
-  nothing.
+- "You can cut at most N now: <bottleneck> runs short. Restock it first, or cut N or fewer." uses N = `max_producible(P)` and names
+  `bottleneck(P)`, also when several materials are short (every short material still shows its "Short by"). When
+  `max_producible(P) = 0`, the message reads "You can't cut any now: restock <bottleneck> first."
+- Never touch stock: Mark ready, Ship, their Move back, editing or deleting an order, recording a sale.
+- Deleting an order is refused while any unit is in cutting or ready to ship ("<client> can't be deleted: N units are in cutting or
+  ready to ship. Move them back to To start first."), so no material taken out of stock is lost by deleting. An order whose units are
+  only to start or shipped deletes as before and returns nothing.
 - Open orders never set stock aside: "Can produce" uses the stock on hand only.
 
 Worked example (demo stock, Denim Jacket): cutting 30 takes 59.4 m Denim 12oz Indigo, 240 pc Metal shank button 17mm, 3,780 m
 Polyester thread and 30 pc Woven brand label; the denim goes from 250 to 190.6 m, "Can produce now" from 112 to 82 (bottleneck the
 button, ⌊660 / 8⌋), and the inventory value from TND 10,544.300 to 9,936.680. Moving 5 back returns 9.9 m, 40 pc, 630 m and 5 pc (denim
-200.5 m, can produce 87); if the jacket needs 10 buttons by then, still 40 pc. With the button at 100 pc, cutting 20 is refused (needs
+200.5 m, can produce 87); if the jacket needs 10 buttons by then, still 40 pc. After cutting 30 at 8 buttons and then 10 at 10
+buttons, moving 5 back returns 50 pc (the latest cut first). With the button at 100 pc, cutting 20 is refused (needs
 160 pc, short by 60 pc, at most 12); cutting 12 leaves 4 pc. With the button at 7 pc, at most 0.
 
 ## Precision and rounding (non-negotiable, see ADR-0002)
@@ -214,6 +219,7 @@ button, ⌊660 / 8⌋), and the inventory value from TND 10,544.300 to 9,936.680
 | Cut a product with an empty BOM | allowed; nothing taken, no history entry; moving those units back returns nothing |
 | Composition changed between a cut and its return | the cut's remembered amounts come back, not the new composition's |
 | Material deleted, or its unit changed, between a cut and its return | nothing back for it ("Deleted, not returned" / "Unit changed, not returned"); the other materials come back |
+| Delete an order with units in cutting or ready to ship | refused; nothing deleted (also when someone starts cutting while Delete is confirmed) |
 | Two people cut from the same stock at once | the second check sees the stock left by the first (row locks, ADR-0014) |
 
 ## Validation rules (inputs)

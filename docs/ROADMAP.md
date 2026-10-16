@@ -1,6 +1,6 @@
 # Invory — product roadmap
 
-> Owner: **product-owner** · Approved by: the human · Last updated: 2026-10-16 (D-11 decided with your final answers: S-49, S-53 and S-50 `Ready`, F-41 `Planned`, S-56 and S-57 added; 2026-10-15: S-48 done, the first Phase 5 story; D-12: Phase 5 "Customer orders" started, the rest of Phase 4 on hold)
+> Owner: **product-owner** · Approved by: the human · Last updated: 2026-10-16 (D-11 decided with your final answers: F-41, S-49 and S-53 `Planned`, S-50 `Ready`, S-56 and S-57 added; 2026-10-15: S-48 done, the first Phase 5 story; D-12: Phase 5 "Customer orders" started, the rest of Phase 4 on hold)
 > Format: **Now / Next / Later**, organised by outcomes, not dates. Each phase is one slice of the story map with one goal, a MoSCoW-labelled
 > set of stories and exit criteria. Detailed stories live in [BACKLOG.md](BACKLOG.md); progress lives in [STATUS.md](STATUS.md).
 
@@ -31,9 +31,8 @@ ready to ship and shipped, and how many units are being made across all open ord
 You asked for it on 2026-10-15 ("design the order management UI") and answered the scope questions the same day (D-10). The same day you
 started it ahead of Phase 4: "we will start with S-48" (D-12). Orders belong to a workshop, and S-44 is done, so nothing blocks it.
 **S-48 is done** (accepted 2026-10-15 after your click-through): the Orders page records, finds, edits and deletes orders of one or more
-products. S-49, S-53 and S-50 are `Ready` (S-49 and S-53 revised with your final D-11 answers, 2026-10-16); the tech-lead
-revises the Technical work of S-49 and S-53 for your approval again. F-41 stays `Planned` and is built first in the same build
-([stories](stories/README.md)).
+products. S-49 and S-53 are `Planned` (card and Technical work approved 2026-10-16, revised to your final D-11 answers), with
+F-41 built first in the same build; S-50 is `Ready` ([stories](stories/README.md)). S-53 stays one L story (your choice, 2026-10-16).
 
 | Priority               | Story                                                    | Size |
 | ---------------------- | -------------------------------------------------------- | ---- |

@@ -1,7 +1,8 @@
 # ADR-0014 — Cutting takes materials out of stock; moving back returns exactly what was taken
 
 - **Status:** Accepted · 2026-10-16 (approved by the human on 2026-10-16 with the skill wording below; tech-lead; the human's decisions
-  D-10 of 2026-10-15 and D-11 of 2026-10-16, STATUS §2; delivered by F-41, S-49 and S-53)
+  D-10 of 2026-10-15 and D-11 of 2026-10-16, STATUS §2; delivered by F-41, S-49 and S-53) · **Amended** 2026-10-16 for the final D-11
+  answers and D-14 (see "Amendment" below)
 - **Supersedes:** decision Q9 of the Phase 3 plan ("making products never reduces material stock")
 - **Keeps:** [ADR-0002](0002-money-and-quantity-precision.md) (decimal strings + BigDecimal, scale 4, HalfUp on output),
   [ADR-0004](0004-pure-costing-domain.md) (pure domain), [ADR-0010](0010-database-architecture.md) (`quantity_on_hand` is the cached
@@ -15,8 +16,8 @@ units out of stock**, and D-11 settled the details:
 - Cutting more than the stock allows is refused; the window names the short material and the most units you can cut.
 - "Move back to To start" returns **exactly what was taken** for those units, even if the composition changed since. The units cut most
   recently go back first. A material deleted since gets nothing back.
-- Deleting an order returns nothing. "Ready to ship", "Shipped", their "Move back", editing an order and recording a sale never touch stock.
-- History entries "Cutting" and "Returned" are dated the day of the click. No alerts.
+- ~~Deleting an order returns nothing.~~ (amended: deleting is refused while units are in cutting or ready to ship) "Ready to ship", "Shipped", their "Move back", editing an order and recording a sale never touch stock.
+- History entries "Cutting" and ~~"Returned"~~ "Back from cutting" (amended) are dated the day of the click. No alerts.
 - Open orders never set stock aside (S-48).
 
 This is the first time Invory changes stock **by itself**, so a wrong amount would quietly spoil stock, "Can produce" and the inventory
@@ -48,10 +49,10 @@ line, or use the same material, at the same moment.
    back; its share is written off and its row reads "Deleted, not returned" or "Unit changed, not returned". When the units' cuts took
    no material, nothing comes back and the window says so. Units that no cut covers (only possible for data written before S-53)
    return nothing.
-6. **Ledger.** `StockMovementType` gains `cutting` and `returned`. Each writes one row per material with `quantity` (positive),
+6. **Ledger.** `StockMovementType` gains `cutting` and ~~`returned`~~ `cutting_return` (amended). Each writes one row per material with `quantity` (positive),
    `quantity_before`, `quantity_after`, and three new nullable references: `order_id`, `product_id` (both only ever soft-deleted, so the
    keys restrict and the text "Boutique Lina · 30 × Denim Jacket" always resolves) and `units`. `occurred_on` is today in the app's time
-   zone. `StockLedgerVerifier` counts `cutting` as −quantity and `returned` as +quantity. A material with no amount (an empty
+   zone. `StockLedgerVerifier` counts `cutting` as −quantity and `cutting_return` as +quantity. A material with no amount (an empty
    composition, or a deleted material on return) gets no row.
 7. **Concurrency: one lock order for every writer.** Every move runs in one transaction that locks, in this order: the order row
    (`orders … FOR UPDATE`, which also serialises with "Edit order"), the order line, the line's open cuts (moves back to To start only),
@@ -77,7 +78,8 @@ line, or use the same material, at the same moment.
 - ✅ Stock, "Can produce", the bottleneck, "Needs restock" and the inventory value follow the floor without hand corrections.
 - ✅ `invory:stock:verify` still rebuilds every balance from the ledger.
 - ✅ A deleted or edited order line can't leave stock out of reach: a line that has started can't be removed or reduced below what has
-  started (S-49 AC-6), and a soft-deleted order keeps its cuts.
+  started (S-49 AC-6), and an order can be deleted only with nothing in cutting or ready to ship (amendment 1); a deleted order keeps
+  its cuts.
 - ⚠️ Two new tables and three new ledger columns; the older migration tests that roll back past `2026_10_15_100100` need the new
   migrations rolled back first. On SQLite, adding keys to `stock_movements` rebuilds the table (F-59; nothing points at it).
 - ⚠️ A cut's materials are written off when the material is deleted or its unit changes; the history keeps the "Cutting" entry.
@@ -86,30 +88,55 @@ line, or use the same material, at the same moment.
 - ⚠️ The older migration tests keep their hand-kept rollback lists (the human's choice for F-60, 2026-10-16); S-49-a and S-53-a add
   their migrations to them.
 
-## Change to the `invory-costing-domain` skill (approved by the human on 2026-10-16)
-**Target file:** `.claude/skills/invory-costing-domain/SKILL.md` (on `main`). The main session applies these eight edits exactly as
-written, in the docs commit that carries the F-41, S-49 and S-53 Technical work, **before any code**. Each edit names its anchor in the
-current file; nothing else in the file changes.
+## Amendment — 2026-10-16: the final D-11 answers
+The human gave final answers to D-11 later the same day (STATUS §2, criteria committed in `de98837`), and D-14 was decided with them.
+The decision above stands except for these points, which replace it where the two differ:
+
+1. **Deleting an order is refused, not warned.** While any line of the order has units in cutting or ready to ship, "Delete" deletes
+   nothing and says "<client> can't be deleted: N units are in cutting or ready to ship. Move them back to To start first." (N = in
+   cutting + ready to ship, summed over the lines), from the order page and from the Orders list. An order whose units are only to start
+   or shipped deletes as before (soft delete) and returns nothing. `DeleteOrder` takes the **order row lock** (§7) and re-reads the
+   counts under it, so a delete confirmed while someone starts cutting is refused. So no material taken out of stock can be lost by
+   deleting; the earlier warning sentence and its `units_cut` figure are dropped. Cancelling an order is a later story (S-57).
+2. **The second history type is `cutting_return`, labelled "Back from cutting"** (replaces `returned` / "Returned" in §6). The value
+   fits `stock_movements.type` (`string(16)`); `back_from_cutting` is 17 characters and would need a column change, which rebuilds the
+   table on SQLite (F-59).
+3. **A deleted product can't start cutting** ("<product> was deleted, so it can't be cut."), checked in the move Action under the
+   locks; "Mark ready", "Ship" and every "Move back" still work for its units, and moving them back to To start returns their materials
+   from the remembered cuts as for any product.
+4. **The short-stock message** ends "… runs short. Restock it first, or cut N or fewer." (N = `max_producible`); the zero variant stays
+   "You can't cut any now: restock <bottleneck> first."
+5. **Latest cut first** is the same rule as §5 ("newest first"); the card's example is now: cut 30 at 8 buttons, then 10 at 10 buttons;
+   moving back 5 returns 50 pc.
+6. **D-14** confirms §5: a material deleted since the cut, or whose unit changed since, gets nothing back ("Deleted, not returned" /
+   "Unit changed, not returned"); the other materials come back.
+
+The skill change below was applied on 2026-10-16 and revised the same day to these answers; it shows the final wording.
+
+## Change to the `invory-costing-domain` skill (approved by the human on 2026-10-16, revised the same day)
+**Target file:** `.claude/skills/invory-costing-domain/SKILL.md` (on `main`). The main session applied these eight edits on 2026-10-16
+(`e8955bf`); the tech-lead revised them the same day to the final D-11 answers, in the file and below. Nothing else in the file
+changes. The file is committed with the revised Technical work, **before any code**.
 
 **Edit 1 · Glossary, the "Stock movement" row.** Replace the row with:
 ```
-| Stock movement | A history entry of a material: `created`, `restock`, `correction`, `price_change`, `cutting`, `returned` | `StockMovement` / `StockMovementType` enum |
+| Stock movement | A history entry of a material: `created`, `restock`, `correction`, `price_change`, `cutting`, `cutting_return` ("Back from cutting") | `StockMovement` / `StockMovementType` enum |
 ```
 
 **Edit 2 · Glossary, the "Order" row.** Replace the row with:
 ```
-| Order | A client's order: client name, order date, optional note, and one or more order lines. Recording, editing or deleting an order **never changes material stock or sales** (S-48); only "Start cutting" and "Move back to To start" on a line do (S-53) | `Order` / `orders` |
+| Order | A client's order: client name, order date, optional note, and one or more order lines. Recording, editing or deleting an order **never changes material stock or sales** (S-48); only "Start cutting" and "Move back to To start" on a line do (S-53). An order can't be deleted while any unit is in cutting or ready to ship (S-49) | `Order` / `orders` |
 ```
 
 **Edit 3 · Glossary, after the "Order line" row.** Insert two rows:
 ```
 | Stage counts | How many units of an order line are To start, In cutting, Ready to ship and Shipped; they always add up to the line's quantity. To start = quantity − the other three (S-49) | `in_cutting`, `ready_to_ship`, `shipped` (`to_start` derived) |
-| Cut | One "Start cutting" of N units of an order line, remembering per material the exact amount per unit and the amount taken. A move back to To start returns from the newest cuts first (S-53) | `OrderLineCut` / `order_line_cuts` |
+| Cut | One "Start cutting" of N units of an order line, remembering per material the exact amount per unit and the amount taken. A move back to To start returns from the latest cut first (S-53) | `OrderLineCut` / `order_line_cuts` |
 ```
 
 **Edit 4 · Units and categories, the `StockMovementType` bullet.** Replace it with:
 ```
-- `StockMovementType`: `created, restock, correction, price_change, cutting, returned`.
+- `StockMovementType`: `created, restock, correction, price_change, cutting, cutting_return` (labelled "Back from cutting").
 ```
 
 **Edit 5 · New section** between the line "History is listed newest first (date, then entry order) with who did it." and the heading
@@ -120,7 +147,8 @@ current file; nothing else in the file changes.
 
 ```
 start_cutting(line, N):                                   N whole, 1 ≤ N ≤ to_start(line)
-    requires: the product is not deleted                  (archived and draft products can be cut)
+    requires: the product is not deleted                  (archived and draft products can be cut; a deleted product's units
+                                                          still move on and back)
     requires: BOM empty  or  N ≤ max_producible(P)        on the stock saved at that moment
     required_exact(m)  = Σ effective_qty(L) over m's lines, unrounded (at most 8 decimals)
     needed(m, N)       = round4( required_exact(m) × N )             HalfUp, once per material per cut
@@ -130,25 +158,29 @@ start_cutting(line, N):                                   N whole, 1 ≤ N ≤ t
     history: one `cutting` entry per material (quantity = needed), dated today; none for an empty BOM
 
 back_to_start(line, k):                                   k whole, 1 ≤ k ≤ in_cutting(line)
-    cuts of the line, newest first; from each cut c take k_c = min(k still to return, c.units − c.units_returned)
+    cuts of the line, latest cut first; from each cut c take k_c = min(k still to return, c.units − c.units_returned)
     held(c, m, r)      = round4( per_unit(c, m) × r )                r = outstanding units of c
     returned(c, m)     = held(c, m, r) − held(c, m, r − k_c)         a cut returned in full gives back exactly `taken`
     stock'(m)          = stock(m) + Σ_c returned(c, m)
     nothing back for a material deleted since, or whose unit changed since the cut
-    history: one `returned` entry per material that gets something back, dated today
+    a deleted product's units return their materials like any other
+    history: one `cutting_return` entry per material that gets something back, dated today
 ```
 - The current composition is never read for a return. Units no cut covers return nothing.
-- "You can cut at most N now" is `max_producible(P)`; the material it names is `bottleneck(P)`, also when several materials are short
-  (every short material still shows its "Short by"). When `max_producible(P) = 0`, the message reads "You can't cut any now: restock
-  <bottleneck> first."
-- Never touch stock: Mark ready, Ship, their Move back, editing or deleting an order, recording a sale. Deleting an order returns
-  nothing.
+- "You can cut at most N now: <bottleneck> runs short. Restock it first, or cut N or fewer." uses N = `max_producible(P)` and names
+  `bottleneck(P)`, also when several materials are short (every short material still shows its "Short by"). When
+  `max_producible(P) = 0`, the message reads "You can't cut any now: restock <bottleneck> first."
+- Never touch stock: Mark ready, Ship, their Move back, editing or deleting an order, recording a sale.
+- Deleting an order is refused while any unit is in cutting or ready to ship ("<client> can't be deleted: N units are in cutting or
+  ready to ship. Move them back to To start first."), so no material taken out of stock is lost by deleting. An order whose units are
+  only to start or shipped deletes as before and returns nothing.
 - Open orders never set stock aside: "Can produce" uses the stock on hand only.
 
 Worked example (demo stock, Denim Jacket): cutting 30 takes 59.4 m Denim 12oz Indigo, 240 pc Metal shank button 17mm, 3,780 m
 Polyester thread and 30 pc Woven brand label; the denim goes from 250 to 190.6 m, "Can produce now" from 112 to 82 (bottleneck the
 button, ⌊660 / 8⌋), and the inventory value from TND 10,544.300 to 9,936.680. Moving 5 back returns 9.9 m, 40 pc, 630 m and 5 pc (denim
-200.5 m, can produce 87); if the jacket needs 10 buttons by then, still 40 pc. With the button at 100 pc, cutting 20 is refused (needs
+200.5 m, can produce 87); if the jacket needs 10 buttons by then, still 40 pc. After cutting 30 at 8 buttons and then 10 at 10
+buttons, moving 5 back returns 50 pc (the latest cut first). With the button at 100 pc, cutting 20 is refused (needs
 160 pc, short by 60 pc, at most 12); cutting 12 leaves 4 pc. With the button at 7 pc, at most 0.
 ````
 
@@ -157,6 +189,7 @@ button, ⌊660 / 8⌋), and the inventory value from TND 10,544.300 to 9,936.680
 | Cut a product with an empty BOM | allowed; nothing taken, no history entry; moving those units back returns nothing |
 | Composition changed between a cut and its return | the cut's remembered amounts come back, not the new composition's |
 | Material deleted, or its unit changed, between a cut and its return | nothing back for it ("Deleted, not returned" / "Unit changed, not returned"); the other materials come back |
+| Delete an order with units in cutting or ready to ship | refused; nothing deleted (also when someone starts cutting while Delete is confirmed) |
 | Two people cut from the same stock at once | the second check sees the stock left by the first (row locks, ADR-0014) |
 ```
 

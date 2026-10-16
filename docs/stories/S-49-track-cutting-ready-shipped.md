@@ -5,7 +5,7 @@ type: feature
 phase: 5
 priority: Must
 size: M
-status: Ready
+status: Planned
 created: 2026-10-15
 tags:
   - story
@@ -67,10 +67,13 @@ tags:
     (someone else started the line meanwhile), nothing is saved and the same message shows under the products. Lines that haven't
     started, and new lines, can be changed freely.
   - A fully shipped line whose quantity is raised from 50 to 60 shows To start 10 and is "In progress" again.
-  - An order with units in cutting or ready to ship can't be deleted: "Delete", on the order's page or the Orders list, shows "Boutique
-    Lina can't be deleted: 30 units are in cutting or ready to ship. Move them back to To start first." and nothing is deleted. An order
-    whose units are only to start or shipped deletes as today, after "Delete order?"; deleting it from the order's page brings you back
-    to the Orders list with "Order deleted.".
+  - An order with units in cutting or ready to ship can't be deleted. "Delete", on the order's page or the Orders list, opens the
+    "Delete order?" window, which shows "Boutique Lina can't be deleted: 30 units are in cutting or ready to ship. Move them back to To
+    start first." in place of its question, with only a "Close" button; nothing is deleted. If someone else started cutting while you
+    confirmed, the same text shows as an error message and nothing is deleted. An order whose units are only to start or shipped deletes
+    as today, after "Delete order?"; deleting it from the order's page brings you back to the Orders list with "Order deleted.".
+  - With one unit, the messages read "1 unit is in cutting or ready to ship", "Denim Jacket can't be removed: 1 unit has started." and
+    "The quantity can't be less than the 1 unit already in cutting, ready to ship or shipped.".
 - [ ] **AC-7 · Ready and shipped are counts.** "Mark ready", "Ship" and their "Move back" never change material stock and never record a
   sale: after 10 Denim Jackets have shipped, the Sales page and the dashboard show no new sale.
 
@@ -78,17 +81,19 @@ tags:
 
 ## Technical work
 > [!warning] Complex · CRITICAL · backend + frontend · 5 commits (one build with F-41 and S-53: 12 commits)
-> Tech-lead · 2026-10-16 · approved 2026-10-16
-> Why complex: new columns on order lines, new business rules on moving units and on editing a started order, a new page and new routes
-> (a new contract), and two people can move units of the same line at once. It ships with S-53 in one build (D-11).
+> Tech-lead · 2026-10-16 · approved 2026-10-16 (revised)
+> Why complex: new columns on order lines, new business rules on moving units, on editing a started order and on deleting one, a new
+> page and new routes (a new contract), and two people can move units of the same line at once. It ships with S-53 in one build (D-11).
 
 ### In short
 Each order line gets three counters: In cutting, Ready to ship and Shipped. To start is never stored; it is the quantity minus the other
 three, so the four figures can't stop adding up. The statuses ("Not started", "In progress", "Shipped") are worked out from those
 counters on the server and sent to the screen with their words. Every move goes through one server action that locks the order and the
 line while it checks and writes, so the limit it applies is always the count saved at that moment, never the one on someone's screen;
-when a move is refused, the page reloads its figures. "Edit order" re-checks the "already started" rules under the same lock. The server
-comes first (counters and the order page's data, then the moves, then the edit rules), and the screens follow. The stock side of "Start
+when a move is refused, the page reloads its figures. "Edit order" re-checks the "already started" rules under the same lock, and
+"Delete" re-checks that no unit is in cutting or ready to ship, so someone starting to cut while another person deletes can't lose
+work. The server comes first (counters and the order page's data, then the moves, then the edit and delete rules), and the screens
+follow. The stock side of "Start
 cutting" and "Move back to To start" is S-53, built in the same branch right after: until then, those two moves change only the counters.
 
 ### Steps
@@ -96,9 +101,9 @@ cutting" and "Move back to To start" is S-53, built in the same branch right aft
 | Step       | What it does                                      | Proves                       | Lane     | Who      | Size       |
 | ---------- | ------------------------------------------------- | ---------------------------- | -------- | -------- | ---------- |
 | **S-49-a** | Stage counts on each line; the order page's data  | AC-1, AC-3, AC-6             | CRITICAL | Backend  | ~280 lines |
-| **S-49-b** | Moving units on and back, with the limits         | AC-2, AC-3, AC-4, AC-5, AC-7 | CRITICAL | Backend  | ~280 lines |
-| **S-49-c** | Editing and deleting an order that has started    | AC-6                         | CRITICAL | Backend  | ~200 lines |
-| **S-49-d** | The order page and the move window                | AC-1, AC-2, AC-3, AC-4, AC-5 | CRITICAL | Frontend | ~400 lines |
+| **S-49-b** | Moving units on and back, with the limits         | AC-2, AC-3, AC-4, AC-5, AC-7 | CRITICAL | Backend  | ~300 lines |
+| **S-49-c** | Editing and deleting an order that has started    | AC-6                         | CRITICAL | Backend  | ~240 lines |
+| **S-49-d** | The order page and the move window                | AC-1, AC-2, AC-3, AC-4, AC-5 | CRITICAL | Frontend | ~410 lines |
 | **S-49-e** | Edit order and Delete order once work has started | AC-6                         | CRITICAL | Frontend | ~220 lines |
 
 Every step keeps `composer test`, `npx vp test`, `npm run check`, `npm run types:check` and `npm run build` green on its own. S-49-a to
@@ -116,8 +121,9 @@ changes: saving now lands on the order's page).
 - Statuses (AC-3), one dataset over a line and its order: everything To start → Not started; any unit moved → In progress; every line
   fully shipped → Shipped; one line shipped and one not → In progress.
 - Saving lands on the page (AC-1): saving a new order and saving an edit redirect to `orders.show` with "Order recorded." / "Order
-  updated." (the S-48 tests that expect the list are updated). Deleting from the order page lands on the Orders list with "Order
-  deleted." (AC-6); deleting from the list still goes back to the same page and search.
+  updated." (the S-48 tests that expect the list are updated). Deleting an order with nothing in cutting or ready to ship from the
+  order page lands on the Orders list with "Order deleted." (AC-6); deleting from the list still goes back to the same page and
+  search.
 - 1 query-budget row for the order page (an order of 5 lines).
 - The existing route guards pick up `orders.show`: guest redirect, another workshop's order is 404, the leak scan walks the page.
 
@@ -145,6 +151,9 @@ changes: saving now lands on the order's page).
 - Moves on (AC-2, AC-3), one test walking the card: Start cutting 30 → "30 units of Denim Jacket moved to In cutting.", 20 · 30 · 0 · 0,
   Denim Jeans 5-pocket untouched, the order In progress; Mark ready 10 → 20 · 20 · 10 · 0; Ship 10 → 20 · 20 · 0 · 10, the line "10 of
   50 shipped" and the order "10 of 80 shipped"; one unit reads "1 unit of … moved to …".
+- Product status (AC-2): a line whose product was archived or set back to draft moves as usual; on a deleted product, Start cutting is
+  refused with "Denim Jacket was deleted, so it can't be cut." under `units` (nothing moves), while Mark ready, Ship and the three moves
+  back work.
 - Moves back (AC-5), a dataset of the three: from 20 · 20 · 10 · 0, back 5 from In cutting → 25 · 15 · 10 · 0 and "5 units of Denim
   Jacket moved back to To start."; the same for Ready to ship and Shipped; a shipped line moved back is In progress again.
 - Limits (AC-4), a validation dataset with the card's messages under `units`, nothing changed: 25 with 20 in cutting → "You can move at
@@ -174,18 +183,31 @@ changes: saving now lands on the order's page).
 - Edit rules (AC-6), a dataset on Boutique Lina at 20 · 20 · 10 · 0, nothing saved on each refusal: Denim Jacket 25 → "The quantity
   can't be less than the 30 units already in cutting, ready to ship or shipped." under that line's quantity; Denim Jacket left out
   (removed, or swapped for another product) → "Denim Jacket can't be removed: 30 units have started." under the products list.
+  One-unit rows (AC-6): a line with 1 unit in cutting left out → "Denim Jacket can't be removed: 1 unit has started."; the quantity
+  message for 1 started unit reads "The quantity can't be less than the 1 unit already in cutting, ready to ship or shipped." (proved
+  on the message itself: a quantity below 1 is refused first by S-48's 1 to 1,000,000 rule, see the hand-off).
 - Allowed edits (AC-6): Denim Jacket 40 → saved, To start 10; Denim Jeans 5-pocket (not started) swapped, removed or changed; a new line
   added; a fully shipped line raised from 50 to 60 → To start 10, the line and the order In progress.
 - The saved count wins (AC-6): the form was opened with nothing started, then someone else started 30 units; saving 25 is refused with
   the quantity message, and saving without Denim Jacket (or with another product in its place) is refused with "Denim Jacket can't be
   removed: 30 units have started." under the products; nothing is saved either time (the checks run again after the order lock).
-- Delete warning data (AC-6): the order carries 20 in cutting, 10 ready to ship and 0 shipped for the "Its progress (…)" sentence.
+- Delete refused (AC-6), from the order page and from the list: with 20 in cutting and 10 ready to ship, Delete → "Boutique Lina can't
+  be deleted: 30 units are in cutting or ready to ship. Move them back to To start first." and the order, its lines and its counts are
+  untouched; the order's `delete_refusal` carries the same text. With 1 unit in cutting: "Boutique Lina can't be deleted: 1 unit is in
+  cutting or ready to ship. Move them back to To start first.". A dataset of what may be deleted: only To start, only Shipped, To start
+  and Shipped mixed → deleted as today, `delete_refusal` null.
+- Delete, the saved state wins (AC-6): the page showed nothing in cutting, then someone else started cutting 5 units; Delete is refused,
+  nothing is deleted and the answer is an error toast with the refusal text (the check runs after the order lock, which every move also
+  takes first).
 
-> [!example]- Files (5)
+> [!example]- Files (9)
 > - `app/Http/Requests/Orders/UpdateOrderRequest.php`
 > - `app/Actions/Orders/{UpdateOrder,SyncOrderLines}.php` (the re-check under the lock)
-> - `tests/Feature/Orders/EditStartedOrderTest.php`
-> - `tests/Feature/Orders/OrderActionsTest.php`
+> - `app/Actions/Orders/DeleteOrder.php` (the lock and the refusal)
+> - `app/Http/Controllers/OrderController.php` (`destroy` answers a refusal)
+> - `app/Http/Resources/OrderResource.php` (`delete_refusal`)
+> - `resources/js/types/domain.ts` (`Order.delete_refusal`)
+> - `tests/Feature/Orders/{EditStartedOrderTest,DeleteStartedOrderTest,OrderActionsTest}.php`
 
 #### S-49-d · The order page and the move window
 **Commit:** `feat(orders): order page with stage figures and the move window (S-49-d)`
@@ -194,7 +216,8 @@ changes: saving now lands on the order's page).
 - Page smoke (AC-1): heading "Boutique Lina", "Ordered 15 Oct 2026 · 2 products · 80 units", the status, "0 of 80 shipped", "Note",
   "Edit" and "Delete"; each line's block with its four figures in order and "0 of 50 shipped".
 - Statuses (AC-3): line and order statuses read as a word with an icon (the icon is `aria-hidden`; the word carries the meaning); on a
-  fully shipped line the three forward buttons are disabled; a stage holding 0 disables its button.
+  fully shipped line the three forward buttons are disabled; a stage holding 0 disables its button; on a deleted product's line "Start
+  cutting" is disabled with "Denim Jacket was deleted, so it can't be cut." while Mark ready, Ship and Move back stay open (AC-2).
 - Move window (AC-2, AC-4, AC-5): the title "Start cutting · Denim Jacket", "How many units?", "Up to 20 units.", "Move units" posts
   `{ move, units }`; the server's message shows under the field and the window stays open; "Cancel" sends nothing; "Move back to To start
   · Denim Jacket" for a move back.
@@ -215,11 +238,14 @@ changes: saving now lands on the order's page).
 
 **Tests**
 - Order form, edge cases (AC-6): a started line's product picker is disabled with "The product can't change once work on this line has
-  started."; its "Remove" button can't be clicked and carries the hint "Denim Jacket can't be removed: 30 units have started."; lines
-  not started and new lines stay free; the server's quantity message shows under its line, and its "can't be removed" message under
-  the products.
-- Delete dialog (AC-6): with progress, "Its progress (20 in cutting, 10 ready to ship, 0 shipped) is removed too." is added; without
-  progress it isn't; the dialog works from the list and from the order page (where the server then lands you on the Orders list).
+  started."; its "Remove" button can't be clicked and carries the hint "Denim Jacket can't be removed: 30 units have started." (and
+  "… 1 unit has started." for a line with one unit started, the text coming from the line's `started`); lines not started and new lines
+  stay free; the server's quantity message shows under its line, and its "can't be removed" message under the products.
+- Delete (AC-6), on the order page and on the list: with `delete_refusal` set, "Delete" opens the "Delete order?" window, which shows
+  "Boutique Lina can't be deleted: 30 units are in cutting or ready to ship. Move them back to To start first." in place of its
+  question, with only a "Close" button, and sends nothing; with one unit it shows the server's "1 unit is …" text as sent. Without
+  `delete_refusal`, "Delete order?" works as in S-48 and adds no sentence. A refusal answered by the server (someone started cutting
+  meanwhile) shows as an error toast with the same text, and the order stays.
 
 > [!example]- Files (8)
 > - `resources/js/components/orders/{order-form,order-lines-editor,order-line-row,delete-order-dialog}.tsx`
@@ -231,7 +257,8 @@ changes: saving now lands on the order's page).
 must belong to the order (`scopeBindings()`), otherwise 404):
 - `GET orders/{order}` → `orders.show` → page `orders/show` (S-49-a).
 - `POST orders` and `PUT orders/{order}` now redirect to `orders.show` (S-49-a). `DELETE orders/{order}` sent from the order's own page
-  redirects to `orders.index`; from the list it still goes back (keeping the page and the search).
+  redirects to `orders.index`; from the list it still goes back (keeping the page and the search). While any line has units in cutting
+  or ready to ship, `DELETE` deletes nothing and goes back with an error toast carrying the refusal text (S-49-c).
 - `POST orders/{order}/lines/{line}/moves` → `orders.lines.moves.store` (`update` on the order) → redirect to `orders.show` with the
   toast; validation errors under `units` (S-49-b).
 - S-53 adds `GET orders/{order}/lines/{line}/moves/preview` (see the S-53 card).
@@ -266,11 +293,14 @@ export type Order = {
     note: string | null;
     lines: OrderLine[];
     units: number;
-    in_cutting: number; // the lines summed, server-side (the "Delete order?" progress sentence)
+    in_cutting: number; // the lines summed, server-side
     ready_to_ship: number;
     shipped: number; // "10 of 80 shipped"
     status: OrderProgress;
     status_label: string;
+    // S-49-c. Set while units are in cutting or ready to ship: "Boutique Lina can't be deleted: 30 units are in cutting or ready to
+    // ship. Move them back to To start first." (30 = in_cutting + ready_to_ship; "1 unit is" for one); null when it may be deleted
+    delete_refusal: string | null;
 };
 
 export type OrderShowProps = { order: Order };
@@ -288,9 +318,12 @@ lock.
 
 **Validation** (`MoveOrderLineUnitsRequest`): `move` required, one of the six; `units` required, integer, min 1, with one message for all:
 "Enter a whole number of units, at least 1.". The stage limit is checked in the Action under the lock: "You can move at most N units."
-under `units` (N is the saved count). Edit order (S-49-c): a line whose product is already on the order keeps `quantity ≥ started` ("The
+under `units` (N is the saved count). Every count in a message uses the singular for 1 ("1 unit has started.", "the 1 unit already", "1 unit
+is in cutting"), built with `trans_choice`. Edit order (S-49-c): a line whose product is already on the order keeps `quantity ≥ started` ("The
 quantity can't be less than the N units already in cutting, ready to ship or shipped."); a started line's product must stay on the order
 ("<product name> can't be removed: N units have started." under `lines`). `UpdateOrder` repeats both checks after its order lock.
+Start cutting on a deleted product: "<product name> was deleted, so it can't be cut." under `units` (S-49-b). Delete (S-49-c):
+`DeleteOrder` locks the order row, re-reads its lines and refuses while `in_cutting + ready_to_ship > 0`, with the `delete_refusal` text.
 
 ### Decisions
 - **To start is derived, not stored.** Three counters and the quantity can't disagree; a stored fourth figure could. S-50 sums the same
@@ -300,14 +333,17 @@ quantity can't be less than the N units already in cutting, ready to ship or shi
   touch stock by construction.
 - **Locks in one order for every writer** (ADR-0014 §7): the order row, then the line, then (S-53) the line's cuts and the materials in
   ascending id. "Edit order" already locks the order row (S-48), so a move and an edit of the same order take turns. On SQLite (tests
-  only) writers are serialised by the database file.
+  only) writers are serialised by the database file. `DeleteOrder` takes the same order lock, so a delete and a Start cutting on the
+  same order take turns and the delete sees the cut.
+- **Delete is refused, not warned** (D-11): an order may be deleted only with units to start or shipped, so no material taken out of
+  stock can be lost by deleting (S-53 AC-6). Cancelling an order is S-57, out of scope.
 - **A refused move redirects back with the error**, so Inertia reloads `order` and the window shows the saved count ("Up to 5 units.").
 - **Moves happen on the order page**, not on the list; S-50 brings progress to the list.
 
 ### Order (the whole build: F-41, S-49 and S-53)
-- **Before any code (docs):** ADR-0014 and its wording for the costing rules were approved on 2026-10-16. Once the human approves
-  this Technical work, S-53's and the F-41 card, the main session applies ADR-0014's wording to
-  `.claude/skills/invory-costing-domain/SKILL.md` and commits all of it on `main`. The older rollback tests keep their hand-kept
+- **Before any code (docs):** ADR-0014 (with its amendment of 2026-10-16) and the costing rules in
+  `.claude/skills/invory-costing-domain/SKILL.md` already match the final D-11 answers. Once the human approves this revised Technical
+  work and S-53's, the main session commits them on `main` (F-41's approval still stands). The older rollback tests keep their hand-kept
   migration lists (F-60 stays open, the human's choice): S-49-a and S-53-a add their migrations to them.
 - **Wave 1:** F-41-a (backend 1) ∥ S-49-a (backend 2).
 - **Wave 2:** S-53-b (backend 1, the stock maths; needs F-41-a) ∥ S-49-b (backend 2).
@@ -328,6 +364,8 @@ quantity can't be less than the N units already in cutting, ready to ship or shi
 - Saving now lands on the order page, which breaks S-48 tests and the browser golden path → both are in S-49-a's and S-49-d's file lists.
 - Deleting from the order page would go "back" to a page that no longer exists → `destroy` lands on the list when it was sent from the
   order page (S-49-a test).
+- Someone confirms Delete while someone else starts cutting → both take the order lock first; the delete re-reads the counts and is
+  refused (S-49-c test).
 - The route guards are shared test files → they are in the file lists, and each developer runs the whole suite.
 - A started line's product swapped in Edit order could slip through, since lines are matched by product (S-48) → a swap reads as
   "removed", so the started-line rule catches it (S-49-c dataset row).

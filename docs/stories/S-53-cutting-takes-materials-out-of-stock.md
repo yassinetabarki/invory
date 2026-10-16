@@ -5,7 +5,7 @@ type: feature
 phase: 5
 priority: Must
 size: L
-status: Ready
+status: Planned
 created: 2026-10-15
 tags:
   - story
@@ -91,53 +91,55 @@ tags:
 
 ## Technical work
 > [!warning] Complex · CRITICAL · backend + frontend · 6 commits (one build with F-41 and S-49: 12 commits)
-> Tech-lead · 2026-10-16 · approved 2026-10-16
+> Tech-lead · 2026-10-16 · approved 2026-10-16 (revised)
 > Why complex: Invory changes stock by itself for the first time. It needs new stock maths, two new tables, new history types, a new
 > business rule (ADR-0014, replacing Q9), row locks so two people can't use the same stock twice, and a new contract for the move window.
-> Size: **L** (about 1,700 lines of production code over 6 commits; S-49 is about 1,400). One story: the move back to To start stays in.
+> Size: **L** (about 1,650 lines of production code over 6 commits; S-49 is about 1,450). One story: the move back to To start stays in.
 
 ### In short
 When you start cutting, the server works out each material's need from the product's composition (F-41's total per material, waste
 included) times the units, checks it against the stock saved at that moment, and refuses the cut if any material is short. If the cut
 goes ahead, it takes the materials out of stock, writes a "Cutting" history entry per material, and **remembers what each material cost
-that cut, per unit**. "Move back to To start" never looks at today's composition: it walks back through the remembered cuts, newest first,
-and returns exactly their amounts, so a cut returned in pieces gives back to the last 0.0001 what it took. While a move runs, the order,
-the line and the materials are locked, so two people cutting from the same stock take turns and the second one sees the first one's
-stock. The window's materials table is worked out by the server as you type (the screen never computes amounts). The maths is pure
+that cut, per unit**. "Move back to To start" never looks at today's composition: it walks back through the remembered cuts, the
+latest cut first, and returns exactly their amounts, so a cut returned in pieces gives back to the last 0.0001 what it took. While a
+move runs, the order, the line and the materials are locked, so two people cutting from the same stock take turns and the second one
+sees the first one's stock. Deleting an order is refused while units are in cutting or ready to ship (S-49), so no material taken out of
+stock can be lost that way. The window's materials table is worked out by the server as you type (the screen never computes amounts). The maths is pure
 domain code with its own tests; the business rule goes into the costing rules and ADR-0014 before any code.
 
 ### Steps
 
 | Step       | What it does                                              | Proves                       | Lane         | Who      | Size       |
 | ---------- | --------------------------------------------------------- | ---------------------------- | ------------ | -------- | ---------- |
-| **S-53-a** | Remembering each cut; Cutting and Returned in the history | AC-4, AC-5                   | CRITICAL     | Backend  | ~320 lines |
+| **S-53-a** | Remembering each cut; two new history types               | AC-4, AC-5                   | CRITICAL     | Backend  | ~320 lines |
 | **S-53-b** | The maths of taking and returning materials               | AC-1, AC-3, AC-5             | CRITICAL     | Backend  | ~220 lines |
 | **S-53-c** | Start cutting takes the materials out of stock            | AC-1, AC-2, AC-3, AC-4, AC-7 | CRITICAL     | Backend  | ~360 lines |
-| **S-53-d** | Move back to To start returns what was taken              | AC-5, AC-6                   | CRITICAL     | Backend  | ~280 lines |
-| **S-53-e** | The materials table in the move window                    | AC-1, AC-3, AC-5, AC-6       | CRITICAL     | Frontend | ~420 lines |
-| **S-53-f** | Cutting and Returned entries in a material's history      | AC-4                         | NON-CRITICAL | Frontend | ~120 lines |
+| **S-53-d** | Move back to To start returns what was taken              | AC-5, AC-6                   | CRITICAL     | Backend  | ~260 lines |
+| **S-53-e** | The materials table in the move window                    | AC-1, AC-3, AC-5             | CRITICAL     | Frontend | ~390 lines |
+| **S-53-f** | Cutting and Back from cutting in a material's history     | AC-4, AC-5                   | NON-CRITICAL | Frontend | ~120 lines |
 
 It needs [F-41](F-41-summed-requirement-per-material.md) first, and it builds on S-49's moves; the order of the whole build is in
 [S-49](S-49-track-cutting-ready-shipped.md), section "Order (the whole build: F-41, S-49 and S-53)". Every step keeps `composer test`,
 `npx vp test`, `npm run check`, `npm run types:check` and `npm run build` green on its own. S-53-a, S-53-c and S-53-d also run
 `composer test:pgsql` (tables, locks, decimals); S-53-e also runs `composer test:browser`.
 
-#### S-53-a · Remembering each cut; Cutting and Returned in the history
-**Commit:** `feat(stock): order line cuts and the cutting and returned ledger types (S-53-a)`
+#### S-53-a · Remembering each cut; two new history types
+**Commit:** `feat(stock): order line cuts and the cutting ledger types (S-53-a)`
 
 **Tests**
 - 1 migration test: both tables and the three ledger columns created, and `down()` removes them (the older rollback tests list the new
   migrations, F-60). PostgreSQL only, one dataset: the database refuses a cut whose workshop differs from its line's, a cut material
   whose workshop differs from its material's, `units_returned` above `units`, and a per-unit amount of 0.
 - 1 stamp dataset (2 rows): a cut takes its line's workshop; a cut material takes its cut's.
-- Ledger check: `invory:stock:verify` balances a material with a `cutting` of 59.4 and a `returned` of 9.9 (250 → 200.5) and reports
-  drift when one of them is missing.
-- History data (AC-4, AC-5): a `cutting` and a `returned` entry come back with `type_label` "Cutting" / "Returned", the units, the
+- Ledger check: `invory:stock:verify` balances a material with a `cutting` of 59.4 and a `cutting_return` of 9.9 (250 → 200.5) and
+  reports drift when one of them is missing.
+- History data (AC-4, AC-5): a `cutting` and a `cutting_return` entry come back with `type_label` "Cutting" / "Back from cutting", the
+  units, the
   order's client and the product's name, in the one history query (no N+1; a deleted order or product still reads).
 - No new arch test: both tables join the workshop-table list, and the "every model uses `BelongsToWorkshop`" rule picks up both models.
 
 > [!example]- Files (19)
-> - `app/Enums/StockMovementType.php` (`cutting`, `returned`)
+> - `app/Enums/StockMovementType.php` (`cutting`, `cutting_return`)
 > - `app/Models/{OrderLineCut,OrderLineCutMaterial}.php`
 > - `app/Models/{OrderLine,StockMovement}.php` (relations, columns)
 > - `app/Services/Inventory/{StockLedgerVerifier,StockHistory}.php`
@@ -162,8 +164,8 @@ It needs [F-41](F-41-summed-requirement-per-material.md) first, and it builds on
 - Take, edges: an empty composition (allowed, nothing taken, max cuttable null); stock 0; tiny amounts (0.0001 m at 0.01 % × 10 000
   units → `"1.0001"`, not `"1.0000"`); a cut that the exact check allows never leaves a negative stock.
 - Return, golden (AC-5): 30 cut, 5 back → `"9.9000"`, `"40.0000"`, `"630.0000"`, `"5.0000"`.
-- Return, LIFO (AC-5): two cuts with different compositions (8 buttons, then 10) → moving back first takes from the newer cut, then the
-  older; a composition change after the cuts changes nothing.
+- Return, latest cut first (AC-5): cut 30 at 8 buttons, then 10 at 10 buttons → moving back 5 returns `"50.0000"` buttons; moving back
+  10 more returns 5 × 10 + 5 × 8 = `"90.0000"`; a composition change after the cuts changes nothing.
 - Return, exactness: a cut of 3 units at 0.00015 per unit (takes `"0.0005"`) returned one unit at a time gives back exactly `"0.0005"`
   in total; a dataset of partial returns always sums to what was taken.
 - Return, edges: a deleted material and a material whose unit changed get nothing back and are flagged with their reason (deleted,
@@ -182,17 +184,17 @@ It needs [F-41](F-41-summed-requirement-per-material.md) first, and it builds on
 
 **Tests**
 - Preview (AC-1): the JSON for Denim Jacket × 30 has the four rows (needed, in stock, left after) and max cuttable 112; with no
-  composition `has_composition` is false and there are no rows; an archived product previews and cuts; a deleted product → 422 with
-  "This product was deleted, so no more units can be cut.". Guest, another workshop's order and a line of another order → refused (route
-  guards); 1 query-budget row.
+  composition `has_composition` is false and there are no rows; an archived or draft product previews and cuts; Start cutting on a
+  deleted product → 422 with "Denim Jacket was deleted, so it can't be cut." (S-49-b refuses the move itself). Guest, another workshop's
+  order and a line of another order → refused (route guards); 1 query-budget row.
 - Cutting (AC-2): Start cutting 30 → "30 units of Denim Jacket moved to In cutting. Materials taken out of stock."; Denim 12oz Indigo
   `"190.6000"`, Denim Jacket can produce 82 with the button as bottleneck, inventory value `"9936.6800"`, unit costs unchanged; one cut
   with four remembered materials. With no composition the toast is only "30 units of Denim Jacket moved to In cutting." and a cut
   with no materials is remembered (no history entry).
 - Too little stock (AC-3), a dataset with nothing changed on each refusal, the message under `units` and the same text as the preview's
   `short_message`:
-  - buttons at 100, 20 → "Not enough stock to cut 20 units. You can cut at most 12 now: Metal shank button 17mm runs short."; the preview
-    marks the button short by `"60.0000"`;
+  - buttons at 100, 20 → "Not enough stock to cut 20 units. You can cut at most 12 now: Metal shank button 17mm runs short. Restock it
+    first, or cut 12 or fewer."; the preview marks the button short by `"60.0000"`;
   - buttons at 100 and thread at 1,000 m, 20 → both rows short, the message names the button (the bottleneck);
   - buttons at 7, 20 → "Not enough stock to cut 20 units. You can't cut any now: restock Metal shank button 17mm first.".
   Cutting 12 at 100 buttons works and leaves `"4.0000"`.
@@ -227,9 +229,11 @@ It needs [F-41](F-41-summed-requirement-per-material.md) first, and it builds on
 **Tests**
 - Return (AC-5): from 20 · 20 (30 cut, 10 moved on), the preview for 5 has the four rows the card lists (returned, in stock, after
   return: `"9.9000"` · `"190.6000"` · `"200.5000"` …); back 5 → "5 units of Denim Jacket moved back to To start. Materials returned to
-  stock."; Denim 12oz Indigo `"200.5000"`, can produce 87; four `returned` entries "+9.9" … with Boutique Lina, 5 units, dated the day.
-- Exactly what was taken (AC-5): the jacket now needs 10 buttons; back 5 returns `"40.0000"`, not 50; two cuts on different days with
-  different compositions → the newer comes back first; the preview lists the same amounts.
+  stock."; Denim 12oz Indigo `"200.5000"`, can produce 87; four `cutting_return` entries "+9.9" … with Boutique Lina, 5 units, dated
+  the day.
+- Exactly what was taken (AC-5): the jacket now needs 10 buttons; back 5 returns `"40.0000"`, not 50. Cut 30 at 8 buttons, then 10 at 10
+  buttons → back 5 returns `"50.0000"` (the latest cut first); the preview lists the same amounts.
+- Deleted product (AC-5): the product is deleted after the cut; moving 5 back still returns its four materials.
 - Not returned (AC-5), a dataset: a material removed from the composition and deleted → nothing back for it, no history entry, the
   preview flags it `deleted`; a material removed from the composition whose unit then changed → the same, flagged `unit_changed`; the
   other three come back each time.
@@ -238,19 +242,16 @@ It needs [F-41](F-41-summed-requirement-per-material.md) first, and it builds on
   the cut was deleted since.
 - Cut and returned in full: after any mix of cuts and moves back, every material is back at its starting stock and
   `invory:stock:verify` reports no drift.
-- Nothing else touches stock (AC-6), one dataset: Mark ready, Ship and their moves back, editing the order's quantities, recording a sale,
-  and deleting an order with 30 units cut leave every material and its history unchanged; the deleted order's cuts stay. The order
-  carries `units_cut` 30 for the "Delete order?" sentence (0 when nothing was taken).
+- Nothing else touches stock (AC-6), one dataset: Mark ready, Ship and their moves back, editing the order's quantities, recording a
+  sale, deleting an order whose cut units are all shipped (its cuts stay with it), and a refused delete of an order with units in
+  cutting (S-49-c) leave every material and its history unchanged.
 - The saved state wins: two moves back of the same units one after the other return them once.
 - PostgreSQL only: the return locks the order, the line, its cuts and then the materials in ascending id.
 
-> [!example]- Files (9)
+> [!example]- Files (6)
 > - `app/Actions/Orders/ReturnMaterialsFromCuts.php`
 > - `app/Actions/Orders/MoveOrderLineUnits.php` (calls it on `back_to_start`)
 > - `app/Services/Orders/CuttingPreview.php` (the return preview)
-> - `app/Services/Orders/OrderBook.php` (`units_cut`)
-> - `app/Http/Resources/OrderResource.php` (`units_cut`)
-> - `resources/js/types/domain.ts` (`Order.units_cut`)
 > - `tests/Feature/Orders/{BackToStartStockTest,OrdersNeverTouchStockTest}.php`
 > - `tests/Feature/Orders/MovePreviewTest.php` (the return rows)
 
@@ -264,34 +265,33 @@ It needs [F-41](F-41-summed-requirement-per-material.md) first, and it builds on
 - Loading and failure (AC-1), for Start cutting and Move back to To start: "Loading materials…" while the preview loads; on failure
   "Couldn't load the materials for this move." with "Try again", which asks again; "Move units" can't be clicked until the table (or the
   no-composition / nothing-taken sentence) is shown. The other four moves have no table and "Move units" works as in S-49.
-- No composition, deleted product (AC-1): "Denim Jacket has no composition, so no material is taken out of stock."; on a deleted
-  product "Start cutting" is disabled with "This product was deleted, so no more units can be cut." while the other moves stay open.
+- No composition (AC-1): "Denim Jacket has no composition, so no material is taken out of stock." (the deleted-product hint on "Start
+  cutting" is S-49-d's; Move back to To start on a deleted product's line shows its table as usual).
 - Short (AC-3): the button's row reads "Short by 60 pc" with a warning icon and the words, and the server's `short_message` ("Not
-  enough stock to cut 20 units. You can cut at most 12 now: Metal shank button 17mm runs short.") shows; with two short materials both
+  enough stock to cut 20 units. You can cut at most 12 now: Metal shank button 17mm runs short. Restock it first, or cut 12 or fewer.")
+  shows; with two short materials both
   rows read "Short by …"; the "You can't cut any now: restock … first." message shows as sent; clicking "Move units" then changes
   nothing: the server's refusal shows under the field.
 - Move back to To start (AC-5): "Materials returned to stock" with the columns "Material", "Returned", "In stock" and "After return" and
   the card's four rows (9.9 m · 190.6 m · 200.5 m …); a row flagged `deleted` reads "Deleted, not returned", one flagged `unit_changed`
   "Unit changed, not returned"; with `nothing_taken`, "No material was taken out of stock for these units, so none is returned.".
-- Delete dialog (AC-6): with `units_cut` 30, "Materials already taken out of stock for 30 units are not returned. To get them back, move
-  those units back to To start first." is added; with 0 it isn't.
 - 1 browser test: Start cutting 30 on Boutique Lina's Denim Jacket → the toast with "Materials taken out of stock." → Denim 12oz
   Indigo's page shows "In stock 190.6 m".
 
-> [!example]- Files (10)
+> [!example]- Files (8)
 > - `resources/js/components/orders/move-units-dialog.tsx`
 > - `resources/js/components/orders/{materials-move-table.tsx,use-move-preview.ts}`
-> - `resources/js/components/orders/{order-line-card,delete-order-dialog}.tsx`
-> - `resources/js/components/orders/{move-units-dialog,materials-move-table,delete-order-dialog}.test.tsx`
+> - `resources/js/components/orders/order-line-card.tsx`
+> - `resources/js/components/orders/{move-units-dialog,materials-move-table}.test.tsx`
 > - `resources/js/components/orders/use-move-preview.test.ts`
 > - `tests/Browser/OrderGoldenPathTest.php`
 
-#### S-53-f · Cutting and Returned entries in a material's history
-**Commit:** `feat(materials): cutting and returned entries in the stock history (S-53-f)`
+#### S-53-f · Cutting and Back from cutting in a material's history
+**Commit:** `feat(materials): cutting entries in the stock history (S-53-f)`
 
 **Tests**
 - History list (AC-4, AC-5): a `cutting` entry shows the badge "Cutting", "−59.4 m · Boutique Lina · 30 × Denim Jacket", its date and
-  "by" the person; a `returned` entry shows "Returned" and "+9.9 m · Boutique Lina · 5 × Denim Jacket".
+  "by" the person; a `cutting_return` entry shows "Back from cutting" and "+9.9 m · Boutique Lina · 5 × Denim Jacket".
 - The description reads "Restocks, cutting, stock corrections and unit price changes, newest first." on the history panel and card.
 
 > [!example]- Files (6)
@@ -299,9 +299,9 @@ It needs [F-41](F-41-summed-requirement-per-material.md) first, and it builds on
 > - `resources/js/components/materials/{history-list,history-card,history-panel}.test.tsx`
 
 ### Contract (frozen before dispatch)
-**Business rule:** [ADR-0014](../adr/0014-cutting-takes-materials-out-of-stock.md) (Accepted 2026-10-16) and its wording for
-`.claude/skills/invory-costing-domain/SKILL.md` ("Cutting and returning stock"), approved by the human on 2026-10-16. The main session
-applies it and commits it with this card **before** S-53-a starts.
+**Business rule:** [ADR-0014](../adr/0014-cutting-takes-materials-out-of-stock.md) (Accepted 2026-10-16, amended the same day for the
+final D-11 answers) and `.claude/skills/invory-costing-domain/SKILL.md` ("Cutting and returning stock"), already updated to match. They
+are committed with this card **before** S-53-a starts.
 
 **Route** (S-53-c; under `auth` + `verified`, `view` on the order, scoped `{line}` as in S-49):
 - `GET orders/{order}/lines/{line}/moves/preview?move=start_cutting|back_to_start&units=N` → `orders.lines.moves.preview` → JSON
@@ -309,17 +309,19 @@ applies it and commits it with this card **before** S-53-a starts.
   otherwise 422. It reads without locks; the move itself redoes the maths under the locks.
 - `POST orders/{order}/lines/{line}/moves` (S-49) now takes and returns stock on `start_cutting` and `back_to_start`. " Materials
   taken out of stock." / " Materials returned to stock." is added to the toast only when at least one material's stock changed;
-  otherwise the toast is S-49's first sentence alone.
+  otherwise the toast is S-49's first sentence alone. Start cutting on a deleted product is refused by S-49-b; moving its cut units back
+  to To start returns their materials.
 
 **`resources/js/types/domain.ts`:**
 ```ts
-export type StockMovementType = 'created' | 'restock' | 'correction' | 'price_change' | 'cutting' | 'returned';
+// `cutting_return` is labelled "Back from cutting" (it fits the 16-character `stock_movements.type` column, so no column change)
+export type StockMovementType = 'created' | 'restock' | 'correction' | 'price_change' | 'cutting' | 'cutting_return';
 
 export type StockMovement = {
-    // … every field as today; `quantity` is positive for cutting (taken) and returned (given back)
-    units: number | null; // cutting / returned: the units of the order line
-    order: { id: number; client: string } | null; // cutting / returned (soft-deleted orders included)
-    product_name: string | null; // cutting / returned
+    // … every field as today; `quantity` is positive for cutting (taken) and cutting_return (given back)
+    units: number | null; // cutting / cutting_return: the units of the order line
+    order: { id: number; client: string } | null; // cutting / cutting_return (soft-deleted orders included)
+    product_name: string | null; // cutting / cutting_return (soft-deleted products included)
 };
 
 export type MaterialMoveRow = {
@@ -339,21 +341,18 @@ export type MovePreview = {
     nothing_taken: boolean; // back_to_start: true → "No material was taken out of stock for these units, so none is returned."
     max_cuttable: number | null; // start_cutting: "Stock on hand allows N units."; null without composition
     // start_cutting, only when the units exceed max_cuttable; written by the server, the same text as the refusal under `units`:
-    //   max_cuttable ≥ 1: "Not enough stock to cut 20 units. You can cut at most 12 now: <bottleneck> runs short."
+    //   max_cuttable ≥ 1: "Not enough stock to cut 20 units. You can cut at most 12 now: <bottleneck> runs short. Restock it first,
+    //                     or cut 12 or fewer."
     //   max_cuttable = 0: "Not enough stock to cut 20 units. You can't cut any now: restock <bottleneck> first."
     short_message: string | null;
-};
-
-export type Order = {
-    // … S-49's fields
-    units_cut: number; // units whose materials are out of stock and not returned (the "Delete order?" sentence)
 };
 ```
 
 **Schema** (S-53-a):
 - `order_line_cuts`: `id`; `workshop_id` (FK, `restrictOnDelete`, never mass-assignable, from the line); `order_line_id` (FK,
-  `cascadeOnDelete`: only a line with nothing started can be removed, so nothing outstanding goes with it); `units` and `units_returned`
-  (unsigned integers); `user_id` (FK → users, nullable, `nullOnDelete`); timestamps. Index `(order_line_id, id)`.
+  `cascadeOnDelete`: only a line with nothing started can be removed, so nothing outstanding goes with it; an order is only
+  soft-deleted, and only with nothing in cutting or ready to ship); `units` and `units_returned` (unsigned integers); `user_id` (FK →
+  users, nullable, `nullOnDelete`); timestamps. Index `(order_line_id, id)`.
 - `order_line_cut_materials`: `id`; `workshop_id`; `order_line_cut_id` (FK, `cascadeOnDelete`); `material_id` (FK, `restrictOnDelete`;
   materials are only soft-deleted); `unit_id` (FK → units, nullable, `nullOnDelete`: the material's unit at the cut); `quantity_per_unit`
   `decimal(20,8)` (exact, waste included); `quantity_taken` `decimal(14,4)`; timestamps. `unique(order_line_cut_id, material_id)`.
@@ -379,8 +378,13 @@ export type Order = {
 - **Cuts are remembered in their own tables**, not in the history: the history is append-only, and a cut's "units returned" changes.
 - **History entries point at the order and the product**, not at the line or the cut, because a line with nothing started may be removed
   in Edit order (S-49 AC-6), while orders and products are only ever soft-deleted. The client and product names shown are today's.
-- **A material whose unit changed since the cut gets nothing back**, like a deleted one (a unit can change once the material is no longer
-  in any composition): returning "40 pc" into a material now counted in boxes would be wrong. Its row reads "Unit changed, not returned".
+- **A material whose unit changed since the cut gets nothing back**, like a deleted one (D-14; a unit can change once the material is no
+  longer in any composition): returning "40 pc" into a material now counted in boxes would be wrong. Its row reads "Unit changed, not
+  returned".
+- **History type `cutting_return`, labelled "Back from cutting"** (D-11). `back_from_cutting` would need 17 characters and a change to
+  `stock_movements.type` (`string(16)`), which rebuilds the table on SQLite (F-59) for no gain.
+- **No delete warning data.** An order with units in cutting or ready to ship can't be deleted (S-49-c), so every cut whose materials
+  are still out of stock belongs to an order that stays; `units_cut` is gone from the contract.
 - **The preview is a JSON route**, debounced at 250 ms with "last request wins", the same pattern as the material picker. "Move units"
   stays disabled for Start cutting and Move back to To start until a preview answer is shown, so nobody confirms without seeing what
   moves; the server still re-checks everything on the move.
