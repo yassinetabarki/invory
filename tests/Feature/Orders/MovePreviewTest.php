@@ -1,7 +1,12 @@
 <?php
 
+use App\Actions\Orders\MoveOrderLineUnits;
+use App\Enums\OrderLineMove;
+use App\Models\Material;
 use App\Models\Order;
+use App\Models\OrderLineCut;
 use App\Models\Product;
+use App\Models\StockMovement;
 use Illuminate\Testing\TestResponse;
 
 use function Pest\Laravel\actingAs;
@@ -111,7 +116,9 @@ it('refuses a move or a number of units the window can\'t ask for (AC-1)', funct
     'more than a line can hold' => [['move' => 'start_cutting', 'units' => 1000001], 'units'],
     'no units' => [['move' => 'start_cutting', 'units' => ''], 'units'],
     'letters' => [['move' => 'start_cutting', 'units' => 'abc'], 'units'],
-    'Move back to To start, not yet' => [['move' => 'back_to_start', 'units' => 5], 'move'],
+    'a move with no table' => [['move' => 'mark_ready', 'units' => 5], 'move'],
+    'Move back to To start with zero units' => [['move' => 'back_to_start', 'units' => 0], 'units'],
+    'Move back to To start with too many units' => [['move' => 'back_to_start', 'units' => 1000001], 'units'],
     'a move that doesn\'t exist' => [['move' => 'teleport', 'units' => 5], 'move'],
     'no move' => [['units' => 5], 'move'],
 ]);
@@ -123,4 +130,34 @@ it('answers 404 for a line of another order', function () {
     actingAs($this->user)
         ->getJson(route('orders.lines.moves.preview', [$order, $other->lines()->firstOrFail(), 'move' => 'start_cutting', 'units' => 5]))
         ->assertNotFound();
+});
+
+it('previews Move back to To start from the remembered cuts by material name, changing nothing, also for a deleted product (AC-5)', function () {
+    $order = bookOrder();
+    $move = app(MoveOrderLineUnits::class);
+    $line = $order->lines()->get()[0];
+
+    $move->handle($line, OrderLineMove::StartCutting, 30, $this->user);
+    demoProduct('PRD-JKT-001')->delete();
+    $before = [Material::query()->orderBy('id')->get()->toArray(), StockMovement::query()->orderBy('id')->get()->toArray(), OrderLineCut::query()->get()->toArray()];
+
+    previewMove($order, 0, ['move' => 'back_to_start', 'units' => 5])
+        ->assertOk()
+        ->assertExactJson([
+            'move' => 'back_to_start',
+            'units' => 5,
+            'rows' => [
+                startCuttingRow('MAT-DEN-012', '9.9000', '190.6000', '200.5000'),
+                startCuttingRow('MAT-BTN-017', '40.0000', '660.0000', '700.0000'),
+                startCuttingRow('MAT-THR-PES', '630.0000', '16220.0000', '16850.0000'),
+                startCuttingRow('MAT-LBL-WOV', '5.0000', '370.0000', '375.0000'),
+            ],
+            'has_composition' => true,
+            'nothing_taken' => false,
+            'max_cuttable' => null,
+            'short_message' => null,
+        ]);
+
+    expect([Material::query()->orderBy('id')->get()->toArray(), StockMovement::query()->orderBy('id')->get()->toArray(), OrderLineCut::query()->get()->toArray()])->toBe($before)
+        ->and($order->lines()->get()[0]->in_cutting)->toBe(30);
 });

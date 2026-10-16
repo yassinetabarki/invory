@@ -13,8 +13,8 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 
 /**
- * Query of `GET orders/{order}/lines/{line}/moves/preview` (S-53-c): the move window's materials table. Only Start cutting has a
- * table for now. The units the stage holds are not checked: the preview shows what N units would take, and the move checks the limit.
+ * Query of `GET orders/{order}/lines/{line}/moves/preview` (S-53-c, S-53-d): the move window's materials table. Only Start cutting and
+ * Move back to To start have one. The units the stage holds are not checked: the preview shows what N units would take, and the move checks the limit.
  */
 final class MovePreviewRequest extends FormRequest
 {
@@ -37,7 +37,7 @@ final class MovePreviewRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'move' => ['required', Rule::in([OrderLineMove::StartCutting->value])],
+            'move' => ['required', Rule::in([OrderLineMove::StartCutting->value, OrderLineMove::BackToStart->value])],
             'units' => ['required', 'integer', 'min:1', 'max:'.self::MAX_UNITS],
         ];
     }
@@ -53,6 +53,11 @@ final class MovePreviewRequest extends FormRequest
             'units.min' => $units,
             'units.max' => OrderMessages::moveLimit(self::MAX_UNITS),
         ];
+    }
+
+    public function move(): OrderLineMove
+    {
+        return OrderLineMove::from($this->string('move')->value());
     }
 
     public function units(): int

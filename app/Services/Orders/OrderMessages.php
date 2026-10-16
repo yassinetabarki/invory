@@ -51,6 +51,12 @@ final readonly class OrderMessages
         return __('Materials taken out of stock.');
     }
 
+    /** What Move back to To start adds to the toast, only when at least one material's stock changed (S-53). */
+    public static function materialsReturned(): string
+    {
+        return __('Materials returned to stock.');
+    }
+
     /**
      * Why a cut of `$plan->units` is refused, and the same text the preview shows (S-53, ADR-0014): the plan's maximum and its
      * bottleneck, which is named also when several materials are short.

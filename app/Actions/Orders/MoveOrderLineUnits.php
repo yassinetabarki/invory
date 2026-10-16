@@ -16,14 +16,17 @@ use Illuminate\Validation\ValidationException;
 
 final readonly class MoveOrderLineUnits
 {
-    public function __construct(private TakeMaterialsForCut $takeMaterials) {}
+    public function __construct(
+        private TakeMaterialsForCut $takeMaterials,
+        private ReturnMaterialsFromCuts $returnMaterials,
+    ) {}
 
     /**
      * Moves `$units` of an order line from one stage to the next or the previous one. The limit is the count saved now: the order row
      * is locked first (the same lock "Edit order" takes), then the line, and the counts are read under those locks, never from the
-     * model the route handed in (ADR-0014 §7). Start cutting also takes the materials out of stock, inside this transaction (S-53);
-     * every other move reads and writes only the order and the line, so Mark ready, Ship and the moves back that don't return stock
-     * can't touch materials, stock history or sales.
+     * model the route handed in (ADR-0014 §7). Start cutting takes the materials out of stock and Move back to To start returns what the
+     * units took, both inside this transaction (S-53); every other move reads and writes only the order and the line, so Mark ready,
+     * Ship and their moves back can't touch materials, stock history or sales.
      *
      * @throws ValidationException under `units`: more than the stage holds, Start cutting on a deleted product, or too little stock to cut
      */
@@ -47,6 +50,7 @@ final readonly class MoveOrderLineUnits
             }
 
             $cut = $move === OrderLineMove::StartCutting ? $this->takeMaterials->handle($locked, $units, $actor) : null;
+            $returned = $move === OrderLineMove::BackToStart ? $this->returnMaterials->handle($locked, $units, $actor) : null;
 
             // To start has no column: it is whatever the three counters leave of the quantity.
             foreach ([[$move->fromStage(), -$units], [$move->toStage(), $units]] as [$stage, $change]) {
@@ -57,10 +61,17 @@ final readonly class MoveOrderLineUnits
 
             $locked->save();
 
-            $stockChanged = $cut !== null && $cut->hasComposition();
             $message = OrderMessages::moved($move, $units, $product->name);
 
-            return new MoveResult($units, $stockChanged ? "{$message} ".OrderMessages::materialsTaken() : $message, $stockChanged);
+            if ($cut !== null && $cut->hasComposition()) {
+                return new MoveResult($units, "{$message} ".OrderMessages::materialsTaken(), true);
+            }
+
+            if ($returned !== null && $returned->changesStock()) {
+                return new MoveResult($units, "{$message} ".OrderMessages::materialsReturned(), true);
+            }
+
+            return new MoveResult($units, $message);
         });
     }
 
