@@ -28,6 +28,38 @@ class OrderLineFactory extends Factory
             'workshop_id' => static fn (array $attributes): mixed => Order::withTrashed()->whereKey($attributes['order_id'])->value('workshop_id'),
             'quantity' => fake()->numberBetween(1, 100),
             'position' => 0,
+            'in_cutting' => 0,
+            'ready_to_ship' => 0,
+            'shipped' => 0,
         ];
+    }
+
+    /**
+     * Units already moved on (S-49). The quantity is raised to hold them when it would not: the counts never exceed it. To start is
+     * whatever is left.
+     */
+    public function stages(int $inCutting = 0, int $readyToShip = 0, int $shipped = 0): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'in_cutting' => $inCutting,
+            'ready_to_ship' => $readyToShip,
+            'shipped' => $shipped,
+            'quantity' => max((int) $attributes['quantity'], $inCutting + $readyToShip + $shipped),
+        ]);
+    }
+
+    public function inCutting(int $units): static
+    {
+        return $this->stages(inCutting: $units);
+    }
+
+    public function readyToShip(int $units): static
+    {
+        return $this->stages(readyToShip: $units);
+    }
+
+    public function shipped(int $units): static
+    {
+        return $this->stages(shipped: $units);
     }
 }

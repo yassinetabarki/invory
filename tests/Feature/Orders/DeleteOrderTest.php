@@ -35,3 +35,15 @@ it('deletes the order, goes back to the same page of the list and changes no fig
     actingAs($this->user)->get(route('orders.edit', $order))->assertNotFound();
     actingAs($this->user)->delete(route('orders.destroy', $order))->assertNotFound();
 });
+
+it('lands on the Orders list when the delete was sent from the order\'s own page (S-49 AC-6)', function () {
+    $order = bookOrder();
+
+    actingAs($this->user)->from(route('orders.show', $order))
+        ->delete(route('orders.destroy', $order))
+        ->assertRedirect(route('orders.index'))
+        ->assertSessionHasNoErrors()
+        ->assertInertiaFlash('toast', ['type' => 'success', 'message' => 'Order deleted.']);
+
+    assertSoftDeleted($order);
+});

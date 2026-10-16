@@ -30,7 +30,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // {order} is route-model bound (an unknown, soft-deleted or other workshop's order is a 404); the digit constraint keeps a
     // malformed id a 404 too.
-    Route::resource('orders', OrderController::class)->only(['index', 'create', 'store', 'edit', 'update', 'destroy'])
+    Route::resource('orders', OrderController::class)->only(['index', 'create', 'store', 'show', 'edit', 'update', 'destroy'])
         ->where(['order' => '[0-9]{1,18}']);
 
     // {sale} is route-model bound; the digit constraint keeps a malformed id a 404 (a bigint query error on PostgreSQL otherwise).

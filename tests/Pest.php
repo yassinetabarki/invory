@@ -507,6 +507,15 @@ function ordersMigration(): Migration
 }
 
 /**
+ * The stage counts migration object (S-49-a): three columns on `order_lines`. It is newer than the orders one, so a test that rolls the
+ * orders migration (or anything below) back must roll this one back first, and bring it back up after the orders one (the hand-kept list, F-60).
+ */
+function stageCountsMigration(): Migration
+{
+    return require database_path('migrations/2026_10_16_100000_add_stage_counts_to_order_lines.php');
+}
+
+/**
  * An order of the current workshop with its lines (S-48-b). `$lines` is a list of `[Product, quantity]` in the order they are entered
  * (the position follows the list); by default Boutique Lina's order of the card: Denim Jacket 50 then Denim Jeans 5-pocket 30 (needs the
  * demo products). The lines are created last-first, so their ids run against their positions: a read that sorted by id would show.
@@ -523,6 +532,26 @@ function bookOrder(array $attributes = [], ?array $lines = null): Order
 
     foreach (array_reverse($lines, true) as $position => [$product, $quantity]) {
         OrderLine::factory()->create(['order_id' => $order->id, 'product_id' => $product->id, 'quantity' => $quantity, 'position' => $position]);
+    }
+
+    return $order;
+}
+
+/**
+ * Boutique Lina's order with its lines at given stages (S-49): Denim Jacket then Denim Jeans 5-pocket (needs the demo products), each
+ * `[quantity, in_cutting, ready_to_ship, shipped]`; To start is what is left. Like `bookOrder()`, the lines are created last-first.
+ *
+ * @param  list<array{int, int, int, int}>  $stages
+ */
+function bookOrderAtStages(array $stages): Order
+{
+    $products = [demoProduct('PRD-JKT-001'), demoProduct('PRD-JNS-005')];
+    $order = Order::factory()->create(['client' => 'Boutique Lina', 'ordered_on' => '2026-10-15', 'note' => 'Deliver before 30 Oct, in 2 boxes']);
+
+    foreach (array_reverse($stages, true) as $position => [$quantity, $inCutting, $readyToShip, $shipped]) {
+        OrderLine::factory()->stages($inCutting, $readyToShip, $shipped)->create([
+            'order_id' => $order->id, 'product_id' => $products[$position]->id, 'quantity' => $quantity, 'position' => $position,
+        ]);
     }
 
     return $order;

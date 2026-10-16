@@ -39,15 +39,18 @@ it('lists an order with its lines in the order entered and the sum of their unit
             ->where('ordered_on', '2026-10-15')
             ->where('note', 'Deliver before 30 Oct, in 2 boxes')
             ->where('units', 80)
+            ->etc() // the stage counts and statuses are asserted in OrderPageTest
             ->has('lines', 2)
             ->has('lines.0', fn (Assert $line) => $line
                 ->has('id')
                 ->where('quantity', 50)
-                ->where('product', ['id' => pid(1), 'sku' => 'PRD-JKT-001', 'name' => 'Denim Jacket', 'status' => 'active', 'deleted' => false]))
+                ->where('product', ['id' => pid(1), 'sku' => 'PRD-JKT-001', 'name' => 'Denim Jacket', 'status' => 'active', 'deleted' => false])
+                ->etc())
             ->has('lines.1', fn (Assert $line) => $line
                 ->has('id')
                 ->where('quantity', 30)
-                ->where('product', ['id' => pid(5), 'sku' => 'PRD-JNS-005', 'name' => 'Denim Jeans 5-pocket', 'status' => 'active', 'deleted' => false]))));
+                ->where('product', ['id' => pid(5), 'sku' => 'PRD-JNS-005', 'name' => 'Denim Jeans 5-pocket', 'status' => 'active', 'deleted' => false])
+                ->etc())));
 });
 
 it('shows the newest order date first, then the order recorded last, 25 to a page (AC-5)', function () {

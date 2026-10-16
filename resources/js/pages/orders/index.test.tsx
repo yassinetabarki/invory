@@ -4,7 +4,12 @@ import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import OrdersIndex from '@/pages/orders/index';
 import { paginate } from '@/test/fixtures';
 import { inertiaMock, resetInertiaMock, setPageProps } from '@/test/inertia';
-import type { Order, OrdersIndexProps } from '@/types/domain';
+import type {
+    Order,
+    OrderLine,
+    OrderProduct,
+    OrdersIndexProps,
+} from '@/types/domain';
 
 vi.mock('@inertiajs/react', async (importOriginal) => {
     const { createInertiaModule } = await import('@/test/inertia');
@@ -24,16 +29,41 @@ function product(id: number, name: string) {
     };
 }
 
+function notStarted(
+    id: number,
+    product: OrderProduct,
+    quantity: number,
+): OrderLine {
+    return {
+        id,
+        product,
+        quantity,
+        to_start: quantity,
+        in_cutting: 0,
+        ready_to_ship: 0,
+        shipped: 0,
+        started: 0,
+        status: 'not_started',
+        status_label: 'Not started',
+    };
+}
+
 const lina: Order = {
     id: 7,
     client: 'Boutique Lina',
     ordered_on: '2026-10-15',
     note: 'Deliver before the spring show',
     lines: [
-        { id: 1, product: product(1, 'Denim Jacket'), quantity: 50 },
-        { id: 2, product: product(5, 'Denim Jeans 5-pocket'), quantity: 30 },
+        notStarted(1, product(1, 'Denim Jacket'), 50),
+        notStarted(2, product(5, 'Denim Jeans 5-pocket'), 30),
     ],
     units: 80,
+    in_cutting: 0,
+    ready_to_ship: 0,
+    shipped: 0,
+    status: 'not_started',
+    status_label: 'Not started',
+    delete_refusal: null,
 };
 
 function withOrders(

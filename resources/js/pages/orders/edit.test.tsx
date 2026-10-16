@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import OrdersEdit from '@/pages/orders/edit';
 import { inertiaMock, resetInertiaMock } from '@/test/inertia';
-import type { OrderEditProps, OrderProduct } from '@/types/domain';
+import type { OrderEditProps, OrderLine, OrderProduct } from '@/types/domain';
 
 vi.mock('@inertiajs/react', async (importOriginal) => {
     const { createInertiaModule } = await import('@/test/inertia');
@@ -29,17 +29,39 @@ const jeans: OrderProduct = {
     deleted: false,
 };
 
+function notStarted(
+    id: number,
+    product: OrderProduct,
+    quantity: number,
+): OrderLine {
+    return {
+        id,
+        product,
+        quantity,
+        to_start: quantity,
+        in_cutting: 0,
+        ready_to_ship: 0,
+        shipped: 0,
+        started: 0,
+        status: 'not_started',
+        status_label: 'Not started',
+    };
+}
+
 const props: OrderEditProps = {
     order: {
         id: 7,
         client: 'Boutique Lina',
         ordered_on: '2026-10-15',
         note: null,
-        lines: [
-            { id: 70, product: jacket, quantity: 50 },
-            { id: 71, product: jeans, quantity: 30 },
-        ],
+        lines: [notStarted(70, jacket, 50), notStarted(71, jeans, 30)],
         units: 80,
+        in_cutting: 0,
+        ready_to_ship: 0,
+        shipped: 0,
+        status: 'not_started',
+        status_label: 'Not started',
+        delete_refusal: null,
     },
     products: [jacket, jeans],
 };

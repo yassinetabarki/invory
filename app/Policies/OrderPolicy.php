@@ -24,6 +24,11 @@ class OrderPolicy
         return true;
     }
 
+    public function view(User $user, Order $order): Response
+    {
+        return $this->sameWorkshop($user, $order);
+    }
+
     public function update(User $user, Order $order): Response
     {
         return $this->sameWorkshop($user, $order);

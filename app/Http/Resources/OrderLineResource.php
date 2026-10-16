@@ -9,7 +9,8 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * `OrderLine` in resources/js/types/domain.ts. The line must carry its `product` (soft-deleted ones included).
+ * `OrderLine` in resources/js/types/domain.ts. The line must carry its `product` (soft-deleted ones included). The stage counts are
+ * columns; `to_start` and `started` are worked out here from them by the model, never by the screen.
  *
  * @mixin OrderLine
  */
@@ -18,10 +19,19 @@ final class OrderLineResource extends JsonResource
     /** @return array<string, mixed> */
     public function toArray(Request $request): array
     {
+        $progress = $this->progress();
+
         return [
             'id' => $this->id,
             'product' => new OrderProductResource($this->product),
             'quantity' => $this->quantity,
+            'to_start' => $this->to_start,
+            'in_cutting' => $this->in_cutting,
+            'ready_to_ship' => $this->ready_to_ship,
+            'shipped' => $this->shipped,
+            'started' => $this->started,
+            'status' => $progress->value,
+            'status_label' => $progress->label(),
         ];
     }
 }

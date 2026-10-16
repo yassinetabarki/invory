@@ -22,6 +22,13 @@ function line(
     return {
         id,
         quantity,
+        to_start: quantity,
+        in_cutting: 0,
+        ready_to_ship: 0,
+        shipped: 0,
+        started: 0,
+        status: 'not_started',
+        status_label: 'Not started',
         product: {
             id,
             sku: `PRD-${id}`,
@@ -39,6 +46,12 @@ const lina: Order = {
     note: 'Deliver before the spring show',
     lines: [line(1, 'Denim Jacket', 50), line(5, 'Denim Jeans 5-pocket', 30)],
     units: 80,
+    in_cutting: 0,
+    ready_to_ship: 0,
+    shipped: 0,
+    status: 'not_started',
+    status_label: 'Not started',
+    delete_refusal: null,
 };
 
 const fiveProducts: Order = {

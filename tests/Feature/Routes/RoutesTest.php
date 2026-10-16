@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Material;
+use App\Models\Order;
 use App\Models\Sale;
 use App\Models\User;
 use App\Policies\MaterialPolicy;
@@ -59,6 +60,7 @@ function routeRows(): array
         'orders.index' => ['get', 'orders.index', null],
         'orders.create' => ['get', 'orders.create', null],
         'orders.store' => ['post', 'orders.store', null],
+        'orders.show' => ['get', 'orders.show', 'order'],
         'orders.edit' => ['get', 'orders.edit', 'order'],
         'orders.update' => ['put', 'orders.update', 'order'],
         'orders.destroy' => ['delete', 'orders.destroy', 'order'],
@@ -140,6 +142,7 @@ it('registers the frozen routes behind auth and verified', function (string $nam
     'orders.index' => ['orders.index', 'GET', 'orders'],
     'orders.create' => ['orders.create', 'GET', 'orders/create'],
     'orders.store' => ['orders.store', 'POST', 'orders'],
+    'orders.show' => ['orders.show', 'GET', 'orders/{order}'],
     'orders.edit' => ['orders.edit', 'GET', 'orders/{order}/edit'],
     'orders.update' => ['orders.update', 'PUT', 'orders/{order}'],
     'orders.destroy' => ['orders.destroy', 'DELETE', 'orders/{order}'],
@@ -154,8 +157,8 @@ it('keeps the existing materials route names and does not add sale pages beyond 
         expect(Route::has("sales.{$action}"))->toBeFalse();
     }
 
-    // S-49 adds the order's own page; until then there is none.
-    expect(Route::has('orders.show'))->toBeFalse();
+    // S-49 added the order's own page.
+    expect(Route::has('orders.show'))->toBeTrue();
 });
 
 it('renders each page component for a verified user', function (string $route, int|string|null $parameter, string $component) {
@@ -171,6 +174,7 @@ it('renders each page component for a verified user', function (string $route, i
     'sales.index' => ['sales.index', null, 'sales/index'],
     'orders.index' => ['orders.index', null, 'orders/index'],
     'orders.create' => ['orders.create', null, 'orders/create'],
+    'orders.show' => ['orders.show', 'order', 'orders/show'],
     'orders.edit' => ['orders.edit', 'order', 'orders/edit'],
 ]);
 
@@ -181,23 +185,24 @@ it('does not mistake /products/create for a product id', function () {
 });
 
 it('redirects valid writes to the page the contract names', function (string $method, string $route, int|string|null $parameter, string $payload, ?string $target, array $targetParameters) {
-    // A null target means "back to the page the request came from".
+    // A null target means "back to the page the request came from". The product is looked up before the request (a delete removes
+    // it); the order of an order target is the newest one: the one just recorded, or the only one booked.
     $targetParameters = array_map(fn (mixed $value): mixed => $value === 'product' ? pid(1) : $value, $targetParameters);
+    $response = actingAs($this->user)
+        ->from(route('sales.index'))
+        ->{$method}(routeUrl($route, $parameter), routePayload($payload));
+    $targetParameters = array_map(fn (mixed $value): mixed => $value === 'order' ? Order::query()->orderByDesc('id')->value('id') : $value, $targetParameters);
     $expected = $target === null ? route('sales.index') : route($target, $targetParameters);
 
-    actingAs($this->user)
-        ->from(route('sales.index'))
-        ->{$method}(routeUrl($route, $parameter), routePayload($payload))
-        ->assertRedirect($expected)
-        ->assertSessionHasNoErrors();
+    $response->assertRedirect($expected)->assertSessionHasNoErrors();
 })->with([
     'products.update goes to the product' => ['put', 'products.update', 'product', 'product', 'products.show', ['product']],
     'products.destroy goes to the list' => ['delete', 'products.destroy', 'product', 'none', 'products.index', []],
     'sales.store goes back' => ['post', 'sales.store', null, 'sale', null, []],
     'sales.update goes back' => ['put', 'sales.update', 'sale', 'sale', null, []],
     'sales.destroy goes back' => ['delete', 'sales.destroy', 'sale', 'none', null, []],
-    'orders.store goes to the list' => ['post', 'orders.store', null, 'order', 'orders.index', []],
-    'orders.update goes to the list' => ['put', 'orders.update', 'order', 'order', 'orders.index', []],
+    'orders.store goes to the order\'s page' => ['post', 'orders.store', null, 'order', 'orders.show', ['order']],
+    'orders.update goes to the order\'s page' => ['put', 'orders.update', 'order', 'order', 'orders.show', ['order']],
     'orders.destroy goes back' => ['delete', 'orders.destroy', 'order', 'none', null, []],
 ]);
 
@@ -266,6 +271,8 @@ it('answers 404 for a non-numeric product or sale id', function (string $method,
     'sale update, decimal' => ['put', '/sales/1.5'],
     'sale destroy, letters' => ['delete', '/sales/abc'],
     'sale destroy, negative' => ['delete', '/sales/-3'],
+    'order show, letters' => ['get', '/orders/abc'],
+    'order show, beyond the integer range' => ['get', '/orders/99999999999999999999'],
     'order edit, letters' => ['get', '/orders/abc/edit'],
     'order edit, beyond the integer range' => ['get', '/orders/99999999999999999999/edit'],
     'order update, letters' => ['put', '/orders/abc'],
@@ -289,6 +296,7 @@ it('answers 404 for an unknown product or sale id, before anything is validated'
     'destroy a sale' => ['delete', '/sales/900000000', 'none'],
     'sale zero' => ['put', '/sales/0', 'sale'],
     'a far away sale' => ['delete', '/sales/999999', 'none'],
+    'show an order' => ['get', '/orders/900000000', 'none'],
     'edit an order' => ['get', '/orders/900000000/edit', 'none'],
     'update an order' => ['put', '/orders/900000000', 'order'],
     'destroy an order' => ['delete', '/orders/900000000', 'none'],

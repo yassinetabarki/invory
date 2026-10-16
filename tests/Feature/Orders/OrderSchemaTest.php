@@ -32,12 +32,15 @@ it('creates both tables with their columns, indexes and foreign keys, and drops 
         ->and($foreignKeys('order_lines', 'orders')['on_delete'])->toBe('cascade')
         ->and($foreignKeys('order_lines', 'products')['on_delete'])->toBe('restrict');
 
+    // Newest first: the stage counts are columns of `order_lines`.
+    stageCountsMigration()->down();
     ordersMigration()->down();
 
     expect(Schema::hasTable('order_lines'))->toBeFalse()
         ->and(Schema::hasTable('orders'))->toBeFalse();
 
     ordersMigration()->up();
+    stageCountsMigration()->up();
 
     $line = OrderLine::factory()->create();
 
@@ -75,4 +78,35 @@ it('makes PostgreSQL refuse an order line that breaks a workshop, quantity or du
     'a workshop that is not its product\'s' => [fn (array $ids) => ['workshop_id' => $ids['other'], 'order_id' => $ids['foreign order']], 'order_lines_workshop_product_foreign'],
     'a quantity of 0' => [fn (array $ids) => ['product_id' => $ids['spare product'], 'quantity' => 0], 'order_lines_quantity_check'],
     'the same product twice on one order' => [fn (array $ids) => [], 'order_lines_order_id_product_id_unique'],
+]);
+
+it('adds the three stage counts at 0 to the lines that exist, and drops them on rollback (S-49-a)', function () {
+    $line = OrderLine::factory()->create(['quantity' => 40]);
+
+    stageCountsMigration()->down();
+
+    expect(Schema::hasColumns('order_lines', ['in_cutting', 'ready_to_ship', 'shipped']))->toBeFalse()
+        ->and(DB::table('order_lines')->where('id', $line->id)->value('quantity'))->toBe(40);
+
+    stageCountsMigration()->up();
+
+    expect(DB::table('order_lines')->where('id', $line->id)->first(['in_cutting', 'ready_to_ship', 'shipped', 'quantity']))
+        ->toMatchObject(['in_cutting' => 0, 'ready_to_ship' => 0, 'shipped' => 0, 'quantity' => 40]);
+});
+
+it('makes PostgreSQL refuse a negative stage count and counts that add up to more than the quantity (S-49-a)', function (array $counts, string $constraint) {
+    if (DB::getDriverName() !== 'pgsql') {
+        $this->markTestSkipped('The stage count CHECKs are PostgreSQL-only.');
+    }
+
+    $line = OrderLine::factory()->create(['quantity' => 10]);
+
+    // Counts that fill the quantity exactly are fine; a savepoint keeps the surrounding transaction alive after a refusal.
+    DB::table('order_lines')->where('id', $line->id)->update(['in_cutting' => 5, 'ready_to_ship' => 3, 'shipped' => 2]);
+
+    expect(fn () => DB::transaction(fn () => DB::table('order_lines')->where('id', $line->id)->update($counts)))
+        ->toThrow(QueryException::class, $constraint);
+})->with([
+    'a negative count' => [['in_cutting' => -1], 'order_lines_stage_counts_check'],
+    'counts above the quantity' => [['shipped' => 3], 'order_lines_stage_counts_total_check'],
 ]);

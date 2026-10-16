@@ -61,13 +61,13 @@ function orderLinesAsListed(array $row): array
     return array_map(static fn (array $line): string => "{$line['quantity']} × {$line['product']['name']}", $row['lines']);
 }
 
-it('records Boutique Lina\'s order and opens the list with it first (AC-2)', function () {
-    actingAs($this->user)->post(route('orders.store'), orderBody())
-        ->assertRedirect(route('orders.index'))
+it('records Boutique Lina\'s order and lands on its page, where the list shows it first (AC-2, S-49 AC-1)', function () {
+    $response = actingAs($this->user)->post(route('orders.store'), orderBody());
+    $order = Order::query()->with('lines')->firstOrFail();
+
+    $response->assertRedirect(route('orders.show', $order))
         ->assertSessionHasNoErrors()
         ->assertInertiaFlash('toast', ['type' => 'success', 'message' => 'Order recorded.']);
-
-    $order = Order::query()->with('lines')->firstOrFail();
 
     expect($order->only(['client', 'note', 'user_id']))
         ->toBe(['client' => 'Boutique Lina', 'note' => 'Deliver before 30 Oct, in 2 boxes', 'user_id' => $this->user->id])
@@ -118,13 +118,13 @@ it('refuses a mistake with the card\'s message under its field and saves nothing
     'another workshop\'s product, like a product nobody has' => [['lines' => [['product' => 'foreign', 'quantity' => '5']]], 'lines.0.product_id', 'The selected product is invalid.'],
 ]);
 
-it('changes Denim Jeans to 40, adds 20 T-shirts and keeps the Jeans line (AC-6)', function () {
+it('changes Denim Jeans to 40, adds 20 T-shirts, keeps the Jeans line and lands on the order\'s page (AC-6, S-49 AC-1)', function () {
     $order = bookOrder();
     $jeansLine = $order->lines()->where('product_id', pid(5))->firstOrFail();
 
     actingAs($this->user)->put(route('orders.update', $order), orderBody(['lines' => [
         ['product' => 'jacket', 'quantity' => '50'], ['product' => 'jeans', 'quantity' => '40'], ['product' => 'tshirt', 'quantity' => '20'],
-    ]]))->assertRedirect(route('orders.index'))
+    ]]))->assertRedirect(route('orders.show', $order))
         ->assertSessionHasNoErrors()
         ->assertInertiaFlash('toast', ['type' => 'success', 'message' => 'Order updated.']);
 

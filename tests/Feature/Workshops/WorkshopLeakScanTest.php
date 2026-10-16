@@ -186,7 +186,7 @@ it('shows no record of the other workshop on any signed-in page', function (stri
     }
 
     // The scan is not vacuous: the pages that list or show records do show the scanning workshop's own marker.
-    expect(array_keys($ownSeenOn))->toContain('dashboard', 'materials.index', 'materials.show', 'materials.edit', 'materials.options', 'products.index', 'products.show', 'products.edit', 'sales.index', 'orders.index', 'orders.create', 'orders.edit');
+    expect(array_keys($ownSeenOn))->toContain('dashboard', 'materials.index', 'materials.show', 'materials.edit', 'materials.options', 'products.index', 'products.show', 'products.edit', 'sales.index', 'orders.index', 'orders.create', 'orders.show', 'orders.edit');
     // ... and so do the photos of its own material and product, so the photo search isn't vacuous either.
     expect(array_keys($ownPhotoSeenOn))->toContain('materials.index', 'materials.show', 'products.index', 'products.show', 'sales.index');
     expect($walked)->not->toBeEmpty();

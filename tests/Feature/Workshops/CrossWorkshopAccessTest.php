@@ -128,9 +128,9 @@ it('answers 404 to every route with a record of another workshop, shows nothing 
         expect(crossWorkshopFingerprint())->toBe($before, "{$label} changed something.");
     }
 
-    // 14 routes carry a record (material show, edit, update, destroy, restock; product show, edit, update, destroy; sale update, destroy;
-    // order edit, update, destroy): 22 requests, because an update answers to PUT and PATCH, and the material and product updates also run with a photo and with remove_photo.
-    expect(count($requests))->toBeGreaterThanOrEqual(22);
+    // 15 routes carry a record (material show, edit, update, destroy, restock; product show, edit, update, destroy; sale update, destroy;
+    // order show, edit, update, destroy): 23 requests, because an update answers to PUT and PATCH, and the material and product updates also run with a photo and with remove_photo.
+    expect(count($requests))->toBeGreaterThanOrEqual(23);
 
     // Sami's Orders list and its search show nothing of Boutique Lina's order (AC-7).
     foreach ([[], ['search' => 'lina'], ['search' => 'PRD-JKT-001'], ['search' => 'jacket']] as $query) {

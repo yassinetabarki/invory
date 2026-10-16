@@ -24,7 +24,7 @@ use Inertia\Response;
 
 /**
  * Customer orders (S-48): Eloquent reads through {@see OrderBook}, `OrderPolicy` on every route and `{order}` route-model bound.
- * Saving goes through the order Actions.
+ * Saving goes through the order Actions; saving lands on the order's own page (S-49).
  */
 final class OrderController extends Controller
 {
@@ -52,13 +52,22 @@ final class OrderController extends Controller
         ]);
     }
 
+    public function show(Order $order, OrderBook $book): Response
+    {
+        Gate::authorize('view', $order);
+
+        return Inertia::render('orders/show', [
+            'order' => fn (): OrderResource => new OrderResource($book->load($order)),
+        ]);
+    }
+
     public function store(StoreOrderRequest $request, RecordOrder $recordOrder): RedirectResponse
     {
-        $recordOrder->handle($request->validated(), $this->actor($request));
+        $order = $recordOrder->handle($request->validated(), $this->actor($request));
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Order recorded.')]);
 
-        return to_route('orders.index');
+        return to_route('orders.show', $order);
     }
 
     public function edit(Order $order, OrderBook $book): Response
@@ -77,7 +86,7 @@ final class OrderController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Order updated.')]);
 
-        return to_route('orders.index');
+        return to_route('orders.show', $order);
     }
 
     public function destroy(Order $order, DeleteOrder $deleteOrder): RedirectResponse
@@ -88,7 +97,10 @@ final class OrderController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Order deleted.')]);
 
-        return back();
+        // Sent from the order's own page, "back" would be a page that no longer exists: land on the list. From the list, stay on it.
+        $sentFromItsPage = parse_url(url()->previous(), PHP_URL_PATH) === route('orders.show', $order, false);
+
+        return $sentFromItsPage ? to_route('orders.index') : back();
     }
 
     /** The signed-in user, for `orders.user_id`. The `auth` middleware and the request authorization guarantee one. */

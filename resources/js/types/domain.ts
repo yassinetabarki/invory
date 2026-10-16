@@ -309,10 +309,24 @@ export type OrderProduct = {
     deleted: boolean;
 };
 
+export type OrderStage =
+    | 'to_start'
+    | 'in_cutting'
+    | 'ready_to_ship'
+    | 'shipped';
+export type OrderProgress = 'not_started' | 'in_progress' | 'shipped';
+
 export type OrderLine = {
     id: number;
     product: OrderProduct;
     quantity: number; // whole units, 1 … 1 000 000
+    to_start: number; // quantity − in_cutting − ready_to_ship − shipped, computed server-side
+    in_cutting: number;
+    ready_to_ship: number;
+    shipped: number;
+    started: number; // in_cutting + ready_to_ship + shipped, computed server-side
+    status: OrderProgress;
+    status_label: string; // "Not started", "In progress", "Shipped"
 };
 
 export type Order = {
@@ -322,6 +336,14 @@ export type Order = {
     note: string | null;
     lines: OrderLine[]; // in the order entered (position)
     units: number; // sum of the lines' quantities, computed server-side
+    in_cutting: number; // the lines summed, server-side
+    ready_to_ship: number;
+    shipped: number; // "10 of 80 shipped"
+    status: OrderProgress;
+    status_label: string;
+    // Set while units are in cutting or ready to ship: "Boutique Lina can't be deleted: 30 units are in cutting or ready to
+    // ship. Move them back to To start first." (30 = in_cutting + ready_to_ship; "1 unit is" for one); null when it may be deleted
+    delete_refusal: string | null;
 };
 
 export type OrderFilters = {
@@ -347,6 +369,7 @@ export type OrdersIndexProps = {
 };
 export type OrderCreateProps = { products: OrderProduct[] };
 export type OrderEditProps = { order: Order; products: OrderProduct[] };
+export type OrderShowProps = { order: Order };
 
 export type StockMovement = {
     id: number;

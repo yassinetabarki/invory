@@ -144,6 +144,22 @@ it('stays within the query budget and runs the same queries with 3 and with 25 o
         ->and(count($many))->toBe(count($few), implode(PHP_EOL, $many));
 });
 
+it('stays within the query budget on the page of an order, however many lines it has', function () {
+    $lines = array_map(fn (int $number): array => [demoProduct(DEMO_PRODUCT_SKUS[$number]), 10 * $number], [1, 2, 3, 4, 5]);
+    $small = bookOrder(['client' => 'One line'], array_slice($lines, 0, 1));
+    $big = bookOrder(['client' => 'Five lines'], $lines);
+    actingAs($this->user);
+
+    // Warm up: the first request of a process may run one-off queries (schema introspection, the framework's own caches).
+    $this->get(route('orders.show', $small))->assertOk();
+
+    $few = queryLog(fn () => $this->get(route('orders.show', $small))->assertOk());
+    $many = queryLog(fn () => $this->get(route('orders.show', $big))->assertOk());
+
+    expect(count($many))->toBeLessThanOrEqual(QUERY_BUDGET, implode(PHP_EOL, $many))
+        ->and(count($many))->toBe(count($few), implode(PHP_EOL, $many));
+});
+
 it('stays within the query budget when the deferred recent history of the materials list loads', function () {
     actingAs($this->user);
     $firstVisit = $this->get(route('materials.index'))->assertOk();

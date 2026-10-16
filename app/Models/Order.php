@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\OrderProgress;
 use App\Models\Concerns\BelongsToWorkshop;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
@@ -58,6 +59,46 @@ class Order extends Model
     public function lines(): HasMany
     {
         return $this->hasMany(OrderLine::class)->orderBy('position')->orderBy('id');
+    }
+
+    /** Units in cutting, summed over the loaded lines (no query: the order must carry its `lines`). */
+    public function unitsInCutting(): int
+    {
+        return (int) $this->lines->sum('in_cutting');
+    }
+
+    /** Units ready to ship, summed over the loaded lines. */
+    public function unitsReadyToShip(): int
+    {
+        return (int) $this->lines->sum('ready_to_ship');
+    }
+
+    /** Units shipped, summed over the loaded lines. */
+    public function unitsShipped(): int
+    {
+        return (int) $this->lines->sum('shipped');
+    }
+
+    /**
+     * Units that hold material taken out of stock and haven't left yet: in cutting plus ready to ship. While there are any, the order
+     * can't be deleted.
+     */
+    public function unitsHeld(): int
+    {
+        return $this->unitsInCutting() + $this->unitsReadyToShip();
+    }
+
+    /**
+     * "Not started" while no unit of any line has left To start, "Shipped" once every line is fully shipped, "In progress" otherwise.
+     * Read from the loaded lines.
+     */
+    public function progress(): OrderProgress
+    {
+        return match (true) {
+            $this->lines->every(fn (OrderLine $line): bool => $line->started === 0) => OrderProgress::NotStarted,
+            $this->lines->every(fn (OrderLine $line): bool => $line->progress() === OrderProgress::Shipped) => OrderProgress::Shipped,
+            default => OrderProgress::InProgress,
+        };
     }
 
     /** @return BelongsTo<User, $this> */
