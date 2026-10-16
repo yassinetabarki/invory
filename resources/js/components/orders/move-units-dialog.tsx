@@ -1,7 +1,12 @@
 import { useForm } from '@inertiajs/react';
 import { useEffect, useId, useRef } from 'react';
-import type { FormEvent, ReactNode, RefObject } from 'react';
+import type { FormEvent, RefObject } from 'react';
+import { MaterialsMoveTable } from '@/components/orders/materials-move-table';
 import { formatUnits } from '@/components/orders/stage-figure';
+import {
+    hasPreview,
+    useMovePreview,
+} from '@/components/orders/use-move-preview';
 import { FormField } from '@/components/products/form-field';
 import { Button } from '@/components/ui/button';
 import {
@@ -47,8 +52,6 @@ type MoveUnitsDialogProps = {
     onClose: () => void;
     /** The button that opened the dialog: gets focus back when it closes. */
     returnFocusTo?: RefObject<HTMLElement | null>;
-    /** Shown under the field (S-53-e adds the materials table here). */
-    children?: ReactNode;
 };
 
 type MoveUnitsFormProps = {
@@ -56,31 +59,34 @@ type MoveUnitsFormProps = {
     line: OrderLine;
     move: OrderLineMove;
     onClose: () => void;
-    children?: ReactNode;
 };
 
-function MoveUnitsForm({
-    order,
-    line,
-    move,
-    onClose,
-    children,
-}: MoveUnitsFormProps) {
+function MoveUnitsForm({ order, line, move, onClose }: MoveUnitsFormProps) {
     const uid = useId();
     const { locale } = useAppSettings();
     const inputRef = useRef<HTMLInputElement>(null);
     const form = useForm<MoveUnitsFormData>({ move, units: '' });
     const { errors, processing } = form;
-    const error = errors.units ?? errors.move;
+    const refusal = errors.units ?? errors.move;
+    // Start cutting and Move back to To start show the materials of the number typed.
+    const needsTable = hasPreview(move);
+    const preview = useMovePreview({
+        order: order.id,
+        line: line.id,
+        move,
+        units: form.data.units,
+    });
+    // The server's word on the number typed (preview) or on the move itself (refusal): the same place.
+    const error = preview.status === 'invalid' ? preview.message : refusal;
     // The count saved now: it follows the page's reload after a refused move.
     const held = line[MOVES[move].from];
 
     // Back to the field once a move has been refused.
     useEffect(() => {
-        if (!processing && error) {
+        if (!processing && refusal) {
             inputRef.current?.focus();
         }
-    }, [error, processing]);
+    }, [refusal, processing]);
 
     function handleSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
@@ -125,13 +131,26 @@ function MoveUnitsForm({
                 )}
             </FormField>
 
-            {children}
+            {needsTable && (
+                // Always mounted, so a screen reader hears the table arrive.
+                <div aria-live="polite" className="empty:hidden">
+                    <MaterialsMoveTable
+                        state={preview}
+                        productName={line.product.name}
+                    />
+                </div>
+            )}
 
             <DialogFooter>
                 <Button type="button" variant="outline" onClick={onClose}>
                     Cancel
                 </Button>
-                <Button type="submit" disabled={processing}>
+                <Button
+                    type="submit"
+                    disabled={
+                        processing || (needsTable && preview.status !== 'ready')
+                    }
+                >
                     {processing && <Spinner />}
                     Move units
                 </Button>
@@ -150,7 +169,6 @@ export function MoveUnitsDialog({
     target,
     onClose,
     returnFocusTo,
-    children,
 }: MoveUnitsDialogProps) {
     const line = target
         ? order.lines.find((candidate) => candidate.id === target.lineId)
@@ -181,9 +199,7 @@ export function MoveUnitsDialog({
                         line={line}
                         move={target.move}
                         onClose={onClose}
-                    >
-                        {children}
-                    </MoveUnitsForm>
+                    />
                 )}
             </DialogContent>
         </Dialog>

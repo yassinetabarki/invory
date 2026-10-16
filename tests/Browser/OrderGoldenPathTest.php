@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Models\Material;
 use App\Models\Order;
 use App\Models\User;
 use Database\Seeders\DemoCatalogSeeder;
@@ -10,12 +11,12 @@ use Tests\Browser\Support\GoldenPathStep;
 
 /*
 |--------------------------------------------------------------------------
-| Golden path of S-48 and S-49: record an order, then start cutting (S-48 AC-2, S-49 AC-1 and AC-2)
+| Golden path of S-48, S-49 and S-53: record an order, then start cutting (S-48 AC-2, S-49 AC-1 and AC-2, S-53 AC-1 and AC-2)
 |--------------------------------------------------------------------------
 |
 | A signed-in user with the demo products opens "New order", fills it in and saves. The order's own page opens with the
-| toast; "Start cutting" moves 30 jackets into cutting and the figures and the toast follow. The new order is then the
-| first row of the Orders list. Runs on the throwaway database of RefreshDatabase, like the other browser test.
+| toast; "Start cutting" shows the materials table, then moves 30 jackets into cutting: the figures and the toast follow
+| and the denim's own page shows what is left in stock. The new order is then the first row of the Orders list. Runs on the throwaway database of RefreshDatabase, like the other browser test.
 */
 
 it('records an order with two products, starts cutting 30 jackets and finds it first on the Orders list', function () {
@@ -69,9 +70,14 @@ it('records an order with two products, starts cutting 30 jackets and finds it f
 
         $dialog = $browser->getByRole('dialog', ['name' => 'Start cutting · Denim Jacket', 'exact' => true]);
         $dialog->getByLabel('How many units?', true)->fill('30');
+
+        // The server works the table out for the number typed; the row waits for its answer (S-53 AC-1).
+        $denimRow = $dialog->getByRole('row', ['name' => 'Denim 12oz Indigo']);
+        expect(preg_replace('/\s+/', ' ', trim($denimRow->innerText())))->toBe('Denim 12oz Indigo 59.4 m 250 m 190.6 m');
+
         $dialog->getByRole('button', ['name' => 'Move units', 'exact' => true])->click();
 
-        $page->assertSee('30 units of Denim Jacket moved to In cutting.');
+        $page->assertSee('30 units of Denim Jacket moved to In cutting. Materials taken out of stock.');
         $page->assertScript(<<<'JS'
         (() => {
             const jacket = Array.from(document.querySelectorAll('h3'))
@@ -84,6 +90,17 @@ it('records an order with two products, starts cutting 30 jackets and finds it f
                 : '';
         })()
         JS, 'To start 20 units | In cutting 30 units | Ready to ship 0 units | Shipped 0 units');
+        $page->assertNoJavaScriptErrors();
+    }, $page);
+
+    GoldenPathStep::run('material page: the denim left in stock follows the cut', function () use ($page) {
+        $page->navigate(route('materials.show', Material::query()->where('name', 'Denim 12oz Indigo')->firstOrFail(), false));
+        $page->assertScript(<<<'JS'
+        (() => {
+            const label = Array.from(document.querySelectorAll('dt')).find((term) => term.innerText.trim() === 'In stock');
+            return label?.nextElementSibling?.innerText.trim() ?? '';
+        })()
+        JS, '190.6 m');
         $page->assertNoJavaScriptErrors();
     }, $page);
 
