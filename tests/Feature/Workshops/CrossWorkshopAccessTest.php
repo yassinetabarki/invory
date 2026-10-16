@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Material;
+use App\Models\OrderLine;
 use App\Models\Product;
 use App\Models\Sale;
 use App\Models\User;
@@ -61,11 +62,13 @@ function crossWorkshopFingerprint(): array
 }
 
 it('answers 404 to every route with a record of another workshop, shows nothing of it and changes nothing (AC-3, AC-4)', function () {
+    $order = bookOrder();
     $records = [
         'material' => demoMaterial('MAT-DEN-012'),
         'product' => demoProduct('PRD-JKT-001'),
         'sale' => Sale::query()->where('product_id', pid(1))->orderBy('id')->firstOrFail(),
-        'order' => bookOrder(),
+        'order' => $order,
+        'line' => OrderLine::query()->where('order_id', $order->id)->orderBy('position')->firstOrFail(),
     ];
     $secrets = ['Denim 12oz Indigo', 'MAT-DEN-012', 'Denim Jacket', 'PRD-JKT-001', 'Boutique Lina', '2 boxes'];
 
@@ -83,6 +86,7 @@ it('answers 404 to every route with a record of another workshop, shows nothing 
         'products.update' => validProductPayload(['sku' => 'PRD-JKT-001', 'name' => 'Denim Jacket']),
         'sales.update' => validSalePayload(),
         'orders.update' => validOrderPayload(),
+        'orders.lines.moves.store' => ['move' => 'start_cutting', 'units' => '1'],
     ];
     $requests = [];
 
@@ -128,9 +132,9 @@ it('answers 404 to every route with a record of another workshop, shows nothing 
         expect(crossWorkshopFingerprint())->toBe($before, "{$label} changed something.");
     }
 
-    // 15 routes carry a record (material show, edit, update, destroy, restock; product show, edit, update, destroy; sale update, destroy;
-    // order show, edit, update, destroy): 23 requests, because an update answers to PUT and PATCH, and the material and product updates also run with a photo and with remove_photo.
-    expect(count($requests))->toBeGreaterThanOrEqual(23);
+    // 16 routes carry a record (material show, edit, update, destroy, restock; product show, edit, update, destroy; sale update, destroy;
+    // order show, edit, update, destroy, move units): 24 requests, because an update answers to PUT and PATCH, and the material and product updates also run with a photo and with remove_photo.
+    expect(count($requests))->toBeGreaterThanOrEqual(24);
 
     // Sami's Orders list and its search show nothing of Boutique Lina's order (AC-7).
     foreach ([[], ['search' => 'lina'], ['search' => 'PRD-JKT-001'], ['search' => 'jacket']] as $query) {

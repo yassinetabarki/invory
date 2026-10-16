@@ -5,6 +5,7 @@ use App\Http\Controllers\MaterialController;
 use App\Http\Controllers\MaterialOptionController;
 use App\Http\Controllers\MaterialRestockController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\OrderLineMoveController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\SaleController;
 use Illuminate\Support\Facades\Route;
@@ -32,6 +33,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // malformed id a 404 too.
     Route::resource('orders', OrderController::class)->only(['index', 'create', 'store', 'show', 'edit', 'update', 'destroy'])
         ->where(['order' => '[0-9]{1,18}']);
+
+    // Moving units of an order line between stages (S-49). `scopeBindings()`: a line that isn't the order's own is a 404.
+    Route::post('orders/{order}/lines/{line}/moves', [OrderLineMoveController::class, 'store'])
+        ->where(['order' => '[0-9]{1,18}', 'line' => '[0-9]{1,18}'])
+        ->scopeBindings()
+        ->name('orders.lines.moves.store');
 
     // {sale} is route-model bound; the digit constraint keeps a malformed id a 404 (a bigint query error on PostgreSQL otherwise).
     Route::resource('sales', SaleController::class)->only(['index', 'store', 'update', 'destroy'])
