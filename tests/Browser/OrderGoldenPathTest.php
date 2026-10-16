@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Models\Order;
 use App\Models\User;
 use Database\Seeders\DemoCatalogSeeder;
 use Illuminate\Support\Facades\DB;
@@ -9,14 +10,15 @@ use Tests\Browser\Support\GoldenPathStep;
 
 /*
 |--------------------------------------------------------------------------
-| Golden path of S-48: record an order with two products (AC-2)
+| Golden path of S-48 and S-49: record an order, then start cutting (S-48 AC-2, S-49 AC-1 and AC-2)
 |--------------------------------------------------------------------------
 |
-| A signed-in user with the demo products opens "New order", fills it in and saves. The list opens with the toast and the
-| new order on its first row. Runs on the throwaway database of RefreshDatabase, like the other browser test.
+| A signed-in user with the demo products opens "New order", fills it in and saves. The order's own page opens with the
+| toast; "Start cutting" moves 30 jackets into cutting and the figures and the toast follow. The new order is then the
+| first row of the Orders list. Runs on the throwaway database of RefreshDatabase, like the other browser test.
 */
 
-it('records an order with two products and finds it first on the Orders list', function () {
+it('records an order with two products, starts cutting 30 jackets and finds it first on the Orders list', function () {
     GoldenPathStep::run('database: throwaway', function () {
         expect(DB::connection()->getDatabaseName())->toBe(':memory:');
     });
@@ -52,12 +54,41 @@ it('records an order with two products and finds it first on the Orders list', f
         }
     }, $page);
 
-    GoldenPathStep::run('new order: save', function () use ($page, $browser) {
+    GoldenPathStep::run('new order: save lands on the order page', function () use ($page, $browser) {
         $browser->getByRole('button', ['name' => 'Save order', 'exact' => true])->click();
-        $page->assertPathIs('/orders')->assertSee('Order recorded.');
+        $page->assertPathIs(route('orders.show', Order::query()->firstOrFail(), false))
+            ->assertSee('Order recorded.')
+            ->assertSee('Ordered ')
+            ->assertSee('2 products · 80 units')
+            ->assertSee('0 of 80 shipped');
+    }, $page);
+
+    GoldenPathStep::run('order page: start cutting 30 jackets', function () use ($page, $browser) {
+        $jacket = $browser->getByRole('region', ['name' => 'Denim Jacket · PRD-JKT-001 · 50 units', 'exact' => true]);
+        $jacket->getByRole('button', ['name' => 'Start cutting', 'exact' => true])->click();
+
+        $dialog = $browser->getByRole('dialog', ['name' => 'Start cutting · Denim Jacket', 'exact' => true]);
+        $dialog->getByLabel('How many units?', true)->fill('30');
+        $dialog->getByRole('button', ['name' => 'Move units', 'exact' => true])->click();
+
+        $page->assertSee('30 units of Denim Jacket moved to In cutting.');
+        $page->assertScript(<<<'JS'
+        (() => {
+            const jacket = Array.from(document.querySelectorAll('h3'))
+                .find((heading) => heading.innerText.startsWith('Denim Jacket'))
+                ?.closest('section');
+            return jacket
+                ? Array.from(jacket.querySelectorAll('ol > li > p'))
+                    .map((figure) => figure.innerText.replace(/[ \t\r\n\f\v]+/g, ' ').trim())
+                    .join(' | ')
+                : '';
+        })()
+        JS, 'To start 20 units | In cutting 30 units | Ready to ship 0 units | Shipped 0 units');
+        $page->assertNoJavaScriptErrors();
     }, $page);
 
     GoldenPathStep::run('orders list: the new order is the first row', function () use ($page) {
+        $page->navigate(route('orders.index', absolute: false));
         // Client, products, units and note of the first row (the date column depends on the day the test runs).
         $page->assertScript(<<<'JS'
         (() => {

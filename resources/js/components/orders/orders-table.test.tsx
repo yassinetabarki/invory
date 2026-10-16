@@ -103,6 +103,14 @@ describe('<OrdersTable>', () => {
         expect(table().queryByText(/Leather Tote/)).not.toBeInTheDocument();
     });
 
+    it("links the client's name to the order's page", () => {
+        renderTable([lina]);
+
+        expect(
+            table().getByRole('link', { name: 'Boutique Lina' }),
+        ).toHaveAttribute('href', '/orders/7');
+    });
+
     it('links an active product and leaves a deleted one as plain text', () => {
         renderTable([
             {

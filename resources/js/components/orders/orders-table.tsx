@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/table';
 import { useAppSettings } from '@/hooks/use-app-settings';
 import { EMPTY_VALUE, formatCount, formatDate } from '@/lib/format';
-import { edit } from '@/routes/orders';
+import { edit, show as showOrder } from '@/routes/orders';
 import { show } from '@/routes/products';
 import type { Order } from '@/types/domain';
 
@@ -61,6 +61,18 @@ function ProductLines({ order }: { order: Order }) {
                 <li className="text-muted-foreground">+ {hidden} more</li>
             )}
         </ul>
+    );
+}
+
+/** The client's name, linking to the order's page. */
+function ClientLink({ order }: { order: Order }) {
+    return (
+        <Link
+            href={showOrder(order.id)}
+            className="hover:underline focus-visible:underline"
+        >
+            {order.client}
+        </Link>
     );
 }
 
@@ -154,7 +166,7 @@ export function OrdersTable({ orders, onDelete }: OrdersTableProps) {
                                         {date}
                                     </TableCell>
                                     <TableCell className="align-top font-semibold">
-                                        {order.client}
+                                        <ClientLink order={order} />
                                     </TableCell>
                                     <TableCell className="align-top whitespace-normal">
                                         <ProductLines order={order} />
@@ -191,7 +203,7 @@ export function OrdersTable({ orders, onDelete }: OrdersTableProps) {
                         <li key={order.id} className="space-y-3 border-t p-4">
                             <div className="flex items-start justify-between gap-3">
                                 <p className="font-semibold break-words">
-                                    {order.client}
+                                    <ClientLink order={order} />
                                 </p>
                                 <span className="text-sm font-bold whitespace-nowrap tabular-nums">
                                     {formatCount(order.units, locale)}{' '}
