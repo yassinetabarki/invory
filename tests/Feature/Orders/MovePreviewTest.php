@@ -1,0 +1,126 @@
+<?php
+
+use App\Models\Order;
+use App\Models\Product;
+use Illuminate\Testing\TestResponse;
+
+use function Pest\Laravel\actingAs;
+
+/*
+|--------------------------------------------------------------------------
+| The move window's materials table: the preview of Start cutting (S-53-c: AC-1, AC-3 server side)
+|--------------------------------------------------------------------------
+|
+| Boutique Lina's order of the card: Denim Jacket 50, Denim Jeans 5-pocket 30, on the demo stock (Denim 12oz Indigo 250 m, Metal shank
+| button 17mm 900 pc, Polyester thread 20,000 m, Woven brand label 400 pc). The guards of the route (guest, unverified, digits, another
+| workshop's order) are walked by RoutesTest and CrossWorkshopAccessTest; the cut itself is in StartCuttingStockTest.
+*/
+
+beforeEach(fn () => $this->user = prepareDemo($this));
+
+/** The preview of the line at that position (0 = Denim Jacket), as the window asks for it: JSON. */
+function previewMove(Order $order, int $position, array $query): TestResponse
+{
+    $line = $order->lines()->get()[$position];
+
+    return actingAs(test()->user)->getJson(route('orders.lines.moves.preview', [$order, $line, ...$query]));
+}
+
+/** The `material` of a row: the picker's reference of a demo material. */
+function previewRef(string $sku): array
+{
+    $material = demoMaterial($sku);
+
+    return ['id' => $material->id, 'sku' => $sku, 'name' => $material->name, 'unit' => $material->unit->code];
+}
+
+/** A row of Start cutting: never `not_returned`. */
+function startCuttingRow(string $sku, string $needed, string $inStock, ?string $after, ?string $shortBy = null): array
+{
+    return [
+        'material' => previewRef($sku), 'quantity' => $needed, 'in_stock' => $inStock, 'after' => $after, 'short_by' => $shortBy, 'not_returned' => null,
+    ];
+}
+
+it('shows what Start cutting 30 Denim Jackets takes, by material name, and what the stock allows (AC-1)', function () {
+    $order = bookOrder();
+
+    previewMove($order, 0, ['move' => 'start_cutting', 'units' => 30])
+        ->assertOk()
+        ->assertExactJson([
+            'move' => 'start_cutting',
+            'units' => 30,
+            'rows' => [
+                startCuttingRow('MAT-DEN-012', '59.4000', '250.0000', '190.6000'),
+                startCuttingRow('MAT-BTN-017', '240.0000', '900.0000', '660.0000'),
+                startCuttingRow('MAT-THR-PES', '3780.0000', '20000.0000', '16220.0000'),
+                startCuttingRow('MAT-LBL-WOV', '30.0000', '400.0000', '370.0000'),
+            ],
+            'has_composition' => true,
+            'nothing_taken' => false,
+            'max_cuttable' => 112,
+            'short_message' => null,
+        ]);
+});
+
+it('changes nothing: the preview is a read', function () {
+    $order = bookOrder();
+    $before = figuresOrdersLeaveAlone();
+
+    previewMove($order, 0, ['move' => 'start_cutting', 'units' => 30])->assertOk();
+
+    expect(figuresOrdersLeaveAlone())->toBe($before)
+        ->and($order->lines()->get()[0]->in_cutting)->toBe(0);
+});
+
+it('says there is no composition, with no rows and no maximum (AC-1)', function () {
+    $product = Product::factory()->create(['name' => 'Plain Tote']);
+    $order = bookOrder(lines: [[$product, 10]]);
+
+    previewMove($order, 0, ['move' => 'start_cutting', 'units' => 10])
+        ->assertOk()
+        ->assertJson(['rows' => [], 'has_composition' => false, 'max_cuttable' => null, 'short_message' => null, 'nothing_taken' => false]);
+});
+
+it('previews a product archived or set back to draft since the order was taken (AC-1)', function (string $status) {
+    $order = bookOrder();
+    demoProduct('PRD-JKT-001')->update(['status' => $status]);
+
+    previewMove($order, 0, ['move' => 'start_cutting', 'units' => 30])
+        ->assertOk()
+        ->assertJsonPath('max_cuttable', 112)
+        ->assertJsonCount(4, 'rows');
+})->with(['archived', 'draft']);
+
+it('refuses to preview Start cutting on a deleted product, under units (AC-1)', function () {
+    $order = bookOrder();
+    demoProduct('PRD-JKT-001')->delete();
+
+    previewMove($order, 0, ['move' => 'start_cutting', 'units' => 30])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['units' => 'Denim Jacket was deleted, so it can\'t be cut.']);
+});
+
+it('refuses a move or a number of units the window can\'t ask for (AC-1)', function (array $query, string $field) {
+    $order = bookOrder();
+
+    previewMove($order, 0, $query)->assertUnprocessable()->assertJsonValidationErrors($field);
+})->with([
+    'zero units' => [['move' => 'start_cutting', 'units' => 0], 'units'],
+    'a decimal' => [['move' => 'start_cutting', 'units' => '2.5'], 'units'],
+    'more than a line can hold' => [['move' => 'start_cutting', 'units' => 1000001], 'units'],
+    'no units' => [['move' => 'start_cutting', 'units' => ''], 'units'],
+    'letters' => [['move' => 'start_cutting', 'units' => 'abc'], 'units'],
+    'Move back to To start, not yet' => [['move' => 'back_to_start', 'units' => 5], 'move'],
+    'a move that doesn\'t exist' => [['move' => 'teleport', 'units' => 5], 'move'],
+    'no move' => [['units' => 5], 'move'],
+]);
+
+it('answers 404 for a line of another order', function () {
+    $order = bookOrder();
+    $other = bookOrder(['client' => 'Atelier Nour']);
+
+    actingAs($this->user)
+        ->getJson(route('orders.lines.moves.preview', [$order, $other->lines()->firstOrFail(), 'move' => 'start_cutting', 'units' => 5]))
+        ->assertNotFound();
+});

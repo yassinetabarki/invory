@@ -68,7 +68,7 @@ it('moves units on line by line and the order follows (AC-2, AC-3)', function ()
     moveUnits($order, 0, 'start_cutting', 30)
         ->assertRedirect(route('orders.show', $order))
         ->assertSessionHasNoErrors()
-        ->assertInertiaFlash('toast', ['type' => 'success', 'message' => '30 units of Denim Jacket moved to In cutting.']);
+        ->assertInertiaFlash('toast', ['type' => 'success', 'message' => '30 units of Denim Jacket moved to In cutting. Materials taken out of stock.']);
     expect(lineStages($order))->toBe([[20, 30, 0, 0], [30, 0, 0, 0]])
         ->and(savedOrder($order)['status'])->toBe('in_progress');
 
@@ -89,7 +89,7 @@ it('moves units on line by line and the order follows (AC-2, AC-3)', function ()
 
     // One unit reads in the singular.
     moveUnits($order, 1, 'start_cutting', 1)
-        ->assertInertiaFlash('toast', ['type' => 'success', 'message' => '1 unit of Denim Jeans 5-pocket moved to In cutting.']);
+        ->assertInertiaFlash('toast', ['type' => 'success', 'message' => '1 unit of Denim Jeans 5-pocket moved to In cutting. Materials taken out of stock.']);
     expect(lineStages($order))->toBe([[20, 20, 0, 10], [29, 1, 0, 0]]);
 });
 
@@ -174,12 +174,13 @@ it('answers 404 for a line of another order, and moves nothing', function () {
         ->and(lineStages($other))->toBe([[50, 0, 0, 0], [30, 0, 0, 0]]);
 });
 
-it('locks the order row and then the line (PostgreSQL)', function () {
+it('locks the order row, then the line, then (for Start cutting) the materials (PostgreSQL)', function () {
     $order = bookOrder();
 
     $locks = queriesMatching(queryLog(fn () => moveUnits($order, 0, 'start_cutting', 5)->assertSessionHasNoErrors()), 'for update');
 
-    expect($locks)->toHaveCount(2)
+    expect($locks)->toHaveCount(3)
         ->and($locks[0])->toContain('"orders"')
-        ->and($locks[1])->toContain('"order_lines"');
+        ->and($locks[1])->toContain('"order_lines"')
+        ->and($locks[2])->toContain('"materials"');
 })->skip(fn () => DB::getDriverName() !== 'pgsql', 'FOR UPDATE is only emitted on PostgreSQL (SQLite has no row locks).');

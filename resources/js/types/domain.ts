@@ -389,6 +389,31 @@ export type OrderLineMove =
 /** Fields the move window posts to `orders.lines.moves.store`. Errors come back as `units` (and `move`). */
 export type MoveUnitsFormData = { move: OrderLineMove; units: string };
 
+/** One row of the move window's materials table (S-53), worked out by the server: the screen never computes. */
+export type MaterialMoveRow = {
+    material: MaterialRef;
+    quantity: Decimal; // start_cutting: needed · back_to_start: what those units took
+    in_stock: Decimal; // the material's stock now ("In stock")
+    after: Decimal | null; // "Left after" / "After return"; null when short or not returned
+    short_by: Decimal | null; // start_cutting, only when the stock is short: "Short by …" (every short row)
+    not_returned: 'deleted' | 'unit_changed' | null; // back_to_start: "Deleted, not returned" / "Unit changed, not returned"
+};
+
+/** `GET orders.lines.moves.preview` (`?move=start_cutting|back_to_start&units=N`): the move window's materials table. */
+export type MovePreview = {
+    move: 'start_cutting' | 'back_to_start';
+    units: number;
+    rows: MaterialMoveRow[]; // by material name
+    has_composition: boolean; // start_cutting: false → "… has no composition, so no material is taken out of stock."
+    nothing_taken: boolean; // back_to_start: true → "No material was taken out of stock for these units, so none is returned."
+    max_cuttable: number | null; // start_cutting: "Stock on hand allows N units."; null without composition
+    // start_cutting, only when the units exceed max_cuttable; written by the server, the same text as the refusal under `units`:
+    //   max_cuttable ≥ 1: "Not enough stock to cut 20 units. You can cut at most 12 now: <bottleneck> runs short. Restock it first,
+    //                     or cut 12 or fewer."
+    //   max_cuttable = 0: "Not enough stock to cut 20 units. You can't cut any now: restock <bottleneck> first."
+    short_message: string | null;
+};
+
 export type StockMovement = {
     id: number;
     material_id: number;

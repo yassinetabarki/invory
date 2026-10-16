@@ -160,6 +160,24 @@ it('stays within the query budget on the page of an order, however many lines it
         ->and(count($many))->toBe(count($few), implode(PHP_EOL, $many));
 });
 
+it('stays within the query budget on the preview of Start cutting, however many materials the composition has', function () {
+    $order = bookOrder();
+    $preview = fn (int $position) => countQueries(fn () => $this->getJson(route('orders.lines.moves.preview', [
+        $order, $order->lines()->get()[$position], 'move' => 'start_cutting', 'units' => 30,
+    ]))->assertOk());
+    actingAs($this->user);
+
+    // Warm up: the first request of a process may run one-off queries (schema introspection, the framework's own caches).
+    $preview(0);
+
+    $jacket = $preview(0);
+    $jeans = $preview(1);
+
+    expect($jacket)->toBeLessThanOrEqual(QUERY_BUDGET)
+        ->and(demoProduct('PRD-JKT-001')->components()->count())->not->toBe(demoProduct('PRD-JNS-005')->components()->count())
+        ->and($jeans)->toBe($jacket);
+});
+
 it('stays within the query budget when the deferred recent history of the materials list loads', function () {
     actingAs($this->user);
     $firstVisit = $this->get(route('materials.index'))->assertOk();

@@ -47,6 +47,7 @@ function leakScanSkipReason(RoutingRoute $route): ?string
         in_array(RequirePassword::class, $middleware, true), in_array('password.confirm', $middleware, true) => 'needs a password confirmation first (security settings, two-factor and passkey set-up)',
         $route->uri() === 'settings' => 'only redirects to settings/profile',
         $route->getName() === 'verification.verify' => 'the signed link of the verification e-mail: needs a hash, shows no data',
+        $route->getName() === 'orders.lines.moves.preview' => 'JSON that needs a move and a number of units: another workshop\'s order or line is a 404 (CrossWorkshopAccessTest walks it), and its own data are in MovePreviewTest',
         $route->getName() === 'passkey.confirm-options' => 'the WebAuthn challenge of a passkey confirmation: JSON with no data of the workshop',
         default => null,
     };

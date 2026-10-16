@@ -6,6 +6,7 @@ use App\Http\Controllers\MaterialOptionController;
 use App\Http\Controllers\MaterialRestockController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\OrderLineMoveController;
+use App\Http\Controllers\OrderLineMovePreviewController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\SaleController;
 use Illuminate\Support\Facades\Route;
@@ -39,6 +40,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->where(['order' => '[0-9]{1,18}', 'line' => '[0-9]{1,18}'])
         ->scopeBindings()
         ->name('orders.lines.moves.store');
+
+    // The move window's materials table: JSON, read-only, no locks (S-53, ADR-0009 rule 5).
+    Route::get('orders/{order}/lines/{line}/moves/preview', [OrderLineMovePreviewController::class, 'show'])
+        ->where(['order' => '[0-9]{1,18}', 'line' => '[0-9]{1,18}'])
+        ->scopeBindings()
+        ->name('orders.lines.moves.preview');
 
     // {sale} is route-model bound; the digit constraint keeps a malformed id a 404 (a bigint query error on PostgreSQL otherwise).
     Route::resource('sales', SaleController::class)->only(['index', 'store', 'update', 'destroy'])

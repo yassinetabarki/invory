@@ -45,7 +45,7 @@ function crossWorkshopPng(): string
 }
 
 /**
- * Every row of the seven tables of workshop data, of every workshop, plus the files of the public disk. Raw `DB::table()` reads, so the
+ * Every row of the nine tables of workshop data, of every workshop, plus the files of the public disk. Raw `DB::table()` reads, so the
  * workshop scope can't hide a change: two equal fingerprints mean nothing was written anywhere.
  *
  * @return array<string, mixed>
@@ -54,7 +54,7 @@ function crossWorkshopFingerprint(): array
 {
     $tables = [];
 
-    foreach (['materials', 'products', 'product_components', 'stock_movements', 'sales', 'orders', 'order_lines'] as $table) {
+    foreach (['materials', 'products', 'product_components', 'stock_movements', 'sales', 'orders', 'order_lines', 'order_line_cuts', 'order_line_cut_materials'] as $table) {
         $tables[$table] = DB::table($table)->orderBy('id')->get()->map(static fn (object $row): array => (array) $row)->all();
     }
 
@@ -132,9 +132,9 @@ it('answers 404 to every route with a record of another workshop, shows nothing 
         expect(crossWorkshopFingerprint())->toBe($before, "{$label} changed something.");
     }
 
-    // 16 routes carry a record (material show, edit, update, destroy, restock; product show, edit, update, destroy; sale update, destroy;
-    // order show, edit, update, destroy, move units): 24 requests, because an update answers to PUT and PATCH, and the material and product updates also run with a photo and with remove_photo.
-    expect(count($requests))->toBeGreaterThanOrEqual(24);
+    // 17 routes carry a record (material show, edit, update, destroy, restock; product show, edit, update, destroy; sale update, destroy;
+    // order show, edit, update, destroy, move units, move preview): 25 requests, because an update answers to PUT and PATCH, and the material and product updates also run with a photo and with remove_photo.
+    expect(count($requests))->toBeGreaterThanOrEqual(25);
 
     // Sami's Orders list and its search show nothing of Boutique Lina's order (AC-7).
     foreach ([[], ['search' => 'lina'], ['search' => 'PRD-JKT-001'], ['search' => 'jacket']] as $query) {

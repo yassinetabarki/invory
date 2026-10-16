@@ -65,6 +65,7 @@ function routeRows(): array
         'orders.update' => ['put', 'orders.update', 'order'],
         'orders.destroy' => ['delete', 'orders.destroy', 'order'],
         'orders.lines.moves.store' => ['post', 'orders.lines.moves.store', 'order line'],
+        'orders.lines.moves.preview' => ['get', 'orders.lines.moves.preview', 'order line'],
         'materials.restocks.store' => ['post', 'materials.restocks.store', 'material'],
     ];
 }
@@ -155,6 +156,7 @@ it('registers the frozen routes behind auth and verified', function (string $nam
     'orders.update' => ['orders.update', 'PUT', 'orders/{order}'],
     'orders.destroy' => ['orders.destroy', 'DELETE', 'orders/{order}'],
     'orders.lines.moves.store' => ['orders.lines.moves.store', 'POST', 'orders/{order}/lines/{line}/moves'],
+    'orders.lines.moves.preview' => ['orders.lines.moves.preview', 'GET', 'orders/{order}/lines/{line}/moves/preview'],
 ]);
 
 it('keeps the existing materials route names and does not add sale pages beyond the contract', function () {
@@ -293,6 +295,8 @@ it('answers 404 for a non-numeric product or sale id', function (string $method,
     'order move, order in letters' => ['post', '/orders/abc/lines/1/moves'],
     'order move, line in letters' => ['post', '/orders/1/lines/abc/moves'],
     'order move, line beyond the integer range' => ['post', '/orders/1/lines/99999999999999999999/moves'],
+    'order move preview, line in letters' => ['get', '/orders/1/lines/abc/moves/preview'],
+    'order move preview, order beyond the integer range' => ['get', '/orders/99999999999999999999/lines/1/moves/preview'],
 ]);
 
 // Route model binding makes an unknown product or sale a 404.

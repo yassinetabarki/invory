@@ -18,7 +18,7 @@ final readonly class AppendStockMovement
 {
     /**
      * @param  string  $occurredOn  'Y-m-d': the receipt date of a restock, otherwise the day of the change
-     * @param  array<string, string|null>  $values  the ledger columns of the type (`quantity`, `quantity_before`, ... `note`)
+     * @param  array<string, string|int|null>  $values  the ledger columns of the type (`quantity`, `quantity_before`, ... `note`; a cut also `order_id`, `product_id` and `units`)
      */
     public function handle(Material $material, StockMovementType $type, string $occurredOn, User $actor, array $values = []): StockMovement
     {
