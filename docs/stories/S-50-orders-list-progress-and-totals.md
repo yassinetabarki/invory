@@ -59,7 +59,7 @@ tags:
 
 ## Technical work
 > [!warning] Complex · CRITICAL · backend + frontend · 3 commits
-> Tech-lead · 2026-10-21 · proposed (revised 2026-10-21 after the product-owner's answers)
+> Tech-lead · 2026-10-21 · approved 2026-10-21 · delivered 2026-10-21
 > Why complex: the list gets a new rule (an order is open until every line has shipped), a new filter and new totals, so the data the
 > Orders page receives changes (a new contract).
 
@@ -234,3 +234,8 @@ files). Then every gate on the combined tree, `composer test:pgsql` and `compose
   columns as the line's totals (the sum of its sizes, written under the same lock). If S-61 moves the counts to a per-size table only,
   the `open()` scope, the totals query and `Order.to_start` must be rewritten. S-60 AC-3 changes the "Products" cell only: it stays its
   own small component in `orders-table.tsx`. S-57 adds a "Cancelled" case to `OrderStatusFilter` and one condition to `open()`.
+
+### Progress
+- 2026-10-21 · build started in worktree `nifty-elion-ab4da9`; business rules file updated (Open order, list totals). S-50-a dispatched.
+- 2026-10-21 · S-50-a approved (round 1; backend + typed-fixture pass), all gates green, parity not run (Docker down). S-50-b and S-50-c dispatched in parallel.
+- 2026-10-21 · S-50-b and S-50-c approved (round 1). All gates green on the combined tree, golden path green; parity not run (Docker down). Delivered.
