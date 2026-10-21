@@ -13,7 +13,7 @@
 
 | | Status | In one line |
 |---|---|---|
-| **Overall** | 🟡 **AMBER** | The MVP is built and every automated check passes on this computer. The checks now also run on GitHub, but nobody has seen a result yet. You haven't signed the MVP off. Since 2026-10-15 Phase 5 (customer orders) is under way: S-48, S-49 and S-53 are done, so orders have their own page and their four stages, and cutting takes the materials out of stock. Next is S-50; S-58 is approved (`Ready`) and four size cards wait for your approval. The rest of Phase 4 is on hold (D-12). |
+| **Overall** | 🟡 **AMBER** | The MVP is built and every automated check passes on this computer. The checks now also run on GitHub, but nobody has seen a result yet. You haven't signed the MVP off. Since 2026-10-15 Phase 5 (customer orders) is under way: S-48, S-49 and S-53 are done, so orders have their own page and their four stages, and cutting takes the materials out of stock. Next is S-50; S-58 is `Planned` (card and Technical work approved) and four size cards wait for your approval. The rest of Phase 4 is on hold (D-12). |
 | Scope (MVP features) | 🟡 AMBER | Every feature in the MVP goal and the 2026-10-08 scope additions works on real data. The preview layer is gone. Since 2026-10-15 every account sees only its own workshop's materials, products and sales (S-44, D-9), records its clients' orders (S-48), follows each product line through the four stages (S-49), and cutting takes the materials out of stock (S-53). Units and categories are still shared until S-45. |
 | Quality (automated) | 🟢 GREEN | All automated checks pass on this computer (tech-lead's F-41, S-49 and S-53 delivery report and its fix round, 2026-10-16): 2 409 backend tests, the same 2 409 on PostgreSQL, 1 206 screen tests, 2 browser tests, code style, static analysis, type check and production build. |
 | Product acceptance | 🔴 RED | The MVP as a whole isn't signed off: the Phase 2 click-through has been pending since 2026-10-08, and the MVP walkthrough (S-30) is on hold since 2026-10-15 (D-12). S-43, S-44, S-48, S-49 and S-53 were accepted one by one (S-49 and S-53 in one click-through, 2026-10-21). |
@@ -24,7 +24,7 @@
 **Current phase:** **Phase 5: Customer orders** (started 2026-10-15, D-12). **Done:** S-48 (accepted 2026-10-15), and **F-41, S-49
 and S-53** (accepted 2026-10-21 after your one click-through; built in one build and landed on `main` together, `e99615e` … `8ab9df8`,
 closing docs `f803cb1`). **Next:** S-50 (`Ready`), which needs its Technical work from the tech-lead. After it come the size stories
-you asked for on 2026-10-18 (D-15, D-16): S-58, then S-60 and S-61 in one build, then S-56 and S-57. S-58 is `Ready` (approved 2026-10-21); the other four cards are `Draft` and
+you asked for on 2026-10-18 (D-15, D-16): S-58, then S-60 and S-61 in one build, then S-56 and S-57. S-58 is `Planned` (card and Technical work approved 2026-10-21; built in a worktree once S-50 is closed); the other four cards are `Draft` and
 wait for your approval (D-17). Phase 5 tech allowance: F-41 only, now done. Nothing is in progress, so the two-story limit is free.
 **Phase 4: MVP release readiness** is on hold for later; S-08 and S-29 are done (closed as they stood, D-13; see [ROADMAP.md](ROADMAP.md)).
 
@@ -38,11 +38,11 @@ wait for your approval (D-17). Phase 5 tech allowance: F-41 only, now done. Noth
 | D-4 | Two early choices are still provisional (Phase 3 plan): **Q4** records are numbered with simple counters (already used everywhere) · **Q6** currency and language are set at installation, not in a settings screen. Keep both? (Q5 is closed: S-17 removed the preview layer. Q9 was replaced by D-10 on 2026-10-15) | Keep both; confirm before Phase 7 (production go-live, was Phase 6) |
 | D-5 | Production database host (needs PostgreSQL 13+ and `pg_trgm`) | Before S-26; not urgent |
 | D-6 | Delete the 5 merged branches and the stale worktree `.claude/worktrees/fix-hover-prefetch-bug`? | Yes (nothing unmerged) |
-| D-17 | Approve the four remaining size cards (S-60, S-61, S-56, S-57) so they become `Ready` (S-58 approved 2026-10-21). They are written with your D-15 and D-16 answers | Approve; then the tech-lead plans S-58 after S-50 |
+| D-17 | Approve the four remaining size cards (S-60, S-61, S-56, S-57) so they become `Ready` (S-58 is `Planned` since 2026-10-21). They are written with your D-15 and D-16 answers | Approve; the tech-lead then plans S-60 and S-61 |
 
 **Decided on 2026-10-21:** you accepted **F-41, S-49 and S-53** after your click-through ("Yes, accepted"). They are `Done` on `main`
 (§4), and their criteria are ticked with their commits.
-You also approved **S-58** (`Ready`) with two answers: a product's sizes lock while it is on any order that isn't deleted, fully
+You also approved **S-58** (`Ready`, then `Planned` with its Technical work: 5 steps, S-58-a to S-58-e, and a "Sizes" section in the business rules; ADR-0015 accepted) with two answers: a product's sizes lock while it is on any order that isn't deleted, fully
 shipped ones included (AC-4); and Settings → Product categories doesn't show the sizes.
 
 **Decided on 2026-10-18: D-15 and D-16 products by size** (you asked for it and answered every question the same day):
@@ -328,7 +328,7 @@ The plan headers were corrected on 2026-10-14, and [plans/README.md](plans/READM
 1. Done 2026-10-21: you accepted F-41, S-49 and S-53; their criteria are ticked, and BACKLOG, ROADMAP and this report are updated. Main
    session: commit these closing docs on `main`. Push when you choose; CI runs on the push, and only you can see the result.
 2. Tech-lead (planning, on the main checkout): S-50's Technical work, for your approval; then its build in a worktree.
-3. Human: approve the four remaining size cards (D-17; S-58 is `Ready`). The tech-lead plans S-58 (built on its own after S-50), then S-60 and S-61 (one
+3. Tech-lead: build S-58 (`Planned`) in a worktree once S-50 is closed, on its own. Human: approve the four remaining size cards (D-17); the tech-lead then plans S-60 and S-61 (one
    build, one click-through), then S-56 and S-57.
 4. Tech-lead: F-60 to F-63 (new from the orders builds) are offered for a tech allowance.
 5. The rest of Phase 4 waits; S-45, S-30 and the known gaps K-1 to K-4 are dealt with before go-live (Phase 7).
