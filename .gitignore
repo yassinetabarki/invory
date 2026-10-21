@@ -46,7 +46,13 @@ yarn-error.log
 /boost.json
 /opencode.json
 /opencode.jsonc
-
+/docs/.obsidian
+/docs/Token Usage Archive
+/docs/.space
+/docs/.makemd
+Token Usage Dashboard.html
+Untitled.canvas
+Untitled.md
 # Git Bash coverage once created "C" + U+F03A (a mangled "C:") at the root (F-08)
 /C
 
