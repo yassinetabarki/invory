@@ -2,7 +2,7 @@
 
 > Owner: **product-owner** (order, wording, acceptance criteria) · Technical detail: **tech-lead** ([TECH-DEBT.md](TECH-DEBT.md), [plans/](plans/README.md))
 > Phases and goals: [ROADMAP.md](ROADMAP.md) · Progress: [STATUS.md](STATUS.md) · Done work and full history: [archive/backlog-2026-10-14.md](archive/backlog-2026-10-14.md)
-> Last cleaned: 2026-10-21 (F-41, S-49 and S-53 done: you accepted them after your click-through, so they left this file; S-50 is next and needs its Technical work). Before that, 2026-10-18 (D-15 and D-16 products by size: S-58, S-60 and S-61 added as Musts, S-56 and S-57 written per size, all five cards `Draft`; S-52 and S-54 become Won't (this time); S-62 added as a Could; S-63 and S-64 to Phase 8). Before that, 2026-10-16 (D-11 decided with your final answers: S-49 and S-53 revised, then their revised Technical work approved, so F-41, S-49 and S-53 are `Planned` and S-50 is `Ready`; S-56 and S-57 added; on 2026-10-15 S-48 done and accepted, so it left this file; before that, D-12: Phase 5 starts now, the rest of Phase 4 is on hold; D-13: S-08 and S-29 done). **Open work only**, top = next.
+> Last cleaned: 2026-10-21 (F-41, S-49 and S-53 done: you accepted them after your click-through, so they left this file; S-50 is next and needs its Technical work; S-58 approved, `Ready`: its sizes lock while the product is on any order that isn't deleted, and Settings shows no sizes). Before that, 2026-10-18 (D-15 and D-16 products by size: S-58, S-60 and S-61 added as Musts, S-56 and S-57 written per size, all five cards `Draft`; S-52 and S-54 become Won't (this time); S-62 added as a Could; S-63 and S-64 to Phase 8). Before that, 2026-10-16 (D-11 decided with your final answers: S-49 and S-53 revised, then their revised Technical work approved, so F-41, S-49 and S-53 are `Planned` and S-50 is `Ready`; S-56 and S-57 added; on 2026-10-15 S-48 done and accepted, so it left this file; before that, D-12: Phase 5 starts now, the rest of Phase 4 is on hold; D-13: S-08 and S-29 done). **Open work only**, top = next.
 > Done items leave this file; they are recorded in STATUS.md and the archive.
 
 ## How to read an item
@@ -36,7 +36,7 @@ produce" and the bottleneck don't change; a bigger size using more fabric (S-63)
 The product's category decides its sizes, from a short list set up with Invory: Apparel S, M, L, XL; Footwear 36 to 46 (all 11 sizes);
 every other category "One size". A product gets every size of its category, and there is no Settings page for sizes for now. One selling
 price and one SKU for all sizes ("PRD-JKT-001 · M"). Finished stock comes from "Update stock" and from cancelled orders; sales don't take
-units out of it. S-52 and S-54 become Won't (this time) to make room. The five size cards are `Draft`, waiting for your approval.
+units out of it. S-52 and S-54 become Won't (this time) to make room. S-58 is `Ready` (you approved it on 2026-10-21); the other four size cards are `Draft`, waiting for your approval.
 
 **Done in Phase 5 so far** (records in [STATUS.md §4](STATUS.md#4-delivery-history)):
 - **S-48** (accepted 2026-10-15; `e3b7ae7`, `5af8ed1`): record, find, edit and delete an order of one or more products.
@@ -52,7 +52,7 @@ Card: [stories/S-50-orders-list-progress-and-totals.md](stories/S-50-orders-list
 orders at the top: "Open orders 2", "To start 170 units", "In cutting 20 units", "Ready to ship 10 units".
 **Why:** "so we have an idea of how many products will be produced": one look, without opening every order.
 
-### S-58 · Every product gets the sizes of its category · Must · S · feature · `Draft` (card written 2026-10-18, D-15, D-16)
+### S-58 · Every product gets the sizes of its category · Must · S · feature · `Ready` (approved 2026-10-21; card written 2026-10-18, D-15, D-16; next: its Technical work)
 Card: [stories/S-58-products-get-sizes-from-their-category.md](stories/S-58-products-get-sizes-from-their-category.md). After S-50; built
 on its own, before S-60 and S-61 (D-16).
 **You get:** each product carries the sizes of its category: Apparel "S, M, L, XL", Footwear "36 to 46", anything else "One size". The
