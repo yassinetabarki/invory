@@ -5,7 +5,7 @@ type: feature
 phase: 5
 priority: Must
 size: S
-status: Ready
+status: Done
 created: 2026-10-15
 tags:
   - story
@@ -26,7 +26,7 @@ tags:
 > orders means opening every order and adding the numbers up by hand.
 
 ## Acceptance criteria
-- [ ] **AC-1 · Stages on every row.** Given three orders:
+- [x] **AC-1 · Stages on every row.** Given three orders:
   - Boutique Lina, ordered 15 Oct 2026: Denim Jacket 50 (To start 20, In cutting 20, Ready to ship 10, Shipped 0) and Denim Jeans
     5-pocket 30 (nothing moved yet);
   - Concept Store Nour, ordered 14 Oct 2026: Classic White T-shirt 120 (nothing moved yet);
@@ -36,24 +36,24 @@ tags:
   "Status", and Boutique Lina's row reads 15 Oct 2026 · Boutique Lina · "50 × Denim Jacket" and "30 × Denim Jeans 5-pocket" · 80 · 50 ·
   20 · 10 · 0 · "In progress". The "Units" and "Note" columns give way to "Ordered" and the four stages: the client's note now shows
   under the client's name, cut short with "…". The client's name still opens the order's page, and each row keeps its "Edit" and
-  "Delete" buttons.
-- [ ] **AC-2 · Status, never by colour alone.** Each status is a badge with its word and an icon: "Not started" (Concept Store Nour), "In
-  progress" (Boutique Lina) and "Shipped" (Hotel Dar Said). It reads the same in dark mode.
-- [ ] **AC-3 · Open orders first.** A "Status" filter offers "Open orders" (chosen when the page opens), "Shipped" and "All orders".
+  "Delete" buttons. ✅ 2026-10-22 · ba0a0cd, 74f05a8
+- [x] **AC-2 · Status, never by colour alone.** Each status is a badge with its word and an icon: "Not started" (Concept Store Nour), "In
+  progress" (Boutique Lina) and "Shipped" (Hotel Dar Said). It reads the same in dark mode. ✅ 2026-10-22 · 74f05a8
+- [x] **AC-3 · Open orders first.** A "Status" filter offers "Open orders" (chosen when the page opens), "Shipped" and "All orders".
   "Open orders" lists Boutique Lina, then Concept Store Nour; "Shipped" lists only Hotel Dar Said; "All orders" lists all three, newest
   first. The filter works together with the search. When nothing matches, the list shows "No orders match your filters", "Try a
   different client, product or note, or clear the filters to see your open orders." and a "Clear filters" button, which empties the
   search and goes back to "Open orders". When every order has shipped, "Open orders" shows "No open orders", "Every order has shipped."
   and a "Show all orders" button. With no orders at all, the list still shows "No orders yet" and "New order", as today, without the
-  search or the Status filter; the four totals above it read 0.
-- [ ] **AC-4 · Totals for all open orders.** Above the list, four figures: "Open orders 2", "To start 170 units", "In cutting 20 units" and
+  search or the Status filter; the four totals above it read 0. ✅ 2026-10-22 · ba0a0cd, a23a5d7
+- [x] **AC-4 · Totals for all open orders.** Above the list, four figures: "Open orders 2", "To start 170 units", "In cutting 20 units" and
   "Ready to ship 10 units". They count every line of every open order in your workshop; the search and the Status filter never change
   them. After "Mark ready" with 5 on Boutique Lina's Denim Jacket line, the list shows "In cutting 15 units" and "Ready to ship 15 units".
-  With no open orders, they read "Open orders 0" and "0 units". One unit reads "1 unit", as on the order's page.
-- [ ] **AC-5 · Phone width.** At 375 px each order is a card: "Boutique Lina" and its status badge, "50 × Denim Jacket" and "30 × Denim
+  With no open orders, they read "Open orders 0" and "0 units". One unit reads "1 unit", as on the order's page. ✅ 2026-10-22 · ba0a0cd, a23a5d7
+- [x] **AC-5 · Phone width.** At 375 px each order is a card: "Boutique Lina" and its status badge, "50 × Denim Jacket" and "30 × Denim
   Jeans 5-pocket", then "To start 50 · In cutting 20 · Ready to ship 10 · Shipped 0", the date, the note, and "Edit" and "Delete". The
   ordered total ("80 units") no longer sits next to the client: the status badge takes its place. Below 1024 px (tablets too) the list
-  shows these cards; from 1024 px up, the table. The four totals sit in two rows of two.
+  shows these cards; from 1024 px up, the table. The four totals sit in two rows of two. ✅ 2026-10-22 · 74f05a8, a23a5d7
 
 ---
 

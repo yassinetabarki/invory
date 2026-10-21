@@ -2,7 +2,7 @@
 
 > Owner: **product-owner** (order, wording, acceptance criteria) · Technical detail: **tech-lead** ([TECH-DEBT.md](TECH-DEBT.md), [plans/](plans/README.md))
 > Phases and goals: [ROADMAP.md](ROADMAP.md) · Progress: [STATUS.md](STATUS.md) · Done work and full history: [archive/backlog-2026-10-14.md](archive/backlog-2026-10-14.md)
-> Last cleaned: 2026-10-21 (F-41, S-49 and S-53 done: you accepted them after your click-through, so they left this file; S-50 is next and needs its Technical work; S-58 card and then its Technical work approved, so it is `Planned`: its sizes lock while the product is on any order that isn't deleted, and Settings shows no sizes). Before that, 2026-10-18 (D-15 and D-16 products by size: S-58, S-60 and S-61 added as Musts, S-56 and S-57 written per size, all five cards `Draft`; S-52 and S-54 become Won't (this time); S-62 added as a Could; S-63 and S-64 to Phase 8). Before that, 2026-10-16 (D-11 decided with your final answers: S-49 and S-53 revised, then their revised Technical work approved, so F-41, S-49 and S-53 are `Planned` and S-50 is `Ready`; S-56 and S-57 added; on 2026-10-15 S-48 done and accepted, so it left this file; before that, D-12: Phase 5 starts now, the rest of Phase 4 is on hold; D-13: S-08 and S-29 done). **Open work only**, top = next.
+> Last cleaned: 2026-10-22 (S-50 done: you accepted it, so it left this file; S-58 is next, `Planned`, to be built in a worktree). Before that, 2026-10-21 (F-41, S-49 and S-53 done: you accepted them after your click-through, so they left this file; S-58 card and then its Technical work approved, so it is `Planned`: its sizes lock while the product is on any order that isn't deleted, and Settings shows no sizes). Before that, 2026-10-18 (D-15 and D-16 products by size: S-58, S-60 and S-61 added as Musts, S-56 and S-57 written per size, all five cards `Draft`; S-52 and S-54 become Won't (this time); S-62 added as a Could; S-63 and S-64 to Phase 8). Before that, 2026-10-16 (D-11 decided with your final answers: S-49 and S-53 revised, then their revised Technical work approved, so F-41, S-49 and S-53 are `Planned` and S-50 is `Ready`; S-56 and S-57 added; on 2026-10-15 S-48 done and accepted, so it left this file; before that, D-12: Phase 5 starts now, the rest of Phase 4 is on hold; D-13: S-08 and S-29 done). **Open work only**, top = next.
 > Done items leave this file; they are recorded in STATUS.md and the archive.
 
 ## How to read an item
@@ -28,9 +28,10 @@ You started it on 2026-10-15: "we will start focusing more on the orders … we 
 - only active products can go on an order, and an order never sets stock aside (S-48, approved 2026-10-15).
 
 Order of work: **F-41, S-49 and S-53 are done** (you accepted them on 2026-10-21 after your one click-through; built in one build
-and landed on `main` together, as D-11 asked). Next comes S-50, then the size stories (below), then the Shoulds S-56 and S-57.
+and landed on `main` together, as D-11 asked), and **S-50 is done** (you accepted it on 2026-10-22). Next come the size stories
+(below), starting with S-58, then the Shoulds S-56 and S-57.
 
-**Products by size (D-15 and D-16, your answers of 2026-10-18):** after S-50 comes S-58 on its own, then S-60 and S-61 in one build
+**Products by size (D-15 and D-16, your answers of 2026-10-18):** S-58 comes first on its own, then S-60 and S-61 in one build
 (one click-through), then S-56 and S-57, both written per size. Every size of a product uses the same composition, so unit cost, "Can
 produce" and the bottleneck don't change; a bigger size using more fabric (S-63) and a shoe size using its own sole (S-64) come later.
 The product's category decides its sizes, from a short list set up with Invory: Apparel S, M, L, XL; Footwear 36 to 46 (all 11 sizes);
@@ -45,18 +46,14 @@ units out of it. S-52 and S-54 become Won't (this time) to make room. S-58 is `P
 - **S-53** (accepted 2026-10-21): "Start cutting" takes the materials out of stock, "Move back to To start" returns them, and each
   material's history shows "Cutting" and "Back from cutting".
 - **F-41** (accepted 2026-10-21): the costing works out each material's total need per unit, which S-53 uses.
+- **S-50** (accepted 2026-10-22; `ba0a0cd`, `74f05a8`, `a23a5d7`, merged in `0270014`): the Orders list shows each order's four stages
+  and its status, opens on "Open orders", and shows the totals of all open orders at the top.
 
-### S-50 · The Orders list shows each order's progress and the totals · Must · S · feature · `Ready` (approved 2026-10-16; next: its Technical work)
-Card: [stories/S-50-orders-list-progress-and-totals.md](stories/S-50-orders-list-progress-and-totals.md). Depends on S-49 (done 2026-10-21).
-**You get:** every order's four counts (the sums of its lines) and its status, the list opening on "Open orders", and totals for all open
-orders at the top: "Open orders 2", "To start 170 units", "In cutting 20 units", "Ready to ship 10 units".
-**Why:** "so we have an idea of how many products will be produced": one look, without opening every order.
-
-### S-58 · Every product gets the sizes of its category · Must · S · feature · `Planned` (card and Technical work approved 2026-10-21; written 2026-10-18, D-15, D-16; next: build in a worktree once S-50 is closed)
-Card: [stories/S-58-products-get-sizes-from-their-category.md](stories/S-58-products-get-sizes-from-their-category.md). After S-50; built
-on its own, before S-60 and S-61 (D-16).
+### S-58 · Every product gets the sizes of its category · Must · S · feature · `Planned` (card and Technical work approved 2026-10-21; written 2026-10-18, D-15, D-16; next: build in a worktree)
+Card: [stories/S-58-products-get-sizes-from-their-category.md](stories/S-58-products-get-sizes-from-their-category.md). Next; built on
+its own, before S-60 and S-61 (D-16).
 **You get:** each product carries the sizes of its category: Apparel "S, M, L, XL", Footwear "36 to 46", anything else "One size". The
-product page shows "Sizes S, M, L, XL" and "Any mix of sizes" under "Can produce now 112"; the form shows the sizes of the chosen category.
+product page shows "Sizes S, M, L, XL" and "from current stock, any mix of sizes" under "Can produce now 112 units"; the form shows the sizes of the chosen category.
 Products you already have follow their category at once. A product on an order can't move to a category with other sizes.
 **Why:** orders, production and finished stock can only be counted per size once each product knows its sizes.
 
@@ -277,7 +274,7 @@ later; S-48 approved: only active products on an order, and an order never sets 
 S-48 done 2026-10-15: a deleted order is hidden, with no way back on screen; a product no longer active stays on the orders that have it ·
 **D-13 S-08 and S-29 closed as they stood** (2026-10-15): Done on the commits on `main`; their open checks are known gaps for go-live ·
 **D-11 how cutting changes stock** (your final answers, 2026-10-16; they replace the "every recommended answer" version committed earlier
-that day; S-49 and S-53 built on them and done 2026-10-21, S-50 `Ready`): cutting more than stock allows is refused, with the most you can
+that day; S-49 and S-53 built on them and done 2026-10-21, S-50 done 2026-10-22): cutting more than stock allows is refused, with the most you can
 cut and what to do; "Move back to To start" returns exactly what was taken, the latest cut first, also for a deleted product; "Delete" is
 refused while units are in cutting or ready to ship, and a cancelled order uses "Cancel order" (S-57), whose cut units go into the
 product's own stock (S-56); history entries read "Cutting" and "Back from cutting", dated the day you click "Move units"; no new
