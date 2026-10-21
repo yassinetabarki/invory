@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Actions\Orders\DeleteOrder;
 use App\Actions\Orders\RecordOrder;
 use App\Actions\Orders\UpdateOrder;
+use App\Enums\OrderStatusFilter;
 use App\Exceptions\OrderDeleteRefusedException;
 use App\Http\Requests\Orders\IndexOrderRequest;
 use App\Http\Requests\Orders\StoreOrderRequest;
@@ -38,9 +39,13 @@ final class OrderController extends Controller
         // Every prop that costs a query is a closure, so a partial reload skips what it does not list.
         return Inertia::render('orders/index', [
             'orders' => fn (): AnonymousResourceCollection => OrderResource::collection(
-                $book->list($filters['search'])->paginate((int) config('invory.per_page'))->withQueryString(),
+                $book->list($filters['search'], OrderStatusFilter::from($filters['status']))->paginate((int) config('invory.per_page'))->withQueryString(),
             ),
             'filters' => $filters,
+            'statuses' => fn (): array => OrderStatusFilter::options(),
+            // Never follow the search or the filter: a search, filter or page change reloads only `orders` and `filters`.
+            'totals' => fn (): array => $book->openTotals(),
+            'has_orders' => fn (): bool => $book->hasOrders(),
         ]);
     }
 

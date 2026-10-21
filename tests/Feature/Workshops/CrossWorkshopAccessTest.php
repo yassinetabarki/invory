@@ -137,7 +137,7 @@ it('answers 404 to every route with a record of another workshop, shows nothing 
     expect(count($requests))->toBeGreaterThanOrEqual(25);
 
     // Sami's Orders list and its search show nothing of Boutique Lina's order (AC-7).
-    foreach ([[], ['search' => 'lina'], ['search' => 'PRD-JKT-001'], ['search' => 'jacket']] as $query) {
+    foreach ([['status' => 'all'], ['status' => 'all', 'search' => 'lina'], ['status' => 'all', 'search' => 'PRD-JKT-001'], ['status' => 'all', 'search' => 'jacket']] as $query) {
         expect(pageProp($this->get(route('orders.index', $query))->assertOk(), 'orders.data'))->toBe([]);
     }
 

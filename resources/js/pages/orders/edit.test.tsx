@@ -56,6 +56,7 @@ const props: OrderEditProps = {
         note: null,
         lines: [notStarted(70, jacket, 50), notStarted(71, jeans, 30)],
         units: 80,
+        to_start: 80,
         in_cutting: 0,
         ready_to_ship: 0,
         shipped: 0,

@@ -58,6 +58,7 @@ const lina: Order = {
         notStarted(2, product(5, 'Denim Jeans 5-pocket'), 30),
     ],
     units: 80,
+    to_start: 80,
     in_cutting: 0,
     ready_to_ship: 0,
     shipped: 0,
@@ -72,7 +73,19 @@ function withOrders(
 ): OrdersIndexProps {
     return {
         orders: paginate(orders, { path: '/orders' }),
-        filters: { search },
+        filters: { search, status: 'open' },
+        statuses: [
+            { value: 'open', label: 'Open orders' },
+            { value: 'shipped', label: 'Shipped' },
+            { value: 'all', label: 'All orders' },
+        ],
+        totals: {
+            open_orders: 0,
+            to_start: 0,
+            in_cutting: 0,
+            ready_to_ship: 0,
+        },
+        has_orders: orders.length > 0,
     };
 }
 

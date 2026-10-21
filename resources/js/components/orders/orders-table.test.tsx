@@ -46,6 +46,7 @@ const lina: Order = {
     note: 'Deliver before the spring show',
     lines: [line(1, 'Denim Jacket', 50), line(5, 'Denim Jeans 5-pocket', 30)],
     units: 80,
+    to_start: 80,
     in_cutting: 0,
     ready_to_ship: 0,
     shipped: 0,
@@ -66,6 +67,7 @@ const fiveProducts: Order = {
         line(7, 'Leather Belt', 50),
     ],
     units: 150,
+    to_start: 150,
 };
 
 function renderTable(orders: Order[]) {

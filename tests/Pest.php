@@ -568,6 +568,36 @@ function bookOrderAtStages(array $stages): Order
 }
 
 /**
+ * An order of the current workshop whose single line is fully shipped (needs the demo products). Hotel Dar Said's of the S-50 card by
+ * default: Leather Tote 12, ordered 2 Oct 2026.
+ *
+ * @param  array<string, mixed>  $attributes
+ */
+function bookShippedOrder(array $attributes = [], int $product = 4, int $quantity = 12): Order
+{
+    $order = Order::factory()->create(['client' => 'Hotel Dar Said', 'ordered_on' => '2026-10-02', 'note' => null, ...$attributes]);
+    OrderLine::factory()->shipped($quantity)->create(['order_id' => $order->id, 'product_id' => pid($product), 'quantity' => $quantity, 'position' => 0]);
+
+    return $order;
+}
+
+/**
+ * The three orders of the S-50 card (needs the demo products): Boutique Lina, 15 Oct, Denim Jacket 50 (20 to start, 20 in cutting, 10
+ * ready to ship) and Denim Jeans 5-pocket 30; Concept Store Nour, 14 Oct, Classic White T-shirt 120; Hotel Dar Said, 2 Oct, Leather Tote
+ * 12, all shipped. Two are open: 170 to start, 20 in cutting, 10 ready to ship.
+ *
+ * @return array{lina: Order, nour: Order, dar_said: Order}
+ */
+function bookCardOrders(): array
+{
+    return [
+        'lina' => bookOrderAtStages([[50, 20, 10, 0], [30, 0, 0, 0]]),
+        'nour' => bookOrder(['client' => 'Concept Store Nour', 'ordered_on' => '2026-10-14', 'note' => null], [[demoProduct('PRD-TSH-002'), 120]]),
+        'dar_said' => bookShippedOrder(),
+    ];
+}
+
+/**
  * Every figure an order must not touch: the Denim Jacket's capacity (112), the materials, their history, the sales and the dashboard.
  * Compare two snapshots with `toBe()`. Needs the demo (`prepareDemo()`) and the signed-in `$this->user` of the test.
  *

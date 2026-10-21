@@ -32,6 +32,7 @@ final class OrderResource extends JsonResource
             'note' => $this->note,
             'lines' => OrderLineResource::collection($this->lines),
             'units' => (int) $this->lines_sum_quantity,
+            'to_start' => $this->unitsToStart(),
             'in_cutting' => $this->unitsInCutting(),
             'ready_to_ship' => $this->unitsReadyToShip(),
             'shipped' => $this->unitsShipped(),

@@ -67,6 +67,12 @@ class Order extends Model
         return (int) $this->lines->sum('in_cutting');
     }
 
+    /** Units still to start, summed over the loaded lines. */
+    public function unitsToStart(): int
+    {
+        return (int) $this->lines->sum(fn (OrderLine $line): int => $line->to_start);
+    }
+
     /** Units ready to ship, summed over the loaded lines. */
     public function unitsReadyToShip(): int
     {
@@ -138,5 +144,28 @@ class Order extends Model
     protected function newestFirst(Builder $query): void
     {
         $query->orderByDesc('ordered_on')->orderByDesc('id');
+    }
+
+    /**
+     * Open orders: at least one line with units still to ship. The one definition behind the Status filter and the totals (S-50);
+     * it agrees with `progress()` for every order that has lines.
+     *
+     * @param  Builder<Order>  $query
+     */
+    #[Scope]
+    protected function open(Builder $query): void
+    {
+        $query->whereHas('lines', fn (Builder $line) => $line->whereColumn('order_lines.shipped', '<', 'order_lines.quantity'));
+    }
+
+    /**
+     * Shipped orders: every line fully shipped, the opposite of {@see self::open()}.
+     *
+     * @param  Builder<Order>  $query
+     */
+    #[Scope]
+    protected function shipped(Builder $query): void
+    {
+        $query->whereDoesntHave('lines', fn (Builder $line) => $line->whereColumn('order_lines.shipped', '<', 'order_lines.quantity'));
     }
 }
