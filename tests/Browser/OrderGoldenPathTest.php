@@ -106,18 +106,18 @@ it('records an order with two products, starts cutting 30 jackets and finds it f
 
     GoldenPathStep::run('orders list: the new order is the first row', function () use ($page) {
         $page->navigate(route('orders.index', absolute: false));
-        // Client, products, units and note of the first row (the date column depends on the day the test runs).
+        // Client (its note under it), products, Ordered, the four stages and Status of the first row (the date column depends on the day the test runs).
         $page->assertScript(<<<'JS'
         (() => {
             const row = document.querySelector('table tbody tr');
             return row
                 ? Array.from(row.querySelectorAll('td'))
-                    .slice(1, 5)
+                    .slice(1, 9)
                     .map((cell) => cell.innerText.replace(/[ \t\r\n\f\v]+/g, ' ').trim())
                     .join(' | ')
                 : '';
         })()
-        JS, 'Boutique Lina | 50 × Denim Jacket 30 × Denim Jeans 5-pocket | 80 | Deliver before 30 Oct, in 2 boxes');
+        JS, 'Boutique Lina Deliver before 30 Oct, in 2 boxes | 50 × Denim Jacket 30 × Denim Jeans 5-pocket | 80 | 50 | 30 | 0 | 0 | In progress');
         $page->assertNoJavaScriptErrors();
     }, $page);
 });

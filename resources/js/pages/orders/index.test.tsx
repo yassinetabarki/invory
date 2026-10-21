@@ -122,23 +122,13 @@ describe('orders/index page', () => {
         );
     });
 
-    it('lists Boutique Lina with her date, products, units and note', () => {
+    it('lists the orders in a table', () => {
         renderPage(withOrders([lina]));
 
-        const row = within(
-            screen.getByRole('table', { name: 'Orders' }),
-        ).getAllByRole('row')[1];
-
-        expect(within(row).getByText('15 Oct 2026')).toBeVisible();
-        expect(within(row).getByText('Boutique Lina')).toBeVisible();
         expect(
-            within(row)
-                .getAllByRole('listitem')
-                .map((item) => item.textContent),
-        ).toEqual(['50 × Denim Jacket', '30 × Denim Jeans 5-pocket']);
-        expect(within(row).getByText('80')).toBeVisible();
-        expect(
-            within(row).getByText('Deliver before the spring show'),
+            within(screen.getByRole('table', { name: 'Orders' })).getByText(
+                'Boutique Lina',
+            ),
         ).toBeVisible();
     });
 

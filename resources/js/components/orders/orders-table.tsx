@@ -11,13 +11,22 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { useAppSettings } from '@/hooks/use-app-settings';
-import { EMPTY_VALUE, formatCount, formatDate } from '@/lib/format';
+import { ProgressStatus } from '@/components/orders/progress-status';
+import { formatCount, formatDate } from '@/lib/format';
 import { edit, show as showOrder } from '@/routes/orders';
 import { show } from '@/routes/products';
 import type { Order } from '@/types/domain';
 
 /** An order lists this many products; the rest collapse into "+ N more". */
 const VISIBLE_LINES = 3;
+
+/** The four stages, in the order the columns and the card line show them. */
+const STAGES = [
+    { key: 'to_start', label: 'To start' },
+    { key: 'in_cutting', label: 'In cutting' },
+    { key: 'ready_to_ship', label: 'Ready to ship' },
+    { key: 'shipped', label: 'Shipped' },
+] as const;
 
 type OrdersTableProps = {
     orders: Order[];
@@ -130,16 +139,17 @@ function TextActions({ order, date, onDelete }: RowActionsProps) {
 }
 
 /**
- * The orders list: a table from `md` up, stacked cards below. Units come from
- * the server (the sum of the lines); this component only formats them.
+ * The orders list: a table from `lg` up (tablets get the cards), stacked cards
+ * below. Every figure and the status come from the server; this component only
+ * formats them.
  */
 export function OrdersTable({ orders, onDelete }: OrdersTableProps) {
     const { locale } = useAppSettings();
 
     return (
         <>
-            {/* >= md: table */}
-            <div className="hidden md:block">
+            {/* >= lg: table */}
+            <div className="hidden lg:block">
                 <Table className="[&_td]:px-4 [&_th]:px-4">
                     <TableCaption className="sr-only">Orders</TableCaption>
                     <TableHeader>
@@ -148,9 +158,18 @@ export function OrdersTable({ orders, onDelete }: OrdersTableProps) {
                             <TableHead scope="col">Client</TableHead>
                             <TableHead scope="col">Products</TableHead>
                             <TableHead scope="col" className="text-right">
-                                Units
+                                Ordered
                             </TableHead>
-                            <TableHead scope="col">Note</TableHead>
+                            {STAGES.map(({ key, label }) => (
+                                <TableHead
+                                    key={key}
+                                    scope="col"
+                                    className="text-right"
+                                >
+                                    {label}
+                                </TableHead>
+                            ))}
+                            <TableHead scope="col">Status</TableHead>
                             <TableHead scope="col" className="text-right">
                                 <span className="sr-only">Actions</span>
                             </TableHead>
@@ -165,8 +184,18 @@ export function OrdersTable({ orders, onDelete }: OrdersTableProps) {
                                     <TableCell className="align-top whitespace-nowrap text-muted-foreground">
                                         {date}
                                     </TableCell>
-                                    <TableCell className="align-top font-semibold">
-                                        <ClientLink order={order} />
+                                    <TableCell className="align-top">
+                                        <p className="font-semibold">
+                                            <ClientLink order={order} />
+                                        </p>
+                                        {order.note && (
+                                            <p
+                                                className="max-w-48 truncate text-sm text-muted-foreground"
+                                                title={order.note}
+                                            >
+                                                {order.note}
+                                            </p>
+                                        )}
                                     </TableCell>
                                     <TableCell className="align-top whitespace-normal">
                                         <ProductLines order={order} />
@@ -174,11 +203,19 @@ export function OrdersTable({ orders, onDelete }: OrdersTableProps) {
                                     <TableCell className="text-right align-top font-bold tabular-nums">
                                         {formatCount(order.units, locale)}
                                     </TableCell>
-                                    <TableCell
-                                        className="max-w-48 truncate align-top text-muted-foreground"
-                                        title={order.note ?? undefined}
-                                    >
-                                        {order.note ?? EMPTY_VALUE}
+                                    {STAGES.map(({ key }) => (
+                                        <TableCell
+                                            key={key}
+                                            className="text-right align-top tabular-nums"
+                                        >
+                                            {formatCount(order[key], locale)}
+                                        </TableCell>
+                                    ))}
+                                    <TableCell className="align-top">
+                                        <ProgressStatus
+                                            status={order.status}
+                                            label={order.status_label}
+                                        />
                                     </TableCell>
                                     <TableCell className="align-top">
                                         <IconActions
@@ -194,8 +231,8 @@ export function OrdersTable({ orders, onDelete }: OrdersTableProps) {
                 </Table>
             </div>
 
-            {/* < md: stacked cards */}
-            <ul aria-label="Orders" className="md:hidden">
+            {/* < lg: stacked cards */}
+            <ul aria-label="Orders" className="lg:hidden">
                 {orders.map((order) => {
                     const date = formatDate(order.ordered_on, locale);
 
@@ -205,12 +242,19 @@ export function OrdersTable({ orders, onDelete }: OrdersTableProps) {
                                 <p className="font-semibold break-words">
                                     <ClientLink order={order} />
                                 </p>
-                                <span className="text-sm font-bold whitespace-nowrap tabular-nums">
-                                    {formatCount(order.units, locale)}{' '}
-                                    {order.units === 1 ? 'unit' : 'units'}
-                                </span>
+                                <ProgressStatus
+                                    status={order.status}
+                                    label={order.status_label}
+                                    className="shrink-0"
+                                />
                             </div>
                             <ProductLines order={order} />
+                            <p className="text-sm tabular-nums">
+                                {STAGES.map(
+                                    ({ key, label }) =>
+                                        `${label} ${formatCount(order[key], locale)}`,
+                                ).join(' · ')}
+                            </p>
                             <p className="text-sm text-muted-foreground">
                                 {date}
                             </p>
