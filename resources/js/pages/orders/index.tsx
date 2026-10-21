@@ -1,18 +1,22 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { ClipboardList, Plus, Search, SearchX } from 'lucide-react';
+import { ClipboardList, PackageCheck, Plus, SearchX } from 'lucide-react';
 import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import { DeleteOrderDialog } from '@/components/orders/delete-order-dialog';
+import { OpenOrderTotals } from '@/components/orders/open-order-totals';
+import { OrdersFilters } from '@/components/orders/orders-filters';
 import { OrdersTable } from '@/components/orders/orders-table';
 import { EmptyState } from '@/components/shared/empty-state';
 import { SEARCH_DEBOUNCE_MS } from '@/components/shared/filters-bar';
 import { PageHeader } from '@/components/shared/page-header';
 import { Pagination } from '@/components/shared/pagination';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { create, destroy, index } from '@/routes/orders';
-import type { Order, OrdersIndexProps } from '@/types/domain';
+import type {
+    Order,
+    OrderStatusFilter,
+    OrdersIndexProps,
+} from '@/types/domain';
 
 /** A search or page change reloads only the list and its filters. */
 const LIST_PROPS = ['orders', 'filters'];
@@ -31,6 +35,9 @@ function NewOrderButton() {
 export default function OrdersIndex({
     orders,
     filters: serverFilters,
+    statuses,
+    totals,
+    has_orders: hasOrders,
 }: OrdersIndexProps) {
     // The search box owns its text (seeded from the server) so a slow response
     // never overwrites what the user typed meanwhile.
@@ -38,6 +45,8 @@ export default function OrdersIndex({
     // The last search we asked for: its echo from the server is not adopted.
     const [emitted, setEmitted] = useState(serverFilters.search);
     const [seenSearch, setSeenSearch] = useState(serverFilters.search);
+    const [status, setStatus] = useState(serverFilters.status);
+    const [seenStatus, setSeenStatus] = useState(serverFilters.status);
 
     const [deleting, setDeleting] = useState<Order | null>(null);
     const [deleteProcessing, setDeleteProcessing] = useState(false);
@@ -54,9 +63,21 @@ export default function OrdersIndex({
         }
     }
 
-    function visit(search: string | null) {
-        // `page` is never sent, so a new search returns to page 1.
-        router.get(index.url(), search === null ? {} : { search }, {
+    // A status we did not ask for (back / forward button) is adopted.
+    if (serverFilters.status !== seenStatus) {
+        setSeenStatus(serverFilters.status);
+        setStatus(serverFilters.status);
+    }
+
+    function visit(search: string | null, nextStatus: OrderStatusFilter) {
+        // `page` is never sent, so a new search or status returns to page 1;
+        // `status` is left out while it is the default, "open".
+        const query = {
+            ...(search === null ? {} : { search }),
+            ...(nextStatus === 'open' ? {} : { status: nextStatus }),
+        };
+
+        router.get(index.url(), query, {
             only: LIST_PROPS,
             preserveState: true,
             preserveScroll: true,
@@ -71,7 +92,7 @@ export default function OrdersIndex({
 
         if (search !== emitted) {
             setEmitted(search);
-            visit(search);
+            visit(search, status);
         }
     });
 
@@ -79,10 +100,16 @@ export default function OrdersIndex({
         emitSearch(debouncedText);
     }, [debouncedText]);
 
-    function clearSearch() {
+    function chooseStatus(next: OrderStatusFilter) {
+        setStatus(next);
+        visit(emitted, next);
+    }
+
+    function clearFilters() {
         setText('');
         setEmitted(null);
-        visit(null);
+        setStatus('open');
+        visit(null, 'open');
     }
 
     function askToDelete(order: Order) {
@@ -109,10 +136,9 @@ export default function OrdersIndex({
         });
     }
 
-    const searching = serverFilters.search !== null;
     const isEmpty = orders.data.length === 0;
-    // Nothing to search before the first order is recorded.
-    const showSearch = !isEmpty || searching || text.trim() !== '';
+    const everyOrderShipped =
+        serverFilters.search === null && serverFilters.status === 'open';
 
     return (
         <>
@@ -125,65 +151,61 @@ export default function OrdersIndex({
                     actions={<NewOrderButton />}
                 />
 
+                <OpenOrderTotals totals={totals} />
+
                 <section
                     aria-label="Orders list"
                     className="min-w-0 rounded-xl border bg-card text-card-foreground"
                 >
-                    {showSearch && (
-                        <div
-                            role="search"
-                            aria-label="Search orders"
-                            className="border-b p-4"
-                        >
-                            <div className="relative">
-                                <Label
-                                    htmlFor="orders-search"
-                                    className="sr-only"
-                                >
-                                    Search orders
-                                </Label>
-                                <Search
-                                    className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
-                                    aria-hidden="true"
-                                />
-                                <Input
-                                    id="orders-search"
-                                    type="search"
-                                    value={text}
-                                    placeholder="Search client, product or note"
-                                    autoComplete="off"
-                                    className="pl-9"
-                                    onChange={(event) =>
-                                        setText(event.target.value)
-                                    }
-                                />
-                            </div>
-                        </div>
+                    {/* Nothing to search or filter before the first order. */}
+                    {hasOrders && (
+                        <OrdersFilters
+                            search={text}
+                            status={status}
+                            statuses={statuses}
+                            onSearchChange={setText}
+                            onStatusChange={chooseStatus}
+                        />
                     )}
 
                     {isEmpty ? (
                         <div className="p-4">
-                            {searching ? (
-                                <EmptyState
-                                    icon={SearchX}
-                                    title="No orders match your search"
-                                    description="Try a different client, product or note, or clear the search to see every order."
-                                    action={
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            onClick={clearSearch}
-                                        >
-                                            Clear search
-                                        </Button>
-                                    }
-                                />
-                            ) : (
+                            {!hasOrders ? (
                                 <EmptyState
                                     icon={ClipboardList}
                                     title="No orders yet"
                                     description="Record a client's order to keep track of what you've promised to make."
                                     action={<NewOrderButton />}
+                                />
+                            ) : everyOrderShipped ? (
+                                <EmptyState
+                                    icon={PackageCheck}
+                                    title="No open orders"
+                                    description="Every order has shipped."
+                                    action={
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={() => chooseStatus('all')}
+                                        >
+                                            Show all orders
+                                        </Button>
+                                    }
+                                />
+                            ) : (
+                                <EmptyState
+                                    icon={SearchX}
+                                    title="No orders match your filters"
+                                    description="Try a different client, product or note, or clear the filters to see your open orders."
+                                    action={
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={clearFilters}
+                                        >
+                                            Clear filters
+                                        </Button>
+                                    }
                                 />
                             )}
                         </div>

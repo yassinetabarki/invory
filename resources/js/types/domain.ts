@@ -339,18 +339,30 @@ export type Order = {
     note: string | null;
     lines: OrderLine[]; // in the order entered (position)
     units: number; // sum of the lines' quantities, computed server-side
+    to_start: number; // the lines' To start summed, server-side
     in_cutting: number; // the lines summed, server-side
     ready_to_ship: number;
     shipped: number; // "10 of 80 shipped"
-    status: OrderProgress;
+    status: OrderProgress; // on the list (S-50): the order's status ("Not started", "In progress", "Shipped")
     status_label: string;
     // Set while units are in cutting or ready to ship: "Boutique Lina can't be deleted: 30 units are in cutting or ready to
     // ship. Move them back to To start first." (30 = in_cutting + ready_to_ship; for one: "1 unit is" and "Move it back"); null when it may be deleted
     delete_refusal: string | null;
 };
 
+export type OrderStatusFilter = 'open' | 'shipped' | 'all';
+
 export type OrderFilters = {
     search: string | null; // client, note, or a line's product name or SKU
+    status: OrderStatusFilter; // 'open' when the URL has none
+};
+
+/** Every line of every open order of the workshop, whatever the search and the filter (S-50). */
+export type OpenOrderTotals = {
+    open_orders: number;
+    to_start: number;
+    in_cutting: number;
+    ready_to_ship: number;
 };
 
 export type OrderLineFormRow = {
@@ -369,6 +381,9 @@ export type OrderFormData = {
 export type OrdersIndexProps = {
     orders: Paginated<Order>;
     filters: OrderFilters;
+    statuses: Option<OrderStatusFilter>[]; // "Open orders", "Shipped", "All orders", from the server
+    totals: OpenOrderTotals;
+    has_orders: boolean; // any order at all in the workshop, whatever its status
 };
 export type OrderCreateProps = { products: OrderProduct[] };
 export type OrderEditProps = { order: Order; products: OrderProduct[] };

@@ -93,6 +93,7 @@ const order: Order = {
     note: null,
     lines: [jacketLine],
     units: 50,
+    to_start: 20,
     in_cutting: 20,
     ready_to_ship: 10,
     shipped: 0,

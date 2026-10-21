@@ -5,9 +5,11 @@ import OrdersIndex from '@/pages/orders/index';
 import { paginate } from '@/test/fixtures';
 import { inertiaMock, resetInertiaMock, setPageProps } from '@/test/inertia';
 import type {
+    OpenOrderTotals,
     Order,
     OrderLine,
     OrderProduct,
+    OrderStatusFilter,
     OrdersIndexProps,
 } from '@/types/domain';
 
@@ -58,6 +60,7 @@ const lina: Order = {
         notStarted(2, product(5, 'Denim Jeans 5-pocket'), 30),
     ],
     units: 80,
+    to_start: 80,
     in_cutting: 0,
     ready_to_ship: 0,
     shipped: 0,
@@ -66,13 +69,37 @@ const lina: Order = {
     delete_refusal: null,
 };
 
+const zeroTotals: OpenOrderTotals = {
+    open_orders: 0,
+    to_start: 0,
+    in_cutting: 0,
+    ready_to_ship: 0,
+};
+
+type Options = {
+    search?: string | null;
+    status?: OrderStatusFilter;
+    hasOrders?: boolean;
+};
+
 function withOrders(
     orders: Order[],
-    search: string | null = null,
+    {
+        search = null,
+        status = 'open',
+        hasOrders = orders.length > 0,
+    }: Options = {},
 ): OrdersIndexProps {
     return {
         orders: paginate(orders, { path: '/orders' }),
-        filters: { search },
+        filters: { search, status },
+        statuses: [
+            { value: 'open', label: 'Open orders' },
+            { value: 'shipped', label: 'Shipped' },
+            { value: 'all', label: 'All orders' },
+        ],
+        totals: zeroTotals,
+        has_orders: hasOrders,
     };
 }
 
@@ -83,6 +110,13 @@ function renderPage(props: OrdersIndexProps) {
 
     return { user };
 }
+
+const LIST_VISIT_OPTIONS = {
+    only: ['orders', 'filters'],
+    preserveState: true,
+    preserveScroll: true,
+    replace: true,
+};
 
 describe('orders/index page', () => {
     beforeEach(() => {
@@ -109,27 +143,76 @@ describe('orders/index page', () => {
         );
     });
 
-    it('lists Boutique Lina with her date, products, units and note', () => {
+    it('lists the orders in a table', () => {
         renderPage(withOrders([lina]));
 
-        const row = within(
-            screen.getByRole('table', { name: 'Orders' }),
-        ).getAllByRole('row')[1];
-
-        expect(within(row).getByText('15 Oct 2026')).toBeVisible();
-        expect(within(row).getByText('Boutique Lina')).toBeVisible();
         expect(
-            within(row)
-                .getAllByRole('listitem')
-                .map((item) => item.textContent),
-        ).toEqual(['50 × Denim Jacket', '30 × Denim Jeans 5-pocket']);
-        expect(within(row).getByText('80')).toBeVisible();
-        expect(
-            within(row).getByText('Deliver before the spring show'),
+            within(screen.getByRole('table', { name: 'Orders' })).getByText(
+                'Boutique Lina',
+            ),
         ).toBeVisible();
     });
 
-    it('invites the first order when there are none', () => {
+    it('offers the three statuses and reloads only the list with the chosen one, keeping the search', async () => {
+        const { user } = renderPage(withOrders([lina], { search: 'lina' }));
+
+        const status = screen.getByRole('combobox', { name: 'Status' });
+
+        expect(status).toHaveTextContent('Open orders');
+
+        await user.click(status);
+
+        expect(
+            screen.getAllByRole('option').map((option) => option.textContent),
+        ).toEqual(['Open orders', 'Shipped', 'All orders']);
+
+        await user.click(screen.getByRole('option', { name: 'All orders' }));
+
+        expect(inertiaMock.router.get).toHaveBeenCalledExactlyOnceWith(
+            '/orders',
+            { search: 'lina', status: 'all' },
+            LIST_VISIT_OPTIONS,
+        );
+    });
+
+    it.each([
+        {
+            name: 'nothing matches',
+            options: { search: 'zzz', hasOrders: true },
+            title: 'No orders match your filters',
+            description:
+                'Try a different client, product or note, or clear the filters to see your open orders.',
+            button: 'Clear filters',
+            query: {},
+        },
+        {
+            name: 'every order has shipped',
+            options: { hasOrders: true },
+            title: 'No open orders',
+            description: 'Every order has shipped.',
+            button: 'Show all orders',
+            query: { status: 'all' },
+        },
+    ])(
+        'says what is empty when $name',
+        async ({ options, title, description, button, query }) => {
+            const { user } = renderPage(withOrders([], options));
+
+            expect(screen.getByText(title)).toBeVisible();
+            expect(screen.getByText(description)).toBeVisible();
+
+            await user.click(screen.getByRole('button', { name: button }));
+
+            expect(inertiaMock.router.get).toHaveBeenCalledExactlyOnceWith(
+                '/orders',
+                query,
+                LIST_VISIT_OPTIONS,
+            );
+            expect(screen.getByRole('searchbox')).toHaveValue('');
+        },
+    );
+
+    it('invites the first order when there are none, with the totals at zero', () => {
         renderPage(withOrders([]));
 
         expect(screen.getByText('No orders yet')).toBeVisible();
@@ -142,26 +225,14 @@ describe('orders/index page', () => {
             2,
         );
         expect(screen.queryByRole('searchbox')).not.toBeInTheDocument();
-    });
+        expect(
+            screen.queryByRole('combobox', { name: 'Status' }),
+        ).not.toBeInTheDocument();
 
-    it('says nothing matches and clears the search', async () => {
-        const { user } = renderPage(withOrders([], 'zzz'));
-
-        expect(screen.getByText('No orders match your search')).toBeVisible();
-        expect(screen.getByRole('searchbox')).toHaveValue('zzz');
-
-        await user.click(screen.getByRole('button', { name: 'Clear search' }));
-
-        expect(inertiaMock.router.get).toHaveBeenCalledExactlyOnceWith(
-            '/orders',
-            {},
-            {
-                only: ['orders', 'filters'],
-                preserveState: true,
-                preserveScroll: true,
-                replace: true,
-            },
-        );
-        expect(screen.getByRole('searchbox')).toHaveValue('');
+        expect(
+            within(screen.getByRole('region', { name: 'Open orders totals' }))
+                .getAllByRole('definition')
+                .map((item) => item.textContent),
+        ).toEqual(['0', '0 units', '0 units', '0 units']);
     });
 });

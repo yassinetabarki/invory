@@ -2,6 +2,7 @@
 
 use App\Enums\ProductStatus;
 use App\Models\Order;
+use App\Models\OrderLine;
 use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -31,7 +32,7 @@ it('lists an order with its lines in the order entered and the sum of their unit
 
     orderList()->assertOk()->assertInertia(fn (Assert $page) => $page
         ->component('orders/index')
-        ->where('filters', ['search' => null])
+        ->where('filters', ['search' => null, 'status' => 'open'])
         ->has('orders.data', 1)
         ->has('orders.data.0', fn (Assert $order) => $order
             ->has('id')
@@ -59,16 +60,17 @@ it('shows the newest order date first, then the order recorded last, 25 to a pag
     bookOrder(['client' => 'Fifth, first recorded', 'ordered_on' => '2026-10-05']);
     bookOrder(['client' => 'Newest', 'ordered_on' => '2026-10-07']);
     bookOrder(['client' => 'Fifth, last recorded', 'ordered_on' => '2026-10-05']);
+    // Fillers have no lines, so they are no open orders: the pagination is read over every order.
     Order::factory()->count(26)->create(['client' => 'Filler', 'ordered_on' => '2026-08-01']);
 
-    $first = orderList();
+    $first = orderList(['status' => 'all']);
 
     expect(array_slice(pageProp($first, 'orders.data.*.client'), 0, 4))->toBe(['Newest', 'Fifth, last recorded', 'Fifth, first recorded', 'Oldest'])
         ->and(pageProp($first, 'orders.data'))->toHaveCount(25)
         ->and(pageProp($first, 'orders.meta.total'))->toBe(30)
-        ->and(pageProp(orderList(['page' => 2]), 'orders.data'))->toHaveCount(5)
-        // The search travels with the page buttons.
-        ->and(pageProp(orderList(['search' => 'fil']), 'orders.links.next'))->toContain('search=fil');
+        ->and(pageProp(orderList(['status' => 'all', 'page' => 2]), 'orders.data'))->toHaveCount(5)
+        // The search and the status travel with the page buttons.
+        ->and(pageProp(orderList(['search' => 'fil', 'status' => 'all']), 'orders.links.next'))->toContain('search=fil')->toContain('status=all');
 });
 
 it('finds an order by client, note, product name or SKU whatever the case, once however many lines match (AC-5)', function (string $term, array $clients) {
@@ -87,6 +89,58 @@ it('finds an order by client, note, product name or SKU whatever the case, once 
     'two lines match: one row' => ['denim', ['Boutique Lina']],
     'two orders match, newest recorded first' => ['o', ['Atelier Noor', 'Boutique Lina']],
     'nothing matches' => ['zzz', []],
+]);
+
+it('shows the stages and the status of each order on its row (S-50 AC-1)', function () {
+    bookCardOrders();
+
+    orderList()->assertOk()->assertInertia(fn (Assert $page) => $page
+        ->has('orders.data', 2)
+        ->has('orders.data.0', fn (Assert $order) => $order
+            ->where('client', 'Boutique Lina')
+            ->where('units', 80)
+            ->where('to_start', 50)
+            ->where('in_cutting', 20)
+            ->where('ready_to_ship', 10)
+            ->where('shipped', 0)
+            ->where('status', 'in_progress')
+            ->where('status_label', 'In progress')
+            ->etc()));
+});
+
+it('lists open, shipped or all orders, with the search, and an order with one line shipped is still open (S-50 AC-3)', function (array $query, array $clients) {
+    bookCardOrders();
+    // One line fully shipped, one not started: open, "In progress" (the scope agrees with `progress()`).
+    $mixed = Order::factory()->create(['client' => 'Atelier Mix', 'ordered_on' => '2026-10-01']);
+    OrderLine::factory()->shipped(10)->create(['order_id' => $mixed->id, 'product_id' => pid(7), 'quantity' => 10, 'position' => 0]);
+    OrderLine::factory()->create(['order_id' => $mixed->id, 'product_id' => pid(3), 'quantity' => 5, 'position' => 1]);
+
+    $response = orderList($query);
+    $statuses = ['Boutique Lina' => 'in_progress', 'Concept Store Nour' => 'not_started', 'Hotel Dar Said' => 'shipped', 'Atelier Mix' => 'in_progress'];
+
+    expect(pageProp($response, 'orders.data.*.client'))->toBe($clients)
+        ->and(pageProp($response, 'orders.data.*.status'))->toBe(array_map(fn (string $client): string => $statuses[$client], $clients))
+        ->and(pageProp($response, 'filters'))->toBe(['search' => $query['search'] ?? null, 'status' => $query['status'] ?? 'open'])
+        ->and(pageProp($response, 'statuses'))->toBe([
+            ['value' => 'open', 'label' => 'Open orders'],
+            ['value' => 'shipped', 'label' => 'Shipped'],
+            ['value' => 'all', 'label' => 'All orders'],
+        ]);
+})->with([
+    'no status: open orders' => [[], ['Boutique Lina', 'Concept Store Nour', 'Atelier Mix']],
+    'open' => [['status' => 'open'], ['Boutique Lina', 'Concept Store Nour', 'Atelier Mix']],
+    'shipped' => [['status' => 'shipped'], ['Hotel Dar Said']],
+    'all, newest first' => [['status' => 'all'], ['Boutique Lina', 'Concept Store Nour', 'Hotel Dar Said', 'Atelier Mix']],
+    'all with a search' => [['status' => 'all', 'search' => 'Denim'], ['Boutique Lina']],
+    'shipped with a search that matches an open order' => [['status' => 'shipped', 'search' => 'Denim'], []],
+]);
+
+it('refuses a status the list does not offer (S-50 AC-3)', function (mixed $status) {
+    orderList(['status' => $status])->assertSessionHasErrors('status');
+})->with([
+    'unknown' => ['cancelled'],
+    'wrong case' => ['OPEN'],
+    'a list' => [['open', 'all']],
 ]);
 
 it('keeps the name of an archived or deleted product on its lines and flags the deleted one (AC-7)', function () {

@@ -33,6 +33,7 @@ it('shows Boutique Lina\'s order with its lines in the order entered, nothing st
             ->where('ordered_on', '2026-10-15')
             ->where('note', 'Deliver before 30 Oct, in 2 boxes')
             ->where('units', 80)
+            ->where('to_start', 80)
             ->where('in_cutting', 0)
             ->where('ready_to_ship', 0)
             ->where('shipped', 0)

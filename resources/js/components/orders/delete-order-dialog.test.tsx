@@ -52,6 +52,7 @@ const lina: Order = {
         notStarted(2, product(5, 'Denim Jeans 5-pocket'), 30),
     ],
     units: 80,
+    to_start: 80,
     in_cutting: 0,
     ready_to_ship: 0,
     shipped: 0,

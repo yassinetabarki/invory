@@ -31,6 +31,7 @@ If a rule here is wrong or incomplete, stop and ask the tech-lead to update it (
 | Order | A client's order: client name, order date, optional note, and one or more order lines. Recording, editing or deleting an order **never changes material stock or sales** (S-48); only "Start cutting" and "Move back to To start" on a line do (S-53). An order can't be deleted while any unit is in cutting or ready to ship (S-49) | `Order` / `orders` |
 | Order line | One product of an order with its whole-unit quantity (1 … 1 000 000); one line per product per order, at most 50 per order | `OrderLine` / `order_lines` |
 | Stage counts | How many units of an order line are To start, In cutting, Ready to ship and Shipped; they always add up to the line's quantity. To start = quantity − the other three (S-49) | `in_cutting`, `ready_to_ship`, `shipped` (`to_start` derived) |
+| Open order | An order with at least one line not fully shipped (`shipped < quantity`). Once every line is fully shipped the order is "Shipped". One rule drives the Orders list's "Open orders" filter, its count and its totals (S-50) | `Order::open()` / `Order::shipped()` scopes, `OrderStatusFilter` enum |
 | Cut | One "Start cutting" of N units of an order line, remembering per material the exact amount per unit and the amount taken. A move back to To start returns from the latest cut first (S-53) | `OrderLineCut` / `order_line_cuts` |
 | Workshop | The business account. Every user belongs to one; every material, product, composition, stock movement, sale, order, order line, photo, unit and category belongs to one | `Workshop` / `workshops`, `workshop_id` |
 
@@ -186,6 +187,25 @@ button, ⌊660 / 8⌋), and the inventory value from TND 10,544.300 to 9,936.680
 buttons, moving 5 back returns 50 pc (the latest cut first). With the button at 100 pc, cutting 20 is refused (needs
 160 pc, short by 60 pc, at most 12); cutting 12 leaves 4 pc. With the button at 7 pc, at most 0.
 
+### Orders list: open orders and their totals (added 2026-10-21, S-50)
+
+```
+open(O)               = some line L of O has L.shipped < L.quantity        (otherwise O is "Shipped")
+order stage(O)        = Σ stage(L) over O's lines, for To start, In cutting, Ready to ship and Shipped      (whole units)
+open_orders           = number of the workshop's non-deleted orders with open(O)
+to_start_total        = Σ to_start(L)      over every line L of every open order of the workshop
+in_cutting_total      = Σ in_cutting(L)    over every line L of every open order of the workshop
+ready_to_ship_total   = Σ ready_to_ship(L) over every line L of every open order of the workshop
+```
+- All whole numbers (integer SQL sums, cast to `int`; no BigDecimal). Deleted orders never count; another workshop's never do (R5).
+- The list's search and Status filter ("Open orders" by default, "Shipped", "All orders") never change the four totals.
+- An order's status on the list: "Not started" while no unit of any line has left To start, "Shipped" once every line is fully
+  shipped (exactly when `open(O)` is false), "In progress" otherwise.
+
+Worked example: Boutique Lina (Denim Jacket 50: To start 20, In cutting 20, Ready to ship 10; Denim Jeans 5-pocket 30 to start),
+Concept Store Nour (Classic White T-shirt 120 to start) and Hotel Dar Said (Leather Tote 12, all shipped) → Open orders 2, To start
+170, In cutting 20, Ready to ship 10. Marking 5 of Boutique Lina's jackets ready → In cutting 15, Ready to ship 15.
+
 ## Precision and rounding (non-negotiable, see ADR-0002)
 
 1. **Never use floats** for money or quantities: no `float` casts, no `(float)`, no `+`/`*` on numeric strings in PHP, and no `Number(x) * y` in TypeScript.
@@ -279,3 +299,5 @@ Variant checks:
 - Added 2026-10-16 (S-53, ADR-0014): `CostingResult::$requirements` (`MaterialRequirement`, F-41: the summed need per material, rounded
   and exact), `App\Domain\Stock\CuttingCalculator` (take and return), `App\Actions\Orders\MoveOrderLineUnits` with
   `TakeMaterialsForCut` and `ReturnMaterialsFromCuts`, `App\Services\Orders\CuttingPreview` (the move window's materials table).
+- Added 2026-10-21 (S-50): `Order::open()` / `Order::shipped()` scopes and `App\Enums\OrderStatusFilter` (the Orders list filter),
+  `App\Services\Orders\OrderBook::openTotals()` (the four list totals, one integer SQL sum over the open orders).
