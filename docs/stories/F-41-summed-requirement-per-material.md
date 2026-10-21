@@ -5,7 +5,7 @@ type: tech
 phase: 5
 priority: Must
 size: S
-status: Planned
+status: Done
 created: 2026-10-16
 tags:
   - tech
@@ -29,16 +29,16 @@ tags:
 > ever sat on two lines, the page would show the first line's figure while "Can produce" used the sum.
 
 ## Acceptance criteria
-- [ ] **AC-1 · One figure per material.** For Denim Jacket the cost engine returns, for each of its four materials, the need per unit
+- [x] **AC-1 · One figure per material.** For Denim Jacket the cost engine returns, for each of its four materials, the need per unit
   waste included (Denim 12oz Indigo 1.98 m, Metal shank button 17mm 8 pc, Polyester thread 126 m, Woven brand label 1 pc), the units its
   stock covers (126, 112, 158, 400) and which one is the bottleneck (the button). The unit cost (TND 35.754), "Can produce 112" and the
-  bottleneck don't change.
-- [ ] **AC-2 · Same material on two lines.** In the engine's own tests, a composition with the button on two lines of 4 pc each returns
-  one entry for the button, needing 8 pc per unit and covering 112 units, exactly as one line of 8 pc does.
-- [ ] **AC-3 · The material page uses it.** Denim 12oz Indigo's "What you can make with it" still shows Denim Jacket with "Needs per
-  unit" 1.98 m, "This stock covers" 126 units, "Can make now" 112 units and its next limit, now read from the engine's total for the material.
-- [ ] **AC-4 · Exact for what comes next.** Next to the 4-decimal figure, the engine keeps the unrounded need per unit (e.g. 0.0001 m at
-  0.01 % waste is 0.00010001 m), so that S-53 can multiply it by the units cut without losing precision.
+  bottleneck don't change. ✅ 2026-10-21 · e99615e
+- [x] **AC-2 · Same material on two lines.** In the engine's own tests, a composition with the button on two lines of 4 pc each returns
+  one entry for the button, needing 8 pc per unit and covering 112 units, exactly as one line of 8 pc does. ✅ 2026-10-21 · e99615e
+- [x] **AC-3 · The material page uses it.** Denim 12oz Indigo's "What you can make with it" still shows Denim Jacket with "Needs per
+  unit" 1.98 m, "This stock covers" 126 units, "Can make now" 112 units and its next limit, now read from the engine's total for the material. ✅ 2026-10-21 · e99615e
+- [x] **AC-4 · Exact for what comes next.** Next to the 4-decimal figure, the engine keeps the unrounded need per unit (e.g. 0.0001 m at
+  0.01 % waste is 0.00010001 m), so that S-53 can multiply it by the units cut without losing precision. ✅ 2026-10-21 · e99615e
 
 ---
 

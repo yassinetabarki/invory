@@ -2,7 +2,7 @@
 
 > Owner: **product-owner** (order, wording, acceptance criteria) · Technical detail: **tech-lead** ([TECH-DEBT.md](TECH-DEBT.md), [plans/](plans/README.md))
 > Phases and goals: [ROADMAP.md](ROADMAP.md) · Progress: [STATUS.md](STATUS.md) · Done work and full history: [archive/backlog-2026-10-14.md](archive/backlog-2026-10-14.md)
-> Last cleaned: 2026-10-16 (D-11 decided with your final answers: S-49 and S-53 revised, then their revised Technical work approved, so F-41, S-49 and S-53 are `Planned` and S-50 is `Ready`; S-56 and S-57 added; on 2026-10-15 S-48 done and accepted, so it left this file; before that, D-12: Phase 5 starts now, the rest of Phase 4 is on hold; D-13: S-08 and S-29 done). **Open work only**, top = next.
+> Last cleaned: 2026-10-21 (F-41, S-49 and S-53 done: you accepted them after your click-through, so they left this file; S-50 is next and needs its Technical work). Before that, 2026-10-18 (D-15 and D-16 products by size: S-58, S-60 and S-61 added as Musts, S-56 and S-57 written per size, all five cards `Draft`; S-52 and S-54 become Won't (this time); S-62 added as a Could; S-63 and S-64 to Phase 8). Before that, 2026-10-16 (D-11 decided with your final answers: S-49 and S-53 revised, then their revised Technical work approved, so F-41, S-49 and S-53 are `Planned` and S-50 is `Ready`; S-56 and S-57 added; on 2026-10-15 S-48 done and accepted, so it left this file; before that, D-12: Phase 5 starts now, the rest of Phase 4 is on hold; D-13: S-08 and S-29 done). **Open work only**, top = next.
 > Done items leave this file; they are recorded in STATUS.md and the archive.
 
 ## How to read an item
@@ -12,7 +12,7 @@
 - **Priority** (MoSCoW, per phase): Must · Should · Could · Won't (this time). **Size:** S (≤ 1 day of agent work) · M · L (split it).
 - **Card:** the full story card (story, acceptance criteria with examples, what you will see, out of scope, questions) lives in
   `docs/stories/<id>-<slug>.md` once the product-owner writes it. Items below show the short version.
-- **IDs:** `S-` stories are numbered by the product-owner, `F-` technical items by the tech-lead. IDs are never reused. Next free: **S-58** (S-47 was dropped on 2026-10-14), **F-62** (F-IDs: see [TECH-DEBT.md](TECH-DEBT.md)).
+- **IDs:** `S-` stories are numbered by the product-owner, `F-` technical items by the tech-lead. IDs are never reused. Next free: **S-65** (S-47 was dropped on 2026-10-14; S-59 was never used, folded into S-58 on 2026-10-18), **F-64** (F-IDs: see [TECH-DEBT.md](TECH-DEBT.md)).
 
 ---
 
@@ -27,77 +27,97 @@ You started it on 2026-10-15: "we will start focusing more on the orders … we 
 - the client is typed on each order, and the delivery date goes in the note;
 - only active products can go on an order, and an order never sets stock aside (S-48, approved 2026-10-15).
 
-Order of work (D-11, decided 2026-10-16): one build in a worktree, F-41 first, then S-49 and S-53, which are accepted and land on
-`main` together (one click-through); then S-50, then the Shoulds S-56 and S-57. Your final D-11 answers (2026-10-16) replace the
-"every recommended answer" version committed earlier that day: S-49 and S-53 were revised with them, and you approved their
-revised Technical work the same day, so they are `Planned` with F-41. S-53 stays one L story.
-**S-48 is done** (accepted 2026-10-15 after your click-through; `e3b7ae7`, `5af8ed1`): you can record, find, edit and delete an order
-of one or more products, and nothing else in Invory changes. Its record is in [STATUS.md §4](STATUS.md#4-delivery-history).
+Order of work: **F-41, S-49 and S-53 are done** (you accepted them on 2026-10-21 after your one click-through; built in one build
+and landed on `main` together, as D-11 asked). Next comes S-50, then the size stories (below), then the Shoulds S-56 and S-57.
 
-### S-49 · Track each product of an order through cutting, ready to ship and shipped · Must · M · feature · `Planned` (card and Technical work approved 2026-10-16, revised to the final D-11 answers; next: the build)
-Card: [stories/S-49-track-cutting-ready-shipped.md](stories/S-49-track-cutting-ready-shipped.md). Depends on S-48 (done); **ships
-together with S-53** (D-11).
-**You get:** each order's own page. Every product line has four counts that add up to its quantity: To start, In cutting, Ready to ship
-and Shipped. "Start cutting", "Mark ready" and "Ship" move a number of units on; "Move back" fixes a mistake. Each line and the order read
-"Not started", "In progress" or "Shipped". A deleted product can't start cutting. "Delete" is refused while units are in cutting or ready
-to ship ("Move them back to To start first.").
-**Why:** this is what you asked for: how many units are ready to ship, and how many are in cutting.
-**Done when:** Boutique Lina's Denim Jacket line can show 20 · 20 · 10 · 0 while its jeans line shows 30 · 0 · 0 · 0; a move never takes
-more than the stage holds; a started line can't drop below its started units or be removed; that order can't be deleted.
+**Products by size (D-15 and D-16, your answers of 2026-10-18):** after S-50 comes S-58 on its own, then S-60 and S-61 in one build
+(one click-through), then S-56 and S-57, both written per size. Every size of a product uses the same composition, so unit cost, "Can
+produce" and the bottleneck don't change; a bigger size using more fabric (S-63) and a shoe size using its own sole (S-64) come later.
+The product's category decides its sizes, from a short list set up with Invory: Apparel S, M, L, XL; Footwear 36 to 46 (all 11 sizes);
+every other category "One size". A product gets every size of its category, and there is no Settings page for sizes for now. One selling
+price and one SKU for all sizes ("PRD-JKT-001 · M"). Finished stock comes from "Update stock" and from cancelled orders; sales don't take
+units out of it. S-52 and S-54 become Won't (this time) to make room. The five size cards are `Draft`, waiting for your approval.
 
-### S-53 · Starting to cut an order takes its materials out of stock · Must · L · feature · `Planned` (card and Technical work approved 2026-10-16, revised to the final D-11 answers; next: the build)
-Card: [stories/S-53-cutting-takes-materials-out-of-stock.md](stories/S-53-cutting-takes-materials-out-of-stock.md). Ships together with
-S-49 (D-11). **Changes a recorded decision:** Q9 "making products never reduces stock" is replaced (D-10). The new rule was written into
-the business rules, with decision record ADR-0014 (accepted 2026-10-16, amended the same day to the final D-11 answers), before any code.
-**You get:** "Start cutting" shows each material needed, in stock and left after, then takes it out of stock. You can't cut more than the
-stock allows, and the message says what to do. "Move back to To start" returns exactly what was taken, the latest cut first. An order
-with units in cutting or ready to ship can't be deleted, so no material is lost. Each material's history shows "Cutting" and "Back from
-cutting" entries, dated the day you click "Move units". No new low-stock alerts.
-**Why:** stock, "Can produce" and the restock list then match the shelves without correcting four materials by hand.
-**Done when:** cutting 30 Denim Jackets leaves Denim 12oz Indigo at 190.6 m, Denim Jacket at "Can produce now 82" and Inventory value at
-TND 9,936.680; cutting 20 with 100 buttons is refused ("at most 12").
+**Done in Phase 5 so far** (records in [STATUS.md §4](STATUS.md#4-delivery-history)):
+- **S-48** (accepted 2026-10-15; `e3b7ae7`, `5af8ed1`): record, find, edit and delete an order of one or more products.
+- **S-49** (accepted 2026-10-21): each order's own page, with To start, In cutting, Ready to ship and Shipped per product line, the moves
+  between them, and an order that can't be deleted while units are in cutting or ready to ship.
+- **S-53** (accepted 2026-10-21): "Start cutting" takes the materials out of stock, "Move back to To start" returns them, and each
+  material's history shows "Cutting" and "Back from cutting".
+- **F-41** (accepted 2026-10-21): the costing works out each material's total need per unit, which S-53 uses.
 
-### S-50 · The Orders list shows each order's progress and the totals · Must · S · feature · `Ready` (approved 2026-10-16)
-Card: [stories/S-50-orders-list-progress-and-totals.md](stories/S-50-orders-list-progress-and-totals.md). Depends on S-49.
+### S-50 · The Orders list shows each order's progress and the totals · Must · S · feature · `Ready` (approved 2026-10-16; next: its Technical work)
+Card: [stories/S-50-orders-list-progress-and-totals.md](stories/S-50-orders-list-progress-and-totals.md). Depends on S-49 (done 2026-10-21).
 **You get:** every order's four counts (the sums of its lines) and its status, the list opening on "Open orders", and totals for all open
 orders at the top: "Open orders 2", "To start 170 units", "In cutting 20 units", "Ready to ship 10 units".
 **Why:** "so we have an idea of how many products will be produced": one look, without opening every order.
 
-### S-56 · Finished products in stock · Should · M · feature · `Idea` (added 2026-10-16, D-11; card to be written)
-Comes after S-50; S-57 needs it.
-**You get:** each product keeps a count of finished units on the shelf. Denim Jacket's page shows "In stock 10 units" next to "Can
-produce now 82". "Can produce now" stays what the materials allow, and the Inventory value stays materials only.
-**Why:** units made for an order that was cancelled are not lost; they wait on the shelf for another client.
-**Still to decide when the card is written:** whether recording a sale takes units out of this stock, and whether a new order can use it.
+### S-58 · Every product gets the sizes of its category · Must · S · feature · `Draft` (card written 2026-10-18, D-15, D-16)
+Card: [stories/S-58-products-get-sizes-from-their-category.md](stories/S-58-products-get-sizes-from-their-category.md). After S-50; built
+on its own, before S-60 and S-61 (D-16).
+**You get:** each product carries the sizes of its category: Apparel "S, M, L, XL", Footwear "36 to 46", anything else "One size". The
+product page shows "Sizes S, M, L, XL" and "Any mix of sizes" under "Can produce now 112"; the form shows the sizes of the chosen category.
+Products you already have follow their category at once. A product on an order can't move to a category with other sizes.
+**Why:** orders, production and finished stock can only be counted per size once each product knows its sizes.
 
-### S-57 · Cancel an order · Should · M · feature · `Idea` (added 2026-10-16, D-11; card to be written)
-Comes after S-56. Separate from "Delete", which stays for orders entered by mistake (S-49).
-**You get:** "Cancel order" on an order's page, and the order then reads "Cancelled". Units still to start are dropped. Units ready to ship
-go into the product's stock at once (S-56). Shipped units stay shipped. Units in cutting stay on the cancelled order until you click
-"Cutting finished · Put in stock", for any number up to the units in cutting at a time; those units go into the product's stock.
+### S-60 · Order a product in several sizes · Must · M · feature · `Draft` (card written 2026-10-18, D-15, D-16)
+Card: [stories/S-60-order-a-product-in-several-sizes.md](stories/S-60-order-a-product-in-several-sizes.md). Depends on S-58; one build
+and one click-through with S-61.
+**You get:** on "New order" and "Edit order", a quantity per size under each product ("S 10 · M 20 · L 15 · XL 5", "Total 50 units"),
+shown on the order's page and the Orders list. Lines recorded before sizes stay "One size".
+**Why:** the cutting table needs to know how many of each size, not just "50 Denim Jackets".
+
+### S-61 · Follow each size through cutting, ready to ship and shipped · Must · M · feature · `Draft` (card written 2026-10-18, D-15, D-16)
+Card: [stories/S-61-follow-each-size-through-the-stages.md](stories/S-61-follow-each-size-through-the-stages.md). Depends on S-60; one
+build and one click-through with it.
+**You get:** each order line shows To start, In cutting, Ready to ship and Shipped for every size, and every move window asks a number
+per size, so one cut can take S 4 and M 10 at once. Cutting takes the same materials per unit for every size.
+**Why:** you see that 4 S and 10 M are being cut while the L and XL haven't started.
+
+### S-56 · Finished products in stock, per size · Should · M · feature · `Draft` (card written 2026-10-18, per size, D-15, D-16)
+Card: [stories/S-56-finished-products-in-stock-per-size.md](stories/S-56-finished-products-in-stock-per-size.md). After S-61; S-57 needs
+it.
+**You get:** each product shows the finished units on the shelf per size: "In stock 10 units", "S 3 · M 0 · L 5 · XL 2", next to "Can
+produce now 112". "Update stock" lets you count and correct it, and cancelled orders add to it (S-57). "Can produce now" stays what the
+materials allow, the Inventory value stays materials only, and recording a sale or a new order doesn't change it (a sale has no size).
+**Why:** "how many we have in S, M, L and XL", and units made for a cancelled order wait on the shelf for another client.
+
+### S-57 · Cancel an order · Should · M · feature · `Draft` (card written 2026-10-18, per size, D-15, D-16)
+Card: [stories/S-57-cancel-an-order.md](stories/S-57-cancel-an-order.md). Depends on S-56. Separate from "Delete", which stays for orders
+entered by mistake (S-49).
+**You get:** "Cancel order" on an order's page; the order reads "Cancelled", and it can't be undone. Units to start are dropped, units
+ready to ship go into stock in their sizes, shipped units stay shipped, and units in cutting stay until "Cutting finished · Put in stock",
+per size. Cancelled orders leave "Open orders" and the totals.
 **Why:** in your words: "if and order is cancelled and we already start cutting we will continue producing the product and then put them
 in the stock user need confirm that cutting is finished and the product is ready to put in stock".
-**Done when:** cancelling Boutique Lina's order at Denim Jacket 20 · 20 · 10 · 0 drops the 20 to start, puts 10 in stock ("In stock 10
-units") and keeps 20 in cutting; "Cutting finished · Put in stock" with 20 then shows "In stock 30 units".
+**Done when:** cancelling Boutique Lina's order at Denim Jacket 20 · 20 · 10 · 0 drops the 20 to start, shows "In stock 10 units" (M 5 ·
+XL 5) and keeps 20 in cutting; putting all 20 in stock then shows "In stock 30 units".
 
-### S-51 · Units on order and in cutting show on the product page and the dashboard · Should · S · feature · `Idea`
+### S-51 · Units on order and in cutting show on the product page and the dashboard · Should · S · feature · `Idea` (per size when its card is written)
 **You get:** Denim Jacket's page shows how many units are still to start on open orders, in cutting and ready to ship, next to "Can produce
 now 82"; the dashboard gets an "In cutting" figure.
 **Why:** "Can produce" doesn't set stock aside for orders not yet cut (S-48, S-53 AC-7), so you need the demand next to it to see a
 shortage coming.
 
-### S-52 · Each order keeps a history of its moves · Could · S · feature · `Idea`
+### S-62 · Open orders by size: what's being made in each size · Could · S · feature · `Idea` (added 2026-10-18, D-15)
+After S-61.
+**You get:** for one product, the units of every open order per size: still to start, in cutting and ready to ship ("Denim Jacket · M:
+to start 15, in cutting 10, ready 5").
+**Why:** at the cutting table you plan by size across all orders, not one order at a time.
+
+### S-52 · Each order keeps a history of its moves · Won't (this time) · S · feature · `Idea` (was Could; D-15, 2026-10-18, to make room for sizes)
 **You get:** the order page lists every move, newest first, with who did it: "15 Oct 2026 · 30 units of Denim Jacket moved to In cutting ·
 by Sami".
 **Why:** when two people update the same order, you can see what happened. (Each material's history already shows cutting, S-53.)
 
-### S-54 · "Ship" can also record the sale · Could · S · feature · `Idea` (your answer of 2026-10-15: "not now", later story)
+### S-54 · "Ship" can also record the sale · Won't (this time) · S · feature · `Idea` (your answer of 2026-10-15: "not now"; was Could, D-15, 2026-10-18)
 **You get:** "Ship" offers "Also record a sale", pre-filled with the product, the units shipped, the selling price and today's date.
 **Why:** today you would type the same sale again on the Sales page.
 
-**Phase 5 tech allowance (~15 %):** **F-41 only** (your choice, 2026-10-15; `Planned`, Technical work approved 2026-10-16, built first in
-the S-49 and S-53 build; card [stories/F-41-summed-requirement-per-material.md](stories/F-41-summed-requirement-per-material.md)): the costing works out, for each product, the total amount of
-each material one unit needs, ready for S-53 to take out of stock. It moved here from Phase 6's allowance. Phase 4's allowance (F-22,
+**Phase 5 tech allowance (~15 %):** **F-41 only** (your choice, 2026-10-15), **done** (accepted 2026-10-21, `e99615e`; card
+[stories/F-41-summed-requirement-per-material.md](stories/F-41-summed-requirement-per-material.md)): the costing works out, for each
+product, the total amount of each material one unit needs, which S-53 takes out of stock. Open technical items from the orders builds
+(F-60, F-61, F-62, F-63 in [TECH-DEBT.md](TECH-DEBT.md)) can join the allowance if the tech-lead proposes them. Phase 4's allowance (F-22,
 F-12, F-45) stays with Phase 4.
 
 ---
@@ -209,6 +229,8 @@ anyone before the server is public (D-9, 2026-10-14). The rest of Phase 4 (at le
 | ID   | You get                                                                                                         | Priority (proposed) |
 | ---- | --------------------------------------------------------------------------------------------------------------- | ------------------- |
 | S-10 | **Production planner:** "Plan N units" shows, per material, what's needed, what's in stock and the shortage     | Should              |
+| S-63 | **A bigger size uses more fabric:** a quantity per size on a composition line; cost and "Can produce" per size  | Could               |
+| S-64 | **A shoe size uses its own sole:** a material per size on a composition line (38 → "Rubber cupsole 38")         | Could               |
 | S-09 | **Live cost preview:** the cost updates while you edit a product's composition                                  | Could               |
 | S-11 | **CSV import/export** of materials                                                                              | Could               |
 | S-37 | **Custom date range** ("from – to") for the sales log and the dashboard (was F-11)                              | Could               |
@@ -221,9 +243,13 @@ anyone before the server is public (D-9, 2026-10-14). The rest of Phase 4 (at le
 - S-55 (feature, `Idea`, size S–M, added 2026-10-15 during S-48's planning, raised again at its delivery): the product pickers on "New
   order" and "Record a sale" let you type part of a product's name to find it, so a large catalogue doesn't mean scrolling a long list.
   Today both pickers are plain lists, sorted by name.
+- S-63 and S-64 (feature, `Idea`, size M each, added 2026-10-18, D-15): S-63 lets a size use more or less of a material (S 1.70 · M 1.80 ·
+  L 1.90 · XL 2.00 m of denim); S-64 lets a size use its own material, such as a shoe sole. Both change the costing rules, so the
+  tech-lead writes the rule and a decision record first. You said shoes aren't made in volume ("leave it for later"), so S-64 isn't right
+  after the size stories.
 
 ## VISION — not scheduled
-Suppliers and purchase orders · unit conversions in compositions · sizes and variants · sub-assemblies · **several people in one workshop**
+Suppliers and purchase orders · unit conversions in compositions · a SKU and a price per size, and a page to edit the size lists · sub-assemblies · **several people in one workshop**
 (inviting people, removing them, roles and permissions, and history that still says who did it after that person's account is deleted,
 e.g. "by a former member", where today the "by <name>" line just disappears; S-44 already keeps the data with the workshop) · cost history snapshots ·
 setting stock aside for orders not yet cut · a client list · REST API / mobile. See [ROADMAP.md](ROADMAP.md). (Production that takes
@@ -251,9 +277,19 @@ later; S-48 approved: only active products on an order, and an order never sets 
 S-48 done 2026-10-15: a deleted order is hidden, with no way back on screen; a product no longer active stays on the orders that have it ·
 **D-13 S-08 and S-29 closed as they stood** (2026-10-15): Done on the commits on `main`; their open checks are known gaps for go-live ·
 **D-11 how cutting changes stock** (your final answers, 2026-10-16; they replace the "every recommended answer" version committed earlier
-that day; S-49 and S-53 revised and `Planned` with their revised Technical work, S-50 `Ready`): cutting more than stock allows is refused, with the most you can
+that day; S-49 and S-53 built on them and done 2026-10-21, S-50 `Ready`): cutting more than stock allows is refused, with the most you can
 cut and what to do; "Move back to To start" returns exactly what was taken, the latest cut first, also for a deleted product; "Delete" is
 refused while units are in cutting or ready to ship, and a cancelled order uses "Cancel order" (S-57), whose cut units go into the
 product's own stock (S-56); history entries read "Cutting" and "Back from cutting", dated the day you click "Move units"; no new
 low-stock alerts; archived or draft products move as usual, a deleted product can't start cutting; S-49 and S-53 ship together (one
-build, one click-through); S-56 and S-57 are Phase 5 Shoulds after S-50. Pending: [STATUS.md §2](STATUS.md#2-decisions-needed-from-you).
+build, one click-through); S-56 and S-57 are Phase 5 Shoulds after S-50 · **D-15 and D-16 products by size** (2026-10-18; S-58,
+S-60, S-61, S-56, S-57): count units per size when ordered, in production and on the shelf; every size uses the same composition
+(more fabric for bigger sizes later, S-63); shoes' own soles later, as shoes aren't made in volume (S-64); the product's category decides
+its sizes, from a short list set up with Invory (Apparel S, M, L, XL; Footwear 36 to 46, all 11; any other category "One size"), with no
+Settings page for now; a product gets every size of its category; existing products follow their category at once and order lines
+recorded before sizes stay "One size"; one line per product on an order with a quantity per size, stages tracked per size, and each move
+window asks a number per size; one selling price and one SKU for all sizes; finished stock comes from "Update stock" and cancelled orders,
+and sales and new orders never touch it (a sale has no size); cancelling an order can't be undone, and cancelled orders leave "Open
+orders" and the totals; S-58 is built first on its own, then S-60 and S-61 in one build; S-52 and S-54 become Won't (this time); the smaller choices take the
+defaults written in the five cards, which stay `Draft` until you approve them.
+Pending: [STATUS.md §2](STATUS.md#2-decisions-needed-from-you).
