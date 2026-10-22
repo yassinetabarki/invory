@@ -5,7 +5,7 @@ type: feature
 phase: 5
 priority: Should
 size: M
-status: Draft
+status: Ready
 created: 2026-10-18
 tags:
   - story
@@ -32,7 +32,8 @@ tags:
   cutting 20 (S 5, M 10, L 5), Ready to ship 10 (M 5, XL 5) and Shipped 0. Its page offers "Cancel order" next to "Edit" and "Delete".
   It opens "Cancel order?" with "Units to start are dropped. Units ready to ship go into stock now. Units in cutting stay on the order
   until you put them in stock. This can't be undone." and the buttons "Cancel order" and "Keep order". Confirming shows "Order
-  cancelled." and the order reads "Cancelled", as a word with an icon. A fully shipped or already cancelled order has no "Cancel order".
+  cancelled." and the order reads "Cancelled", as a word with a crossed-out circle icon. A fully shipped or already cancelled order has
+  no "Cancel order".
 - [ ] **AC-2 · What happens to each stage.** After cancelling, the 20 units to start are dropped, the 10 ready to ship go into stock in
   their sizes (Denim Jacket "In stock 10 units", "S 0 · M 5 · L 0 · XL 5", from 0), shipped units stay shipped, and the 20 in cutting stay.
   The line's figures read "Dropped 20 units", "In cutting 20 units", "Put in stock 10 units" and "Shipped 0 units", and they still add
@@ -48,3 +49,8 @@ tags:
   "Ready to ship") leave cancelled orders out. Boutique Lina's row reads "Cancelled" with its icon in every theme.
 - [ ] **AC-6 · One size.** A "One size" line (Leather Tote 12) behaves the same with one field: cancelling with 4 ready to ship shows the
   Leather Tote "In stock 4 units".
+- [ ] **AC-7 · Phone width.** At 375 px "Cancel order?" shows its whole message, with "Cancel order" and "Keep order" under it, without
+  scrolling sideways. On the cancelled order each size becomes its own row of four labelled figures, with the Total first ("Total ·
+  Dropped 20 · In cutting 20 · Put in stock 10 · Shipped 0", then "S · Dropped 5 · In cutting 5 · Put in stock 0 · Shipped 0"), and
+  "Cancelled" keeps its icon next to the word. In "Cutting finished · Put in stock" the size fields wrap onto several rows, each with its
+  label, like the order form's.

@@ -13,7 +13,7 @@
 
 | | Status | In one line |
 |---|---|---|
-| **Overall** | 🟡 **AMBER** | The MVP is built and every automated check passes on this computer. The checks now also run on GitHub, but nobody has seen a result yet. You haven't signed the MVP off. Since 2026-10-15 Phase 5 (customer orders) is under way: S-48, S-49, S-53, S-50 and S-58 are done, so orders have their own page and their four stages, cutting takes the materials out of stock, the Orders list shows each order's progress and the open-order totals, and every product has the sizes of its category. Next are S-60 and S-61, once you approve their cards (D-17). The rest of Phase 4 is on hold (D-12). |
+| **Overall** | 🟡 **AMBER** | The MVP is built and every automated check passes on this computer. The checks now also run on GitHub, but nobody has seen a result yet. You haven't signed the MVP off. Since 2026-10-15 Phase 5 (customer orders) is under way: S-48, S-49, S-53, S-50 and S-58 are done, so orders have their own page and their four stages, cutting takes the materials out of stock, the Orders list shows each order's progress and the open-order totals, and every product has the sizes of its category. Next are S-60 and S-61, whose cards you approved on 2026-10-22 (D-17); the tech-lead plans them next. The rest of Phase 4 is on hold (D-12). |
 | Scope (MVP features) | 🟡 AMBER | Every feature in the MVP goal and the 2026-10-08 scope additions works on real data. The preview layer is gone. Since 2026-10-15 every account sees only its own workshop's materials, products and sales (S-44, D-9), records its clients' orders (S-48), follows each product line through the four stages (S-49), cutting takes the materials out of stock (S-53), and the Orders list shows each order's progress, a Status filter and the open-order totals (S-50). Every product has the sizes of its category (S-58). Units and categories are still shared until S-45. |
 | Quality (automated) | 🟢 GREEN | All automated checks pass on this computer (tech-lead's F-41, S-49 and S-53 delivery report and its fix round, 2026-10-16): 2 409 backend tests, the same 2 409 on PostgreSQL, 1 206 screen tests, 2 browser tests, code style, static analysis, type check and production build. S-50 (delivered 2026-10-21): every gate green and the golden path green, but the PostgreSQL parity suite wasn't run (Docker was down). S-58 (delivered 2026-10-22): every gate green (2 463 backend tests, 1 225 screen tests, 2 browser tests); the full PostgreSQL parity suite wasn't run (your choice), only S-58's own tests on PostgreSQL, which passed. |
 | Product acceptance | 🔴 RED | The MVP as a whole isn't signed off: the Phase 2 click-through has been pending since 2026-10-08, and the MVP walkthrough (S-30) is on hold since 2026-10-15 (D-12). S-43, S-44, S-48, S-49, S-53, S-50 and S-58 were accepted one by one (S-49 and S-53 in one click-through, 2026-10-21; S-50 and S-58 on 2026-10-22, S-58 after your click-through). |
@@ -26,8 +26,9 @@ and S-53** (accepted 2026-10-21 after your one click-through; built in one build
 closing docs `f803cb1`), **S-50** (accepted 2026-10-22; `ba0a0cd`, `74f05a8`, `a23a5d7`, merged in `0270014`), and **S-58**
 (accepted 2026-10-22 after your click-through; `2f02d87`, `9eeee19`, `f1074b6`, `ce9a36f`, `eb5ff13`, docs `69b064b`, on the build
 branch `claude/magical-morse-e3d3b5`; it reaches `main` when that branch merges). **Next:** the rest of the size stories you asked for
-on 2026-10-18 (D-15, D-16): S-60 and S-61 in one build, then S-56 and S-57. Their four cards are `Draft` and wait for your approval
-(D-17). After them comes S-65 "Close a fully shipped order" (`Ready`, card approved 2026-10-22), then S-66 and S-67 (`Idea`, cards
+on 2026-10-18 (D-15, D-16): S-60 and S-61 in one build, then S-56 and S-57. You approved S-60 and S-61 on 2026-10-22 (D-17), so
+they are `Ready` for the tech-lead's plan; S-56 and S-57 are `Ready` too, the same day, with a phone-width criterion each.
+After them comes S-65 "Close a fully shipped order" (`Ready`, card approved 2026-10-22), then S-66 and S-67 (`Idea`, cards
 later). Phase 5 tech allowance: F-41 only, now done. Nothing is in progress, so the two-story limit is free.
 **Phase 4: MVP release readiness** is on hold for later; S-08 and S-29 are done (closed as they stood, D-13; see [ROADMAP.md](ROADMAP.md)).
 
@@ -41,7 +42,16 @@ later). Phase 5 tech allowance: F-41 only, now done. Nothing is in progress, so 
 | D-4 | Two early choices are still provisional (Phase 3 plan): **Q4** records are numbered with simple counters (already used everywhere) · **Q6** currency and language are set at installation, not in a settings screen. Keep both? (Q5 is closed: S-17 removed the preview layer. Q9 was replaced by D-10 on 2026-10-15) | Keep both; confirm before Phase 7 (production go-live, was Phase 6) |
 | D-5 | Production database host (needs PostgreSQL 13+ and `pg_trgm`) | Before S-26; not urgent |
 | D-6 | Delete the 5 merged branches and the stale worktree `.claude/worktrees/fix-hover-prefetch-bug`? | Yes (nothing unmerged) |
-| D-17 | Approve the four remaining size cards (S-60, S-61, S-56, S-57) so they become `Ready` (S-58 is done since 2026-10-22). They are written with your D-15 and D-16 answers | Approve; the tech-lead then plans S-60 and S-61 |
+
+**Decided on 2026-10-22: D-17 the size cards** (your words: "Approve S-60 and S-61 now. Send S-56 and S-57 back to the product-owner
+to add a phone-width criterion, then approve them."):
+- **S-60** (order a product in several sizes) and **S-61** (follow each size through the stages) are approved as written, so they are
+  `Ready`. The tech-lead plans them next, as one build with one click-through.
+- **S-56** (finished products in stock, per size) and **S-57** (cancel an order) gained a phone-width criterion: S-56 AC-6 ("In stock"
+  with its sizes and the "Update stock" window) and S-57 AC-7 (the "Cancel order?" window, the cancelled line's figures and the
+  "Cutting finished · Put in stock" window). The product-owner also settled two details: "Update stock" is a button on the "In stock"
+  figure, under its sizes (S-56 AC-2), and "Cancelled" shows a crossed-out circle icon (S-57 AC-1). You approved the new wording the
+  same day, so both cards are `Ready`. They come after S-60 and S-61: S-56 first, then S-57.
 
 **Decided on 2026-10-22 (S-58):** you accepted **S-58** after your click-through. You kept the sizes between the category and the
 status under the product's name ("SKU · Apparel · Sizes S, M, L, XL · Active"), and when the lock refuses a save, the form showing the
@@ -342,8 +352,8 @@ The plan headers were corrected on 2026-10-14, and [plans/README.md](plans/READM
    the push, and only you can see the result.
 2. Tech-lead: run the full PostgreSQL parity suite once on `main` after the merge; S-50 and S-58 were delivered without it (S-58's own
    tests passed on PostgreSQL).
-3. Human: approve the four remaining size cards (D-17); the tech-lead then plans S-60 and S-61 (one build, one click-through), then
-   S-56 and S-57, then S-65 (`Ready` since 2026-10-22), S-66 and S-67.
+3. Tech-lead: plan S-60 and S-61 (`Ready` since 2026-10-22, D-17; one build, one click-through). S-56 and S-57
+   (`Ready` since 2026-10-22, D-17) follow. After them come S-65 (`Ready` since 2026-10-22), S-66 and S-67.
 4. Tech-lead: F-60 to F-63 (from the orders builds) and F-64 to F-66 (from S-58) are offered for a tech allowance. F-64 (the lock can
    miss an order saved in the same instant) is closed by S-60.
 5. The rest of Phase 4 waits; S-45, S-30 and the known gaps K-1 to K-4 are dealt with before go-live (Phase 7).

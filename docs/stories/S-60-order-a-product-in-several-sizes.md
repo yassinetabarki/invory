@@ -5,7 +5,7 @@ type: feature
 phase: 5
 priority: Must
 size: M
-status: Draft
+status: Ready
 created: 2026-10-18
 tags:
   - story

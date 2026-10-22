@@ -1,6 +1,6 @@
 # Invory — product roadmap
 
-> Owner: **product-owner** · Approved by: the human · Last updated: 2026-10-22 (S-58 done, accepted after your click-through; next S-60 and S-61, once you approve their cards; earlier the same day, S-65 "Close a fully shipped order" approved, `Ready`, a Should after S-57, with S-66 and S-67 as Shoulds after it; before that, S-50 done, accepted; earlier, 2026-10-21: F-41, S-49 and S-53 done, accepted after your click-through; S-58 card and Technical work approved; earlier, 2026-10-18: D-15 and D-16 products by size: S-58, S-60, S-61 added to Phase 5, S-56 and S-57 per size, S-52 and S-54 Won't (this time); earlier, 2026-10-16: D-11 decided with your final answers: F-41, S-49 and S-53 `Planned`, S-50 `Ready`, S-56 and S-57 added; 2026-10-15: S-48 done, the first Phase 5 story; D-12: Phase 5 "Customer orders" started, the rest of Phase 4 on hold)
+> Owner: **product-owner** · Approved by: the human · Last updated: 2026-10-22 (D-17: the four size cards S-60, S-61, S-56 and S-57 approved, `Ready`, S-56 and S-57 with a phone-width criterion each; earlier the same day, S-58 done, accepted after your click-through; S-65 "Close a fully shipped order" approved, `Ready`, a Should after S-57, with S-66 and S-67 as Shoulds after it; before that, S-50 done, accepted; earlier, 2026-10-21: F-41, S-49 and S-53 done, accepted after your click-through; S-58 card and Technical work approved; earlier, 2026-10-18: D-15 and D-16 products by size: S-58, S-60, S-61 added to Phase 5, S-56 and S-57 per size, S-52 and S-54 Won't (this time); earlier, 2026-10-16: D-11 decided with your final answers: F-41, S-49 and S-53 `Planned`, S-50 `Ready`, S-56 and S-57 added; 2026-10-15: S-48 done, the first Phase 5 story; D-12: Phase 5 "Customer orders" started, the rest of Phase 4 on hold)
 > Format: **Now / Next / Later**, organised by outcomes, not dates. Each phase is one slice of the story map with one goal, a MoSCoW-labelled
 > set of stories and exit criteria. Detailed stories live in [BACKLOG.md](BACKLOG.md); progress lives in [STATUS.md](STATUS.md).
 
@@ -38,7 +38,8 @@ shows each order's stages and status and the totals of all open orders ([stories
 On 2026-10-18 you asked for products by size and answered the questions (D-15, D-16): the product's category decides its sizes, the
 units are counted per size on orders, through the stages and on the shelf, and every size uses the same composition for now. **S-58 is
 done** (accepted 2026-10-22 after your click-through): every product has the sizes of its category. Next come S-60 and S-61 in one build, then
-S-56 and S-57, written per size. Those four cards are `Draft`, waiting for your approval. On 2026-10-22 you approved S-65 (close a fully
+S-56 and S-57, written per size. You approved all four cards on 2026-10-22 (D-17), so they are `Ready`; S-56 and S-57 gained a
+phone-width criterion first. On 2026-10-22 you also approved S-65 (close a fully
 shipped order, `Ready`), from your design; it comes after S-57, followed by S-66 and S-67, whose cards come later.
 
 | Priority               | Story                                                         | Size |

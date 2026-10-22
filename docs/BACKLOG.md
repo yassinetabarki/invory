@@ -2,7 +2,7 @@
 
 > Owner: **product-owner** (order, wording, acceptance criteria) · Technical detail: **tech-lead** ([TECH-DEBT.md](TECH-DEBT.md), [plans/](plans/README.md))
 > Phases and goals: [ROADMAP.md](ROADMAP.md) · Progress: [STATUS.md](STATUS.md) · Done work and full history: [archive/backlog-2026-10-14.md](archive/backlog-2026-10-14.md)
-> Last cleaned: 2026-10-22 (S-58 done: you accepted it after your click-through, kept the sizes between the category and the status, and wanted no follow-up story for the lock message, so it left this file; next, the four size cards waiting for your approval). Earlier the same day, S-65 "Close a fully shipped order" added as a Should after S-57, from your design, with your eight answers written into its card, then approved, so it is `Ready`; S-66 "Each shipment is remembered" and S-67 "Materials used by an order" added after it as `Idea` Shoulds in Phase 5, their cards to come later. Before that, S-50 done: you accepted it, so it left this file. Before that, 2026-10-21 (F-41, S-49 and S-53 done: you accepted them after your click-through, so they left this file; S-58 card and then its Technical work approved, so it is `Planned`: its sizes lock while the product is on any order that isn't deleted, and Settings shows no sizes). Before that, 2026-10-18 (D-15 and D-16 products by size: S-58, S-60 and S-61 added as Musts, S-56 and S-57 written per size, all five cards `Draft`; S-52 and S-54 become Won't (this time); S-62 added as a Could; S-63 and S-64 to Phase 8). Before that, 2026-10-16 (D-11 decided with your final answers: S-49 and S-53 revised, then their revised Technical work approved, so F-41, S-49 and S-53 are `Planned` and S-50 is `Ready`; S-56 and S-57 added; on 2026-10-15 S-48 done and accepted, so it left this file; before that, D-12: Phase 5 starts now, the rest of Phase 4 is on hold; D-13: S-08 and S-29 done). **Open work only**, top = next.
+> Last cleaned: 2026-10-22 (D-17: you approved the four size cards, so S-60, S-61, S-56 and S-57 are `Ready`; S-60 and S-61 go to the tech-lead for planning first. S-56 and S-57 gained a phone-width criterion, plus where "Update stock" sits and the "Cancelled" icon, and you approved that wording). Earlier the same day, S-58 done: you accepted it after your click-through, kept the sizes between the category and the status, and wanted no follow-up story for the lock message, so it left this file. Earlier the same day, S-65 "Close a fully shipped order" added as a Should after S-57, from your design, with your eight answers written into its card, then approved, so it is `Ready`; S-66 "Each shipment is remembered" and S-67 "Materials used by an order" added after it as `Idea` Shoulds in Phase 5, their cards to come later. Before that, S-50 done: you accepted it, so it left this file. Before that, 2026-10-21 (F-41, S-49 and S-53 done: you accepted them after your click-through, so they left this file; S-58 card and then its Technical work approved, so it is `Planned`: its sizes lock while the product is on any order that isn't deleted, and Settings shows no sizes). Before that, 2026-10-18 (D-15 and D-16 products by size: S-58, S-60 and S-61 added as Musts, S-56 and S-57 written per size, all five cards `Draft`; S-52 and S-54 become Won't (this time); S-62 added as a Could; S-63 and S-64 to Phase 8). Before that, 2026-10-16 (D-11 decided with your final answers: S-49 and S-53 revised, then their revised Technical work approved, so F-41, S-49 and S-53 are `Planned` and S-50 is `Ready`; S-56 and S-57 added; on 2026-10-15 S-48 done and accepted, so it left this file; before that, D-12: Phase 5 starts now, the rest of Phase 4 is on hold; D-13: S-08 and S-29 done). **Open work only**, top = next.
 > Done items leave this file; they are recorded in STATUS.md and the archive.
 
 ## How to read an item
@@ -29,8 +29,8 @@ You started it on 2026-10-15: "we will start focusing more on the orders … we 
 
 Order of work: **F-41, S-49 and S-53 are done** (you accepted them on 2026-10-21 after your one click-through; built in one build
 and landed on `main` together, as D-11 asked), **S-50 is done** (you accepted it on 2026-10-22), and **S-58 is done** (you accepted
-it on 2026-10-22: every product has the sizes of its category). Next come S-60 and S-61 (below), once you approve their cards, then the
-Shoulds S-56 and S-57, then S-65 (close a fully shipped order), S-66 and S-67.
+it on 2026-10-22: every product has the sizes of its category). Next come S-60 and S-61 (below), then the Shoulds S-56 and
+S-57, all four `Ready` since you approved their cards on 2026-10-22 (D-17), then S-65 (close a fully shipped order), S-66 and S-67.
 
 **Products by size (D-15 and D-16, your answers of 2026-10-18):** S-58 came first on its own (done), then S-60 and S-61 in one build
 (one click-through), then S-56 and S-57, both written per size. Every size of a product uses the same composition, so unit cost, "Can
@@ -38,7 +38,7 @@ produce" and the bottleneck don't change; a bigger size using more fabric (S-63)
 The product's category decides its sizes, from a short list set up with Invory: Apparel S, M, L, XL; Footwear 36 to 46 (all 11 sizes);
 every other category "One size". A product gets every size of its category, and there is no Settings page for sizes for now. One selling
 price and one SKU for all sizes ("PRD-JKT-001 · M"). Finished stock comes from "Update stock" and from cancelled orders; sales don't take
-units out of it. S-52 and S-54 become Won't (this time) to make room. S-58 is done (accepted 2026-10-22); the other four size cards are `Draft`, waiting for your approval.
+units out of it. S-52 and S-54 become Won't (this time) to make room. S-58 is done (accepted 2026-10-22); S-60, S-61, S-56 and S-57 are `Ready` (D-17, 2026-10-22).
 
 **Done in Phase 5 so far** (records in [STATUS.md §4](STATUS.md#4-delivery-history)):
 - **S-48** (accepted 2026-10-15; `e3b7ae7`, `5af8ed1`): record, find, edit and delete an order of one or more products.
@@ -53,21 +53,21 @@ units out of it. S-52 and S-54 become Won't (this time) to make room. S-58 is do
   `main` when it merges): each product has the sizes of its category (Apparel "S, M, L, XL", Footwear "36 to 46", anything else "One
   size"), shown on the product page and in the form, and a product on an order can't move to a category with other sizes.
 
-### S-60 · Order a product in several sizes · Must · M · feature · `Draft` (card written 2026-10-18, D-15, D-16)
+### S-60 · Order a product in several sizes · Must · M · feature · `Ready` (card written 2026-10-18, D-15, D-16; approved 2026-10-22, D-17)
 Card: [stories/S-60-order-a-product-in-several-sizes.md](stories/S-60-order-a-product-in-several-sizes.md). Depends on S-58 (done); one build
 and one click-through with S-61.
 **You get:** on "New order" and "Edit order", a quantity per size under each product ("S 10 · M 20 · L 15 · XL 5", "Total 50 units"),
 shown on the order's page and the Orders list. Lines recorded before sizes stay "One size".
 **Why:** the cutting table needs to know how many of each size, not just "50 Denim Jackets".
 
-### S-61 · Follow each size through cutting, ready to ship and shipped · Must · M · feature · `Draft` (card written 2026-10-18, D-15, D-16)
+### S-61 · Follow each size through cutting, ready to ship and shipped · Must · M · feature · `Ready` (card written 2026-10-18, D-15, D-16; approved 2026-10-22, D-17)
 Card: [stories/S-61-follow-each-size-through-the-stages.md](stories/S-61-follow-each-size-through-the-stages.md). Depends on S-60; one
 build and one click-through with it.
 **You get:** each order line shows To start, In cutting, Ready to ship and Shipped for every size, and every move window asks a number
 per size, so one cut can take S 4 and M 10 at once. Cutting takes the same materials per unit for every size.
 **Why:** you see that 4 S and 10 M are being cut while the L and XL haven't started.
 
-### S-56 · Finished products in stock, per size · Should · M · feature · `Draft` (card written 2026-10-18, per size, D-15, D-16)
+### S-56 · Finished products in stock, per size · Should · M · feature · `Ready` (card written 2026-10-18, per size, D-15, D-16; phone-width criterion added and approved 2026-10-22, D-17)
 Card: [stories/S-56-finished-products-in-stock-per-size.md](stories/S-56-finished-products-in-stock-per-size.md). After S-61; S-57 needs
 it.
 **You get:** each product shows the finished units on the shelf per size: "In stock 10 units", "S 3 · M 0 · L 5 · XL 2", next to "Can
@@ -75,7 +75,7 @@ produce now 112". "Update stock" lets you count and correct it, and cancelled or
 materials allow, the Inventory value stays materials only, and recording a sale or a new order doesn't change it (a sale has no size).
 **Why:** "how many we have in S, M, L and XL", and units made for a cancelled order wait on the shelf for another client.
 
-### S-57 · Cancel an order · Should · M · feature · `Draft` (card written 2026-10-18, per size, D-15, D-16)
+### S-57 · Cancel an order · Should · M · feature · `Ready` (card written 2026-10-18, per size, D-15, D-16; phone-width criterion added and approved 2026-10-22, D-17)
 Card: [stories/S-57-cancel-an-order.md](stories/S-57-cancel-an-order.md). Depends on S-56. Separate from "Delete", which stays for orders
 entered by mistake (S-49).
 **You get:** "Cancel order" on an order's page; the order reads "Cancelled", and it can't be undone. Units to start are dropped, units
@@ -318,5 +318,7 @@ defaults written in the five cards, which stay `Draft` until you approve them. �
 recommended): an order shipped in full stays in "Open orders" and its count until you close it ("Ready to close"); closing is final,
 at once, with no reopen; before closing only "Move back" on shipped units stays, after closing nothing; neither a ready-to-close nor a
 closed order can be deleted or cancelled; orders already shipped in full become "ready to close"; "Not yet" goes back to the Orders
-list; shipments and the timeline are S-66, materials used S-67.
+list; shipments and the timeline are S-66, materials used S-67. · **D-17 the size cards approved** (2026-10-22): S-60 and S-61
+`Ready` as written; S-56 and S-57 `Ready` with a phone-width criterion each, "Update stock" as a button on the "In stock" figure,
+and "Cancelled" with a crossed-out circle icon.
 Pending: [STATUS.md §2](STATUS.md#2-decisions-needed-from-you).
