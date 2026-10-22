@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace App\Actions\Products;
 
 use App\Models\Product;
+use App\Models\ProductCategory;
 use App\Models\User;
 use App\Services\Photos\PhotoStorage;
+use App\Services\Products\ProductSizeLock;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 final readonly class UpdateProduct
 {
@@ -16,6 +19,7 @@ final readonly class UpdateProduct
         private ResolveProductCategoryCode $resolveCategory,
         private SyncProductComponents $syncComponents,
         private PhotoStorage $photos,
+        private ProductSizeLock $sizeLock,
     ) {}
 
     /**
@@ -31,6 +35,8 @@ final readonly class UpdateProduct
     public function handle(Product $product, array $data, User $actor): Product
     {
         return $this->photos->persist('products', $data, $product->photo_path, fn (array $attributes, array $photo): Product => DB::transaction(function () use ($product, $attributes, $photo, $actor): Product {
+            $this->guardSizes($product, $attributes['category'] ?? null);
+
             $product->fill($this->resolveCategory->handle(Arr::except($attributes, ['components'])))->forceFill($photo);
             $product->updated_by = $actor->id;
             $product->save();
@@ -39,5 +45,23 @@ final readonly class UpdateProduct
 
             return $product->refresh();
         }));
+    }
+
+    /**
+     * S-58 / AC-4, the second check: under the product's row lock, so the category it has now is the one compared. Throwing here
+     * rolls the transaction back and `PhotoStorage` deletes the file it stored for this save.
+     */
+    private function guardSizes(Product $product, mixed $categoryCode): void
+    {
+        if ($categoryCode === null) {
+            return;
+        }
+
+        $locked = Product::query()->with('category')->lockForUpdate()->findOrFail($product->id);
+        $refusal = $this->sizeLock->refusal($locked, ProductCategory::query()->where('code', $categoryCode)->firstOrFail());
+
+        if ($refusal !== null) {
+            throw ValidationException::withMessages(['category' => $refusal]);
+        }
     }
 }
