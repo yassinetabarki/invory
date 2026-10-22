@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import ProductsEdit from '@/pages/products/edit';
 import {
     answerMaterialOptions,
+    categorySizesFixture,
     choreJacket,
     denimJacket,
     productStatuses,
@@ -34,6 +35,7 @@ function props(product: Product = denimJacket): ProductEditProps {
     return {
         product,
         statuses: productStatuses,
+        category_sizes: categorySizesFixture,
     };
 }
 

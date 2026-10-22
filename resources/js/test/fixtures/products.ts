@@ -19,6 +19,7 @@ import type {
     ProductListItem,
     ProductStatus,
     Sale,
+    SizeList,
     UnitOfMeasure,
 } from '@/types/domain';
 
@@ -327,6 +328,46 @@ export const noProductFilters: ProductFilters = {
 };
 
 // ---------------------------------------------------------------------------
+// Size lists (S-58): ids as the migration numbers them
+// ---------------------------------------------------------------------------
+
+export const sizeListSToXl: SizeList = {
+    code: 's_to_xl',
+    name: 'S, M, L, XL',
+    sizes: [
+        { id: 1, label: 'S' },
+        { id: 2, label: 'M' },
+        { id: 3, label: 'L' },
+        { id: 4, label: 'XL' },
+    ],
+};
+
+export const sizeListEu36To46: SizeList = {
+    code: 'eu_36_to_46',
+    name: '36 to 46',
+    sizes: [36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46].map((size, index) => ({
+        id: 5 + index,
+        label: String(size),
+    })),
+};
+
+export const sizeListOneSize: SizeList = {
+    code: 'one_size',
+    name: 'One size',
+    sizes: [{ id: 16, label: 'One size' }],
+};
+
+/** The sizes of each default category, as the create and edit pages receive them. */
+export const categorySizesFixture: Record<ProductCategory, SizeList> = {
+    apparel: sizeListSToXl,
+    footwear: sizeListEu36To46,
+    bag: sizeListOneSize,
+    accessory: sizeListOneSize,
+    jewelry: sizeListOneSize,
+    other: sizeListOneSize,
+};
+
+// ---------------------------------------------------------------------------
 // Products (full)
 // ---------------------------------------------------------------------------
 
@@ -337,6 +378,7 @@ export const denimJacket: Product = {
     name: 'Denim Jacket',
     category: 'apparel',
     category_label: 'Apparel',
+    size_list: sizeListSToXl,
     status: 'active',
     status_label: 'Active',
     description:
@@ -399,6 +441,7 @@ export const canvasLowSneaker: Product = {
     name: 'Canvas Low Sneaker',
     category: 'footwear',
     category_label: 'Footwear',
+    size_list: sizeListEu36To46,
     status: 'active',
     status_label: 'Active',
     description: 'Vulcanised low-top sneaker in natural canvas.',
@@ -468,6 +511,7 @@ export const choreJacket: Product = {
     name: 'Canvas Chore Jacket',
     category: 'apparel',
     category_label: 'Apparel',
+    size_list: sizeListSToXl,
     status: 'draft',
     status_label: 'Draft',
     description: null,

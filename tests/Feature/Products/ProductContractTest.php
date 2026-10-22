@@ -104,12 +104,15 @@ it('sends Product with its exact keys, order and types', function () {
         $product = loadedPageProp($response, 'product');
 
         expect(keysOf($product))->toBe([
-            'id', 'sku', 'name', 'category', 'category_label', 'status', 'status_label', 'description', 'photo_url',
+            'id', 'sku', 'name', 'category', 'category_label', 'size_list', 'status', 'status_label', 'description', 'photo_url',
             'labor_cost', 'overhead_cost', 'selling_price', 'cost', 'margin', 'capacity', 'components', 'created_at', 'updated_at',
         ])
             ->and($product['id'])->toBeInt()
             ->and($product['labor_cost'])->toMatch(SCALE_4)
             ->and($product['overhead_cost'])->toMatch(SCALE_4)
+            ->and(keysOf($product['size_list']))->toBe(['code', 'name', 'sizes'])
+            ->and(keysOf($product['size_list']['sizes'][0]))->toBe(['id', 'label'])
+            ->and($product['size_list']['sizes'][0]['id'])->toBeInt()
             ->and(keysOf($product['cost']))->toBe(['material_cost', 'labor_cost', 'overhead_cost', 'unit_cost'])
             ->and($product['created_at'])->toMatch('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$/')
             ->and($product['updated_at'])->toMatch('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$/');
@@ -175,7 +178,7 @@ it('sends the props of the create and edit pages (S-25: statuses, plus the produ
     }
 
     expect(actingAs($this->user)->get(route('products.create'))->inertiaProps())->not->toHaveKey('product')
-        ->and(keysOf(actingAs($this->user)->get(route('products.edit', pid(1)))->inertiaProps('product')))->toHaveCount(18);
+        ->and(keysOf(actingAs($this->user)->get(route('products.edit', pid(1)))->inertiaProps('product')))->toHaveCount(19);
 });
 
 it('sends the product-shaped props of the dashboard, the sales form and the material page as before', function () {

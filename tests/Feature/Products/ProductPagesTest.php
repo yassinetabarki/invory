@@ -266,7 +266,7 @@ describe('show', function () {
                 ->component('products/show')
                 ->loadDeferredProps('default', fn (Assert $reloaded) => $reloaded
                     ->has('product', fn (Assert $product) => $product->hasAll([
-                        'id', 'sku', 'name', 'category', 'category_label', 'status', 'status_label', 'description', 'photo_url',
+                        'id', 'sku', 'name', 'category', 'category_label', 'size_list', 'status', 'status_label', 'description', 'photo_url',
                         'labor_cost', 'overhead_cost', 'selling_price', 'cost', 'margin', 'capacity', 'components',
                         'created_at', 'updated_at',
                     ]))
@@ -512,7 +512,8 @@ describe('create and edit', function () {
                 ->has('statuses', 3));
     });
 
-    it('sends a create page that does not grow with the catalogue (at most 5 KB)', function () {
+    // 6 KB: `category_sizes` (S-58, about 1.2 KB, one size list per category) is part of the page since the sizes came to the product form.
+    it('sends a create page that does not grow with the catalogue (at most 6 KB)', function () {
         $size = fn (): int => strlen(json_encode(actingAs($this->user)->get(route('products.create'))->assertOk()->inertiaPage(), JSON_THROW_ON_ERROR));
 
         $small = $size();
@@ -520,7 +521,7 @@ describe('create and edit', function () {
         $large = $size();
 
         expect($large)->toBe($small)
-            ->and($large)->toBeLessThanOrEqual(5 * 1024);
+            ->and($large)->toBeLessThanOrEqual(6 * 1024);
     });
 
     it('sends the statuses and the product, but no materials, on the edit page', function () {
@@ -568,7 +569,9 @@ it('reads the materials table once per page and answers within a bounded number 
     // lines, the materials of the lines and the units of those (6; the units sold are a sum inside the products query); a product is the row,
     // its category, its lines, their materials and the units of those, and its sales figures and recent sales (7), plus the product row again for the deferred request (8); the create form reads nothing (the picker searches the materials through `materials.options`, S-25)
     // and the edit page costs the lines like the show page (5).
-    $budget = ['index' => 6, 'show' => 8, 'create' => 0, 'edit' => 5];
+    // S-58: the sizes cost three reads (categories, size_lists, sizes), which replace the old category read where there was one:
+    // show 8 -> 10, create 0 -> 3, edit 5 -> 7.
+    $budget = ['index' => 6, 'show' => 10, 'create' => 3, 'edit' => 7];
     $materialReads = ['index' => 1, 'show' => 1, 'create' => 0, 'edit' => 1];
 
     $baseline = array_map($count, $urls);

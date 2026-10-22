@@ -143,10 +143,10 @@ describe('products create and edit', function () {
             fn (Assert $partial) => $partial->missing('materials')->has('product.components'),
         );
 
-        // The route-model binding of the product, its category and lines, ONE read of the materials (those of the lines) and their
-        // units (eager-loaded).
+        // The route-model binding of the product, its lines, ONE read of the materials (those of the lines) and their units
+        // (eager-loaded), and the three size-list reads (categories, size_lists, sizes; S-58) that replace the old `load('category')`.
         expect(queriesMatching($queries, 'from "materials"'))->toHaveCount(1)
-            ->and($queries)->toHaveCount(5);
+            ->and($queries)->toHaveCount(7);
     });
 
     it('loads nothing on the edit page when only the status list is requested', function () {

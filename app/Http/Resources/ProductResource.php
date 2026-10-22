@@ -12,7 +12,8 @@ use LogicException;
 
 /**
  * `Product`: the detail of one product with its cost breakdown, margin, capacity and composition. The product must carry its
- * category, its composition (with the materials) and the attribute the controller sets (`costing`).
+ * category (with its size list and the sizes, from `SizeLists`), its composition (with the materials) and the attribute the
+ * controller sets (`costing`).
  *
  * @mixin Product
  */
@@ -30,6 +31,7 @@ final class ProductResource extends JsonResource
             'name' => $this->name,
             'category' => $this->category->code,
             'category_label' => $this->category->name,
+            'size_list' => (new SizeListResource($this->category->sizeList))->resolve($request),
             'status' => $this->status->value,
             'status_label' => $this->status->label(),
             'description' => $this->description,

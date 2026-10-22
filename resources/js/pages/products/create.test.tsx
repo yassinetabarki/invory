@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import ProductsCreate from '@/pages/products/create';
 import {
     answerMaterialOptions,
+    categorySizesFixture,
     materialOptions,
     productCategories,
     productStatuses,
@@ -32,6 +33,7 @@ vi.mock('@inertiajs/react', async (importOriginal) => {
 
 const props: ProductCreateProps = {
     statuses: productStatuses,
+    category_sizes: categorySizesFixture,
 };
 
 describe('products/create page', () => {

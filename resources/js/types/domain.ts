@@ -196,12 +196,23 @@ export type ProductListItem = {
     units_sold_last_30_days: number;
 };
 
+/** One size of a product (S-58). Later stories (S-60, S-61, S-56) refer to a size by its id. */
+export type Size = { id: number; label: string }; // "S", "36", "One size"
+
+/** The fixed sizes of a product category (S-58, ADR-0015). */
+export type SizeList = {
+    code: string; // immutable: 's_to_xl', 'eu_36_to_46' or 'one_size' today
+    name: string; // what the screens show: "S, M, L, XL", "36 to 46" or "One size"
+    sizes: Size[]; // in order, at least one
+};
+
 export type Product = {
     id: number;
     sku: string;
     name: string;
     category: ProductCategory;
     category_label: string;
+    size_list: SizeList; // the sizes of the product's category
     status: ProductStatus;
     status_label: string;
     description: string | null;
@@ -505,6 +516,7 @@ export type ProductsIndexProps = {
 };
 export type ProductCreateProps = {
     statuses: Option<ProductStatus>[];
+    category_sizes: Record<ProductCategory, SizeList>; // every category, archived ones included
 };
 export type ProductEditProps = ProductCreateProps & { product: Product };
 export type ProductShowProps = {

@@ -14,11 +14,15 @@ use App\Http\Requests\Products\UpdateProductRequest;
 use App\Http\Resources\ProductListResource;
 use App\Http\Resources\ProductResource;
 use App\Http\Resources\SaleResource;
+use App\Http\Resources\SizeListResource;
 use App\Models\Product;
+use App\Models\SizeList;
 use App\Models\User;
 use App\Services\Costing\ProductCostingService;
 use App\Services\Products\ProductIndexQuery;
+use App\Services\Products\SizeLists;
 use App\Services\Sales\SalesReport;
+use ArrayObject;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -56,12 +60,13 @@ final class ProductController extends Controller
         ]);
     }
 
-    public function create(): Response
+    public function create(SizeLists $sizes): Response
     {
         Gate::authorize('create', Product::class);
 
         return Inertia::render('products/create', [
             'statuses' => ProductStatus::options(),
+            'category_sizes' => fn (): ArrayObject => $this->categorySizes($sizes),
         ]);
     }
 
@@ -74,34 +79,35 @@ final class ProductController extends Controller
         return to_route('products.show', $product);
     }
 
-    public function show(Product $product, ProductCostingService $costing, SalesReport $sales): Response
+    public function show(Product $product, ProductCostingService $costing, SalesReport $sales, SizeLists $sizes): Response
     {
         Gate::authorize('view', $product);
 
         return Inertia::render('products/show', [
             // RL-02: all three props are deferred in one group: the first response carries none of them (no costing work, so the
             // navigation is instant) and one follow-up request brings them all.
-            'product' => Inertia::defer(function () use ($product, $costing): ProductResource {
-                $product->load(['category', 'components.material' => fn ($materials) => $materials->without('category')]);
+            'product' => Inertia::defer(function () use ($product, $costing, $sizes): ProductResource {
+                $product->load(['components.material' => fn ($materials) => $materials->without('category')]);
 
-                return $this->resource($product, $costing);
+                return $this->resource($product, $costing, $sizes);
             }),
             'sales_last_30_days' => Inertia::defer(fn (): array => $sales->lastThirtyDays($product)),
             'recent_sales' => Inertia::defer(fn (): array => SaleResource::collection($sales->recentOf($product))->resolve()),
         ]);
     }
 
-    public function edit(Product $product, ProductCostingService $costing): Response
+    public function edit(Product $product, ProductCostingService $costing, SizeLists $sizes): Response
     {
         Gate::authorize('update', $product);
 
         return Inertia::render('products/edit', [
             'statuses' => ProductStatus::options(),
+            'category_sizes' => fn (): ArrayObject => $this->categorySizes($sizes),
             // The picker searches the materials itself (`materials.options`, S-25): only the materials of the lines are loaded here.
-            'product' => function () use ($product, $costing): ProductResource {
-                $product->load(['category', 'components.material' => fn ($materials) => $materials->without('category')]);
+            'product' => function () use ($product, $costing, $sizes): ProductResource {
+                $product->load(['components.material' => fn ($materials) => $materials->without('category')]);
 
-                return $this->resource($product, $costing);
+                return $this->resource($product, $costing, $sizes);
             },
         ]);
     }
@@ -126,12 +132,27 @@ final class ProductController extends Controller
         return to_route('products.index');
     }
 
-    /** A product with its composition loaded, costed and ready for `ProductResource`. */
-    private function resource(Product $product, ProductCostingService $costing): ProductResource
+    /** A product with its composition loaded, its category (and the sizes of it) and its cost, ready for `ProductResource`. */
+    private function resource(Product $product, ProductCostingService $costing, SizeLists $sizes): ProductResource
     {
+        $product->setRelation('category', $sizes->category($product->category_id));
         $product->setAttribute('costing', $costing->cost($product));
 
         return new ProductResource($product);
+    }
+
+    /**
+     * `category_sizes`: the size list of every category by code. Always a JSON object, also when every code is made of digits
+     * (PHP would turn `['2027' => …]` into a list).
+     *
+     * @return ArrayObject<string, array<mixed>>
+     */
+    private function categorySizes(SizeLists $sizes): ArrayObject
+    {
+        return new ArrayObject(array_map(
+            fn (SizeList $list): array => (new SizeListResource($list))->resolve(),
+            $sizes->byCategoryCode(),
+        ));
     }
 
     /** The signed-in user, for the audit columns. The `auth` middleware and the request authorization guarantee one. */
