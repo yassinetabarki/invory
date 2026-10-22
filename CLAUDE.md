@@ -19,6 +19,8 @@ Dev environment: **native PHP 8.3 + Composer** serves the app (`composer dev` �
 ## How work gets done: two leads, you are the liaison
 The **product-owner** owns *what* and *why* (phases, backlog order, story cards, behaviour and UX, acceptance, progress).
 The **tech-lead** owns *how* (the Technical work in each card, dispatching developers, code review and gates, architecture, ADRs, tech debt, CI).
+The **ui-ux-designer** advises the product-owner. It proposes flows, layouts, states, accessibility and wording (design specs in
+`docs/design/specs/`, boards on the design canvas) and reviews delivered UI. It decides nothing and never writes code or cards.
 The main session **does not write feature code, stories or Technical work, and does not brief the developers directly**. Subagents can't ask the
 human questions, so you carry their questions to the human with `AskUserQuestion`. Full workflow and decision rights: [docs/TEAM.md](docs/TEAM.md).
 
@@ -42,10 +44,12 @@ starts with them.
 
 ```
 human ⇄ main session ──► product-owner   0. REFINE: phase proposal, story cards docs/stories/<id>-<slug>.md   ◄── human approves cards
+                     ──► ui-ux-designer    ↳ when a screen changes: design spec + boards; the product-owner decides
      (main checkout) ──► tech-lead       1. PLAN (planning-only): "Technical work" added in the same card      ◄── human approves it
                      main session        ↳ after each approval: commit the approved docs on main ── then a worktree is cut from main
           (worktree) ──► tech-lead       2. BUILD: dispatch ──► backend-developer ∥ frontend-developer, review, delivery report
                      ──► product-owner   3. ACCEPT: AC check + click-through script                          ◄── human accepts
+                     ──► ui-ux-designer    ↳ UX review of the delivered screens, folded into the acceptance review
                      main session        4. CLOSE: commit per acceptance criterion (human's yes) ──► product-owner updates BACKLOG/STATUS
 ```
 
@@ -57,6 +61,10 @@ human ⇄ main session ──► product-owner   0. REFINE: phase proposal, stor
 2. Present its output: link the cards, summarise each in two lines, and ask its "Questions for the human" with `AskUserQuestion` (keep its
    options and recommendation; don't add rules it didn't propose). Send the answers back with `SendMessage`. Only the human makes a card `Ready`.
    When they do, commit the approved cards and the backlog/roadmap changes on `main` right away (docs commit rule above).
+- **Design (ui-ux-designer).** When a story adds or changes a screen, or the human asks for a design, dispatch the **ui-ux-designer**
+  (`subagent_type: "ui-ux-designer"`) with the request or the card. Present its spec and boards, send its proposals to the product-owner
+  (which decides and writes the criteria) and ask the human its questions with `AskUserQuestion`. Specs are written from the main
+  checkout, like cards.
 
 ### Step 1 — Plan (tech-lead, planning-only)
 3. Dispatch the **tech-lead** (`subagent_type: "tech-lead"`) in **planning-only mode** with the `Ready` card paths (or the `TECH-DEBT.md` IDs
@@ -73,7 +81,8 @@ human ⇄ main session ──► product-owner   0. REFINE: phase proposal, stor
    with an AC → test evidence table.
 
 ### Step 3 — Accept (product-owner)
-6. Send the delivery report to the product-owner for its **acceptance review**. Relay the verdicts, the gates and its click-through
+6. Send the delivery report to the product-owner for its **acceptance review**; for a story that changes a screen, also send it to the
+   **ui-ux-designer** and pass its UX review to the product-owner. Relay the verdicts, the gates and its click-through
    script to the human. Gaps go back to the tech-lead (fix) or become new stories (product-owner).
 
 ### Step 4 — Close
