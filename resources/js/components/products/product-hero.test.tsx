@@ -16,11 +16,13 @@ vi.mock('@inertiajs/react', async (importOriginal) => {
 function renderHero(
     capacity: Capacity = denimJacket.capacity,
     sales = denimSalesLast30Days,
+    multipleSizes = true,
 ) {
     return render(
         <ProductHero
             capacity={capacity}
             unitCost={denimJacket.cost.unit_cost}
+            multipleSizes={multipleSizes}
             sales={sales}
         />,
     );
@@ -43,10 +45,44 @@ describe('<ProductHero>', () => {
         expect(production.getByText('Can produce now')).toBeInTheDocument();
         expect(production.getByText('112')).toBeInTheDocument();
         expect(production.getByText('units')).toBeInTheDocument();
-        expect(production.getByText('from current stock')).toBeInTheDocument();
         expect(card('Production capacity')).toHaveClass('bg-primary');
         expect(card('Unit cost')).not.toHaveClass('bg-primary');
     });
+
+    it.each([
+        [
+            'several sizes',
+            denimJacket.capacity,
+            true,
+            'from current stock, any mix of sizes',
+        ],
+        ['one size', denimJacket.capacity, false, 'from current stock'],
+        [
+            "can't produce",
+            { ...denimJacket.capacity, max_producible: 0 },
+            true,
+            'with current stock',
+        ],
+        [
+            'no composition',
+            { max_producible: null, bottleneck: null },
+            true,
+            'Add materials to see capacity',
+        ],
+    ] satisfies [string, Capacity, boolean, string][])(
+        'reads the capacity sub-line for %s',
+        (_, capacity, multipleSizes, subLine) => {
+            renderHero(capacity, denimSalesLast30Days, multipleSizes);
+
+            const production = within(card('Production capacity'));
+
+            expect(production.getByText(subLine)).toBeInTheDocument();
+
+            if (!subLine.includes('any mix of sizes')) {
+                expect(production.queryByText(/any mix of sizes/)).toBeNull();
+            }
+        },
+    );
 
     it('says "1 unit" for a single unit', () => {
         renderHero({ ...denimJacket.capacity, max_producible: 1 });

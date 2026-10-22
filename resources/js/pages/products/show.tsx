@@ -113,6 +113,7 @@ function ProductDetails({ product, sales, recentSales }: ProductDetailsProps) {
                         <ProductHero
                             capacity={product.capacity}
                             unitCost={product.cost.unit_cost}
+                            multipleSizes={product.size_list.sizes.length > 1}
                             sales={sales}
                         />
                         <BottleneckCallout

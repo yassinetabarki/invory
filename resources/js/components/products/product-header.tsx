@@ -6,7 +6,12 @@ import type { Product } from '@/types/domain';
 type ProductHeaderProps = {
     product: Pick<
         Product,
-        'name' | 'sku' | 'category_label' | 'status' | 'status_label'
+        | 'name'
+        | 'sku'
+        | 'category_label'
+        | 'size_list'
+        | 'status'
+        | 'status_label'
     >;
     /** Record sale, Edit, Delete. */
     actions?: ReactNode;
@@ -30,6 +35,11 @@ export function ProductHeader({ product, actions }: ProductHeaderProps) {
                     >
                         {product.category_label}
                     </Badge>
+                    <span className="text-sm text-muted-foreground">
+                        {product.size_list.sizes.length > 1
+                            ? `Sizes ${product.size_list.name}`
+                            : product.size_list.name}
+                    </span>
                     <ProductStatusBadge
                         status={product.status}
                         label={product.status_label}

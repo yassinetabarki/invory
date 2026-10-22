@@ -10,6 +10,8 @@ type SalesFigure = { units_sold: number; revenue: Decimal };
 type ProductHeroProps = {
     capacity: Capacity;
     unitCost: Decimal;
+    /** The product has more than one size (S-58). */
+    multipleSizes: boolean;
     /** Sales of the last 30 days. */
     sales: SalesFigure;
 };
@@ -76,7 +78,12 @@ function SoldCard({ sales }: { sales: SalesFigure }) {
  * The three numbers that matter on a product: how many can be produced now
  * (the primary card), what one unit costs, and what sold in the last 30 days.
  */
-export function ProductHero({ capacity, unitCost, sales }: ProductHeroProps) {
+export function ProductHero({
+    capacity,
+    unitCost,
+    multipleSizes,
+    sales,
+}: ProductHeroProps) {
     const { locale } = useAppSettings();
     const { max_producible: producible } = capacity;
 
@@ -112,7 +119,9 @@ export function ProductHero({ capacity, unitCost, sales }: ProductHeroProps) {
                             </span>
                         </span>
                         <span className="text-[0.8125rem] text-primary-foreground/85">
-                            from current stock
+                            {multipleSizes
+                                ? 'from current stock, any mix of sizes'
+                                : 'from current stock'}
                         </span>
                     </>
                 )}

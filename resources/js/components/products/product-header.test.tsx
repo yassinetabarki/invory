@@ -1,8 +1,13 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vite-plus/test';
 import { ProductHeader } from '@/components/products/product-header';
 import { ProductPhoto } from '@/components/products/product-photo';
-import { choreJacket, denimJacket } from '@/test/fixtures/products';
+import {
+    canvasLowSneaker,
+    choreJacket,
+    denimJacket,
+    sizeListOneSize,
+} from '@/test/fixtures/products';
 
 describe('<ProductHeader>', () => {
     it('shows the name as the page title with SKU, category and status', () => {
@@ -15,6 +20,33 @@ describe('<ProductHeader>', () => {
         expect(screen.getByText('Apparel')).toBeInTheDocument();
         expect(screen.getByText('Active')).toBeInTheDocument();
     });
+
+    it.each([
+        ['Denim Jacket', denimJacket, 'Apparel', 'Sizes S, M, L, XL'],
+        ['Canvas Low Sneaker', canvasLowSneaker, 'Footwear', 'Sizes 36 to 46'],
+        [
+            'Leather Tote',
+            {
+                ...denimJacket,
+                name: 'Leather Tote',
+                category_label: 'Bag',
+                size_list: sizeListOneSize,
+            },
+            'Bag',
+            'One size',
+        ],
+    ])(
+        'names the sizes of %s next to its category',
+        (_, product, category, sizes) => {
+            render(<ProductHeader product={product} />);
+
+            const row = screen.getByText(category).parentElement;
+
+            expect(
+                within(row as HTMLElement).getByText(sizes),
+            ).toBeInTheDocument();
+        },
+    );
 
     it('labels a draft in words', () => {
         render(<ProductHeader product={choreJacket} />);
