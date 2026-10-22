@@ -62,7 +62,7 @@ tags:
 
 ## Technical work
 > [!warning] Complex · CRITICAL · backend + frontend · 5 commits
-> Tech-lead · 2026-10-21 · approved 2026-10-21
+> Tech-lead · 2026-10-21 · approved 2026-10-21 · delivered 2026-10-22
 > Why complex: a database change (two new tables and a new link on every product category, filled in for the data you already
 > have), a new business rule (the AC-4 lock) and new data for the product page and the product form (a new contract).
 
@@ -295,3 +295,17 @@ developer; the files don't overlap; their parity runs go one after the other). W
 - The race on the lock → accepted until S-60 ([F-64](../TECH-DEBT.md)).
 - A category code made only of digits would make PHP send `category_sizes` as a list → it is always cast to an object, and the AC-3
   test uses such a code.
+
+### Progress
+- 2026-10-22 · build started in worktree `claude/magical-morse-e3d3b5` (from `main` 8ff2d47). Environment: `composer install` and `npm ci`
+  from the lock files, `storage:link` and a build; `composer test` green on the base (2427 tests). Wave 1: S-58-a dispatched.
+- 2026-10-22 · S-58-a approved in round 1 (all five gates green, 2443 PHP tests; the migration tests also pass on PostgreSQL in a
+  targeted run). Docs: ARCHITECTURE §4 and the business rules ("Sizes"). Wave 2: S-58-b ∥ S-58-c dispatched.
+- 2026-10-22 · S-58-b approved in round 2 (round 1: four older tests pinned the old page contract, size and query budgets; the
+  create page's payload limit is now 6 KB and the show/create/edit budgets 10/3/7 extra queries, all pages still ≤ 10) plus its
+  frontend fixture pass. S-58-c approved in round 1. Gates green; the S-58-b/c tests also pass on PostgreSQL in a targeted run.
+  Wave 3: S-58-d ∥ S-58-e dispatched.
+- 2026-10-22 · S-58-d and S-58-e approved in round 1. All five gates green on the combined tree (2463 PHP tests, 1225 Vitest
+  tests with `--maxWorkers=3`; the default run hit the known F-22 timeouts), both browser golden paths pass. The full
+  PostgreSQL parity suite was not run (the human's choice); the S-58 PHP tests pass on PostgreSQL in targeted runs. F-66 logged.
+  Delivered; waiting for acceptance.
