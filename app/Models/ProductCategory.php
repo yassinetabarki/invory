@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
@@ -20,11 +21,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $code
  * @property string $name
  * @property int $position
+ * @property int $size_list_id
  * @property CarbonInterface|null $archived_at
  * @property CarbonInterface $created_at
  * @property CarbonInterface $updated_at
  */
-#[Fillable(['code', 'name', 'position', 'archived_at'])]
+#[Fillable(['code', 'name', 'position', 'archived_at', 'size_list_id'])]
 class ProductCategory extends Model
 {
     /** @use HasFactory<ProductCategoryFactory> */
@@ -47,6 +49,16 @@ class ProductCategory extends Model
     public function products(): HasMany
     {
         return $this->hasMany(Product::class, 'category_id');
+    }
+
+    /**
+     * The fixed sizes of the category (ADR-0015). Set when the category is created, never by a rename, archive or restore.
+     *
+     * @return BelongsTo<SizeList, $this>
+     */
+    public function sizeList(): BelongsTo
+    {
+        return $this->belongsTo(SizeList::class);
     }
 
     public function isArchived(): bool

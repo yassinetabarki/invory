@@ -153,6 +153,21 @@ Indexes: `materials_sku_unique` on `(workshop_id, sku)` (partial unique `WHERE d
 Defaults are inserted by the migration (frozen snapshot, `insertOrIgnore` by code). Writes go through `App\Actions\Reference\*`, which bump the
 `reference` once-prop version (shared with signed-in users; [ADR-0009](adr/0009-spa-data-loading-on-inertia.md)).
 
+### `size_lists` and `sizes` (S-58, [ADR-0015](adr/0015-sizes-come-from-the-product-category.md))
+
+| Table / column                    | Columns and rules                                                                                                              |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `size_lists`                      | id, `code` string(32) unique (immutable), `name` string(64) (what the screens show), timestamps                                |
+| `sizes`                           | id, `size_list_id` FK `restrictOnDelete`, `label` string(16), `position`, timestamps; unique per list on label and on position |
+| `product_categories.size_list_id` | FK → size_lists, NOT NULL, `restrictOnDelete`, indexed                                                                         |
+
+Installation-wide, filled by the migration (frozen snapshot by code): `s_to_xl` "S, M, L, XL", `eu_36_to_46` "36 to 46" (36 … 46),
+`one_size` "One size". No screen edits them and they carry no `workshop_id` (allow-listed in the workshop arch test). The migration links
+each category by **code** (apparel → `s_to_xl`, footwear → `eu_36_to_46`, every other code → `one_size`); `CreateProductCategory` gives a
+new category `one_size`; rename, archive and restore never touch the link. A product stores no sizes: it has its category's list. A
+product on an order that isn't deleted can't move to a category with another list (`ProductSizeLock`, checked in `UpdateProductRequest`
+and again in `UpdateProduct` under the product's row lock). Sizes never reach `App\Domain\Costing`.
+
 ### `products` (final items)
 | Column | Type | Rules |
 |---|---|---|

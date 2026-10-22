@@ -33,6 +33,8 @@ If a rule here is wrong or incomplete, stop and ask the tech-lead to update it (
 | Stage counts | How many units of an order line are To start, In cutting, Ready to ship and Shipped; they always add up to the line's quantity. To start = quantity − the other three (S-49) | `in_cutting`, `ready_to_ship`, `shipped` (`to_start` derived) |
 | Open order | An order with at least one line not fully shipped (`shipped < quantity`). Once every line is fully shipped the order is "Shipped". One rule drives the Orders list's "Open orders" filter, its count and its totals (S-50) | `Order::open()` / `Order::shipped()` scopes, `OrderStatusFilter` enum |
 | Cut | One "Start cutting" of N units of an order line, remembering per material the exact amount per unit and the amount taken. A move back to To start returns from the latest cut first (S-53) | `OrderLineCut` / `order_line_cuts` |
+| Size list | The fixed sizes of a product category, in order, with the name the screens show: "S, M, L, XL" (Apparel), "36 to 46" (Footwear), "One size" (every other category). Installation-wide; no screen edits them (S-58, ADR-0015) | `SizeList` / `size_lists` |
+| Size | One size of a size list ("S", "36", "One size"). A product has every size of its category; later stories count orders, production and finished stock by size id | `Size` / `sizes` |
 | Workshop | The business account. Every user belongs to one; every material, product, composition, stock movement, sale, order, order line, photo, unit and category belongs to one | `Workshop` / `workshops`, `workshop_id` |
 
 ## Workshops (added 2026-10-14, D-9, ADR-0013)
@@ -206,6 +208,26 @@ Worked example: Boutique Lina (Denim Jacket 50: To start 20, In cutting 20, Read
 Concept Store Nour (Classic White T-shirt 120 to start) and Hotel Dar Said (Leather Tote 12, all shipped) → Open orders 2, To start
 170, In cutting 20, Ready to ship 10. Marking 5 of Boutique Lina's jackets ready → In cutting 15, Ready to ship 15.
 
+### Sizes (added 2026-10-21, S-58, ADR-0015)
+
+```
+size_list(category)   = by the category's immutable code: apparel → s_to_xl "S, M, L, XL" (S, M, L, XL)
+                                                           footwear → eu_36_to_46 "36 to 46" (36, 37 … 46)
+                                                           every other code, and every category added in Settings → one_size "One size"
+sizes(P)              = sizes(size_list(P.category))       in position order; nothing is stored per product
+```
+- Renaming, archiving or restoring a category never changes its size list. "One size" is a real size row, not a null.
+- Sizes change **no figure**: every size of a product uses the same composition, so unit cost, "Can produce", the bottleneck, next
+  limit, margin, sales and every dashboard figure are as before. A sale has no size.
+- **Lock (AC-4):** a product on any order that isn't deleted (fully shipped ones included) can't move to a category with another size
+  list. "The same sizes" means the same list: Bag → Accessory, or → a category added in Settings, is always allowed; a product on no
+  order can move anywhere. Add product has no lock. The refusal sits on `category`:
+  "<product> is on orders, so its category can't change to one with other sizes." + "Keep a category with sizes <list name>." (a list
+  with several sizes) or "Keep a "One size" category." (a one-size list).
+- Screens: the product page shows "Sizes " + name ("Sizes S, M, L, XL"), or the name alone for one size ("One size"); "Can produce now"
+  adds ", any mix of sizes" after "from current stock" when there is more than one size. The product form shows "Sizes: " + name, or
+  "One size", with the hint "Sizes come with the category.". The server names the list; the frontend never works out a range.
+
 ## Precision and rounding (non-negotiable, see ADR-0002)
 
 1. **Never use floats** for money or quantities: no `float` casts, no `(float)`, no `+`/`*` on numeric strings in PHP, and no `Number(x) * y` in TypeScript.
@@ -301,3 +323,5 @@ Variant checks:
   `TakeMaterialsForCut` and `ReturnMaterialsFromCuts`, `App\Services\Orders\CuttingPreview` (the move window's materials table).
 - Added 2026-10-21 (S-50): `Order::open()` / `Order::shipped()` scopes and `App\Enums\OrderStatusFilter` (the Orders list filter),
   `App\Services\Orders\OrderBook::openTotals()` (the four list totals, one integer SQL sum over the open orders).
+- Added 2026-10-21 (S-58, ADR-0015): `App\Models\SizeList` / `Size`, `ProductCategory::sizeList()`, `App\Services\Products\SizeLists`
+  (the lists, once per request), `SizeListResource`, `App\Services\Products\ProductSizeLock::refusal()` (the AC-4 lock).

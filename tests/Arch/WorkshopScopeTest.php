@@ -11,6 +11,8 @@ use App\Models\Product;
 use App\Models\ProductCategory;
 use App\Models\ProductComponent;
 use App\Models\Sale;
+use App\Models\Size;
+use App\Models\SizeList;
 use App\Models\StockMovement;
 use App\Models\Unit;
 use App\Models\User;
@@ -83,7 +85,8 @@ function applicationFilesMatching(string $pattern): array
 
 it('puts BelongsToWorkshop on every model of workshop data', function () {
     // User and Workshop are the owners, not owned. Units and categories stay shared until S-45 gives each workshop its own lists.
-    $allowed = [User::class, Workshop::class, Unit::class, MaterialCategory::class, ProductCategory::class];
+    // SizeList and Size are fixed, installation-wide reference data that a migration fills and no screen edits (ADR-0015 decision 1).
+    $allowed = [User::class, Workshop::class, Unit::class, MaterialCategory::class, ProductCategory::class, SizeList::class, Size::class];
     $missing = [];
 
     foreach (applicationSources() as [$path, $code]) {

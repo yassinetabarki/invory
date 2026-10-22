@@ -526,6 +526,16 @@ function cutsMigration(): Migration
 }
 
 /**
+ * The size lists migration object (S-58-a): two tables, and `size_list_id` on `product_categories`. It is newer than everything else
+ * that touches `product_categories`, so a test that rolls the reference tables (S-21) back must roll this one back first, and bring it
+ * back up last (the hand-kept list, F-60).
+ */
+function sizeListsMigration(): Migration
+{
+    return require database_path('migrations/2026_10_21_100000_create_size_lists_and_sizes_tables.php');
+}
+
+/**
  * An order of the current workshop with its lines (S-48-b). `$lines` is a list of `[Product, quantity]` in the order they are entered
  * (the position follows the list); by default Boutique Lina's order of the card: Denim Jacket 50 then Denim Jeans 5-pocket 30 (needs the
  * demo products). The lines are created last-first, so their ids run against their positions: a read that sorted by id would show.

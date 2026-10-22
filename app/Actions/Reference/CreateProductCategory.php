@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions\Reference;
 
 use App\Models\ProductCategory;
+use App\Models\SizeList;
 use App\Services\Reference\ReferenceNameGuard;
 use App\Services\Reference\ReferenceVersion;
 use Illuminate\Validation\ValidationException;
@@ -26,6 +27,8 @@ final readonly class CreateProductCategory
             'code' => $data['code'],
             'name' => $data['name'],
             'position' => isset($data['position']) ? (int) $data['position'] : $this->nextPosition(),
+            // Every new category is "One size" (ADR-0015); the two lists of clothes and shoes belong to the seeded codes.
+            'size_list_id' => SizeList::query()->where('code', SizeList::ONE_SIZE)->value('id'),
         ]));
 
         $this->version->bump();
