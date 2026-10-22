@@ -2,7 +2,7 @@
 
 > Owner: **product-owner** (order, wording, acceptance criteria) · Technical detail: **tech-lead** ([TECH-DEBT.md](TECH-DEBT.md), [plans/](plans/README.md))
 > Phases and goals: [ROADMAP.md](ROADMAP.md) · Progress: [STATUS.md](STATUS.md) · Done work and full history: [archive/backlog-2026-10-14.md](archive/backlog-2026-10-14.md)
-> Last cleaned: 2026-10-22 (S-58 done: you accepted it after your click-through, kept the sizes between the category and the status, and wanted no follow-up story for the lock message, so it left this file; next, the four size cards waiting for your approval). Earlier the same day, S-50 done: you accepted it, so it left this file. Before that, 2026-10-21 (F-41, S-49 and S-53 done: you accepted them after your click-through, so they left this file; S-58 card and then its Technical work approved, so it is `Planned`: its sizes lock while the product is on any order that isn't deleted, and Settings shows no sizes). Before that, 2026-10-18 (D-15 and D-16 products by size: S-58, S-60 and S-61 added as Musts, S-56 and S-57 written per size, all five cards `Draft`; S-52 and S-54 become Won't (this time); S-62 added as a Could; S-63 and S-64 to Phase 8). Before that, 2026-10-16 (D-11 decided with your final answers: S-49 and S-53 revised, then their revised Technical work approved, so F-41, S-49 and S-53 are `Planned` and S-50 is `Ready`; S-56 and S-57 added; on 2026-10-15 S-48 done and accepted, so it left this file; before that, D-12: Phase 5 starts now, the rest of Phase 4 is on hold; D-13: S-08 and S-29 done). **Open work only**, top = next.
+> Last cleaned: 2026-10-22 (S-58 done: you accepted it after your click-through, kept the sizes between the category and the status, and wanted no follow-up story for the lock message, so it left this file; next, the four size cards waiting for your approval). Earlier the same day, S-65 "Close a fully shipped order" added as a Should after S-57, from your design, with your eight answers written into its card, then approved, so it is `Ready`; S-66 "Each shipment is remembered" and S-67 "Materials used by an order" added after it as `Idea` Shoulds in Phase 5, their cards to come later. Before that, S-50 done: you accepted it, so it left this file. Before that, 2026-10-21 (F-41, S-49 and S-53 done: you accepted them after your click-through, so they left this file; S-58 card and then its Technical work approved, so it is `Planned`: its sizes lock while the product is on any order that isn't deleted, and Settings shows no sizes). Before that, 2026-10-18 (D-15 and D-16 products by size: S-58, S-60 and S-61 added as Musts, S-56 and S-57 written per size, all five cards `Draft`; S-52 and S-54 become Won't (this time); S-62 added as a Could; S-63 and S-64 to Phase 8). Before that, 2026-10-16 (D-11 decided with your final answers: S-49 and S-53 revised, then their revised Technical work approved, so F-41, S-49 and S-53 are `Planned` and S-50 is `Ready`; S-56 and S-57 added; on 2026-10-15 S-48 done and accepted, so it left this file; before that, D-12: Phase 5 starts now, the rest of Phase 4 is on hold; D-13: S-08 and S-29 done). **Open work only**, top = next.
 > Done items leave this file; they are recorded in STATUS.md and the archive.
 
 ## How to read an item
@@ -12,7 +12,7 @@
 - **Priority** (MoSCoW, per phase): Must · Should · Could · Won't (this time). **Size:** S (≤ 1 day of agent work) · M · L (split it).
 - **Card:** the full story card (story, acceptance criteria with examples, what you will see, out of scope, questions) lives in
   `docs/stories/<id>-<slug>.md` once the product-owner writes it. Items below show the short version.
-- **IDs:** `S-` stories are numbered by the product-owner, `F-` technical items by the tech-lead. IDs are never reused. Next free: **S-65** (S-47 was dropped on 2026-10-14; S-59 was never used, folded into S-58 on 2026-10-18), **F-67** (F-IDs: see [TECH-DEBT.md](TECH-DEBT.md)).
+- **IDs:** `S-` stories are numbered by the product-owner, `F-` technical items by the tech-lead. IDs are never reused. Next free: **S-68** (S-47 was dropped on 2026-10-14; S-59 was never used, folded into S-58 on 2026-10-18), **F-67** (F-IDs: see [TECH-DEBT.md](TECH-DEBT.md)).
 
 ---
 
@@ -30,7 +30,7 @@ You started it on 2026-10-15: "we will start focusing more on the orders … we 
 Order of work: **F-41, S-49 and S-53 are done** (you accepted them on 2026-10-21 after your one click-through; built in one build
 and landed on `main` together, as D-11 asked), **S-50 is done** (you accepted it on 2026-10-22), and **S-58 is done** (you accepted
 it on 2026-10-22: every product has the sizes of its category). Next come S-60 and S-61 (below), once you approve their cards, then the
-Shoulds S-56 and S-57.
+Shoulds S-56 and S-57, then S-65 (close a fully shipped order), S-66 and S-67.
 
 **Products by size (D-15 and D-16, your answers of 2026-10-18):** S-58 came first on its own (done), then S-60 and S-61 in one build
 (one click-through), then S-56 and S-57, both written per size. Every size of a product uses the same composition, so unit cost, "Can
@@ -85,6 +85,36 @@ per size. Cancelled orders leave "Open orders" and the totals.
 in the stock user need confirm that cutting is finished and the product is ready to put in stock".
 **Done when:** cancelling Boutique Lina's order at Denim Jacket 20 · 20 · 10 · 0 drops the 20 to start, shows "In stock 10 units" (M 5 ·
 XL 5) and keeps 20 in cutting; putting all 20 in stock then shows "In stock 30 units".
+
+### S-65 · Close a fully shipped order · Should · M · feature · `Ready` (card approved 2026-10-22; written that day from your design "Orders · shipped and closed", with your answers)
+Card: [stories/S-65-close-a-fully-shipped-order.md](stories/S-65-close-a-fully-shipped-order.md). After S-61 (its tables are per size)
+and S-57 (its Status filter lists "Cancelled").
+**You get:** when the last unit ships, the order reads "All shipped · ready to close" on a page that shows everything (ordered and
+shipped per size, the order's details and who recorded it). The only button left is "Move back" on shipped units, to fix a wrong
+shipment, which makes the order "In progress" again. "Confirm finished · Close order" closes it at once as Shipped, for good ("Boutique
+Lina closed as Shipped.", with "View order"); it then reads "Shipped · closed 30 Oct 2026 by Admin" and nothing can change it. Neither a
+ready-to-close nor a closed order can be deleted or cancelled. The Status filter gains "Ready to close"; "Shipped" now means closed.
+**Why:** a finished order today can still be edited or deleted at any time, and nothing records that you checked it was finished.
+**Done when:** Boutique Lina's 80 units have all shipped, the order waits as "Ready to close" and counts in "Open orders 2" until you
+confirm, then "Open orders 1", and nothing on its page can change it. Orders that shipped in full before this change become "ready to
+close" too.
+
+### S-66 · Each shipment is remembered · Should · M · feature · `Idea` (added 2026-10-22, your answer to S-65 question 5)
+Right after S-65; per size (after S-61).
+**You get:** each "Ship" (and each "Mark ready") is remembered with its date, sizes, units and who did it. The order's page shows a
+"Shipments" table (date, product, sizes, units, by), the day each size shipped in the size tables, "3 shipments" and "15 days from
+order to last shipment", and a timeline: order recorded, cutting started, first ready, first shipment, last shipment, then your
+confirmation. For Boutique Lina: 24 Oct (Denim Jacket S 10 · M 10), 28 Oct (Denim Jacket M 10 · L 15 · XL 5; Denim Jeans 5-pocket S 5 ·
+M 10), 30 Oct (Denim Jeans 5-pocket L 10 · XL 5). Orders shipped before it read "Shipped before shipments were recorded".
+**Why:** today Invory keeps only how many units have shipped, not when or by whom, so a closed order can't show its deliveries.
+Overlaps S-52 (a history of every move, Won't this time); the card says how a "Move back" on shipped units shows in the list.
+
+### S-67 · Materials used by an order · Should · S · feature · `Idea` (added 2026-10-22, your answer to S-65 question 6)
+After S-65.
+**You get:** the order's page shows "Materials used": for each material, what its cuts took out of stock minus what came back, waste
+included. For 50 Denim Jackets: Denim 12oz Indigo 99 m, Metal shank button 17mm 400 pc, Polyester thread 6,300 m and Woven brand label
+50 pc.
+**Why:** when an order is finished, you see what it really used, from the cuts Invory already remembers.
 
 ### S-51 · Units on order and in cutting show on the product page and the dashboard · Should · S · feature · `Idea` (per size when its card is written)
 **You get:** Denim Jacket's page shows how many units are still to start on open orders, in cutting and ready to ship, next to "Can produce
@@ -284,5 +314,9 @@ recorded before sizes stay "One size"; one line per product on an order with a q
 window asks a number per size; one selling price and one SKU for all sizes; finished stock comes from "Update stock" and cancelled orders,
 and sales and new orders never touch it (a sale has no size); cancelling an order can't be undone, and cancelled orders leave "Open
 orders" and the totals; S-58 is built first on its own (done 2026-10-22), then S-60 and S-61 in one build; S-52 and S-54 become Won't (this time); the smaller choices take the
-defaults written in the five cards, which stay `Draft` until you approve them.
+defaults written in the five cards, which stay `Draft` until you approve them. · **S-65 closing an order** (your answers of 2026-10-22, all
+recommended): an order shipped in full stays in "Open orders" and its count until you close it ("Ready to close"); closing is final,
+at once, with no reopen; before closing only "Move back" on shipped units stays, after closing nothing; neither a ready-to-close nor a
+closed order can be deleted or cancelled; orders already shipped in full become "ready to close"; "Not yet" goes back to the Orders
+list; shipments and the timeline are S-66, materials used S-67.
 Pending: [STATUS.md §2](STATUS.md#2-decisions-needed-from-you).

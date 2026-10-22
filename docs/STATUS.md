@@ -27,7 +27,8 @@ closing docs `f803cb1`), **S-50** (accepted 2026-10-22; `ba0a0cd`, `74f05a8`, `a
 (accepted 2026-10-22 after your click-through; `2f02d87`, `9eeee19`, `f1074b6`, `ce9a36f`, `eb5ff13`, docs `69b064b`, on the build
 branch `claude/magical-morse-e3d3b5`; it reaches `main` when that branch merges). **Next:** the rest of the size stories you asked for
 on 2026-10-18 (D-15, D-16): S-60 and S-61 in one build, then S-56 and S-57. Their four cards are `Draft` and wait for your approval
-(D-17). Phase 5 tech allowance: F-41 only, now done. Nothing is in progress, so the two-story limit is free.
+(D-17). After them comes S-65 "Close a fully shipped order" (`Ready`, card approved 2026-10-22), then S-66 and S-67 (`Idea`, cards
+later). Phase 5 tech allowance: F-41 only, now done. Nothing is in progress, so the two-story limit is free.
 **Phase 4: MVP release readiness** is on hold for later; S-08 and S-29 are done (closed as they stood, D-13; see [ROADMAP.md](ROADMAP.md)).
 
 ---
@@ -317,7 +318,7 @@ The plan headers were corrected on 2026-10-14, and [plans/README.md](plans/READM
 | R-13 | Risk | When someone deletes the only account of a workshop, that workshop's materials, products and sales stay in the database with nobody able to reach them (D-9). That may matter for privacy once other businesses use a public server | Low now, higher at go-live | The "Delete account" wording says the data stays (S-44 AC-6). Product-owner raises it with you again before S-26 |
 | R-14 | Dependency (closed 2026-10-15) | The project instructions, ADR-0003 and ARCHITECTURE.md said "single company, no teams" | — | Closed: updated in `672937f` (ADR-0003 superseded by ADR-0013) |
 | R-16 | Risk | With S-45 on hold (D-12), units and categories stay shared by every workshop. If a second real workshop signs up, its renames would change your screens | Medium | No second real workshop signs up until S-45 is done (D-9); S-45 is done before go-live. Product-owner raises it again before S-26 |
-| R-18 | Risk | With the size stories, Phase 5's Musts are about 70 % of the phase (usual limit 60 %), and S-60 and S-61 change the order screens and the cutting window just delivered | Medium | S-62 slips first, then S-51; S-58 went alone first, so sizes work on products before orders use them (done 2026-10-22); S-60 and S-61 share one click-through |
+| R-18 | Risk | With the size stories, Phase 5's Musts are about 70 % of the phase (usual limit 60 %), and S-60 and S-61 change the order screens and the cutting window just delivered | Medium | S-62 slips first, then S-67, S-66 and S-51; S-58 went alone first, so sizes work on products before orders use them (done 2026-10-22); S-60 and S-61 share one click-through |
 | R-17 | Risk | Orders are built on screens nobody has signed off: the MVP walkthrough (S-30) is on hold (D-12) | Medium | Each Phase 5 story gets its own click-through (S-48's passed 2026-10-15); S-30 is walked before go-live |
 | R-15 | Risk (reduced 2026-10-21) | With S-53, Invory changes material stock by itself for the first time (D-10). Delivered and accepted on 2026-10-21 against the worked example. A wrong amount would quietly spoil stock, "Can produce" and the inventory value | Medium | S-53 shows the materials before you confirm, writes a history entry per material, and "Move back" returns what was taken; the tech-lead encodes the rule before code and tests it against the worked example (30 Denim Jackets → Inventory value TND 9,936.680) |
 
@@ -342,7 +343,7 @@ The plan headers were corrected on 2026-10-14, and [plans/README.md](plans/READM
 2. Tech-lead: run the full PostgreSQL parity suite once on `main` after the merge; S-50 and S-58 were delivered without it (S-58's own
    tests passed on PostgreSQL).
 3. Human: approve the four remaining size cards (D-17); the tech-lead then plans S-60 and S-61 (one build, one click-through), then
-   S-56 and S-57.
+   S-56 and S-57, then S-65 (`Ready` since 2026-10-22), S-66 and S-67.
 4. Tech-lead: F-60 to F-63 (from the orders builds) and F-64 to F-66 (from S-58) are offered for a tech allowance. F-64 (the lock can
    miss an order saved in the same instant) is closed by S-60.
 5. The rest of Phase 4 waits; S-45, S-30 and the known gaps K-1 to K-4 are dealt with before go-live (Phase 7).
