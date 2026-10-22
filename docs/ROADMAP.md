@@ -1,6 +1,6 @@
 # Invory — product roadmap
 
-> Owner: **product-owner** · Approved by: the human · Last updated: 2026-10-22 (S-50 done, accepted; next S-58, `Planned`; earlier, 2026-10-21: F-41, S-49 and S-53 done, accepted after your click-through; S-58 card and Technical work approved; earlier, 2026-10-18: D-15 and D-16 products by size: S-58, S-60, S-61 added to Phase 5, S-56 and S-57 per size, S-52 and S-54 Won't (this time); earlier, 2026-10-16: D-11 decided with your final answers: F-41, S-49 and S-53 `Planned`, S-50 `Ready`, S-56 and S-57 added; 2026-10-15: S-48 done, the first Phase 5 story; D-12: Phase 5 "Customer orders" started, the rest of Phase 4 on hold)
+> Owner: **product-owner** · Approved by: the human · Last updated: 2026-10-22 (S-58 done, accepted after your click-through; next S-60 and S-61, once you approve their cards; earlier the same day, S-50 done, accepted; earlier, 2026-10-21: F-41, S-49 and S-53 done, accepted after your click-through; S-58 card and Technical work approved; earlier, 2026-10-18: D-15 and D-16 products by size: S-58, S-60, S-61 added to Phase 5, S-56 and S-57 per size, S-52 and S-54 Won't (this time); earlier, 2026-10-16: D-11 decided with your final answers: F-41, S-49 and S-53 `Planned`, S-50 `Ready`, S-56 and S-57 added; 2026-10-15: S-48 done, the first Phase 5 story; D-12: Phase 5 "Customer orders" started, the rest of Phase 4 on hold)
 > Format: **Now / Next / Later**, organised by outcomes, not dates. Each phase is one slice of the story map with one goal, a MoSCoW-labelled
 > set of stories and exit criteria. Detailed stories live in [BACKLOG.md](BACKLOG.md); progress lives in [STATUS.md](STATUS.md).
 
@@ -13,7 +13,7 @@ A small fashion workshop knows, at any moment, **what each product costs to make
 | Activity | Built (Phases 1–3) | Phase 4 | Phase 5 (orders) | Phase 6 (speed) | Phase 7 (go-live) | Phase 8 + Vision |
 |---|---|---|---|---|---|---|
 | **Keep stock of materials** | List, filters, CRUD, photo, restock, history, status badges | Acceptance | | History on demand (S-33) | | Suppliers and purchase orders, CSV import (S-11) |
-| **Define products** | Product CRUD, composition editor, selling price, photo | Acceptance; overhead cost optional (S-43, done) | Sizes from the category (S-58); finished products in stock per size (S-56); units on order on the product page (S-51) | Instant edit page (S-35) | | More fabric for bigger sizes (S-63), own sole per shoe size (S-64), sub-assemblies, unit conversions |
+| **Define products** | Product CRUD, composition editor, selling price, photo | Acceptance; overhead cost optional (S-43, done) | Sizes from the category (S-58, done); finished products in stock per size (S-56); units on order on the product page (S-51) | Instant edit page (S-35) | | More fabric for bigger sizes (S-63), own sole per shoe size (S-64), sub-assemblies, unit conversions |
 | **Take client orders** | Nothing yet | | Orders with several products (S-48, done); to start, in cutting, ready to ship, shipped per line (S-49, done); cutting takes materials out of stock (S-53, done); progress and totals on the list (S-50, done); a quantity per size (S-60) and the stages per size (S-61); cancel an order (S-57); open orders by size (S-62) | | | A client list |
 | **Know cost and capacity** | Unit cost, can produce, bottleneck, next limit, margin, "what you can make with it" | Acceptance, E2E (S-08) | | Fast at 500 products (S-23, S-27) | | Live cost preview (S-09), production planner (S-10), cost history |
 | **Sell** | Sales log, totals, filters, record/edit/delete | Acceptance | | Instant delete feedback (S-36) | | Custom date range (S-37) |
@@ -36,9 +36,9 @@ products. **S-49 and S-53 are done** (accepted 2026-10-21 after your one click-t
 own page with the four stages per product line, and "Start cutting" takes the materials out of stock. **S-50 is done** (accepted 2026-10-22): the Orders list
 shows each order's stages and status and the totals of all open orders ([stories](stories/README.md)).
 On 2026-10-18 you asked for products by size and answered the questions (D-15, D-16): the product's category decides its sizes, the
-units are counted per size on orders, through the stages and on the shelf, and every size uses the same composition for now. S-58 comes
-next, on its own (`Planned`: card and Technical work approved 2026-10-21; built in a worktree), then S-60 and S-61 in one build, then
-S-56 and S-57, written per size. Those four cards are `Draft`.
+units are counted per size on orders, through the stages and on the shelf, and every size uses the same composition for now. **S-58 is
+done** (accepted 2026-10-22 after your click-through): every product has the sizes of its category. Next come S-60 and S-61 in one build, then
+S-56 and S-57, written per size. Those four cards are `Draft`, waiting for your approval.
 
 | Priority               | Story                                                         | Size |
 | ---------------------- | ------------------------------------------------------------- | ---- |
@@ -46,7 +46,7 @@ S-56 and S-57, written per size. Those four cards are `Draft`.
 | Must                   | S-49 Track each product line through the stages (done)        | M    |
 | Must                   | S-53 Cutting takes materials out of stock (done)              | L    |
 | Must                   | S-50 Orders list: progress of each order and totals (done)    | S    |
-| Must                   | S-58 Every product gets the sizes of its category             | S    |
+| Must                   | S-58 Every product gets the sizes of its category (done)      | S    |
 | Must                   | S-60 Order a product in several sizes                         | M    |
 | Must                   | S-61 Follow each size through cutting, ready to ship, shipped | M    |
 | Should                 | S-56 Finished products in stock, per size                     | M    |
@@ -57,8 +57,8 @@ S-56 and S-57, written per size. Those four cards are `Draft`.
 | Won't (this time)      | S-54 "Ship" can also record the sale                          | S    |
 | Tech allowance (~15 %) | F-41 only (each material's total need, for S-53; done)        | —    |
 
-With the size stories the Musts are about 70 % of the phase, above the usual 60 %. S-48, S-49, S-53 and S-50 are done, so of the work
-still to do the Musts (S-58, S-60, S-61) are about half. Order: S-58, then S-60 and S-61 together, then S-56, then S-57
+With the size stories the Musts are about 70 % of the phase, above the usual 60 %. S-48, S-49, S-53, S-50 and S-58 are done, so of the work
+still to do the Musts (S-60, S-61) are about half. Order: S-60 and S-61 together, then S-56, then S-57
 (D-15, D-16). S-52 and S-54 became Won't (this time) to make room. If time runs short, S-62 slips first, then S-51.
 
 - An order holds one or more products, each with its own quantity and its own four stages: To start, In cutting, Ready to ship, Shipped.
@@ -78,7 +78,7 @@ still to do the Musts (S-58, S-60, S-61) are about half. Order: S-58, then S-60 
 - Won't (this time): a client list, order numbers, setting stock aside for orders not yet cut, low-stock emails or notifications (D-11),
   the order history (S-52), "Ship" recording the sale (S-54), a SKU or a price per size, a page to edit the size lists (D-15).
 
-**Exit criteria:** you have accepted S-48 (done 2026-10-15), S-49 and S-53 (done 2026-10-21), S-50 (done 2026-10-22), S-58, S-60 and S-61 in a click-through · an order of
+**Exit criteria:** you have accepted S-48 (done 2026-10-15), S-49 and S-53 (done 2026-10-21), S-50 and S-58 (done 2026-10-22), S-60 and S-61 in a click-through · an order of
 Denim Jackets S 10 · M 20 · L 15 · XL 5 can be followed size by size through the four stages · cutting an order changes stock exactly as
 the cards say · another workshop never sees your orders · every gate green.
 

@@ -2,7 +2,7 @@
 
 > Owner: **product-owner** (order, wording, acceptance criteria) · Technical detail: **tech-lead** ([TECH-DEBT.md](TECH-DEBT.md), [plans/](plans/README.md))
 > Phases and goals: [ROADMAP.md](ROADMAP.md) · Progress: [STATUS.md](STATUS.md) · Done work and full history: [archive/backlog-2026-10-14.md](archive/backlog-2026-10-14.md)
-> Last cleaned: 2026-10-22 (S-50 done: you accepted it, so it left this file; S-58 is next, `Planned`, to be built in a worktree). Before that, 2026-10-21 (F-41, S-49 and S-53 done: you accepted them after your click-through, so they left this file; S-58 card and then its Technical work approved, so it is `Planned`: its sizes lock while the product is on any order that isn't deleted, and Settings shows no sizes). Before that, 2026-10-18 (D-15 and D-16 products by size: S-58, S-60 and S-61 added as Musts, S-56 and S-57 written per size, all five cards `Draft`; S-52 and S-54 become Won't (this time); S-62 added as a Could; S-63 and S-64 to Phase 8). Before that, 2026-10-16 (D-11 decided with your final answers: S-49 and S-53 revised, then their revised Technical work approved, so F-41, S-49 and S-53 are `Planned` and S-50 is `Ready`; S-56 and S-57 added; on 2026-10-15 S-48 done and accepted, so it left this file; before that, D-12: Phase 5 starts now, the rest of Phase 4 is on hold; D-13: S-08 and S-29 done). **Open work only**, top = next.
+> Last cleaned: 2026-10-22 (S-58 done: you accepted it after your click-through, kept the sizes between the category and the status, and wanted no follow-up story for the lock message, so it left this file; next, the four size cards waiting for your approval). Earlier the same day, S-50 done: you accepted it, so it left this file. Before that, 2026-10-21 (F-41, S-49 and S-53 done: you accepted them after your click-through, so they left this file; S-58 card and then its Technical work approved, so it is `Planned`: its sizes lock while the product is on any order that isn't deleted, and Settings shows no sizes). Before that, 2026-10-18 (D-15 and D-16 products by size: S-58, S-60 and S-61 added as Musts, S-56 and S-57 written per size, all five cards `Draft`; S-52 and S-54 become Won't (this time); S-62 added as a Could; S-63 and S-64 to Phase 8). Before that, 2026-10-16 (D-11 decided with your final answers: S-49 and S-53 revised, then their revised Technical work approved, so F-41, S-49 and S-53 are `Planned` and S-50 is `Ready`; S-56 and S-57 added; on 2026-10-15 S-48 done and accepted, so it left this file; before that, D-12: Phase 5 starts now, the rest of Phase 4 is on hold; D-13: S-08 and S-29 done). **Open work only**, top = next.
 > Done items leave this file; they are recorded in STATUS.md and the archive.
 
 ## How to read an item
@@ -12,7 +12,7 @@
 - **Priority** (MoSCoW, per phase): Must · Should · Could · Won't (this time). **Size:** S (≤ 1 day of agent work) · M · L (split it).
 - **Card:** the full story card (story, acceptance criteria with examples, what you will see, out of scope, questions) lives in
   `docs/stories/<id>-<slug>.md` once the product-owner writes it. Items below show the short version.
-- **IDs:** `S-` stories are numbered by the product-owner, `F-` technical items by the tech-lead. IDs are never reused. Next free: **S-65** (S-47 was dropped on 2026-10-14; S-59 was never used, folded into S-58 on 2026-10-18), **F-66** (F-IDs: see [TECH-DEBT.md](TECH-DEBT.md)).
+- **IDs:** `S-` stories are numbered by the product-owner, `F-` technical items by the tech-lead. IDs are never reused. Next free: **S-65** (S-47 was dropped on 2026-10-14; S-59 was never used, folded into S-58 on 2026-10-18), **F-67** (F-IDs: see [TECH-DEBT.md](TECH-DEBT.md)).
 
 ---
 
@@ -28,16 +28,17 @@ You started it on 2026-10-15: "we will start focusing more on the orders … we 
 - only active products can go on an order, and an order never sets stock aside (S-48, approved 2026-10-15).
 
 Order of work: **F-41, S-49 and S-53 are done** (you accepted them on 2026-10-21 after your one click-through; built in one build
-and landed on `main` together, as D-11 asked), and **S-50 is done** (you accepted it on 2026-10-22). Next come the size stories
-(below), starting with S-58, then the Shoulds S-56 and S-57.
+and landed on `main` together, as D-11 asked), **S-50 is done** (you accepted it on 2026-10-22), and **S-58 is done** (you accepted
+it on 2026-10-22: every product has the sizes of its category). Next come S-60 and S-61 (below), once you approve their cards, then the
+Shoulds S-56 and S-57.
 
-**Products by size (D-15 and D-16, your answers of 2026-10-18):** S-58 comes first on its own, then S-60 and S-61 in one build
+**Products by size (D-15 and D-16, your answers of 2026-10-18):** S-58 came first on its own (done), then S-60 and S-61 in one build
 (one click-through), then S-56 and S-57, both written per size. Every size of a product uses the same composition, so unit cost, "Can
 produce" and the bottleneck don't change; a bigger size using more fabric (S-63) and a shoe size using its own sole (S-64) come later.
 The product's category decides its sizes, from a short list set up with Invory: Apparel S, M, L, XL; Footwear 36 to 46 (all 11 sizes);
 every other category "One size". A product gets every size of its category, and there is no Settings page for sizes for now. One selling
 price and one SKU for all sizes ("PRD-JKT-001 · M"). Finished stock comes from "Update stock" and from cancelled orders; sales don't take
-units out of it. S-52 and S-54 become Won't (this time) to make room. S-58 is `Planned` (you approved its card and its Technical work on 2026-10-21); the other four size cards are `Draft`, waiting for your approval.
+units out of it. S-52 and S-54 become Won't (this time) to make room. S-58 is done (accepted 2026-10-22); the other four size cards are `Draft`, waiting for your approval.
 
 **Done in Phase 5 so far** (records in [STATUS.md §4](STATUS.md#4-delivery-history)):
 - **S-48** (accepted 2026-10-15; `e3b7ae7`, `5af8ed1`): record, find, edit and delete an order of one or more products.
@@ -48,17 +49,12 @@ units out of it. S-52 and S-54 become Won't (this time) to make room. S-58 is `P
 - **F-41** (accepted 2026-10-21): the costing works out each material's total need per unit, which S-53 uses.
 - **S-50** (accepted 2026-10-22; `ba0a0cd`, `74f05a8`, `a23a5d7`, merged in `0270014`): the Orders list shows each order's four stages
   and its status, opens on "Open orders", and shows the totals of all open orders at the top.
-
-### S-58 · Every product gets the sizes of its category · Must · S · feature · `Planned` (card and Technical work approved 2026-10-21; written 2026-10-18, D-15, D-16; next: build in a worktree)
-Card: [stories/S-58-products-get-sizes-from-their-category.md](stories/S-58-products-get-sizes-from-their-category.md). Next; built on
-its own, before S-60 and S-61 (D-16).
-**You get:** each product carries the sizes of its category: Apparel "S, M, L, XL", Footwear "36 to 46", anything else "One size". The
-product page shows "Sizes S, M, L, XL" and "from current stock, any mix of sizes" under "Can produce now 112 units"; the form shows the sizes of the chosen category.
-Products you already have follow their category at once. A product on an order can't move to a category with other sizes.
-**Why:** orders, production and finished stock can only be counted per size once each product knows its sizes.
+- **S-58** (accepted 2026-10-22; `2f02d87`, `9eeee19`, `f1074b6`, `ce9a36f`, `eb5ff13`, docs `69b064b`; on the build branch, reaching
+  `main` when it merges): each product has the sizes of its category (Apparel "S, M, L, XL", Footwear "36 to 46", anything else "One
+  size"), shown on the product page and in the form, and a product on an order can't move to a category with other sizes.
 
 ### S-60 · Order a product in several sizes · Must · M · feature · `Draft` (card written 2026-10-18, D-15, D-16)
-Card: [stories/S-60-order-a-product-in-several-sizes.md](stories/S-60-order-a-product-in-several-sizes.md). Depends on S-58; one build
+Card: [stories/S-60-order-a-product-in-several-sizes.md](stories/S-60-order-a-product-in-several-sizes.md). Depends on S-58 (done); one build
 and one click-through with S-61.
 **You get:** on "New order" and "Edit order", a quantity per size under each product ("S 10 · M 20 · L 15 · XL 5", "Total 50 units"),
 shown on the order's page and the Orders list. Lines recorded before sizes stay "One size".
@@ -114,7 +110,7 @@ by Sami".
 **Phase 5 tech allowance (~15 %):** **F-41 only** (your choice, 2026-10-15), **done** (accepted 2026-10-21, `e99615e`; card
 [stories/F-41-summed-requirement-per-material.md](stories/F-41-summed-requirement-per-material.md)): the costing works out, for each
 product, the total amount of each material one unit needs, which S-53 takes out of stock. Open technical items from the orders builds
-(F-60, F-61, F-62, F-63 in [TECH-DEBT.md](TECH-DEBT.md)) can join the allowance if the tech-lead proposes them. Phase 4's allowance (F-22,
+(F-60 to F-63, and F-64 to F-66 from S-58, in [TECH-DEBT.md](TECH-DEBT.md)) can join the allowance if the tech-lead proposes them. Phase 4's allowance (F-22,
 F-12, F-45) stays with Phase 4.
 
 ---
@@ -287,6 +283,6 @@ Settings page for now; a product gets every size of its category; existing produ
 recorded before sizes stay "One size"; one line per product on an order with a quantity per size, stages tracked per size, and each move
 window asks a number per size; one selling price and one SKU for all sizes; finished stock comes from "Update stock" and cancelled orders,
 and sales and new orders never touch it (a sale has no size); cancelling an order can't be undone, and cancelled orders leave "Open
-orders" and the totals; S-58 is built first on its own, then S-60 and S-61 in one build; S-52 and S-54 become Won't (this time); the smaller choices take the
+orders" and the totals; S-58 is built first on its own (done 2026-10-22), then S-60 and S-61 in one build; S-52 and S-54 become Won't (this time); the smaller choices take the
 defaults written in the five cards, which stay `Draft` until you approve them.
 Pending: [STATUS.md §2](STATUS.md#2-decisions-needed-from-you).
