@@ -5,7 +5,10 @@ import { useReference } from '@/hooks/use-reference';
 import { categoryOptions } from '@/lib/reference';
 import type { ProductCreateProps } from '@/types/domain';
 
-export default function ProductsCreate({ statuses }: ProductCreateProps) {
+export default function ProductsCreate({
+    statuses,
+    category_sizes,
+}: ProductCreateProps) {
     const reference = useReference();
 
     return (
@@ -18,6 +21,7 @@ export default function ProductsCreate({ statuses }: ProductCreateProps) {
                     description="Details, photo and the materials that make one unit."
                     categories={categoryOptions(reference.product_categories)}
                     statuses={statuses}
+                    categorySizes={category_sizes}
                     action={{
                         url: ProductController.store.url(),
                         method: 'post',

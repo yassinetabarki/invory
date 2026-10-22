@@ -33,6 +33,7 @@ import type {
     ProductCategory,
     ProductFormData,
     ProductStatus,
+    SizeList,
 } from '@/types/domain';
 
 /** The form's state: the submitted fields, with client-only keys on the composition rows. */
@@ -47,6 +48,8 @@ type ProductFormProps = {
     description: string;
     categories: Option<ProductCategory>[];
     statuses: Option<ProductStatus>[];
+    /** The sizes every category gives its products (S-58), shown under "Category". */
+    categorySizes: Record<ProductCategory, SizeList>;
     /** Where to send the form (Wayfinder in the page). */
     action: { url: string; method: 'post' | 'put' };
     cancelHref: string;
@@ -101,6 +104,11 @@ function toFormState(product: Product | undefined): ProductFormState {
             notes: line.notes ?? '',
         })),
     };
+}
+
+/** "Sizes: S, M, L, XL" for a list of several sizes, "One size" for a single one. */
+function sizesLine(list: SizeList): string {
+    return list.sizes.length > 1 ? `Sizes: ${list.name}` : list.name;
 }
 
 /** The currency's symbol where the locale has one ("€"), otherwise its code ("TND"). */
@@ -177,6 +185,7 @@ export function ProductForm({
     description,
     categories,
     statuses,
+    categorySizes,
     action,
     cancelHref,
     submitLabel,
@@ -200,6 +209,12 @@ export function ProductForm({
         }),
     );
     const { errors, processing } = form;
+
+    // `category` is '' until one is chosen; a code the server didn't send shows no line.
+    const sizeList =
+        form.data.category === ''
+            ? undefined
+            : categorySizes[form.data.category];
 
     const symbol = currencySymbol(currency, locale);
     const id = (name: string) => `${uid}-${name}`;
@@ -330,6 +345,19 @@ export function ProductForm({
                                     id={id('category')}
                                     label="Category"
                                     required
+                                    hint={
+                                        sizeList && (
+                                            <>
+                                                <span className="block">
+                                                    {sizesLine(sizeList)}
+                                                </span>{' '}
+                                                <span className="block">
+                                                    Sizes come with the
+                                                    category.
+                                                </span>
+                                            </>
+                                        )
+                                    }
                                     error={errors.category}
                                 >
                                     {(control) => (

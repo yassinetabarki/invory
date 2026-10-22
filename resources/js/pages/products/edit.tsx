@@ -5,7 +5,11 @@ import { useReference } from '@/hooks/use-reference';
 import { categoryOptions } from '@/lib/reference';
 import type { ProductEditProps } from '@/types/domain';
 
-export default function ProductsEdit({ product, statuses }: ProductEditProps) {
+export default function ProductsEdit({
+    product,
+    statuses,
+    category_sizes,
+}: ProductEditProps) {
     const reference = useReference();
 
     return (
@@ -25,6 +29,7 @@ export default function ProductsEdit({ product, statuses }: ProductEditProps) {
                         product.category,
                     )}
                     statuses={statuses}
+                    categorySizes={category_sizes}
                     action={{
                         url: ProductController.update.url(product.id),
                         method: 'put',

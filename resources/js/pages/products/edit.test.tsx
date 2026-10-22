@@ -71,6 +71,15 @@ describe('products/edit page', () => {
         ).toHaveValue('8');
     });
 
+    it('shows the sizes of its category at once', () => {
+        render(<ProductsEdit {...props()} />);
+
+        expect(screen.getByText('Sizes: S, M, L, XL')).toBeInTheDocument();
+        expect(
+            screen.getByText('Sizes come with the category.'),
+        ).toBeInTheDocument();
+    });
+
     it('shows the saved rows with their units without asking the server for materials', () => {
         render(<ProductsEdit {...props()} />);
 

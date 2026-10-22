@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { ProductForm } from '@/components/products/product-form';
 import {
     answerMaterialOptions,
+    categorySizesFixture,
     choreJacket,
     denimJacket,
     productCategories,
@@ -45,6 +46,7 @@ function setup({
             description="Details, photo and the materials that make one unit."
             categories={productCategories}
             statuses={productStatuses}
+            categorySizes={categorySizesFixture}
             action={{ url, method }}
             cancelHref={product ? `/products/${product.id}` : '/products'}
             submitLabel="Save product"
@@ -295,6 +297,23 @@ describe('<ProductForm>', () => {
                 'aria-invalid',
                 'true',
             );
+        });
+
+        it('shows the category-lock error under "Category", with the sizes line still there', () => {
+            const message =
+                "Denim Jacket is on orders, so its category can't change to one with other sizes. Keep a category with sizes S, M, L, XL.";
+
+            setFormState({ errors: { category: message } });
+            setup({ product: denimJacket });
+
+            const category = screen.getByLabelText(/^Category/);
+
+            expect(screen.getByText(message)).toBeInTheDocument();
+            expect(category).toHaveAttribute('aria-invalid', 'true');
+            expect(category).toHaveAccessibleDescription(
+                expect.stringContaining(message),
+            );
+            expect(screen.getByText('Sizes: S, M, L, XL')).toBeInTheDocument();
         });
 
         it('moves focus to the first invalid field', () => {
