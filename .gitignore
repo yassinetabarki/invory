@@ -35,6 +35,9 @@ yarn-error.log
 !/.claude/skills/
 /.claude/skills/*
 !/.claude/skills/invory-*/
+!/.claude/skills/bencium-controlled-ux-designer/
+!/.claude/skills/web-design-guidelines/
+!/.claude/skills/frontend-design/
 /.cursor
 /.factory
 /.grok

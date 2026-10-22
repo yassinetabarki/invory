@@ -1,12 +1,15 @@
 # Invory — Team, skills and workflow
 
-Four Claude Code subagents (in `.claude/agents/`) build Invory, split by **what/why** and **how**:
+Five Claude Code subagents (in `.claude/agents/`) build Invory, split by **what/why** and **how**:
 
 - The **product-owner** owns the *what* and *why*. It plans the phases, keeps the backlog ordered, writes story cards you can read and
   approve, specifies behaviour and UX, accepts delivered work against its acceptance criteria, and reports progress.
 - The **tech-lead** owns the *how*. Under an approved story card, in the same file, it adds the **Technical work** (short when the work is
   simple, detailed when it is complex), dispatches the two developers, reviews the code by running every gate itself, and owns
   architecture, ADRs, technical debt and CI.
+- The **ui-ux-designer** advises the product-owner on how screens look and behave: it proposes flows, layouts, states, accessibility and
+  wording as design specs and boards on the design canvas, and reviews delivered UI. The product-owner decides; the designer never writes
+  code or cards.
 - The **main Claude session is the liaison.** Subagents can't ask you questions, so it carries work between you and the two leads, asks
   you their questions, and commits only with your approval.
 
@@ -15,10 +18,11 @@ Four Claude Code subagents (in `.claude/agents/`) build Invory, split by **what/
 | Agent | Model | Owns | Can spawn | Never does |
 |---|---|---|---|---|
 | **product-owner** | opus | Roadmap and phases (`docs/ROADMAP.md`), backlog order (`docs/BACKLOG.md`), story cards (`docs/stories/`: properties, Description, How it works today, Acceptance criteria), behaviour and UX, acceptance review, progress report (`docs/STATUS.md`) | nothing | Write code or Technical work, dispatch developers, review code, run gates, commit |
+| **ui-ux-designer** | opus | UX proposals: design specs (`docs/design/specs/`), boards on the claude.ai design canvas, card reviews for UX gaps, UX review of delivered UI (Step 3) | nothing | Decide UX, write cards, Technical work or code, edit existing canvas boards, run gates, commit |
 | **tech-lead** | opus | The **Technical work** section of every card, `F-xx` cards, contracts, dispatching, code review and gates, architecture, ADRs, `docs/TECH-DEBT.md`, `docs/SETUP.md`, CI (`.github/`); earlier plans in `docs/plans/` | `backend-developer`, `frontend-developer` | Write application code, decide behaviour/UX/priority, edit the product-owner's files or part of a card, commit |
 | **backend-developer** | sonnet | `app/`, `routes/`, `database/`, `config/`, `tests/` (PHP), `resources/js/types/domain.ts`, `sharedPageProps` | nothing | Build UI (page *stubs* only), invent business rules, commit |
 | **frontend-developer** | sonnet | `resources/js/**` (except contract files and generated code), `resources/css`, Vitest and browser tests | nothing | Touch PHP or the contract files, invent copy or UX, commit |
-| *main session* | — | Relaying, `AskUserQuestion`, commits after your yes | `product-owner`, `tech-lead` | Write stories, Technical work or code itself; brief developers directly |
+| *main session* | — | Relaying, `AskUserQuestion`, commits after your yes | `product-owner`, `ui-ux-designer`, `tech-lead` | Write stories, Technical work or code itself; brief developers directly |
 | *human (you)* | — | Vision, approvals (cards, Technical work, acceptance, commits), product decisions | — | — |
 
 ### Decision rights (RACI-style; full table in the `invory-product-owner` skill §1)
@@ -26,13 +30,13 @@ Four Claude Code subagents (in `.claude/agents/`) build Invory, split by **what/
 | Topic | Decides | Proposes / does | Consulted |
 |---|---|---|---|
 | Phases, roadmap, backlog order | **Human** | Product-owner | Tech-lead (size, risk, dependencies) |
-| Story text, acceptance criteria, UX, wording | **Human** (approves the card) | Product-owner | Tech-lead (feasibility) |
+| Story text, acceptance criteria, UX, wording | **Human** (approves the card) | Product-owner | UI/UX designer (design spec, boards), tech-lead (feasibility) |
 | Business rules (formulas, stock rules) | **Human** | Product-owner states it; tech-lead encodes it in `invory-costing-domain` first | — |
 | Technical approach, contracts, slicing, tests | **Tech-lead** | Tech-lead (the card's Technical work); human approves it | Developers (pre-flight ack) |
 | Technical debt items and their cost of delay | **Tech-lead** | Tech-lead (`TECH-DEBT.md`) | — |
 | Which debt goes into a phase (≈ 15 % allowance) | **Product-owner** | Product-owner | Tech-lead |
 | Code verdict (APPROVED / CHANGES REQUESTED) | **Tech-lead** | Tech-lead | — |
-| Story accepted | **Human** | Product-owner (AC check + click-through script) | Tech-lead (evidence) |
+| Story accepted | **Human** | Product-owner (AC check + click-through script) | Tech-lead (evidence), UI/UX designer (UX review) |
 | Commits | **Human** | Main session commits; tech-lead proposes messages | — |
 
 No role overlaps another: the tech-lead no longer owns the backlog or product questions, and the main session no longer picks stories or
@@ -46,12 +50,14 @@ apply it here.
 | Role | Competencies required | Claude skills / tools |
 |---|---|---|
 | **Product owner** | Product vision and outcome-based roadmaps (Now / Next / Later) · story mapping and phase slicing · backlog management (DEEP, hygiene) · user stories (INVEST, 3 Cs) and acceptance criteria (Given / When / Then with real examples) · prioritisation (MoSCoW, value / effort, cost of delay) · UX writing, interaction design and WCAG 2.2 AA basics · domain knowledge of fashion BOM costing · acceptance testing · progress reporting (RAG, RAID, flow metrics) · stakeholder communication | Preloaded: `invory-product-owner`, `invory-costing-domain` · Read-only `git log` · WebSearch / WebFetch for research · Agent memory (project) |
+| **UI/UX designer** | Interaction design and UX flows · information hierarchy for numeric, data-dense screens · design systems (tokens, shadcn components, consistency) · interaction states · WCAG 2.2 AA (contrast, targets, focus, keyboard, colour-only cues) · responsive and mobile-first layout (375 px) · UX writing and microcopy · design specs and mockups · heuristic and accessibility review | Preloaded: `invory-ux-design`, `bencium-controlled-ux-designer`, `web-design-guidelines`, `invory-product-owner`, `invory-costing-domain` · On demand: `frontend-design` · claude.ai design canvas (Artifact tool) · Agent memory (project) |
 | **Tech lead** | Laravel architecture (modular monolith, actions, policies) · domain modelling of BOM costing · decimal precision · OWASP Top 10 for web apps (mass assignment, broken access control, XSS, SQLi) · DB design and indexing · N+1 detection · test strategy (unit/feature/arch/E2E) · vertical slicing and technical task breakdown · accessibility review · CI/CD · writing ADRs · technical-debt management · mentoring-quality feedback | Preloaded: `invory-costing-domain`, `invory-code-review` · Built-in: `/security-review`, `/code-review` · Boost MCP: `search-docs`, `database-schema`, `application-info` · Agent memory (project) |
 | **Backend developer** | PHP 8.3+ (enums, readonly classes, strict types) · Laravel 13: Eloquent, migrations, FormRequests, Policies, API Resources, transactions, service container · Inertia 3 server side · `brick/math` BigDecimal · Pest 4 (datasets, `assertInertia`, arch tests) · Larastan / PHPStan generics · Pint · Wayfinder route naming | Preloaded: `invory-costing-domain`, `invory-laravel-backend` · Boost skills: `pest-testing`, `wayfinder-development`, `infer-conventions` · Boost MCP: `search-docs`, `database-schema`, `database-query`, `last-error`, `read-log-entries` |
 | **Frontend developer** | React 19 (Rules of React, React Compiler, ref-as-prop) · TypeScript strict · Inertia 3 client (pages, `<Form>`, `useForm`, partial reloads, `preserveState`) · Wayfinder · Tailwind 4 · shadcn/ui + Radix · form UX for numeric data · `Intl.NumberFormat` · WCAG 2.2 AA · responsive and dark mode · Vitest + React Testing Library + user-event · Pest browser tests | Preloaded: `invory-costing-domain`, `invory-react-frontend` · Boost skills: `inertia-react-development`, `wayfinder-development`, `tailwindcss-development` · Boost MCP: `search-docs`, `browser-logs` |
 
 Boost skills and MCP tools appear after `php artisan boost:install` (see [SETUP.md](SETUP.md)).
-Project skills live in `.claude/skills/invory-*` and are committed. `invory-costing-domain` is the single source of truth for business maths.
+Project skills live in `.claude/skills/invory-*` and are committed. The three third-party design skills (`bencium-controlled-ux-designer`,
+`web-design-guidelines`, `frontend-design`) are copied with their licence and a `SOURCE.md` (upstream commit, changes made). `invory-costing-domain` is the single source of truth for business maths.
 
 ## Workflow
 
@@ -59,6 +65,7 @@ Project skills live in `.claude/skills/invory-*` and are committed. `invory-cost
  human ⇄ main session (liaison)
               │
    0. REFINE  ├──► product-owner: phase proposal + story cards (docs/stories/<id>-<slug>.md, Obsidian style)
+              │       ui-ux-designer (when a story changes a screen): design spec + canvas boards → the PO decides
               │       Description · How it works today · Acceptance criteria — questions with options in its hand-off
               │◄── cards ──► human approves each card ──► status Ready ──► main session commits the docs on main
               │
@@ -74,6 +81,7 @@ Project skills live in `.claude/skills/invory-*` and are committed. `invory-cost
               │◄── delivery report: verdicts, gates, AC → test evidence, proposed commits
               │
    3. ACCEPT  ├──► product-owner: acceptance review (each AC vs evidence) + click-through script
+              │       ui-ux-designer: UX review of the delivered screens (spec, states, WCAG) → folded into the PO's review
               │◄── human clicks through and accepts (or a gap goes back to step 2 / a new story)
               │
    4. CLOSE   └── main session commits per acceptance criterion (your yes) ──► product-owner updates BACKLOG / STATUS / ROADMAP
@@ -162,7 +170,8 @@ about behaviour go to the product-owner.
    Approved cards and Technical work are the exception: they're committed straight to `main` before the build branch exists (see above).
 4. **Handoff reports are mandatory** and use the exact template in each agent file. The tech-lead re-runs every gate. Pasted output is not proof.
 5. **Disagreements:** technical ones are settled by the tech-lead; behaviour, UX, scope and priority by the product-owner, with you deciding
-   anything the card doesn't settle. Neither lead edits the other's documents, or the other's part of a card.
+   anything the card doesn't settle. The UI/UX designer proposes and reviews; where it disagrees with the product-owner, the main session
+   puts both options to you. Neither lead edits the other's documents, or the other's part of a card.
 6. **Domain changes** (a formula, rounding, a new edge case) are product decisions: the product-owner proposes the rule, you decide, it
    becomes an acceptance criterion, and the tech-lead updates `invory-costing-domain` before any code changes. Code follows the skill,
    never the other way round.
@@ -249,6 +258,7 @@ Lane · Who · Size), then one block per step with its commit, its tests and a f
 ## Example prompts for the main session
 - "What's next?" → the product-owner proposes the next phase or the next stories, with cards to approve.
 - "Write the cards for Phase 4." → the product-owner refines S-30, S-08, S-31, S-32; you approve them; then the tech-lead plans.
+- "Design the order sizes screen." → the ui-ux-designer writes a design spec with options and boards; the product-owner turns your choice into the card.
 - "Plan S-31." → the tech-lead adds the Technical work under S-31's approved card (simple or complex), then stops for your approval.
 - "Approved, build it." → the tech-lead dispatches, reviews and returns a delivery report; then the product-owner prepares your acceptance check.
 - "Where are we?" → the product-owner refreshes `docs/STATUS.md`.
