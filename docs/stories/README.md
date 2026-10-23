@@ -8,7 +8,7 @@ tags:
     
     vault_path: docs/
     
-    updated: 2026-10-22
+    updated: 2026-10-23
     
 
 # Story Cards (Product-Owner & Tech-Lead)
@@ -61,9 +61,9 @@ This document tracks all story cards across active and past phases. Each story c
 | **S-53** — Starting to cut an order takes its materials out of stock                               | 5         | Must           | L        | `Done` (accepted 2026-10-21; `cd98f04`, `e809fb9`, `c5a38e1`, `06beb6d`, `15cfd26`, `8ab9df8`)         |
 | **S-50** — See on the Orders list how far each order has got, and what is being made               | 5         | Must           | S        | `Done` (accepted 2026-10-22; `ba0a0cd`, `74f05a8`, `a23a5d7`)                                          |
 | **S-58** — Every product gets the sizes of its category                                            | 5         | Must           | S        | `Done` (accepted 2026-10-22; `2f02d87`, `9eeee19`, `f1074b6`, `ce9a36f`, `eb5ff13`)                    |
-| **S-60** — Order a product in several sizes                                                        | 5         | Must           | M        | `Ready` (approved 2026-10-22, D-17; next: tech-lead plans it with S-61)                                |
-| **S-61** — Follow each size through cutting, ready to ship and shipped                             | 5         | Must           | M        | `Ready` (approved 2026-10-22, D-17; next: tech-lead plans it with S-60)                                |
-| **S-56** — Finished products in stock, per size                                                    | 5         | Should         | M        | `Ready` (approved 2026-10-22, D-17; after S-60 and S-61)                                               |
+| **S-60** — Order a product in several sizes                                                        | 5         | Must           | M        | `Done` (accepted 2026-10-23; `1db11bb`, one commit with S-61)                                          |
+| **S-61** — Follow each size through cutting, ready to ship and shipped                             | 5         | Must           | M        | `Done` (accepted 2026-10-23; `1db11bb`, one commit with S-60)                                          |
+| **S-56** — Finished products in stock, per size                                                    | 5         | Should         | M        | `Ready` (approved 2026-10-22, D-17; next: tech-lead plans it)                                          |
 | **S-57** — Cancel an order                                                                         | 5         | Should         | M        | `Ready` (approved 2026-10-22, D-17; after S-56)                                                        |
 | **S-65** — Close a fully shipped order                                                             | 5         | Should         | M        | `Ready` (approved 2026-10-22; next: tech-lead plans after S-57)                                        |
 | **F-41** — The cost engine gives the total need of each material                                   | 5         | Tech Allowance | S        | `Done` (accepted 2026-10-21; `e99615e`)                                                                |
