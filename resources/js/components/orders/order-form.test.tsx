@@ -3,7 +3,12 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { OrderForm } from '@/components/orders/order-form';
 import { inertiaMock, resetInertiaMock, setFormState } from '@/test/inertia';
-import { formProduct, sizeIds, sizeLists } from '@/test/fixtures';
+import {
+    formProduct,
+    sizedJacketLine,
+    sizeIds,
+    sizeLists,
+} from '@/test/fixtures';
 
 vi.mock('@inertiajs/react', async (importOriginal) => {
     const { createInertiaModule } = await import('@/test/inertia');
@@ -309,5 +314,88 @@ describe('<OrderForm>', () => {
         ).toHaveTextContent(message);
         expect(sizes[0]).toHaveFocus();
         expect(inertiaMock.submissions).toHaveLength(1);
+    });
+
+    it('shows a started size its minimum before anything is typed, and only that size (S-70 AC-6)', async () => {
+        const user = userEvent.setup();
+        // M has 4 in cutting, 3 ready to ship and 3 shipped: 10 started. The line is 50 units.
+        const line = {
+            ...sizedJacketLine,
+            in_cutting: 4,
+            ready_to_ship: 3,
+            shipped: 3,
+            started: 10,
+            to_start: 40,
+            sizes: sizedJacketLine.sizes.map((entry) =>
+                entry.size.id === sizeIds.M
+                    ? {
+                          ...entry,
+                          to_start: 10,
+                          in_cutting: 4,
+                          ready_to_ship: 3,
+                          shipped: 3,
+                          started: 10,
+                      }
+                    : entry,
+            ),
+        };
+
+        render(
+            <OrderForm
+                title="Edit order"
+                order={{
+                    id: 7,
+                    client: 'Boutique Lina',
+                    ordered_on: '2026-10-20',
+                    note: null,
+                    lines: [line],
+                    units: 50,
+                    to_start: 40,
+                    in_cutting: 4,
+                    ready_to_ship: 3,
+                    shipped: 3,
+                    status: 'in_progress',
+                    status_label: 'In progress',
+                    delete_refusal: null,
+                }}
+                products={[
+                    ...products,
+                    product(
+                        4,
+                        'Canvas Low Sneaker',
+                        'PRD-SNK-004',
+                        'eu_36_to_46',
+                    ),
+                ]}
+                sizeLists={sizeLists}
+                action={{ url: '/orders/7', method: 'put' }}
+                cancelHref="/orders/7"
+            />,
+        );
+
+        const first = lineGroup(1);
+
+        expect(first.getByLabelText('M')).toHaveAccessibleDescription(
+            'At least 10',
+        );
+
+        for (const label of ['S', 'L', 'XL']) {
+            expect(
+                first.getByLabelText(label),
+            ).not.toHaveAccessibleDescription();
+        }
+
+        // A line added now has nothing started.
+        await user.click(screen.getByRole('button', { name: 'Add product' }));
+        const added = lineGroup(2);
+
+        await user.click(added.getByRole('combobox', { name: 'Product' }));
+        await user.click(
+            screen.getByRole('option', {
+                name: 'Canvas Low Sneaker · PRD-SNK-004',
+            }),
+        );
+
+        expect(added.getByLabelText('36')).not.toHaveAccessibleDescription();
     });
 });

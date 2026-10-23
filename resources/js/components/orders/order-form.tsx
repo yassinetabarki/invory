@@ -82,6 +82,14 @@ function startedLines(
             map.set(rows[index].uid, {
                 name: line.product.name,
                 count: line.started,
+                // A size already started can't go below what has started (S-61, S-70 AC-6).
+                ...(line.size_mode === 'by_size' && {
+                    sizes: Object.fromEntries(
+                        line.sizes
+                            .filter((entry) => entry.started >= 1)
+                            .map((entry) => [entry.size.id, entry.started]),
+                    ),
+                }),
             });
         }
     });

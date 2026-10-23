@@ -74,7 +74,7 @@ tags:
 
 ## Technical work
 > [!warning] Complex · CRITICAL · backend + frontend · 6 commits
-> Tech-lead · 2026-10-23 · approved 2026-10-23
+> Tech-lead · 2026-10-23 · approved 2026-10-23 · delivered 2026-10-23
 > Why complex: a small change to the data the order pages receive (each size's started units), the wording of the server's
 > per-size messages, and six screens.
 
@@ -302,3 +302,16 @@ frontend developers' files don't overlap. Merge order: a, b, d, c, e, f.
 - Screen readers could hear chips twice or lose a message → chips hidden behind one spoken line, each size field described by its own
   message; both covered by tests.
 - The golden path reads the Orders list's text → words and spaces kept; `composer test:browser` after the last wave.
+
+### Progress
+- 2026-10-23 · Build started in worktree `objective-hawking-a968ec` from 1591dc4. Tech-lead wrote the SKILL.md naming lines (S-70-a).
+  Wave 1 dispatched: backend S-70-a then S-70-b ∥ frontend S-70-d.
+- 2026-10-23 · Wave 1 cut off once by a rate limit (nothing written), re-dispatched. S-70-a, S-70-b, S-70-d approved in round 1; all
+  five gates green on the combined tree (Pest 2558, Vitest 1313). Wave 2 dispatched: frontend S-70-c ∥ frontend S-70-e then S-70-f.
+- 2026-10-23 · Wave 2: S-70-c, S-70-e, S-70-f approved in round 1. Combined tree: `composer test` (2558, 52 skipped), `npx vp test`
+  (1321), `npm run check`, `npm run types:check`, `npm run build`, `composer test:pgsql` (2558) and `composer test:browser` (2) green.
+  Size fields measured in a throwaway browser test at 375 px (4, 4, 3 per row) and 320 px (3, 3, 3, 2), 7 digits whole, no sideways
+  scroll, in all four places. Delivered; nothing committed.
+- 2026-10-23 · Fix round 1 after the product-owner and designer reviews (six layout items, approved by the human): row and label
+  gaps, 8 px from tablet up, titles clear of the ✕, "At least N" kept as one phrase, smaller SKU, badge weight. Approved; all gates and
+  `composer test:browser` green again. Screenshots `s70-*-fix.png` in the session scratchpad.

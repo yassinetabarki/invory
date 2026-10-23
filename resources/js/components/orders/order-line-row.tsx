@@ -1,4 +1,4 @@
-import { Trash2 } from 'lucide-react';
+import { Lock, Trash2 } from 'lucide-react';
 import { OrderSizeFields } from '@/components/orders/order-size-fields';
 import { FormField } from '@/components/products/form-field';
 import { Button } from '@/components/ui/button';
@@ -74,7 +74,12 @@ export function countingFor(
 }
 
 /** A saved line with units in cutting, ready to ship or shipped (S-49): it keeps its product and can't be removed. */
-export type StartedLine = { name: string; count: number };
+export type StartedLine = {
+    name: string;
+    count: number;
+    /** Units already started per size id (in cutting, ready to ship or shipped), as the server counted them: the lowest each size can go. */
+    sizes?: Readonly<Record<number, number>>;
+};
 
 type OrderLineRowProps = {
     row: OrderLineRow;
@@ -178,6 +183,30 @@ export function OrderLineRowFields({
                         sizes={counting.sizes}
                         values={row.sizes ?? {}}
                         errors={errors.bySize}
+                        hints={Object.fromEntries(
+                            Object.entries(started?.sizes ?? {}).map(
+                                ([sizeId, count]) => [
+                                    sizeId,
+                                    <>
+                                        <Lock
+                                            aria-hidden="true"
+                                            className="size-3 shrink-0"
+                                        />
+                                        {/* One phrase while it fits a phone-width field (up to 3 characters, "At least 100"): the lock then goes above it. A longer number may wrap after "At least". */}
+                                        <span
+                                            className={cn(
+                                                formatCount(count, locale)
+                                                    .length <= 3 &&
+                                                    'whitespace-nowrap',
+                                            )}
+                                        >
+                                            At least{' '}
+                                            {formatCount(count, locale)}
+                                        </span>
+                                    </>,
+                                ],
+                            ),
+                        )}
                         totalError={errors.sizes}
                         onChange={(sizeId, value) =>
                             onChange({
