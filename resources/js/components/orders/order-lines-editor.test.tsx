@@ -184,13 +184,13 @@ describe('<OrderLinesEditor>', () => {
 
     it.each([
         {
-            name: "a size's message under that size (S-60 AC-2)",
+            name: "a size's message under Total, naming the size (S-60 AC-2, S-70 AC-5)",
             key: `lines.0.sizes.${sizeIds.S}`,
-            message: 'Enter a whole number from 0 to 1,000,000.',
+            message: 'S: Enter a whole number from 0 to 1,000,000.',
             field: 'S',
         },
         {
-            name: "a size's message under that size, below what is started (S-61 AC-5)",
+            name: "a size's message under Total, below what is started (S-61 AC-5)",
             key: `lines.0.sizes.${sizeIds.M}`,
             message:
                 "M can't be less than the 10 units already in cutting, ready to ship or shipped.",
@@ -234,12 +234,10 @@ describe('<OrderLinesEditor>', () => {
             }
         }
 
-        if (field === null) {
-            // Under the "Total" line, after the last size.
-            const total = line.getByText('Total 0 units');
-
-            expect(total.nextElementSibling).toHaveTextContent(message);
-        }
+        // Under the "Total" line, after the last size; the fields keep their place.
+        expect(
+            line.getByText('Total 0 units').nextElementSibling,
+        ).toHaveTextContent(message);
     });
 
     it.each([

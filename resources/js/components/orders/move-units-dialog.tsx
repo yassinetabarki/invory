@@ -181,7 +181,7 @@ function MoveUnitsForm({ order, line, move, onClose }: MoveUnitsFormProps) {
             className="flex min-h-0 flex-col gap-4"
             onSubmit={handleSubmit}
         >
-            <DialogHeader className="shrink-0">
+            <DialogHeader className="shrink-0 pr-6">
                 <DialogTitle>
                     {MOVES[move].title} · {line.product.name}
                 </DialogTitle>
@@ -326,8 +326,8 @@ export function MoveUnitsDialog({
             }}
         >
             <DialogContent
-                // At most the screen's height: the form inside scrolls its middle.
-                className="flex max-h-[calc(100dvh-2rem)] flex-col"
+                // At most the screen's height: the form inside scrolls its middle. 16 px at the sides on a phone, so four size fields fit a row.
+                className="flex max-h-[calc(100dvh-2rem)] flex-col px-4 sm:px-6"
                 aria-describedby={undefined}
                 onCloseAutoFocus={(event) => {
                     const opener = returnFocusTo?.current;

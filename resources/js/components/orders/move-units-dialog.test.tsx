@@ -840,7 +840,7 @@ describe('<MoveUnitsDialog> materials table (S-53)', () => {
         it.each([
             ['the window', 'sizes', 'Enter at least one unit to move.'],
             ['M', `sizes.${sizeIds.M}`, 'You can move at most 20 units of M.'],
-            ['M', `sizes.${sizeIds.M}`, 'Enter a whole number of units.'],
+            ['M', `sizes.${sizeIds.M}`, 'M: Enter a whole number of units.'],
             // L holds 0 in cutting: it has no field, so its message goes under all the fields.
             [
                 'the window',
@@ -1054,10 +1054,10 @@ describe('<MoveUnitsDialog> materials table (S-53)', () => {
             }
 
             // The same wrapping row as the order form's size fields (layout: see the click-through).
-            expect(size('S').closest('.flex-wrap')).toBe(
-                size('XL').closest('.flex-wrap'),
-            );
-            expect(size('S').closest('.flex-wrap')).not.toBeNull();
+            const grid = size('S').closest('[data-slot="size-fields"]');
+
+            expect(grid).not.toBeNull();
+            expect(size('XL').closest('[data-slot="size-fields"]')).toBe(grid);
         });
     });
 });

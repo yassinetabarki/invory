@@ -184,13 +184,13 @@ describe('<UpdateStockDialog>', () => {
         expectation: () => void;
     }>([
         {
-            name: 'a refused number shows under its size',
+            name: 'a refused number shows under the fields, naming its size',
             errors: {
-                'sizes.2': 'Enter a whole number from 0 to 1,000,000.',
+                'sizes.2': 'M: Enter a whole number from 0 to 1,000,000.',
             },
             expectation: () => {
                 expect(field('M')).toHaveAccessibleDescription(
-                    'Enter a whole number from 0 to 1,000,000.',
+                    'M: Enter a whole number from 0 to 1,000,000.',
                 );
                 expect(field('M')).toBeInvalid();
                 expect(field('S')).toBeValid();
@@ -287,7 +287,7 @@ describe('<UpdateStockDialog>', () => {
         });
         const inputs = within(group).getAllByRole('textbox');
 
-        expect(inputs[0].closest('.flex-wrap')).not.toBeNull();
+        expect(inputs[0].closest('[data-slot="size-fields"]')).not.toBeNull();
         expect(inputs).toHaveLength(11);
 
         for (const input of inputs) {
