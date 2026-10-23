@@ -5,7 +5,7 @@ type: feature
 phase: 5
 priority: Should
 size: M
-status: Ready
+status: Done
 created: 2026-10-18
 tags:
   - story
@@ -27,32 +27,32 @@ tags:
 > finished jackets.
 
 ## Acceptance criteria
-- [ ] **AC-1 · In stock on the product page.** Next to "Can produce now 112", the Denim Jacket's page shows "In stock 10 units" and under
+- [x] **AC-1 · In stock on the product page.** Next to "Can produce now 112", the Denim Jacket's page shows "In stock 10 units" and under
   it "S 3 · M 0 · L 5 · XL 2". A product with nothing in stock shows "In stock 0 units". A "One size" product shows only "In stock 4
-  units".
-- [ ] **AC-2 · Update the count.** On the "In stock" figure each size under "10 units" is a chip with its label and count: "S 3",
+  units". ✅ 2026-10-23 · 83062eb
+- [x] **AC-2 · Update the count.** On the "In stock" figure each size under "10 units" is a chip with its label and count: "S 3",
   "M 0", "L 5", "XL 2". A size at 0, like "M 0", is greyed. Screen readers hear "In stock per size: S 3, M 0, L 5, XL 2". At 375 px
   the chips wrap onto more lines. "Update stock", a button at the top right of the figure on the same row as "In stock", opens
   "Update stock · Denim Jacket" with a field per size holding today's count (S 3, M 0, L 5, XL 2). Changing M to 4 and clicking
   "Save" shows "Stock updated." and the page reads "In stock 14 units" with the chips "S 3", "M 4", "L 5", "XL 2". Each size takes a
   whole number from 0 to 1,000,000 ("Enter a whole number from 0 to 1,000,000."). A size left empty counts as 0. If the product's
   sizes change while the window is open, nothing is saved and the window shows the new sizes with "The sizes of Denim Jacket have
-  changed. Enter the stock again." "Cancel" changes nothing.
-- [ ] **AC-3 · Nothing else changes.** After the update, "Can produce now" (112), the unit cost (TND 35.754), the materials' stock and the
+  changed. Enter the stock again." "Cancel" changes nothing. ✅ 2026-10-23 · 83062eb
+- [x] **AC-3 · Nothing else changes.** After the update, "Can produce now" (112), the unit cost (TND 35.754), the materials' stock and the
   dashboard's Inventory value read as before. Recording a sale of 2 Denim Jackets leaves "In stock 14 units". A new order of Denim
-  Jackets doesn't change it either.
-- [ ] **AC-4 · The category stays locked while there is stock.** With 14 Denim Jackets in stock and the jacket on no order, changing its
+  Jackets doesn't change it either. ✅ 2026-10-23 · 83062eb
+- [x] **AC-4 · The category stays locked while there is stock.** With 14 Denim Jackets in stock and the jacket on no order, changing its
   category to Footwear shows "Denim Jacket has units in stock, so its category can't change to one with other sizes. Keep a category
   with sizes S, M, L, XL." and nothing is saved (a "One size" product ends with "Keep a "One size" category."). If the jacket is also
-  on an order, the S-58 message shows instead. At "In stock 0 units" the S-58 rule applies alone.
-- [ ] **AC-5 · States.** If the stock can't be loaded, the figure shows "Couldn't load the stock." with "Try again". If saving fails, the
-  window stays open with what you typed and shows "Couldn't save the stock. Try again."
-- [ ] **AC-6 · The "Update stock" window, and phone width.** "Update stock · Denim Jacket" shows the note "Doesn't change materials,
+  on an order, the S-58 message shows instead. At "In stock 0 units" the S-58 rule applies alone. ✅ 2026-10-23 · 83062eb
+- [x] **AC-5 · States.** If the stock can't be loaded, the figure shows "Couldn't load the stock." with "Try again". If saving fails, the
+  window stays open with what you typed and shows "Couldn't save the stock. Try again." ✅ 2026-10-23 · 83062eb
+- [x] **AC-6 · The "Update stock" window, and phone width.** "Update stock · Denim Jacket" shows the note "Doesn't change materials,
   "Can produce now" or sales." and the line "Total after saving 10 units", which follows what you type: changing M from 0 to 4 makes
   it "Total after saving 14 units" and shows "was 0" under M. A size you haven't changed shows no "was" hint, and putting M back to 0
   removes it. A size left empty counts as 0 in the total. At 375 px "In stock 10 units" sits right under "Can produce now", a shoe's
   11 sizes (36 to 46) wrap onto several lines without scrolling sideways, and in the window the size fields wrap onto several rows,
-  each with its label, with "Save" and "Cancel" under the last row.
+  each with its label, with "Save" and "Cancel" under the last row. ✅ 2026-10-23 · 83062eb
 
 ---
 
