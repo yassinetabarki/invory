@@ -36,15 +36,15 @@ describe('<ProductHeader>', () => {
             'One size',
         ],
     ])(
-        'names the sizes of %s next to its category',
+        'names the sizes of %s in an outlined badge next to its category',
         (_, product, category, sizes) => {
             render(<ProductHeader product={product} />);
 
             const row = screen.getByText(category).parentElement;
+            const badge = within(row as HTMLElement).getByText(sizes);
 
-            expect(
-                within(row as HTMLElement).getByText(sizes),
-            ).toBeInTheDocument();
+            expect(badge).toHaveAttribute('data-slot', 'badge');
+            expect(badge.previousElementSibling).toHaveTextContent(category);
         },
     );
 

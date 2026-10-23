@@ -12,6 +12,7 @@ import { DecimalInput } from '@/components/products/decimal-input';
 import { trimDecimal } from '@/components/products/decimals';
 import { FormField } from '@/components/products/form-field';
 import { PhotoField } from '@/components/shared/photo-field';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -106,9 +107,63 @@ function toFormState(product: Product | undefined): ProductFormState {
     };
 }
 
-/** "Sizes: S, M, L, XL" for a list of several sizes, "One size" for a single one. */
-function sizesLine(list: SizeList): string {
-    return list.sizes.length > 1 ? `Sizes: ${list.name}` : list.name;
+/** A list with more sizes than this shows its name ("36 to 46") instead of one tag per size. */
+const MAX_SIZE_TAGS = 6;
+
+/**
+ * The sizes of the chosen category, under "Category": grey "Sizes:" then a tag
+ * per size (or the list's name in bold), then the hint. The visual line is
+ * hidden from screen readers; one hidden line says "Sizes: S, M, L, XL",
+ * "Sizes: 36 to 46" or "One size", and the Category select is described by it
+ * and by the hint (`spokenId`, `hintId`).
+ */
+function SizesLine({
+    list,
+    spokenId,
+    hintId,
+}: {
+    list: SizeList;
+    spokenId: string;
+    hintId: string;
+}) {
+    const several = list.sizes.length > 1;
+
+    return (
+        <>
+            {several ? (
+                <>
+                    <p id={spokenId} className="sr-only">
+                        Sizes: {list.name}
+                    </p>
+                    <p
+                        aria-hidden="true"
+                        className="flex flex-wrap items-center gap-1.5 text-sm"
+                    >
+                        <span className="text-muted-foreground">Sizes:</span>
+                        {list.sizes.length <= MAX_SIZE_TAGS ? (
+                            list.sizes.map((size) => (
+                                <Badge key={size.id} variant="outline">
+                                    {size.label}
+                                </Badge>
+                            ))
+                        ) : (
+                            <strong className="font-semibold">
+                                {list.name}
+                            </strong>
+                        )}
+                    </p>
+                </>
+            ) : (
+                // One size: the bold words are also what a screen reader hears.
+                <p id={spokenId} className="text-sm">
+                    <strong className="font-semibold">{list.name}</strong>
+                </p>
+            )}
+            <p id={hintId} className="text-xs text-muted-foreground">
+                Sizes come with the category.
+            </p>
+        </>
+    );
 }
 
 /** The currency's symbol where the locale has one ("€"), otherwise its code ("TND"). */
@@ -345,48 +400,63 @@ export function ProductForm({
                                     id={id('category')}
                                     label="Category"
                                     required
-                                    hint={
-                                        sizeList && (
-                                            <>
-                                                <span className="block">
-                                                    {sizesLine(sizeList)}
-                                                </span>{' '}
-                                                <span className="block">
-                                                    Sizes come with the
-                                                    category.
-                                                </span>
-                                            </>
-                                        )
-                                    }
                                     error={errors.category}
                                 >
                                     {(control) => (
-                                        <Select
-                                            value={form.data.category}
-                                            onValueChange={(value) =>
-                                                form.setData(
-                                                    'category',
-                                                    value as ProductCategory,
-                                                )
-                                            }
-                                        >
-                                            <SelectTrigger
-                                                {...control}
-                                                className="w-full"
+                                        <>
+                                            <Select
+                                                value={form.data.category}
+                                                onValueChange={(value) =>
+                                                    form.setData(
+                                                        'category',
+                                                        value as ProductCategory,
+                                                    )
+                                                }
                                             >
-                                                <SelectValue placeholder="Select a category" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {categories.map((option) => (
-                                                    <SelectItem
-                                                        key={option.value}
-                                                        value={option.value}
-                                                    >
-                                                        {option.label}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                                <SelectTrigger
+                                                    {...control}
+                                                    aria-describedby={
+                                                        [
+                                                            sizeList
+                                                                ? `${control.id}-sizes ${control.id}-sizes-hint`
+                                                                : null,
+                                                            control[
+                                                                'aria-describedby'
+                                                            ],
+                                                        ]
+                                                            .filter(Boolean)
+                                                            .join(' ') ||
+                                                        undefined
+                                                    }
+                                                    className="w-full"
+                                                >
+                                                    <SelectValue placeholder="Select a category" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {categories.map(
+                                                        (option) => (
+                                                            <SelectItem
+                                                                key={
+                                                                    option.value
+                                                                }
+                                                                value={
+                                                                    option.value
+                                                                }
+                                                            >
+                                                                {option.label}
+                                                            </SelectItem>
+                                                        ),
+                                                    )}
+                                                </SelectContent>
+                                            </Select>
+                                            {sizeList && (
+                                                <SizesLine
+                                                    list={sizeList}
+                                                    spokenId={`${control.id}-sizes`}
+                                                    hintId={`${control.id}-sizes-hint`}
+                                                />
+                                            )}
+                                        </>
                                     )}
                                 </FormField>
                                 <FormField

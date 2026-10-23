@@ -35,11 +35,14 @@ export function ProductHeader({ product, actions }: ProductHeaderProps) {
                     >
                         {product.category_label}
                     </Badge>
-                    <span className="text-sm text-muted-foreground">
+                    <Badge
+                        variant="outline"
+                        className="rounded-full font-semibold"
+                    >
                         {product.size_list.sizes.length > 1
                             ? `Sizes ${product.size_list.name}`
                             : product.size_list.name}
-                    </span>
+                    </Badge>
                     <ProductStatusBadge
                         status={product.status}
                         label={product.status_label}

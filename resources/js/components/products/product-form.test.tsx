@@ -146,7 +146,48 @@ describe('<ProductForm>', () => {
             expect(
                 screen.queryByRole('group', { name: /^Row/ }),
             ).not.toBeInTheDocument();
+            // No category chosen: no sizes line.
+            expect(
+                screen.queryByText('Sizes come with the category.'),
+            ).not.toBeInTheDocument();
         });
+
+        it.each([
+            [
+                'Apparel',
+                'apparel',
+                'Sizes: S, M, L, XL',
+                ['S', 'M', 'L', 'XL'],
+                null,
+            ],
+            ['Footwear', 'footwear', 'Sizes: 36 to 46', [], '36 to 46'],
+            ['Bag', 'bag', 'One size', [], 'One size'],
+        ] as const)(
+            'names the sizes of %s under "Category"',
+            (_, category, spoken, tags, bold) => {
+                setup({ product: { ...denimJacket, category } });
+
+                // The category field: select, sizes line, hint.
+                const field = screen.getByText('Sizes come with the category.')
+                    .parentElement as HTMLElement;
+
+                expect(
+                    screen.getByLabelText(/^Category/),
+                ).toHaveAccessibleDescription(
+                    `${spoken} Sizes come with the category.`,
+                );
+
+                // One outline tag per size up to 6 sizes; above that, the list's name in bold.
+                expect(
+                    [...field.querySelectorAll('[data-slot="badge"]')].map(
+                        (badge) => badge.textContent,
+                    ),
+                ).toEqual(tags);
+                expect(field.querySelector('strong')?.textContent).toBe(
+                    bold ?? undefined,
+                );
+            },
+        );
 
         it('marks the required fields and labels the optional ones', () => {
             setup();

@@ -124,8 +124,16 @@ describe('<ProductHero>', () => {
         const cost = within(card('Unit cost'));
 
         expect(cost.getByText('€35.75')).toBeInTheDocument();
+    });
+
+    it.each([
+        ['several sizes', true, 'same for every size'],
+        ['one size', false, 'materials, labor and overhead'],
+    ])('reads the unit cost sub-line for %s', (_, multipleSizes, subLine) => {
+        renderHero(denimJacket.capacity, denimSalesLast30Days, multipleSizes);
+
         expect(
-            cost.getByText('materials, labor and overhead'),
+            within(card('Unit cost')).getByText(subLine),
         ).toBeInTheDocument();
     });
 

@@ -154,7 +154,9 @@ export function ProductHero({
                     <Money value={unitCost} />
                 </span>
                 <span className="text-[0.8125rem] text-muted-foreground">
-                    materials, labor and overhead
+                    {multipleSizes
+                        ? 'same for every size'
+                        : 'materials, labor and overhead'}
                 </span>
             </HeroCard>
 
