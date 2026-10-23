@@ -647,6 +647,10 @@ describe('<MoveUnitsDialog> materials table (S-53)', () => {
                     figures.in_cutting +
                     figures.ready_to_ship +
                     figures.shipped,
+                started:
+                    figures.in_cutting +
+                    figures.ready_to_ship +
+                    figures.shipped,
                 ...figures,
             };
         }

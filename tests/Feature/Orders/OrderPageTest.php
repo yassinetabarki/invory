@@ -55,7 +55,7 @@ it('shows Boutique Lina\'s order with its lines in the order entered, nothing st
                 ->where('size_mode', 'before_sizes')
                 ->where('sizes', [[
                     'size' => ['id' => Size::query()->where('label', 'One size')->value('id'), 'label' => 'One size'],
-                    'quantity' => 50, 'to_start' => 50, 'in_cutting' => 0, 'ready_to_ship' => 0, 'shipped' => 0,
+                    'quantity' => 50, 'to_start' => 50, 'in_cutting' => 0, 'ready_to_ship' => 0, 'shipped' => 0, 'started' => 0,
                 ]])
                 ->where('status', 'not_started')
                 ->where('status_label', 'Not started'))

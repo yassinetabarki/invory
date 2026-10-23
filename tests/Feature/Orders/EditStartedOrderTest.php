@@ -6,6 +6,7 @@ use App\Models\OrderLine;
 use App\Models\SizeList;
 use App\Services\Orders\OrderMessages;
 use Illuminate\Validation\ValidationException;
+use Inertia\Testing\AssertableInertia as Assert;
 
 use function Pest\Laravel\actingAs;
 
@@ -245,3 +246,18 @@ it('keeps each size at its started units, lets the others change, and keeps a st
         'S' => [10, 0, 0, 0], 'M' => [10, ...$started], 'L' => [20, 0, 0, 0], 'XL' => [5, 0, 0, 0],
     ]);
 })->with('started sizes');
+
+it('sends each size its started units, computed from its three stages, on Edit order (S-70 AC-6)', function () {
+    // M: 4 in cutting + 3 ready to ship + 3 shipped; S: nothing started.
+    $order = bookSizedOrder(['S' => 10, 'M' => 20], ['M' => [4, 3, 3]]);
+
+    actingAs($this->user)->get(route('orders.edit', $order))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('order.lines.0.sizes.0.size.label', 'S')
+            ->where('order.lines.0.sizes.0.started', 0)
+            ->where('order.lines.0.sizes.1.size.label', 'M')
+            ->where('order.lines.0.sizes.1.started', 10)
+            ->where('order.lines.0.started', 10)
+            ->etc());
+});

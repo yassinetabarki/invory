@@ -149,6 +149,7 @@ describe('<OrderLineCard>', () => {
             in_cutting: 0,
             ready_to_ship: 0,
             shipped: 0,
+            started: 0,
             ...figures,
         });
 

@@ -58,6 +58,7 @@ function sizedLine(counts: [keyof typeof sizeIds, number][]): OrderLine {
             in_cutting: 0,
             ready_to_ship: 0,
             shipped: 0,
+            started: 0,
         })),
     };
 }
@@ -243,6 +244,7 @@ describe('<OrdersTable>', () => {
                     in_cutting: 0,
                     ready_to_ship: 0,
                     shipped: 0,
+                    started: 0,
                 })),
                 quantity: 12,
                 to_start: 12,

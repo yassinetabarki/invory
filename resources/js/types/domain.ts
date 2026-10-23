@@ -349,6 +349,7 @@ export type OrderLineSize = {
     in_cutting: number;
     ready_to_ship: number;
     shipped: number;
+    started: number; // in_cutting + ready_to_ship + shipped, computed server-side
 };
 
 export type OrderLine = {

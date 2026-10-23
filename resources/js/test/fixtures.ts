@@ -81,6 +81,7 @@ export function withOneSize(
                 in_cutting: line.in_cutting,
                 ready_to_ship: line.ready_to_ship,
                 shipped: line.shipped,
+                started: line.started,
             },
         ],
     };
@@ -115,6 +116,7 @@ export const sizedJacketLine: OrderLine = {
         in_cutting: 0,
         ready_to_ship: 0,
         shipped: 0,
+        started: 0,
     })),
     status: 'not_started',
     status_label: 'Not started',

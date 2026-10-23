@@ -26,6 +26,7 @@ final class OrderLineSizeResource extends JsonResource
             'in_cutting' => $this->in_cutting,
             'ready_to_ship' => $this->ready_to_ship,
             'shipped' => $this->shipped,
+            'started' => $this->started,
         ];
     }
 }
