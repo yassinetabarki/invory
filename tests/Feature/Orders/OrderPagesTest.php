@@ -30,7 +30,25 @@ it('offers only the active products of the workshop on New order, by name', func
     expect(pageProp($response, 'products.*.name'))->toBe([
         'Canvas Low Sneaker', 'Classic White T-shirt', 'Denim Jacket', 'Denim Jeans 5-pocket', 'Leather Belt', 'Leather Tote',
     ])
-        ->and(pageProp($response, 'products.2'))->toBe(['id' => pid(1), 'sku' => 'PRD-JKT-001', 'name' => 'Denim Jacket', 'status' => 'active', 'deleted' => false]);
+        ->and(pageProp($response, 'products.2'))->toBe(['id' => pid(1), 'sku' => 'PRD-JKT-001', 'name' => 'Denim Jacket', 'status' => 'active', 'deleted' => false, 'size_list_code' => 's_to_xl']);
+});
+
+it('sends the three size lists by code, once each, and the code of each product\'s list, on New order and Edit order (S-60)', function () {
+    $order = bookOrder();
+
+    foreach ([route('orders.create'), route('orders.edit', $order)] as $uri) {
+        $response = actingAs($this->user)->get($uri)->assertOk();
+
+        expect(array_keys(pageProp($response, 'size_lists')))->toBe(['s_to_xl', 'eu_36_to_46', 'one_size'])
+            ->and(pageProp($response, 'size_lists.s_to_xl.name'))->toBe('S, M, L, XL')
+            ->and(pageProp($response, 'size_lists.s_to_xl.sizes.*.label'))->toBe(['S', 'M', 'L', 'XL'])
+            ->and(pageProp($response, 'size_lists.eu_36_to_46.name'))->toBe('36 to 46')
+            ->and(pageProp($response, 'size_lists.eu_36_to_46.sizes'))->toHaveCount(11)
+            ->and(pageProp($response, 'size_lists.one_size'))->toMatchArray(['code' => 'one_size', 'name' => 'One size'])
+            ->and(array_column(pageProp($response, 'products'), 'size_list_code', 'name'))->toMatchArray([
+                'Denim Jacket' => 's_to_xl', 'Canvas Low Sneaker' => 'eu_36_to_46', 'Leather Tote' => 'one_size',
+            ]);
+    }
 });
 
 it('offers on Edit order the active products plus every product already on the order, whatever its status', function () {

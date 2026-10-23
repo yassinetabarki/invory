@@ -86,6 +86,28 @@ final readonly class OrderMessages
         return trans_choice('{1} You can move at most :count unit.|[0,*] You can move at most :count units.', $held);
     }
 
+    /** Why a size can't move that many units (S-61-a): its stage holds `$held` units of `$size` now. */
+    public static function sizeMoveLimit(string $size, int $held): string
+    {
+        return trans_choice(
+            '{1} You can move at most :count unit of :size.|[0,*] You can move at most :count units of :size.',
+            $held,
+            ['size' => self::sizeName($size)],
+        );
+    }
+
+    /** A size's field of the move window holds something that is not a whole number of units, or a negative one (S-61-a). */
+    public static function wholeUnits(): string
+    {
+        return __('Enter a whole number of units.');
+    }
+
+    /** Every size of a move is empty or 0 (S-61-a). */
+    public static function atLeastOneToMove(): string
+    {
+        return __('Enter at least one unit to move.');
+    }
+
     /** Why a deleted product's units can't start cutting. */
     public static function productDeleted(string $product): string
     {
@@ -100,6 +122,58 @@ final readonly class OrderMessages
             ."|[2,*] The quantity can't be less than the :count units already in cutting, ready to ship or shipped.",
             $started,
         );
+    }
+
+    /** Why a size's quantity can't go lower (S-61 AC-5): `$started` units of that size are in cutting, ready to ship or shipped. */
+    public static function sizeBelowStarted(string $size, int $started): string
+    {
+        return trans_choice(
+            "{1} :size can't be less than the :count unit already in cutting, ready to ship or shipped."
+            ."|[2,*] :size can't be less than the :count units already in cutting, ready to ship or shipped.",
+            $started,
+            ['size' => self::sizeName($size, true)],
+        );
+    }
+
+    /** A size's quantity is not a whole number from 0 to 1,000,000 (S-60 AC-2). */
+    public static function sizeQuantity(): string
+    {
+        return __('Enter a whole number from 0 to 1,000,000.');
+    }
+
+    /** Every size of a line is empty or 0 (S-60 AC-2). */
+    public static function atLeastOneUnit(string $product): string
+    {
+        return __('Enter at least one unit of :product.', ['product' => $product]);
+    }
+
+    /** The sizes of a line add up to more than a line can hold (S-60 AC-2). */
+    public static function lineTooBig(): string
+    {
+        return __('A line can hold up to 1,000,000 units.');
+    }
+
+    /**
+     * The product's sizes changed after the order form was built (F-64, S-60 F3): what was typed no longer fits, so nothing is saved.
+     * Shown under the field that was submitted.
+     */
+    public static function orderSizesChanged(string $product): string
+    {
+        return __('The sizes of :product have changed. Enter its quantities again.', ['product' => $product]);
+    }
+
+    /** The sizes of the line changed after the move window was built (S-61 F3): nothing moves. Shown under `sizes`, the whole window. */
+    public static function moveSizesChanged(string $product): string
+    {
+        return __('The sizes ordered for :product have changed. Enter the units again.', ['product' => $product]);
+    }
+
+    /** How a size is named in a sentence: a size of digits only reads "size 36", a letter size stays "M"; `$first` capitalises it. */
+    private static function sizeName(string $label, bool $first = false): string
+    {
+        $name = ctype_digit($label) ? "size {$label}" : $label;
+
+        return $first ? ucfirst($name) : $name;
     }
 
     /** Why a started line can't leave the order (also when its product is swapped, since lines are matched by product). */

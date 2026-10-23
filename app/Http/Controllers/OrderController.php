@@ -12,11 +12,15 @@ use App\Exceptions\OrderDeleteRefusedException;
 use App\Http\Requests\Orders\IndexOrderRequest;
 use App\Http\Requests\Orders\StoreOrderRequest;
 use App\Http\Requests\Orders\UpdateOrderRequest;
-use App\Http\Resources\OrderProductResource;
+use App\Http\Resources\OrderFormProductResource;
 use App\Http\Resources\OrderResource;
+use App\Http\Resources\SizeListResource;
 use App\Models\Order;
+use App\Models\SizeList;
 use App\Models\User;
 use App\Services\Orders\OrderBook;
+use App\Services\Products\SizeLists;
+use ArrayObject;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -49,12 +53,13 @@ final class OrderController extends Controller
         ]);
     }
 
-    public function create(OrderBook $book): Response
+    public function create(OrderBook $book, SizeLists $sizes): Response
     {
         Gate::authorize('create', Order::class);
 
         return Inertia::render('orders/create', [
-            'products' => fn (): AnonymousResourceCollection => OrderProductResource::collection($book->newOrderProducts()),
+            'products' => fn (): AnonymousResourceCollection => OrderFormProductResource::collection($book->newOrderProducts()),
+            'size_lists' => fn (): ArrayObject => $this->sizeLists($sizes),
         ]);
     }
 
@@ -76,13 +81,14 @@ final class OrderController extends Controller
         return to_route('orders.show', $order);
     }
 
-    public function edit(Order $order, OrderBook $book): Response
+    public function edit(Order $order, OrderBook $book, SizeLists $sizes): Response
     {
         Gate::authorize('update', $order);
 
         return Inertia::render('orders/edit', [
             'order' => fn (): OrderResource => new OrderResource($book->load($order)),
-            'products' => fn (): AnonymousResourceCollection => OrderProductResource::collection($book->editOrderProducts($order)),
+            'products' => fn (): AnonymousResourceCollection => OrderFormProductResource::collection($book->editOrderProducts($order)),
+            'size_lists' => fn (): ArrayObject => $this->sizeLists($sizes),
         ]);
     }
 
@@ -113,6 +119,16 @@ final class OrderController extends Controller
         $sentFromItsPage = parse_url(url()->previous(), PHP_URL_PATH) === route('orders.show', $order, false);
 
         return $sentFromItsPage ? to_route('orders.index') : back();
+    }
+
+    /**
+     * `size_lists`: the size lists by code, each once however many products use it. Always a JSON object (never `[]`).
+     *
+     * @return ArrayObject<string, array<mixed>>
+     */
+    private function sizeLists(SizeLists $sizes): ArrayObject
+    {
+        return new ArrayObject(array_map(fn (SizeList $list): array => (new SizeListResource($list))->resolve(), $sizes->lists()));
     }
 
     /** The signed-in user, for `orders.user_id`. The `auth` middleware and the request authorization guarantee one. */

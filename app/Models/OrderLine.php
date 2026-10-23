@@ -6,10 +6,10 @@ namespace App\Models;
 
 use App\Enums\OrderProgress;
 use App\Models\Concerns\BelongsToWorkshop;
+use App\Models\Concerns\HasStageCounts;
 use Carbon\CarbonInterface;
 use Database\Factories\OrderLineFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
-use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -22,13 +22,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int $workshop_id The workshop of the order (and of its product). Never mass-assignable: it comes from the order.
  * @property int $order_id
  * @property int $product_id
- * @property int $quantity Whole units, 1 to 1 000 000.
+ * @property int $quantity Whole units, 1 to 1 000 000: the sum of the line's sizes.
  * @property int $position Display order: the order the lines were entered in.
- * @property int $in_cutting Units in cutting (S-49). To start is derived: see `to_start`.
+ * @property int|null $size_list_id The size list the line counts by (ADR-0016). Never null in PostgreSQL; never mass-assignable: the Actions set it.
+ * @property int $in_cutting Units in cutting (S-49): the sum of the line's sizes. To start is derived: see `to_start`.
  * @property int $ready_to_ship Units ready to ship.
  * @property int $shipped Units shipped. The three counts never add up to more than the quantity.
- * @property-read int $to_start The quantity minus the three counts: whatever has not moved yet.
- * @property-read int $started The three counts added up: the units that have left To start.
  * @property CarbonInterface $created_at
  * @property CarbonInterface $updated_at
  */
@@ -36,7 +35,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class OrderLine extends Model
 {
     /** @use HasFactory<OrderLineFactory> */
-    use BelongsToWorkshop, HasFactory;
+    use BelongsToWorkshop, HasFactory, HasStageCounts;
 
     /** @return array<string, string> */
     protected function casts(): array
@@ -48,26 +47,6 @@ class OrderLine extends Model
             'ready_to_ship' => 'integer',
             'shipped' => 'integer',
         ];
-    }
-
-    /**
-     * To start is never stored, so the four figures of a line can't stop adding up to its quantity.
-     *
-     * @return Attribute<int, never>
-     */
-    protected function toStart(): Attribute
-    {
-        return Attribute::get(fn (): int => $this->quantity - $this->started);
-    }
-
-    /**
-     * The units that have left To start.
-     *
-     * @return Attribute<int, never>
-     */
-    protected function started(): Attribute
-    {
-        return Attribute::get(fn (): int => $this->in_cutting + $this->ready_to_ship + $this->shipped);
     }
 
     /**
@@ -96,6 +75,24 @@ class OrderLine extends Model
     public function cuts(): HasMany
     {
         return $this->hasMany(OrderLineCut::class);
+    }
+
+    /**
+     * The sizes of this line, in the size list's order. The order is a subselect on the size's position, not a join: the rows keep their
+     * columns (strict models), it runs the same on SQLite and PostgreSQL, and it survives eager loading.
+     *
+     * @return HasMany<OrderLineSize, $this>
+     */
+    public function sizes(): HasMany
+    {
+        return $this->hasMany(OrderLineSize::class)
+            ->orderBy(Size::query()->select('position')->whereColumn('sizes.id', 'order_line_sizes.size_id'));
+    }
+
+    /** @return BelongsTo<SizeList, $this> */
+    public function sizeList(): BelongsTo
+    {
+        return $this->belongsTo(SizeList::class);
     }
 
     /**

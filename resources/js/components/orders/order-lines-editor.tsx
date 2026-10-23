@@ -1,31 +1,88 @@
 import { Plus } from 'lucide-react';
 import { useEffect, useId, useRef } from 'react';
 import {
+    countingFor,
     newOrderLine,
     OrderLineRowFields,
 } from '@/components/orders/order-line-row';
 import type {
+    LineCounting,
     OrderLineRow,
     StartedLine,
 } from '@/components/orders/order-line-row';
 import { Button } from '@/components/ui/button';
-import type { OrderProduct } from '@/types/domain';
+import type {
+    OrderFormProduct,
+    OrderLineSizeMode,
+    SizeList,
+} from '@/types/domain';
 
 /** An order holds up to this many lines (the server enforces it too). */
 export const MAX_ORDER_LINES = 50;
 
 type OrderLinesEditorProps = {
     rows: OrderLineRow[];
-    products: readonly OrderProduct[];
+    products: readonly OrderFormProduct[];
+    /** The size lists by code: a product's list says how its line counts. */
+    sizeLists: Readonly<Record<string, SizeList>>;
+    /** How the saved order's lines count, by product id (Edit order): a product already on it keeps that way. */
+    savedModes?: ReadonlyMap<number, OrderLineSizeMode>;
     /**
      * The form's errors by key: `lines` for the list as a whole and
-     * `lines.N.product_id` / `lines.N.quantity` for a line (`N` counts from 0).
+     * `lines.N.product_id` / `lines.N.quantity` for a line (`N` counts from 0);
+     * `lines.N.sizes` for the sizes of a line and `lines.N.sizes.<size id>` for one size.
      */
     errors: Record<string, string | undefined>;
     /** Saved lines that have started, by row `uid`: their product is fixed and they can't be removed. */
     started?: ReadonlyMap<string, StartedLine>;
     onChange: (rows: OrderLineRow[]) => void;
 };
+
+/**
+ * The server's messages for line `index`, each under a field that is on screen.
+ * A message whose field isn't shown (the product's sizes changed since the form
+ * was built: a quantity on a line now counted by size, sizes on a "Quantity"
+ * line, a size that is gone) moves under "Total" or "Quantity", so none is lost.
+ */
+function lineErrors(
+    errors: Record<string, string | undefined>,
+    index: number,
+    counting: LineCounting,
+) {
+    const key = (name: string) => `lines.${index}.${name}`;
+    const product_id = errors[key('product_id')];
+    const sizeKeys = Object.keys(errors).filter(
+        (name) => name.startsWith(key('sizes.')) && errors[name],
+    );
+
+    if (counting.kind === 'quantity') {
+        const lost = [key('sizes'), ...sizeKeys].find((name) => errors[name]);
+
+        return {
+            product_id,
+            quantity: errors[key('quantity')] ?? (lost && errors[lost]),
+        };
+    }
+
+    const shown = new Set(
+        counting.sizes.map((size) => key(`sizes.${size.id}`)),
+    );
+    const lost = sizeKeys.find((name) => !shown.has(name));
+
+    return {
+        product_id,
+        sizes:
+            errors[key('sizes')] ??
+            errors[key('quantity')] ??
+            (lost && errors[lost]),
+        bySize: Object.fromEntries(
+            counting.sizes.map((size) => [
+                size.id,
+                errors[key(`sizes.${size.id}`)],
+            ]),
+        ),
+    };
+}
 
 /**
  * The "Products" section of the order form: one line per product with its
@@ -35,6 +92,8 @@ type OrderLinesEditorProps = {
 export function OrderLinesEditor({
     rows,
     products,
+    sizeLists,
+    savedModes,
     errors,
     started,
     onChange,
@@ -96,30 +155,37 @@ export function OrderLinesEditor({
                 </p>
             ) : (
                 <div className="flex flex-col gap-3">
-                    {rows.map((row, index) => (
-                        <OrderLineRowFields
-                            key={row.uid}
-                            row={row}
-                            number={index + 1}
-                            idPrefix={idPrefix}
-                            products={products}
-                            errors={{
-                                product_id: errors[`lines.${index}.product_id`],
-                                quantity: errors[`lines.${index}.quantity`],
-                            }}
-                            started={started?.get(row.uid)}
-                            onChange={(patch) =>
-                                onChange(
-                                    rows.map((other) =>
-                                        other.uid === row.uid
-                                            ? { ...other, ...patch }
-                                            : other,
-                                    ),
-                                )
-                            }
-                            onRemove={() => removeLine(index)}
-                        />
-                    ))}
+                    {rows.map((row, index) => {
+                        const counting = countingFor(
+                            row,
+                            products,
+                            sizeLists,
+                            savedModes,
+                        );
+
+                        return (
+                            <OrderLineRowFields
+                                key={row.uid}
+                                row={row}
+                                number={index + 1}
+                                idPrefix={idPrefix}
+                                products={products}
+                                counting={counting}
+                                errors={lineErrors(errors, index, counting)}
+                                started={started?.get(row.uid)}
+                                onChange={(patch) =>
+                                    onChange(
+                                        rows.map((other) =>
+                                            other.uid === row.uid
+                                                ? { ...other, ...patch }
+                                                : other,
+                                        ),
+                                    )
+                                }
+                                onRemove={() => removeLine(index)}
+                            />
+                        );
+                    })}
                 </div>
             )}
 

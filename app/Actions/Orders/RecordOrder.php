@@ -16,7 +16,7 @@ final readonly class RecordOrder
     /**
      * Records an order with its lines in one transaction. Orders are stock-neutral: no material, stock movement or sale is touched.
      *
-     * @param  array<string, mixed>  $data  validated input: `client`, `ordered_on` (Y-m-d), optional `note`, and `lines` (a list of `product_id` and `quantity`)
+     * @param  array<string, mixed>  $data  validated input: `client`, `ordered_on` (Y-m-d), optional `note`, and `lines` (a list of `product_id` and `quantity` or `sizes`)
      */
     public function handle(array $data, User $actor): Order
     {

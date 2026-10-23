@@ -2,6 +2,13 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import OrdersEdit from '@/pages/orders/edit';
+import {
+    formProduct,
+    sizedJacketLine,
+    sizeIds,
+    sizeLists,
+    withOneSize,
+} from '@/test/fixtures';
 import { inertiaMock, resetInertiaMock } from '@/test/inertia';
 import type { OrderEditProps, OrderLine, OrderProduct } from '@/types/domain';
 
@@ -34,7 +41,7 @@ function notStarted(
     product: OrderProduct,
     quantity: number,
 ): OrderLine {
-    return {
+    return withOneSize({
         id,
         product,
         quantity,
@@ -45,7 +52,7 @@ function notStarted(
         started: 0,
         status: 'not_started',
         status_label: 'Not started',
-    };
+    });
 }
 
 const props: OrderEditProps = {
@@ -64,7 +71,8 @@ const props: OrderEditProps = {
         status_label: 'Not started',
         delete_refusal: null,
     },
-    products: [jacket, jeans],
+    products: [formProduct(jacket), formProduct(jeans)],
+    size_lists: sizeLists,
 };
 
 describe('orders/edit page', () => {
@@ -117,6 +125,80 @@ describe('orders/edit page', () => {
             'href',
             '/orders',
         );
+    });
+
+    it('fills each size with its saved quantity, and keeps "Quantity" with a hint for a line recorded before sizes (S-60 AC-4, AC-5)', async () => {
+        const user = userEvent.setup();
+
+        render(
+            <OrdersEdit
+                {...props}
+                order={{
+                    ...props.order,
+                    lines: [sizedJacketLine, props.order.lines[1]],
+                }}
+            />,
+        );
+
+        const first = within(screen.getByRole('group', { name: 'Line 1' }));
+        const second = within(screen.getByRole('group', { name: 'Line 2' }));
+
+        expect(first.queryByLabelText('Quantity')).not.toBeInTheDocument();
+        expect(
+            ['S', 'M', 'L', 'XL'].map(
+                (label) =>
+                    (first.getByLabelText(label) as HTMLInputElement).value,
+            ),
+        ).toEqual(['10', '20', '15', '5']);
+        expect(first.getByText('Total 50 units')).toBeInTheDocument();
+
+        expect(second.getByLabelText('Quantity')).toHaveValue('30');
+        expect(second.getByLabelText('Quantity')).toHaveAccessibleDescription(
+            'Recorded before sizes.',
+        );
+
+        // Changing M from 20 to 25 is posted by size id; the total follows.
+        await user.clear(first.getByLabelText('M'));
+        await user.type(first.getByLabelText('M'), '25');
+        expect(first.getByText('Total 55 units')).toBeInTheDocument();
+
+        // Removed and added back in the same visit, the line is still counted as before.
+        await user.click(
+            screen.getByRole('button', { name: 'Remove Denim Jeans 5-pocket' }),
+        );
+        await user.click(screen.getByRole('button', { name: 'Add product' }));
+        await user.click(
+            within(screen.getByRole('group', { name: 'Line 2' })).getByRole(
+                'combobox',
+                { name: 'Product' },
+            ),
+        );
+        await user.click(
+            screen.getByRole('option', {
+                name: 'Denim Jeans 5-pocket · PRD-JNS-005',
+            }),
+        );
+
+        const back = within(screen.getByRole('group', { name: 'Line 2' }));
+
+        expect(back.getByLabelText('Quantity')).toHaveAccessibleDescription(
+            'Recorded before sizes.',
+        );
+        await user.type(back.getByLabelText('Quantity'), '30');
+        await user.click(screen.getByRole('button', { name: 'Save order' }));
+
+        expect(inertiaMock.submissions[0].data.lines).toEqual([
+            {
+                product_id: 1,
+                sizes: {
+                    [sizeIds.S]: '10',
+                    [sizeIds.M]: '25',
+                    [sizeIds.L]: '15',
+                    [sizeIds.XL]: '5',
+                },
+            },
+            { product_id: 5, quantity: '30' },
+        ]);
     });
 
     it('locks the product and Remove of a line that has started (AC-6)', () => {

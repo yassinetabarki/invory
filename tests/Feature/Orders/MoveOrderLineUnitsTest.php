@@ -174,13 +174,14 @@ it('answers 404 for a line of another order, and moves nothing', function () {
         ->and(lineStages($other))->toBe([[50, 0, 0, 0], [30, 0, 0, 0]]);
 });
 
-it('locks the order row, then the line, then (for Start cutting) the materials (PostgreSQL)', function () {
+it('locks the order row, then the line, then its size rows, then (for Start cutting) the materials (PostgreSQL)', function () {
     $order = bookOrder();
 
     $locks = queriesMatching(queryLog(fn () => moveUnits($order, 0, 'start_cutting', 5)->assertSessionHasNoErrors()), 'for update');
 
-    expect($locks)->toHaveCount(3)
+    expect($locks)->toHaveCount(4)
         ->and($locks[0])->toContain('"orders"')
         ->and($locks[1])->toContain('"order_lines"')
-        ->and($locks[2])->toContain('"materials"');
+        ->and($locks[2])->toContain('"order_line_sizes"')
+        ->and($locks[3])->toContain('"materials"');
 })->skip(fn () => DB::getDriverName() !== 'pgsql', 'FOR UPDATE is only emitted on PostgreSQL (SQLite has no row locks).');

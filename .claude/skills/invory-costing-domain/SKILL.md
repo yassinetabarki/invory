@@ -33,6 +33,7 @@ If a rule here is wrong or incomplete, stop and ask the tech-lead to update it (
 | Stage counts | How many units of an order line are To start, In cutting, Ready to ship and Shipped; they always add up to the line's quantity. To start = quantity − the other three (S-49) | `in_cutting`, `ready_to_ship`, `shipped` (`to_start` derived) |
 | Open order | An order with at least one line not fully shipped (`shipped < quantity`). Once every line is fully shipped the order is "Shipped". One rule drives the Orders list's "Open orders" filter, its count and its totals (S-50) | `Order::open()` / `Order::shipped()` scopes, `OrderStatusFilter` enum |
 | Cut | One "Start cutting" of N units of an order line, remembering per material the exact amount per unit and the amount taken. A move back to To start returns from the latest cut first (S-53) | `OrderLineCut` / `order_line_cuts` |
+| Order line size | One size of an order line: the units ordered in that size and its stage counts (In cutting, Ready to ship, Shipped; To start derived). Only sizes ordered have one. The line's quantity and stage counts are the sums of its sizes. A line recorded before sizes holds one "One size" row (S-60, S-61, ADR-0016) | `OrderLineSize` / `order_line_sizes`, `OrderLineSizeMode` |
 | Size list | The fixed sizes of a product category, in order, with the name the screens show: "S, M, L, XL" (Apparel), "36 to 46" (Footwear), "One size" (every other category). Installation-wide; no screen edits them (S-58, ADR-0015) | `SizeList` / `size_lists` |
 | Size | One size of a size list ("S", "36", "One size"). A product has every size of its category; later stories count orders, production and finished stock by size id | `Size` / `sizes` |
 | Workshop | The business account. Every user belongs to one; every material, product, composition, stock movement, sale, order, order line, photo, unit and category belongs to one | `Workshop` / `workshops`, `workshop_id` |
@@ -228,6 +229,50 @@ sizes(P)              = sizes(size_list(P.category))       in position order; no
   adds ", any mix of sizes" after "from current stock" when there is more than one size. The product form shows "Sizes: " + name, or
   "One size", with the hint "Sizes come with the category.". The server names the list; the frontend never works out a range.
 
+### Orders by size (added 2026-10-22, S-60, S-61, ADR-0016)
+
+```
+quantity(L)           = Σ quantity(z)       over the size rows z of line L        (whole units; only sizes ordered have a row)
+stage(L)              = Σ stage(z)          for In cutting, Ready to ship and Shipped
+to_start(z)           = quantity(z) − in_cutting(z) − ready_to_ship(z) − shipped(z)    (as on the line; never stored)
+size_mode(L)          = by_size        when L's size list has several sizes
+                      = one_size       when L's product is "One size"
+                      = before_sizes   when L counts as "One size" but its product now has several sizes (recorded before sizes)
+```
+- Every line counts by a size list, stored on the line: a new line takes its product's; lines recorded before sizes keep "One size"
+  for good (one row holding their quantity and stages). `one_size` and `before_sizes` lines keep the single "Quantity" field, the
+  single "How many units?" field, and today's messages.
+- **Saving an order** (`by_size`): each size takes a whole number 0 … 1 000 000 or nothing (nothing and 0 mean no row): "Enter a
+  whole number from 0 to 1,000,000."; at least one unit on the line: "Enter at least one unit of <product>."; a line's total at most
+  1 000 000: "A line can hold up to 1,000,000 units.". Only sizes of the line's list. A size keeps at least its started units: "<size>
+  can't be less than the N units already in cutting, ready to ship or shipped.". A started line still can't be removed. When the
+  product's sizes no longer match what was submitted (a size not of the line's list, or the product moved to other sizes meanwhile):
+  "The sizes of <product> have changed. Enter its quantities again." and nothing is saved; the form then shows the product's sizes.
+- **Moving units** (`by_size`): a number per size (nothing or 0 moves nothing in that size); every size empty → "Enter at least one
+  unit to move."; not a whole number → "Enter a whole number of units."; each size at most what its stage holds: "You can move at most
+  N units of <size>.". One size over its limit refuses the whole move: every size moves, or none. A size that isn't on the line:
+  "The sizes ordered for <product> have changed. Enter the units again." (for the whole window) and nothing moves. The window
+  checks each size's limit only on the server: the materials preview of Start cutting and Move back to To start is asked for the
+  total, but its "at most N units" for the total never replaces the per-size message.
+- **How a size is named in text** (S-60/S-61 fix round, human decision 2026-10-22): a letter size by its label ("S 10 · M 20",
+  "…at most 20 units of M.", "M can't be less than…"); a size whose label is a number with a colon and the word "size" ("36: 4 ·
+  37: 8", "…at most 20 units of size 36.", "Size 36 can't be less than…"). "A number" = the label is digits only. Applies to the
+  sizes under a line heading, the Orders list, a material's history and the per-size messages; the size fields and table rows show
+  the bare label.
+- **Cutting is per line, not per size.** Start cutting takes the materials of the total, exactly as one cut of that many units
+  (the formulas of "Cutting and returning stock" with N = Σ units over the sizes); the short-stock check counts every size together.
+  Move back to To start returns from the line's cuts for the total, latest cut first, whatever sizes those cuts held. Every size uses
+  the same composition.
+- The history entries of a move of a `by_size` line remember the sizes moved (size, label, units, in size order) and read
+  "14 × Denim Jacket (S 4 · M 10)"; other entries have none.
+- Sizes change no figure: costing, "Can produce", the bottleneck, sales and the dashboard are as before. The Orders list's totals,
+  filter and statuses read the line, so they add every size.
+
+Worked example: Boutique Lina's Denim Jacket S 10 · M 20 · L 15 · XL 5 (line 50). Start cutting S 4 · M 10 → S 6 · 4, M 10 · 10, L 15 ·
+0, XL 5 · 0, line To start 36 · In cutting 14; it takes 27.72 m Denim 12oz Indigo, 112 pc Metal shank button 17mm, 1,764 m Polyester
+thread and 14 pc Woven brand label. With the button at 100 pc, S 10 · M 10 is refused (at most 12). Moving M 5 back returns 9.9 m,
+40 pc, 630 m and 5 pc from the latest cut; M then reads To start 15 · In cutting 5.
+
 ## Precision and rounding (non-negotiable, see ADR-0002)
 
 1. **Never use floats** for money or quantities: no `float` casts, no `(float)`, no `+`/`*` on numeric strings in PHP, and no `Number(x) * y` in TypeScript.
@@ -325,3 +370,6 @@ Variant checks:
   `App\Services\Orders\OrderBook::openTotals()` (the four list totals, one integer SQL sum over the open orders).
 - Added 2026-10-21 (S-58, ADR-0015): `App\Models\SizeList` / `Size`, `ProductCategory::sizeList()`, `App\Services\Products\SizeLists`
   (the lists, once per request), `SizeListResource`, `App\Services\Products\ProductSizeLock::refusal()` (the AC-4 lock).
+- Added 2026-10-22 (S-60, S-61, ADR-0016): `App\Models\OrderLineSize`, `App\Models\Concerns\HasStageCounts` (To start and started for
+  lines and sizes), `App\Enums\OrderLineSizeMode`, `App\Services\Orders\OrderLineSizing` (how a line counts), `SyncOrderLines` and
+  `MoveOrderLineUnits` (the only writers of size rows and the line's sums).

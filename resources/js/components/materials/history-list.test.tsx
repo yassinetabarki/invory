@@ -140,6 +140,62 @@ describe('<HistoryList>', () => {
         },
     );
 
+    it.each([
+        {
+            name: 'a cutting entry with sizes',
+            type: 'cutting',
+            label: 'Cutting',
+            quantity: '27.7200',
+            units: 14,
+            sizes: [
+                { size_id: 1, label: 'S', units: 4 },
+                { size_id: 2, label: 'M', units: 10 },
+            ],
+            text: '−27.72 m · Boutique Lina · 14 × Denim Jacket (S 4 · M 10)',
+        },
+        {
+            name: 'a "Back from cutting" entry with sizes',
+            type: 'cutting_return',
+            label: 'Back from cutting',
+            quantity: '9.9000',
+            units: 5,
+            sizes: [{ size_id: 2, label: 'M', units: 5 }],
+            text: '+9.9 m · Boutique Lina · 5 × Denim Jacket (M 5)',
+        },
+        {
+            name: 'a cutting entry without sizes',
+            type: 'cutting',
+            label: 'Cutting',
+            quantity: '59.4000',
+            units: 30,
+            sizes: null,
+            text: '−59.4 m · Boutique Lina · 30 × Denim Jacket',
+        },
+    ] as const)(
+        'shows the sizes after the product for $name',
+        ({ type, label, quantity, units, sizes, text }) => {
+            render(
+                <HistoryList
+                    entries={[
+                        entry({
+                            type,
+                            type_label: label,
+                            quantity,
+                            units,
+                            sizes: sizes && sizes.map((size) => ({ ...size })),
+                            order: { id: 7, client: 'Boutique Lina' },
+                            product_name: 'Denim Jacket',
+                            reference: null,
+                        }),
+                    ]}
+                    unit="m"
+                />,
+            );
+
+            expect(within(row(0)).getByText(text)).toBeInTheDocument();
+        },
+    );
+
     it('leaves out the order or product a cutting entry no longer has', () => {
         render(
             <HistoryList

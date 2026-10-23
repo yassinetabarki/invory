@@ -27,7 +27,7 @@ beforeEach(function () {
 /** The keys of the `StockMovement` type in resources/js/types/domain.ts. */
 const STOCK_MOVEMENT_KEYS = [
     'id', 'material_id', 'type', 'type_label', 'occurred_on', 'quantity', 'quantity_before', 'quantity_after',
-    'unit_price', 'unit_cost_before', 'unit_cost_after', 'reference', 'note', 'units', 'order', 'product_name', 'user_name',
+    'unit_price', 'unit_cost_before', 'unit_cost_after', 'reference', 'note', 'units', 'sizes', 'order', 'product_name', 'user_name',
 ];
 
 /** The ids of a material's entries, newest first (every demo entry is dated in order, so that is the reverse of the entry order). */
@@ -60,6 +60,7 @@ describe('show: history', function () {
                 'reference' => null,
                 'note' => null,
                 'units' => null,
+                'sizes' => null,
                 'order' => null,
                 'product_name' => null,
                 'user_name' => 'Admin',
@@ -79,6 +80,7 @@ describe('show: history', function () {
                 'reference' => 'PO-2291',
                 'note' => null,
                 'units' => null,
+                'sizes' => null,
                 'order' => null,
                 'product_name' => null,
                 'user_name' => 'Admin',
@@ -98,6 +100,7 @@ describe('show: history', function () {
                 'reference' => null,
                 'note' => 'Stock count',
                 'units' => null,
+                'sizes' => null,
                 'order' => null,
                 'product_name' => null,
                 'user_name' => 'Admin',
@@ -117,6 +120,7 @@ describe('show: history', function () {
                 'reference' => null,
                 'note' => null,
                 'units' => null,
+                'sizes' => null,
                 'order' => null,
                 'product_name' => null,
                 'user_name' => 'Admin',

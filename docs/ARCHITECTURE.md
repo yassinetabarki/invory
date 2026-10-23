@@ -98,6 +98,8 @@ code testable and ready to scale.
                            │ (one Start cutting)│          │ (per unit + taken)   │
                            └────────────────────┘          └──────────────────────┘
 ```
+Status (2026-10-22): S-60 and S-61 count every order line by size: one `order_line_sizes` row per size ordered, the line keeping the
+sums (ADR-0016); moves go size by size, a cut still takes the materials of all its units together.
 Status (2026-10-16): S-49 adds stage counts to `order_lines` (To start is derived); S-53 makes "Start cutting" take materials out of stock
 and "Move back to To start" return them, remembering each cut in `order_line_cuts` / `order_line_cut_materials` (ADR-0014). Nothing else
 an order does touches stock, sales or any figure.
@@ -240,6 +242,7 @@ Index: `index(workshop_id, ordered_on, id)` (the list: newest order date first, 
 | quantity                           | unsigned integer            | whole units, 1 … 1 000 000 (CHECK on PostgreSQL)                          |
 | position                           | unsignedSmallInteger        | the order entered                                                         |
 | in_cutting, ready_to_ship, shipped | unsigned integer, default 0 | stage counts (S-49); To start = quantity − the three, never stored        |
+| size_list_id                       | FK → size_lists             | `restrictOnDelete`; the list the line counts by (S-60); NOT NULL on PG    |
 | timestamps                         |                             |                                                                           |
 
 Constraints: `unique(order_id, product_id)` (one line per product per order, at most 50 lines), `index(product_id)`. PostgreSQL only:
@@ -248,6 +251,26 @@ Saving an order again matches lines **by product** (`SyncOrderLines`); a line th
 units (re-checked under the order row lock). A line keeps its product when that product is later archived, set back to draft or deleted.
 Only `MoveOrderLineUnits` changes the counts; only its `start_cutting` and `back_to_start` touch `materials` and `stock_movements`
 (ADR-0014). Orders never touch `sales`.
+
+### `order_line_sizes` (S-60, [ADR-0016](adr/0016-order-lines-count-by-size.md))
+
+| Column                             | Type                        | Rules                                                                          |
+| ---------------------------------- | --------------------------- | ------------------------------------------------------------------------------ |
+| id                                 | bigint PK                   |                                                                                |
+| workshop_id                        | FK → workshops              | the line's workshop (composite FK to `order_lines` on PostgreSQL)              |
+| order_line_id                      | FK → order_lines            | `cascadeOnDelete`                                                              |
+| size_id                            | FK → sizes                  | `restrictOnDelete`, indexed; a size of the line's `size_list_id`               |
+| quantity                           | unsigned integer            | units ordered in this size, 1 … 1 000 000 (CHECK on PostgreSQL)                |
+| in_cutting, ready_to_ship, shipped | unsigned integer, default 0 | stage counts per size; To start derived as on the line (`HasStageCounts`)      |
+| timestamps                         |                             |                                                                                |
+
+Constraints: `unique(order_line_id, size_id)`. PostgreSQL only: CHECKs that the counts are ≥ 0 and add up to at most `quantity`. Only
+sizes ordered have a row. The line's `quantity` and its three counts are the **sums of its size rows**, written only by
+`SyncOrderLines` and `MoveOrderLineUnits`, in the same transaction, under the order row lock (lock order: order row → products of
+the lines when saving, or the line and its size rows when moving → cuts → materials in ascending id). The Orders list, its filter and
+totals, the statuses and the delete refusal keep reading the line. Lines recorded before S-60 got the `one_size` list and one size row
+holding their quantity and counts. How a line counts (`OrderLineSizeMode`: `by_size`, `one_size`, `before_sizes`) is decided by
+`App\Services\Orders\OrderLineSizing` alone.
 
 ### `order_line_cuts` and `order_line_cut_materials` (S-53, [ADR-0014](adr/0014-cutting-takes-materials-out-of-stock.md))
 
@@ -284,6 +307,7 @@ cuts → materials in ascending id.
 | user_id | FK → users nullable | who did it |
 | order_id, product_id | FK nullable, `restrictOnDelete` | cutting / cutting_return: the order and product (both only soft-deleted) |
 | units | unsigned integer nullable | cutting / cutting_return: the units of the order line |
+| sizes | json nullable | cutting / cutting_return of a line counted by size: `[{size_id, label, units}]` of the move, in size order (S-61, ADR-0016) |
 | timestamps | | |
 
 Index: `index(material_id, occurred_on, id)`. `cutting` counts as −quantity and `cutting_return` as +quantity in `invory:stock:verify`. A restock updates `materials.quantity_on_hand` and (by default) `materials.unit_cost` = latest price

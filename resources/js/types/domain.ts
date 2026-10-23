@@ -330,6 +330,22 @@ export type OrderStage =
     | 'shipped';
 export type OrderProgress = 'not_started' | 'in_progress' | 'shipped';
 
+/** How an order line counts its units (S-60, ADR-0016). */
+export type OrderLineSizeMode =
+    | 'by_size' // the line's size list has several sizes: a quantity and a move per size
+    | 'one_size' // a "One size" product: one "Quantity" field and one "How many units?" field, as before
+    | 'before_sizes'; // recorded before sizes: kept as "One size" whatever the product's sizes (S-60 AC-5)
+
+/** One size of an order line (S-60, S-61). Only sizes ordered (quantity ≥ 1); its four stages add up to its quantity. */
+export type OrderLineSize = {
+    size: Size;
+    quantity: number;
+    to_start: number; // computed server-side
+    in_cutting: number;
+    ready_to_ship: number;
+    shipped: number;
+};
+
 export type OrderLine = {
     id: number;
     product: OrderProduct;
@@ -339,6 +355,8 @@ export type OrderLine = {
     ready_to_ship: number;
     shipped: number;
     started: number; // in_cutting + ready_to_ship + shipped, computed server-side
+    size_mode: OrderLineSizeMode;
+    sizes: OrderLineSize[]; // in size order, at least one; the line's own figures are their sums (server-side)
     status: OrderProgress;
     status_label: string; // "Not started", "In progress", "Shipped"
 };
@@ -379,9 +397,15 @@ export type OpenOrderTotals = {
 export type OrderLineFormRow = {
     product_id: number | '';
     quantity: string;
+    // by_size lines: size id → the quantity typed ('' counts 0); single-field lines send `quantity` as before.
+    // Errors: lines.N.sizes (the line) and lines.N.sizes.<size id> (a size); single-field lines keep lines.N.quantity.
+    sizes?: Record<number, string>;
 };
 
-/** Fields the order form submits. Errors come back as client, ordered_on, note, lines, lines.N.product_id, lines.N.quantity. */
+/**
+ * Fields the order form submits. Errors come back as client, ordered_on, note, lines, lines.N.product_id, lines.N.quantity (single-field
+ * lines), lines.N.sizes (a by_size line) and lines.N.sizes.<size id> (one size).
+ */
 export type OrderFormData = {
     client: string;
     ordered_on: string; // 'YYYY-MM-DD'
@@ -396,8 +420,18 @@ export type OrdersIndexProps = {
     totals: OpenOrderTotals;
     has_orders: boolean; // any order at all in the workshop, whatever its status
 };
-export type OrderCreateProps = { products: OrderProduct[] };
-export type OrderEditProps = { order: Order; products: OrderProduct[] };
+/** A product the order forms offer (S-60): an OrderProduct and the code of its size list in `size_lists`. */
+export type OrderFormProduct = OrderProduct & { size_list_code: string };
+
+export type OrderCreateProps = {
+    products: OrderFormProduct[];
+    size_lists: Record<string, SizeList>; // the size lists by code, each once
+};
+export type OrderEditProps = {
+    order: Order;
+    products: OrderFormProduct[];
+    size_lists: Record<string, SizeList>;
+};
 export type OrderShowProps = { order: Order };
 
 /**
@@ -412,8 +446,16 @@ export type OrderLineMove =
     | 'back_to_cutting'
     | 'back_to_ready';
 
-/** Fields the move window posts to `orders.lines.moves.store`. Errors come back as `units` (and `move`). */
-export type MoveUnitsFormData = { move: OrderLineMove; units: string };
+/**
+ * Fields the move window posts to `orders.lines.moves.store`. Errors come back as `units` (and `move`) for a line that counts as one
+ * size, and as `sizes` (the move) and `sizes.<size id>` (a size) for a line counted by size.
+ */
+export type MoveUnitsFormData = {
+    move: OrderLineMove;
+    units: string;
+    /** by_size lines: size id → the units typed ('' counts 0); single-field lines send `units` as before. Errors: sizes (the move) and sizes.<size id> (a size); single-field lines keep units. */
+    sizes?: Record<number, string>;
+};
 
 /** One row of the move window's materials table (S-53), worked out by the server: the screen never computes. */
 export type MaterialMoveRow = {
@@ -455,6 +497,7 @@ export type StockMovement = {
     reference: string | null; // restock: PO or delivery note
     note: string | null; // correction: reason
     units: number | null; // cutting / cutting_return: the units of the order line
+    sizes: { size_id: number; label: string; units: number }[] | null; // cutting / cutting_return of a by_size line: the sizes moved (units ≥ 1), in size order; null otherwise
     order: { id: number; client: string } | null; // cutting / cutting_return (soft-deleted orders included)
     product_name: string | null; // cutting / cutting_return (soft-deleted products included)
     user_name: string | null; // who did it

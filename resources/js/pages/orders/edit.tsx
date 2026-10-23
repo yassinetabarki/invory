@@ -3,7 +3,11 @@ import { OrderForm } from '@/components/orders/order-form';
 import { edit, index, update } from '@/routes/orders';
 import type { OrderEditProps } from '@/types/domain';
 
-export default function OrdersEdit({ order, products }: OrderEditProps) {
+export default function OrdersEdit({
+    order,
+    products,
+    size_lists,
+}: OrderEditProps) {
     return (
         <>
             <Head title="Edit order" />
@@ -15,6 +19,7 @@ export default function OrdersEdit({ order, products }: OrderEditProps) {
                     order={order}
                     title="Edit order"
                     products={products}
+                    sizeLists={size_lists}
                     action={update(order.id)}
                     cancelHref={index.url()}
                 />

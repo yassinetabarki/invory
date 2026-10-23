@@ -15,11 +15,11 @@ use Tests\Browser\Support\GoldenPathStep;
 |--------------------------------------------------------------------------
 |
 | A signed-in user with the demo products opens "New order", fills it in and saves. The order's own page opens with the
-| toast; "Start cutting" shows the materials table, then moves 30 jackets into cutting: the figures and the toast follow
+| toast; "Start cutting" asks a number per size (S 4, M 10), shows the materials table of the 14 jackets, then moves them into cutting: the size table and the toast follow
 | and the denim's own page shows what is left in stock. The new order is then the first row of the Orders list. Runs on the throwaway database of RefreshDatabase, like the other browser test.
 */
 
-it('records an order with two products, starts cutting 30 jackets and finds it first on the Orders list', function () {
+it('records an order with two products, starts cutting 14 jackets by size and finds it first on the Orders list', function () {
     GoldenPathStep::run('database: throwaway', function () {
         expect(DB::connection()->getDatabaseName())->toBe(':memory:');
     });
@@ -47,11 +47,18 @@ it('records an order with two products, starts cutting 30 jackets and finds it f
         $browser->getByLabel('Client', true)->fill('Boutique Lina');
         $browser->getByLabel('Note (optional)', true)->fill('Deliver before 30 Oct, in 2 boxes');
 
-        foreach ([[1, 'Denim Jacket · PRD-JKT-001', '50'], [2, 'Denim Jeans 5-pocket · PRD-JNS-005', '30']] as [$number, $option, $quantity]) {
+        // Both products are counted by size (S-60): a quantity per size, the line's total under them.
+        $jacket = ['S' => '10', 'M' => '20', 'L' => '15', 'XL' => '5'];
+        $jeans = ['S' => '5', 'M' => '10', 'L' => '10', 'XL' => '5'];
+
+        foreach ([[1, 'Denim Jacket · PRD-JKT-001', $jacket], [2, 'Denim Jeans 5-pocket · PRD-JNS-005', $jeans]] as [$number, $option, $sizes]) {
             $line = $browser->getByRole('group', ['name' => "Line {$number}", 'exact' => true]);
             $line->getByRole('combobox', ['name' => 'Product', 'exact' => true])->click();
             $browser->getByRole('option', ['name' => $option, 'exact' => true])->click();
-            $line->getByLabel('Quantity', true)->fill($quantity);
+
+            foreach ($sizes as $size => $quantity) {
+                $line->getByLabel($size, true)->fill($quantity);
+            }
         }
     }, $page);
 
@@ -64,32 +71,38 @@ it('records an order with two products, starts cutting 30 jackets and finds it f
             ->assertSee('0 of 80 shipped');
     }, $page);
 
-    GoldenPathStep::run('order page: start cutting 30 jackets', function () use ($page, $browser) {
+    GoldenPathStep::run('order page: start cutting 14 jackets, S 4 and M 10', function () use ($page, $browser) {
         $jacket = $browser->getByRole('region', ['name' => 'Denim Jacket · PRD-JKT-001 · 50 units', 'exact' => true]);
         $jacket->getByRole('button', ['name' => 'Start cutting', 'exact' => true])->click();
 
         $dialog = $browser->getByRole('dialog', ['name' => 'Start cutting · Denim Jacket', 'exact' => true]);
-        $dialog->getByLabel('How many units?', true)->fill('30');
+        // The jacket is counted by size (S-61): a number per size, the hints from the server.
+        $dialog->getByRole('group', ['name' => 'How many units of each size?', 'exact' => true]);
+        $dialog->getByLabel('S', true)->fill('4');
+        $dialog->getByLabel('M', true)->fill('10');
 
-        // The server works the table out for the number typed; the row waits for its answer (S-53 AC-1).
+        // The server works the table out for the total typed (14 jackets, as if one size); the row waits for its answer (S-53 AC-1, S-61 AC-3).
         $denimRow = $dialog->getByRole('row', ['name' => 'Denim 12oz Indigo']);
-        expect(preg_replace('/\s+/', ' ', trim($denimRow->innerText())))->toBe('Denim 12oz Indigo 59.4 m 250 m 190.6 m');
+        expect(preg_replace('/\s+/', ' ', trim($denimRow->innerText())))->toBe('Denim 12oz Indigo 27.72 m 250 m 222.28 m');
 
         $dialog->getByRole('button', ['name' => 'Move units', 'exact' => true])->click();
 
-        $page->assertSee('30 units of Denim Jacket moved to In cutting. Materials taken out of stock.');
+        $page->assertSee('14 units of Denim Jacket moved to In cutting. Materials taken out of stock.');
+        // The jacket's size table (S-61-b): a row per size and the Total row, each as To start, In cutting, Ready to ship, Shipped.
         $page->assertScript(<<<'JS'
         (() => {
             const jacket = Array.from(document.querySelectorAll('h3'))
                 .find((heading) => heading.innerText.startsWith('Denim Jacket'))
                 ?.closest('section');
             return jacket
-                ? Array.from(jacket.querySelectorAll('ol > li > p'))
-                    .map((figure) => figure.innerText.replace(/[ \t\r\n\f\v]+/g, ' ').trim())
+                ? Array.from(jacket.querySelectorAll('table tbody tr'))
+                    .map((row) => Array.from(row.children)
+                        .map((cell) => (cell.querySelector('span.tabular-nums') ?? cell).innerText.trim())
+                        .join(' '))
                     .join(' | ')
                 : '';
         })()
-        JS, 'To start 20 units | In cutting 30 units | Ready to ship 0 units | Shipped 0 units');
+        JS, 'S 6 4 0 0 | M 10 10 0 0 | L 15 0 0 0 | XL 5 0 0 0 | Total 36 14 0 0');
         $page->assertNoJavaScriptErrors();
     }, $page);
 
@@ -100,7 +113,7 @@ it('records an order with two products, starts cutting 30 jackets and finds it f
             const label = Array.from(document.querySelectorAll('dt')).find((term) => term.innerText.trim() === 'In stock');
             return label?.nextElementSibling?.innerText.trim() ?? '';
         })()
-        JS, '190.6 m');
+        JS, '222.28 m');
         $page->assertNoJavaScriptErrors();
     }, $page);
 
@@ -117,7 +130,7 @@ it('records an order with two products, starts cutting 30 jackets and finds it f
                     .join(' | ')
                 : '';
         })()
-        JS, 'Boutique Lina Deliver before 30 Oct, in 2 boxes | 50 × Denim Jacket 30 × Denim Jeans 5-pocket | 80 | 50 | 30 | 0 | 0 | In progress');
+        JS, 'Boutique Lina Deliver before 30 Oct, in 2 boxes | 50 × Denim Jacket (S 10 · M 20 · L 15 · XL 5) 30 × Denim Jeans 5-pocket (S 5 · M 10 · L 10 · XL 5) | 80 | 66 | 14 | 0 | 0 | In progress');
         $page->assertNoJavaScriptErrors();
     }, $page);
 });

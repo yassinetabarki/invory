@@ -14,7 +14,7 @@ use Illuminate\Database\UniqueConstraintViolationException;
 */
 
 it('leaves no order and no line behind when a line fails to save', function () {
-    $product = Product::factory()->create();
+    $product = Product::factory()->create(['category' => 'bag']); // "One size": counted by quantity, so only the repeated product can fail
 
     // The second line repeats the product: the database's unique index refuses it, after the order and the first line were written.
     expect(fn () => app(RecordOrder::class)->handle([

@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { OrderForm } from '@/components/orders/order-form';
 import { inertiaMock, resetInertiaMock, setFormState } from '@/test/inertia';
-import type { OrderProduct } from '@/types/domain';
+import { formProduct, sizeIds, sizeLists } from '@/test/fixtures';
 
 vi.mock('@inertiajs/react', async (importOriginal) => {
     const { createInertiaModule } = await import('@/test/inertia');
@@ -13,13 +13,22 @@ vi.mock('@inertiajs/react', async (importOriginal) => {
     );
 });
 
-function product(id: number, name: string, sku: string): OrderProduct {
-    return { id, name, sku, status: 'active', deleted: false };
+function product(
+    id: number,
+    name: string,
+    sku: string,
+    sizeListCode = 's_to_xl',
+) {
+    return formProduct(
+        { id, name, sku, status: 'active', deleted: false },
+        sizeListCode,
+    );
 }
 
 const products = [
     product(1, 'Denim Jacket', 'PRD-JKT-001'),
-    product(5, 'Denim Jeans 5-pocket', 'PRD-JNS-005'),
+    product(2, 'Leather Tote', 'PRD-TOT-002', 'one_size'),
+    product(3, 'Leather Belt', 'PRD-BLT-003', 'one_size'),
 ];
 
 function renderForm() {
@@ -29,6 +38,7 @@ function renderForm() {
         <OrderForm
             title="New order"
             products={products}
+            sizeLists={sizeLists}
             action={{ url: '/orders', method: 'post' }}
             cancelHref="/orders"
         />,
@@ -62,7 +72,7 @@ describe('<OrderForm>', () => {
         resetInertiaMock();
     });
 
-    it('records an order with two products (AC-2)', async () => {
+    it('records an order with two one-size products (AC-2)', async () => {
         const user = renderForm();
 
         expect(screen.getByLabelText('Client')).toHaveAttribute(
@@ -88,9 +98,9 @@ describe('<OrderForm>', () => {
         await user.click(screen.getByLabelText('Note (optional)'));
         await user.paste('Deliver before 30 Oct, in 2 boxes');
 
-        await fillLine(user, 1, 'Denim Jacket · PRD-JKT-001', '50');
+        await fillLine(user, 1, 'Leather Tote · PRD-TOT-002', '50');
         await user.click(screen.getByRole('button', { name: 'Add product' }));
-        await fillLine(user, 2, 'Denim Jeans 5-pocket · PRD-JNS-005', '30');
+        await fillLine(user, 2, 'Leather Belt · PRD-BLT-003', '30');
 
         expect(inertiaMock.submissions).toHaveLength(0);
 
@@ -105,15 +115,15 @@ describe('<OrderForm>', () => {
                 ordered_on: '2026-10-15',
                 note: 'Deliver before 30 Oct, in 2 boxes',
                 lines: [
-                    { product_id: 1, quantity: '50' },
-                    { product_id: 5, quantity: '30' },
+                    { product_id: 2, quantity: '50' },
+                    { product_id: 3, quantity: '30' },
                 ],
             },
         });
         // The client-only line keys are never sent.
         expect(inertiaMock.submissions[0].data.lines).toEqual([
-            { product_id: 1, quantity: '50' },
-            { product_id: 5, quantity: '30' },
+            { product_id: 2, quantity: '50' },
+            { product_id: 3, quantity: '30' },
         ]);
         expect(screen.getByRole('link', { name: 'Cancel' })).toHaveAttribute(
             'href',
@@ -125,7 +135,7 @@ describe('<OrderForm>', () => {
         const user = renderForm();
 
         await user.type(screen.getByLabelText('Client'), 'Boutique Lina');
-        await fillLine(user, 1, 'Denim Jacket · PRD-JKT-001', '0');
+        await fillLine(user, 1, 'Leather Tote · PRD-TOT-002', '0');
         await user.click(screen.getByRole('button', { name: 'Add product' }));
 
         setFormState({
@@ -184,6 +194,120 @@ describe('<OrderForm>', () => {
         expect(lineGroup(1).getByLabelText('Quantity')).toHaveValue('0');
         expect(
             lineGroup(1).getByRole('combobox', { name: 'Product' }),
-        ).toHaveTextContent('Denim Jacket · PRD-JKT-001');
+        ).toHaveTextContent('Leather Tote · PRD-TOT-002');
+    });
+
+    it('asks a quantity per size for a product with sizes and posts them by size id (S-60 AC-1)', async () => {
+        const user = renderForm();
+        const line = lineGroup(1);
+
+        await user.type(screen.getByLabelText('Client'), 'Boutique Lina');
+        await user.click(line.getByRole('combobox', { name: 'Product' }));
+        await user.click(
+            screen.getByRole('option', { name: 'Denim Jacket · PRD-JKT-001' }),
+        );
+
+        // The group has a visible name (S-60 F4), not a screen-reader-only one.
+        expect(
+            line.getByRole('group', { name: 'Quantity per size' }),
+        ).toBeInTheDocument();
+        expect(line.getByText('Quantity per size')).not.toHaveClass('sr-only');
+
+        // One field per size, in the list's order, in place of "Quantity".
+        const fields = line.getAllByRole('textbox');
+
+        expect(fields).toHaveLength(4);
+        ['S', 'M', 'L', 'XL'].forEach((label, index) =>
+            expect(fields[index]).toHaveAccessibleName(label),
+        );
+        expect(line.queryByLabelText('Quantity')).not.toBeInTheDocument();
+        expect(line.getByText('Total 0 units')).toBeInTheDocument();
+
+        // XL is left empty at first: it counts 0.
+        await user.type(line.getByLabelText('S'), '10');
+        await user.type(line.getByLabelText('M'), '20');
+        await user.type(line.getByLabelText('L'), '15');
+        expect(line.getByText('Total 45 units')).toBeInTheDocument();
+        await user.type(line.getByLabelText('XL'), '5');
+        expect(line.getByText('Total 50 units')).toBeInTheDocument();
+
+        await user.click(screen.getByRole('button', { name: 'Add product' }));
+        await user.click(
+            lineGroup(2).getByRole('combobox', { name: 'Product' }),
+        );
+        await user.click(
+            screen.getByRole('option', { name: 'Leather Tote · PRD-TOT-002' }),
+        );
+        expect(lineGroup(2).getByLabelText('Quantity')).toBeInTheDocument();
+        expect(lineGroup(2).queryByText(/^Total/)).not.toBeInTheDocument();
+        await user.type(lineGroup(2).getByLabelText('Quantity'), '12');
+
+        await user.click(screen.getByRole('button', { name: 'Save order' }));
+
+        expect(inertiaMock.submissions).toHaveLength(1);
+        expect(inertiaMock.submissions[0].data.lines).toEqual([
+            {
+                product_id: 1,
+                sizes: {
+                    [sizeIds.S]: '10',
+                    [sizeIds.M]: '20',
+                    [sizeIds.L]: '15',
+                    [sizeIds.XL]: '5',
+                },
+            },
+            { product_id: 2, quantity: '12' },
+        ]);
+    });
+
+    it("shows a product's new sizes and the refusal under Total after its sizes changed, without a second post (S-60 F3)", async () => {
+        const user = userEvent.setup();
+        const props = {
+            title: 'New order',
+            sizeLists,
+            action: { url: '/orders', method: 'post' as const },
+            cancelHref: '/orders',
+        };
+        const { rerender } = render(
+            <OrderForm {...props} products={products} />,
+        );
+        const line = lineGroup(1);
+
+        await user.type(screen.getByLabelText('Client'), 'Boutique Lina');
+        await user.click(line.getByRole('combobox', { name: 'Product' }));
+        await user.click(
+            screen.getByRole('option', { name: 'Denim Jacket · PRD-JKT-001' }),
+        );
+        await user.type(line.getByLabelText('S'), '10');
+        await user.click(screen.getByRole('button', { name: 'Save order' }));
+        expect(inertiaMock.submissions).toHaveLength(1);
+
+        // The server refuses: the product moved to the 36 to 46 list meanwhile.
+        const message =
+            'The sizes of Denim Jacket have changed. Enter its quantities again.';
+
+        rerender(
+            <OrderForm
+                {...props}
+                products={[
+                    product(1, 'Denim Jacket', 'PRD-JKT-001', 'eu_36_to_46'),
+                    ...products.slice(1),
+                ]}
+            />,
+        );
+
+        // The page's new props and the refusal arrive together.
+        setFormState({ errors: { 'lines.0.sizes': message } });
+
+        const sizes = line.getAllByRole('textbox');
+
+        expect(sizes).toHaveLength(11);
+        expect(sizes[0]).toHaveAccessibleName('36');
+        expect(sizes[10]).toHaveAccessibleName('46');
+        expect(line.queryByLabelText('XL')).not.toBeInTheDocument();
+        expect(
+            line.getByText('Total 0 units').nextElementSibling,
+        ).toHaveTextContent(message);
+        expect(sizes[0]).toHaveFocus();
+        expect(inertiaMock.submissions).toHaveLength(1);
     });
 });

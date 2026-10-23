@@ -28,14 +28,21 @@ final readonly class TakeMaterialsForCut
     ) {}
 
     /**
-     * @throws ValidationException under `units`, with the same text as the preview, when the stock saved now is too short
+     * One cut takes the materials of all `$units` units together, as if they were one size (S-61-a). `$sizes` is the snapshot of the sizes
+     * moved, written on every history entry of the cut: a list of `{size_id, label, units}` in size order, or null for a line that counts as
+     * one size.
+     *
+     * @param  list<array{size_id: int, label: string, units: int}>|null  $sizes
+     *
+     * @throws ValidationException with the same text as the preview, when the stock saved now is too short: under `sizes` for a line
+     *                             counted by size (`$sizes` given), under `units` otherwise
      */
-    public function handle(OrderLine $line, int $units, User $actor): CutPlan
+    public function handle(OrderLine $line, int $units, User $actor, ?array $sizes = null): CutPlan
     {
         ['plan' => $plan, 'materials' => $materials] = $this->preview->plan($line->product()->firstOrFail(), $units, lock: true);
 
         if (! $plan->allowed) {
-            throw ValidationException::withMessages(['units' => OrderMessages::notEnoughStock($plan)]);
+            throw ValidationException::withMessages([$sizes === null ? 'units' : 'sizes' => OrderMessages::notEnoughStock($plan)]);
         }
 
         // Never mass-assignable: the workshop comes from the line, and who started the cut from the actor.
@@ -61,6 +68,7 @@ final readonly class TakeMaterialsForCut
                 'order_id' => $line->order_id,
                 'product_id' => $line->product_id,
                 'units' => $units,
+                'sizes' => $sizes,
             ]);
 
             $remembered = $cut->materials()->make([

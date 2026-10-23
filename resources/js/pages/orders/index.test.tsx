@@ -2,7 +2,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import OrdersIndex from '@/pages/orders/index';
-import { paginate } from '@/test/fixtures';
+import { paginate, withOneSize } from '@/test/fixtures';
 import { inertiaMock, resetInertiaMock, setPageProps } from '@/test/inertia';
 import type {
     OpenOrderTotals,
@@ -36,7 +36,7 @@ function notStarted(
     product: OrderProduct,
     quantity: number,
 ): OrderLine {
-    return {
+    return withOneSize({
         id,
         product,
         quantity,
@@ -47,7 +47,7 @@ function notStarted(
         started: 0,
         status: 'not_started',
         status_label: 'Not started',
-    };
+    });
 }
 
 const lina: Order = {

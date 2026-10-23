@@ -1,7 +1,7 @@
 import { Link, useForm, usePage } from '@inertiajs/react';
 import { useEffect, useId, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
-import { newOrderLine } from '@/components/orders/order-line-row';
+import { countingFor, newOrderLine } from '@/components/orders/order-line-row';
 import type {
     OrderLineRow,
     StartedLine,
@@ -13,7 +13,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
-import type { Order, OrderFormData, OrderProduct } from '@/types/domain';
+import type {
+    Order,
+    OrderFormData,
+    OrderFormProduct,
+    OrderLineSizeMode,
+    SizeList,
+} from '@/types/domain';
 
 /** The form's state: the submitted fields, with a client-only key on each line. */
 type OrderFormState = Omit<OrderFormData, 'lines'> & { lines: OrderLineRow[] };
@@ -23,7 +29,9 @@ type OrderFormProps = {
     order?: Order;
     title: string;
     /** Every product the picker offers (the server decides which). */
-    products: OrderProduct[];
+    products: OrderFormProduct[];
+    /** The size lists by code: a product's list says how its line counts (S-60). */
+    sizeLists: Record<string, SizeList>;
     /** Where to send the form (Wayfinder in the page). */
     action: { url: string; method: 'post' | 'put' };
     cancelHref: string;
@@ -48,6 +56,15 @@ function toFormState(order: Order | undefined, today: string): OrderFormState {
             newOrderLine({
                 product_id: line.product.id,
                 quantity: String(line.quantity),
+                // A line counted by size starts from each size's saved quantity.
+                ...(line.size_mode === 'by_size' && {
+                    sizes: Object.fromEntries(
+                        line.sizes.map(({ size, quantity }) => [
+                            size.id,
+                            String(quantity),
+                        ]),
+                    ),
+                }),
             }),
         ),
     };
@@ -81,6 +98,7 @@ export function OrderForm({
     order,
     title,
     products,
+    sizeLists,
     action,
     cancelHref,
 }: OrderFormProps) {
@@ -92,6 +110,13 @@ export function OrderForm({
     const form = useForm<OrderFormState>(initial);
     // The saved lines with work started, by row key (a new line is never one).
     const [started] = useState(() => startedLines(order, initial.lines));
+    // How the saved order's lines count, by product (the server matches lines by product).
+    const [savedModes] = useState<ReadonlyMap<number, OrderLineSizeMode>>(
+        () =>
+            new Map(
+                order?.lines.map((line) => [line.product.id, line.size_mode]),
+            ),
+    );
     const { errors, processing } = form;
 
     const errorSignature = Object.entries(errors)
@@ -113,13 +138,30 @@ export function OrderForm({
     function handleSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
 
-        // The client-only keys never leave the browser.
+        // The client-only keys never leave the browser. A line counted by size
+        // sends its sizes by id (an untouched size as ''), any other its quantity.
         form.transform((data) => ({
             ...data,
-            lines: data.lines.map(({ product_id, quantity }) => ({
-                product_id,
-                quantity,
-            })),
+            lines: data.lines.map((row) => {
+                const counting = countingFor(
+                    row,
+                    products,
+                    sizeLists,
+                    savedModes,
+                );
+
+                return counting.kind === 'sizes'
+                    ? {
+                          product_id: row.product_id,
+                          sizes: Object.fromEntries(
+                              counting.sizes.map((size) => [
+                                  size.id,
+                                  row.sizes?.[size.id] ?? '',
+                              ]),
+                          ),
+                      }
+                    : { product_id: row.product_id, quantity: row.quantity };
+            }),
         }));
         form.submit(action, { preserveScroll: 'errors' });
     }
@@ -203,6 +245,8 @@ export function OrderForm({
             <OrderLinesEditor
                 rows={form.data.lines}
                 products={products}
+                sizeLists={sizeLists}
+                savedModes={savedModes}
                 errors={errors}
                 started={started}
                 onChange={(lines) => form.setData('lines', lines)}

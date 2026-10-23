@@ -37,6 +37,7 @@ final class StockMovementResource extends JsonResource
             'reference' => $this->reference,
             'note' => $this->note,
             'units' => $this->units,
+            'sizes' => $this->sizes,
             'order' => $this->order_id === null ? null : ['id' => $this->order_id, 'client' => $this->order_client],
             'product_name' => $this->product_name,
             'user_name' => $this->user_name,

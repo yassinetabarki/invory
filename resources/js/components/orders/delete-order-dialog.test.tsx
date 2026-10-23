@@ -2,6 +2,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { DeleteOrderDialog } from '@/components/orders/delete-order-dialog';
+import { withOneSize } from '@/test/fixtures';
 import { inertiaMock, resetInertiaMock } from '@/test/inertia';
 import type { Order, OrderLine, OrderProduct } from '@/types/domain';
 
@@ -28,7 +29,7 @@ function notStarted(
     product: OrderProduct,
     quantity: number,
 ): OrderLine {
-    return {
+    return withOneSize({
         id,
         product,
         quantity,
@@ -39,7 +40,7 @@ function notStarted(
         started: 0,
         status: 'not_started',
         status_label: 'Not started',
-    };
+    });
 }
 
 const lina: Order = {

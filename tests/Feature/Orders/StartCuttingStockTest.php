@@ -260,20 +260,21 @@ it('rolls back everything when writing the third material fails', function () {
 
     $line = $order->lines()->get()[0];
 
-    expect(fn () => app(MoveOrderLineUnits::class)->handle($line, OrderLineMove::StartCutting, 30, $this->user))
+    expect(fn () => app(MoveOrderLineUnits::class)->handle($line, OrderLineMove::StartCutting, [$line->sizes()->value('size_id') => 30], $this->user))
         ->toThrow(RuntimeException::class, 'The third material failed.')
         ->and($written)->toBe(3)
         ->and(stockAndCuts())->toBe($before);
 });
 
-it('locks the order, the line and then the materials in ascending id (PostgreSQL)', function () {
+it('locks the order, the line, its size rows and then the materials in ascending id (PostgreSQL)', function () {
     $order = bookOrder();
 
     $locks = queriesMatching(queryLog(fn () => cutJackets($order, 5)->assertSessionHasNoErrors()), 'for update');
 
-    expect($locks)->toHaveCount(3)
+    expect($locks)->toHaveCount(4)
         ->and($locks[0])->toContain('"orders"')
         ->and($locks[1])->toContain('"order_lines"')
-        ->and($locks[2])->toContain('"materials"')
-        ->and($locks[2])->toMatch('/order by "id" asc for update/i');
+        ->and($locks[2])->toContain('"order_line_sizes"')
+        ->and($locks[3])->toContain('"materials"')
+        ->and($locks[3])->toMatch('/order by "id" asc for update/i');
 })->skip(fn () => DB::getDriverName() !== 'pgsql', 'FOR UPDATE is only emitted on PostgreSQL (SQLite has no row locks).');

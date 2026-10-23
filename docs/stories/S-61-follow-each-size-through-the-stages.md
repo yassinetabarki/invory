@@ -58,7 +58,7 @@ tags:
 
 ## Technical work
 > [!warning] Complex · CRITICAL · backend + frontend · 3 commits (one build with S-60)
-> Tech-lead · 2026-10-22 · approved 2026-10-22
+> Tech-lead · 2026-10-22 · approved 2026-10-22 · delivered 2026-10-22
 > Why complex: moves per size with a limit per size, the materials a cut of several sizes takes and returns, and new data for the
 > order page and the move window.
 

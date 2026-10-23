@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import OrdersCreate from '@/pages/orders/create';
+import { formProduct, sizeLists } from '@/test/fixtures';
 import { resetInertiaMock } from '@/test/inertia';
 import type { OrderCreateProps } from '@/types/domain';
 
@@ -14,14 +15,15 @@ vi.mock('@inertiajs/react', async (importOriginal) => {
 
 const props: OrderCreateProps = {
     products: [
-        {
+        formProduct({
             id: 1,
             name: 'Denim Jacket',
             sku: 'PRD-JKT-001',
             status: 'active',
             deleted: false,
-        },
+        }),
     ],
+    size_lists: sizeLists,
 };
 
 describe('orders/create page', () => {

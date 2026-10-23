@@ -13,6 +13,7 @@ import {
 import { useAppSettings } from '@/hooks/use-app-settings';
 import { ProgressStatus } from '@/components/orders/progress-status';
 import { formatCount, formatDate } from '@/lib/format';
+import { formatSizes, orderLineSizeCounts } from '@/lib/sizes';
 import { edit, show as showOrder } from '@/routes/orders';
 import { show } from '@/routes/products';
 import type { Order } from '@/types/domain';
@@ -41,31 +42,44 @@ type RowActionsProps = {
     onDelete: (order: Order) => void;
 };
 
-/** One "50 × Denim Jacket" line per product; a deleted product has no link. */
+/**
+ * One "50 × Denim Jacket" line per product; a deleted product has no link. A
+ * line counted by size adds its sizes: "50 × Denim Jacket (S 10 · M 20 · L 15 · XL 5)".
+ */
 function ProductLines({ order }: { order: Order }) {
     const { locale } = useAppSettings();
     const hidden = order.lines.length - VISIBLE_LINES;
 
     return (
         <ul className="space-y-0.5">
-            {order.lines.slice(0, VISIBLE_LINES).map((line) => (
-                <li key={line.id} className="break-words">
-                    <span className="tabular-nums">
-                        {formatCount(line.quantity, locale)}
-                    </span>{' '}
-                    ×{' '}
-                    {line.product.deleted ? (
-                        line.product.name
-                    ) : (
-                        <Link
-                            href={show(line.product.id)}
-                            className="font-semibold hover:underline focus-visible:underline"
-                        >
-                            {line.product.name}
-                        </Link>
-                    )}
-                </li>
-            ))}
+            {order.lines.slice(0, VISIBLE_LINES).map((line) => {
+                const sizes =
+                    line.size_mode === 'by_size'
+                        ? formatSizes(orderLineSizeCounts(line.sizes), locale)
+                        : '';
+
+                return (
+                    <li key={line.id} className="break-words">
+                        <span className="tabular-nums">
+                            {formatCount(line.quantity, locale)}
+                        </span>{' '}
+                        ×{' '}
+                        {line.product.deleted ? (
+                            line.product.name
+                        ) : (
+                            <Link
+                                href={show(line.product.id)}
+                                className="font-semibold hover:underline focus-visible:underline"
+                            >
+                                {line.product.name}
+                            </Link>
+                        )}
+                        {sizes && (
+                            <span className="tabular-nums"> ({sizes})</span>
+                        )}
+                    </li>
+                );
+            })}
             {hidden > 0 && (
                 <li className="text-muted-foreground">+ {hidden} more</li>
             )}

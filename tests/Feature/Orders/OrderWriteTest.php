@@ -4,6 +4,7 @@ use App\Enums\ProductStatus;
 use App\Models\Order;
 use App\Models\OrderLine;
 use App\Models\Product;
+use App\Models\SizeList;
 use App\Models\Workshop;
 use App\Services\Workshops\CurrentWorkshop;
 
@@ -24,9 +25,10 @@ beforeEach(function () {
 
 /**
  * A valid payload with overrides. A line is `['product' => <which>, 'quantity' => <as typed>]`, where which is `jacket` (Denim Jacket),
- * `jeans` (Denim Jeans 5-pocket), `tshirt` (Classic White T-shirt), `draft` (Canvas Chore Jacket), `archived` (a new archived product),
- * `new` (a new active product), `foreign` (a product of another workshop), `missing` (an id nobody has) or `null` (nothing chosen).
- * Datasets are built before the app boots, so they name products instead of holding ids.
+ * `jeans` (Denim Jeans 5-pocket), `tshirt` (Classic White T-shirt), `draft` (Canvas Chore Jacket), `tote` (Leather Tote, a "One size"
+ * product), `archived` (a new archived bag), `new` (a new active bag), `foreign` (a product of another workshop), `missing` (an id
+ * nobody has) or `null` (nothing chosen). Datasets are built before the app boots, so they name products instead of holding ids.
+ * A line posts its quantity as `quantity` and as M of `sizes` (S-60): the server uses the one that fits the product, ignoring the other.
  *
  * @param  array<string, mixed>  $overrides
  * @return array<string, mixed>
@@ -43,16 +45,33 @@ function orderBody(array $overrides = []): array
                 'tshirt' => pid(2),
                 'jeans' => pid(5),
                 'draft' => pid(6),
-                'archived' => Product::factory()->archived()->create()->id,
-                'new' => Product::factory()->create()->id,
+                'tote' => pid(4),
+                'archived' => Product::factory()->archived()->create(['category' => 'bag'])->id,
+                'new' => Product::factory()->create(['category' => 'bag'])->id,
                 'foreign' => CurrentWorkshop::run(Workshop::factory()->create(), fn () => Product::factory()->create()->id),
                 'missing' => NO_SUCH_ID,
             },
             'quantity' => $line['quantity'],
+            'sizes' => sizeIds(['M' => $line['quantity']]),
         ], $overrides['lines']);
     }
 
     return validOrderPayload($overrides);
+}
+
+/** Every line of the order that counts as one size ("One size" product, or recorded before sizes) holds one row equal to the line (ADR-0016). */
+function expectLinesCountedAsOneSize(Order $order): void
+{
+    $oneSize = SizeList::query()->where('code', SizeList::ONE_SIZE)->firstOrFail();
+    $lines = $order->lines()->with('sizes.size')->get()->where('size_list_id', $oneSize->id);
+
+    expect($lines)->not->toBeEmpty();
+
+    foreach ($lines as $line) {
+        expect($line->size_list_id)->toBe($oneSize->id)
+            ->and($line->sizes->map(fn ($row): array => [$row->size->label, $row->quantity, $row->in_cutting, $row->ready_to_ship, $row->shipped])->all())
+            ->toBe([['One size', $line->quantity, 0, 0, 0]]);
+    }
 }
 
 /** The lines of an order as the list reads them: `50 × Denim Jacket`. */
@@ -77,6 +96,12 @@ it('records Boutique Lina\'s order and lands on its page, where the list shows i
             ['product_id' => pid(1), 'quantity' => 50, 'position' => 0, 'workshop_id' => $order->workshop_id],
             ['product_id' => pid(5), 'quantity' => 30, 'position' => 1, 'workshop_id' => $order->workshop_id],
         ]);
+
+    // Both lines are counted by size, and each equals the sum of its rows (sizedFigures checks it).
+    expect(sizedFigures($order))->toBe([
+        pid(1) => ['S' => [10, 0, 0, 0], 'M' => [20, 0, 0, 0], 'L' => [15, 0, 0, 0], 'XL' => [5, 0, 0, 0]],
+        pid(5) => ['M' => [30, 0, 0, 0]],
+    ]);
 
     $row = pageProp(actingAs($this->user)->get(route('orders.index'))->assertOk(), 'orders.data.0');
 
@@ -103,10 +128,10 @@ it('refuses a mistake with the card\'s message under its field and saves nothing
     'note of 1001 characters' => [['note' => str_repeat('a', 1001)], 'note', 'The note field must not be greater than 1000 characters.'],
     'no lines' => [['lines' => []], 'lines', 'Add at least one product.'],
     'a line without a product' => [['lines' => [['product' => null, 'quantity' => '5']]], 'lines.0.product_id', 'Choose a product.'],
-    'quantity empty' => [['lines' => [['product' => 'jacket', 'quantity' => '']]], 'lines.0.quantity', 'The quantity must be a whole number from 1 to 1,000,000.'],
-    'quantity 0' => [['lines' => [['product' => 'jacket', 'quantity' => '0']]], 'lines.0.quantity', 'The quantity must be a whole number from 1 to 1,000,000.'],
-    'quantity 2.5' => [['lines' => [['product' => 'jacket', 'quantity' => '2.5']]], 'lines.0.quantity', 'The quantity must be a whole number from 1 to 1,000,000.'],
-    'quantity 1,000,001' => [['lines' => [['product' => 'jacket', 'quantity' => '1000001']]], 'lines.0.quantity', 'The quantity must be a whole number from 1 to 1,000,000.'],
+    'quantity empty, on a "One size" product' => [['lines' => [['product' => 'tote', 'quantity' => '']]], 'lines.0.quantity', 'The quantity must be a whole number from 1 to 1,000,000.'],
+    'quantity 0, on a "One size" product' => [['lines' => [['product' => 'tote', 'quantity' => '0']]], 'lines.0.quantity', 'The quantity must be a whole number from 1 to 1,000,000.'],
+    'quantity 2.5, on a "One size" product' => [['lines' => [['product' => 'tote', 'quantity' => '2.5']]], 'lines.0.quantity', 'The quantity must be a whole number from 1 to 1,000,000.'],
+    'quantity 1,000,001, on a "One size" product' => [['lines' => [['product' => 'tote', 'quantity' => '1000001']]], 'lines.0.quantity', 'The quantity must be a whole number from 1 to 1,000,000.'],
     'Denim Jacket twice, flagged on the second line' => [
         ['lines' => [['product' => 'jacket', 'quantity' => '5'], ['product' => 'jacket', 'quantity' => '7']]],
         'lines.1.product_id', 'Denim Jacket is already on this order.',
@@ -134,6 +159,8 @@ it('changes Denim Jeans to 40, adds 20 T-shirts, keeps the Jeans line and lands 
         ->and($row['units'])->toBe(110)
         ->and(Order::query()->count())->toBe(1)
         ->and($jeansLine->fresh()->only(['quantity', 'position']))->toBe(['quantity' => 40, 'position' => 1]);
+
+    expectLinesCountedAsOneSize($order);
 });
 
 it('saves two products swapped between lines and drops a product that is no longer listed', function () {

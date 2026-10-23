@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Material;
+use App\Models\OrderLine;
 use App\Models\Product;
 use App\Models\Sale;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -157,6 +158,47 @@ it('stays within the query budget on the page of an order, however many lines it
     $many = queryLog(fn () => $this->get(route('orders.show', $big))->assertOk());
 
     expect(count($many))->toBeLessThanOrEqual(QUERY_BUDGET, implode(PHP_EOL, $many))
+        ->and(count($many))->toBe(count($few), implode(PHP_EOL, $many));
+});
+
+it('stays within the query budget on New order, however many products it offers', function () {
+    $uri = route('orders.create');
+    actingAs($this->user);
+
+    // Warm up: the first request of a process may run one-off queries (schema introspection, the framework's own caches).
+    $this->get($uri)->assertOk();
+
+    $few = queryLog(fn () => $this->get($uri)->assertOk());
+
+    // 30 more products, in every kind of size list: the sizes come once, as `size_lists`, not per product.
+    foreach (['apparel', 'footwear', 'bag'] as $category) {
+        Product::factory()->count(10)->create(['category' => $category, 'status' => 'active']);
+    }
+
+    $many = queryLog(fn () => $this->get($uri)->assertOk());
+
+    expect(count($few))->toBeLessThanOrEqual(QUERY_BUDGET, implode(PHP_EOL, $few))
+        ->and(count($many))->toBe(count($few), implode(PHP_EOL, $many));
+});
+
+it('stays within the query budget on Edit order, however many lines and products there are', function () {
+    $small = bookSizedOrder();
+    $lines = array_map(fn (int $number): array => [demoProduct(DEMO_PRODUCT_SKUS[$number]), 10 * $number], [3, 4, 5, 7]);
+    $big = bookOrder(['client' => 'Five lines'], $lines);
+    OrderLine::factory()->sized(['S' => 4, 'XL' => 6])->create(['order_id' => $big->id, 'product_id' => demoProduct('PRD-TSH-002')->id, 'position' => 4]);
+    actingAs($this->user);
+
+    // Warm up: the first request of a process may run one-off queries (schema introspection, the framework's own caches).
+    $this->get(route('orders.edit', $small))->assertOk();
+
+    $few = queryLog(fn () => $this->get(route('orders.edit', $small))->assertOk());
+
+    Product::factory()->count(20)->create(['category' => 'footwear', 'status' => 'active']);
+
+    $many = queryLog(fn () => $this->get(route('orders.edit', $big))->assertOk());
+
+    expect(count($few))->toBeLessThanOrEqual(QUERY_BUDGET, implode(PHP_EOL, $few))
+        ->and(count($many))->toBeLessThanOrEqual(QUERY_BUDGET, implode(PHP_EOL, $many))
         ->and(count($many))->toBe(count($few), implode(PHP_EOL, $many));
 });
 

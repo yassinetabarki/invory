@@ -7,9 +7,118 @@ import type {
     MaterialFilters,
     MaterialRef,
     MaterialUsage,
+    OrderLine,
+    OrderLineSizeMode,
+    OrderProduct,
     Paginated,
+    Size,
+    SizeList,
     StockMovement,
 } from '@/types/domain';
+
+/** The installation's three size lists (S-58), with fixed size ids shared by every test. */
+export const sizeIds = {
+    S: 1,
+    M: 2,
+    L: 3,
+    XL: 4,
+    oneSize: 16, // 36 … 46 are ids 5 … 15
+} as const;
+
+const size = (id: number, label: string): Size => ({ id, label });
+
+export const sizeLists: Record<string, SizeList> = {
+    s_to_xl: {
+        code: 's_to_xl',
+        name: 'S, M, L, XL',
+        sizes: [
+            size(sizeIds.S, 'S'),
+            size(sizeIds.M, 'M'),
+            size(sizeIds.L, 'L'),
+            size(sizeIds.XL, 'XL'),
+        ],
+    },
+    eu_36_to_46: {
+        code: 'eu_36_to_46',
+        name: '36 to 46',
+        sizes: Array.from({ length: 11 }, (_, i) =>
+            size(5 + i, String(36 + i)),
+        ),
+    },
+    one_size: {
+        code: 'one_size',
+        name: 'One size',
+        sizes: [size(sizeIds.oneSize, 'One size')],
+    },
+};
+
+/** An order product as the order forms offer it (S-60): Apparel products use the S to XL list. */
+export function formProduct(
+    product: OrderProduct,
+    size_list_code = 's_to_xl',
+): OrderProduct & { size_list_code: string } {
+    return { ...product, size_list_code };
+}
+
+type LineFigures = Omit<OrderLine, 'size_mode' | 'sizes'>;
+
+/**
+ * Completes an order line with its sizes. Any mode but 'by_size' gets one "One size" row equal to the line, so a
+ * line built before sizes keeps its meaning.
+ */
+export function withOneSize(
+    line: LineFigures,
+    size_mode: Exclude<OrderLineSizeMode, 'by_size'> = 'before_sizes',
+): OrderLine {
+    return {
+        ...line,
+        size_mode,
+        sizes: [
+            {
+                size: size(sizeIds.oneSize, 'One size'),
+                quantity: line.quantity,
+                to_start: line.to_start,
+                in_cutting: line.in_cutting,
+                ready_to_ship: line.ready_to_ship,
+                shipped: line.shipped,
+            },
+        ],
+    };
+}
+
+/** A Denim Jacket line counted by size: S 10 · M 20 · L 15 · XL 5 = 50 units, nothing started. */
+export const sizedJacketLine: OrderLine = {
+    id: 80,
+    product: {
+        id: 1,
+        sku: 'PRD-JKT-001',
+        name: 'Denim Jacket',
+        status: 'active',
+        deleted: false,
+    },
+    quantity: 50,
+    to_start: 50,
+    in_cutting: 0,
+    ready_to_ship: 0,
+    shipped: 0,
+    started: 0,
+    size_mode: 'by_size',
+    sizes: [
+        [sizeIds.S, 'S', 10],
+        [sizeIds.M, 'M', 20],
+        [sizeIds.L, 'L', 15],
+        [sizeIds.XL, 'XL', 5],
+    ].map(([id, label, quantity]) => ({
+        size: size(Number(id), String(label)),
+        quantity: Number(quantity),
+        to_start: Number(quantity),
+        in_cutting: 0,
+        ready_to_ship: 0,
+        shipped: 0,
+    })),
+    status: 'not_started',
+    status_label: 'Not started',
+};
 
 export const denim: Material = {
     id: 1,
@@ -179,6 +288,7 @@ function movement(
         reference: null,
         note: null,
         units: null,
+        sizes: null,
         order: null,
         product_name: null,
         user_name: 'Admin',

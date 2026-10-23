@@ -23,10 +23,13 @@ final class OrderLineMoveController extends Controller
     {
         $user = $request->user();
 
+        // A line that counts as one size has one size row: its `units` are the units of that size.
+        $units = $request->bySize() ? $request->sizeUnits() : [$line->sizes()->firstOrFail()->size_id => $request->integer('units')];
+
         $result = $moveUnits->handle(
             $line,
             OrderLineMove::from($request->string('move')->value()),
-            $request->integer('units'),
+            $units,
             $user instanceof User ? $user : abort(401),
         );
 

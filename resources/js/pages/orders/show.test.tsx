@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import OrdersShow from '@/pages/orders/show';
 import { Toaster } from '@/components/ui/sonner';
+import { withOneSize } from '@/test/fixtures';
 import { inertiaMock, resetInertiaMock } from '@/test/inertia';
 import type { OrderLine, OrderProduct, OrderShowProps } from '@/types/domain';
 
@@ -34,7 +35,7 @@ function notStarted(
     product: OrderProduct,
     quantity: number,
 ): OrderLine {
-    return {
+    return withOneSize({
         id,
         product,
         quantity,
@@ -45,7 +46,7 @@ function notStarted(
         started: 0,
         status: 'not_started',
         status_label: 'Not started',
-    };
+    });
 }
 
 const props: OrderShowProps = {

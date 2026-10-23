@@ -29,6 +29,11 @@ const OLD_UNITS = ['m', 'cm', 'yd', 'sqm', 'sqft', 'kg', 'g', 'l', 'ml', 'pc', '
  */
 function referenceMigration(): Migration
 {
+    // The S-60-a order line sizes migration points at the size lists, the sizes and order lines, so it goes before all of them.
+    if (Schema::hasTable('order_line_sizes')) {
+        orderLineSizesMigration()->down();
+    }
+
     if (Schema::hasTable('size_lists')) {
         sizeListsMigration()->down();
     }

@@ -1,6 +1,7 @@
 import { Badge } from '@/components/ui/badge';
 import { useAppSettings } from '@/hooks/use-app-settings';
 import { formatDate, formatMoney, formatQuantity } from '@/lib/format';
+import { formatSizes } from '@/lib/sizes';
 import { cn } from '@/lib/utils';
 import type {
     StockMovement,
@@ -31,13 +32,23 @@ type Formatters = { currency: string; locale: string };
 /**
  * "−59.4 m · Boutique Lina · 30 × Denim Jacket": the sign (U+2212 for cutting)
  * is a literal prefix, the server sends the quantity positive. A missing order
- * or product is left out, never printed as "null".
+ * or product is left out, never printed as "null". A line counted by size adds
+ * its sizes: "14 × Denim Jacket (S 4 · M 10)".
  */
-function describeCut(entry: StockMovement, quantity: string): string {
+function describeCut(
+    entry: StockMovement,
+    quantity: string,
+    locale: string,
+): string {
+    const sizes = entry.sizes ? formatSizes(entry.sizes, locale) : '';
+    const product =
+        sizes && entry.product_name
+            ? `${entry.product_name} (${sizes})`
+            : entry.product_name;
     const what =
         entry.units !== null && entry.product_name
-            ? `${entry.units} × ${entry.product_name}`
-            : entry.product_name;
+            ? `${entry.units} × ${product}`
+            : product;
 
     return [quantity, entry.order?.client, what].filter(Boolean).join(' · ');
 }
@@ -72,9 +83,9 @@ function describe(
         case 'price_change':
             return `${price(entry.unit_cost_before)} → ${price(entry.unit_cost_after)} per ${unit}`;
         case 'cutting':
-            return describeCut(entry, `−${quantity(entry.quantity)}`);
+            return describeCut(entry, `−${quantity(entry.quantity)}`, locale);
         case 'cutting_return':
-            return describeCut(entry, `+${quantity(entry.quantity)}`);
+            return describeCut(entry, `+${quantity(entry.quantity)}`, locale);
     }
 }
 

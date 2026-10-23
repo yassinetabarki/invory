@@ -305,7 +305,7 @@ it('rolls back everything when writing the third return fails (AC-5)', function 
 
     $line = $order->lines()->get()[0];
 
-    expect(fn () => app(MoveOrderLineUnits::class)->handle($line, OrderLineMove::BackToStart, 5, $this->user))
+    expect(fn () => app(MoveOrderLineUnits::class)->handle($line, OrderLineMove::BackToStart, [$line->sizes()->value('size_id') => 5], $this->user))
         ->toThrow(RuntimeException::class, 'The third return failed.')
         ->and($written)->toBe(3)
         ->and($snapshot())->toBe($before)
@@ -314,15 +314,16 @@ it('rolls back everything when writing the third return fails (AC-5)', function 
         ->and(jacketStock())->toBe(['MAT-BTN-017' => '660.0000', 'MAT-DEN-012' => '190.6000', 'MAT-LBL-WOV' => '370.0000', 'MAT-THR-PES' => '16220.0000']);
 });
 
-it('locks the order, the line, its cuts and then the materials in ascending id (PostgreSQL)', function () {
+it('locks the order, the line, its size rows, its cuts and then the materials in ascending id (PostgreSQL)', function () {
     $order = orderCutAndMovedOn();
 
     $locks = queriesMatching(queryLog(fn () => jacketMove($order, 'back_to_start', 5)->assertSessionHasNoErrors()), 'for update');
 
-    expect($locks)->toHaveCount(4)
+    expect($locks)->toHaveCount(5)
         ->and($locks[0])->toContain('"orders"')
         ->and($locks[1])->toContain('"order_lines"')
-        ->and($locks[2])->toContain('"order_line_cuts"')
-        ->and($locks[3])->toContain('"materials"')
-        ->and($locks[3])->toMatch('/order by "id" asc for update/i');
+        ->and($locks[2])->toContain('"order_line_sizes"')
+        ->and($locks[3])->toContain('"order_line_cuts"')
+        ->and($locks[4])->toContain('"materials"')
+        ->and($locks[4])->toMatch('/order by "id" asc for update/i');
 })->skip(fn () => DB::getDriverName() !== 'pgsql', 'FOR UPDATE is only emitted on PostgreSQL (SQLite has no row locks).');

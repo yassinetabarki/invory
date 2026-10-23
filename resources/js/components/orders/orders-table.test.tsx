@@ -2,6 +2,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { OrdersTable } from '@/components/orders/orders-table';
+import { sizedJacketLine, sizeIds, withOneSize } from '@/test/fixtures';
 import { resetInertiaMock } from '@/test/inertia';
 import type { Order, OrderLine, OrderProgress } from '@/types/domain';
 
@@ -22,7 +23,7 @@ function line(
 ): OrderLine {
     const { in_cutting = 0, ready_to_ship = 0 } = stages;
 
-    return {
+    return withOneSize({
         id,
         quantity,
         to_start: quantity - in_cutting - ready_to_ship,
@@ -39,6 +40,25 @@ function line(
             status: deleted ? 'archived' : 'active',
             deleted,
         },
+    });
+}
+
+/** A Denim Jacket counted by size from [label, units] pairs; the units add up to the line. */
+function sizedLine(counts: [keyof typeof sizeIds, number][]): OrderLine {
+    const quantity = counts.reduce((sum, [, units]) => sum + units, 0);
+
+    return {
+        ...sizedJacketLine,
+        quantity,
+        to_start: quantity,
+        sizes: counts.map(([label, units]) => ({
+            size: { id: sizeIds[label], label },
+            quantity: units,
+            to_start: units,
+            in_cutting: 0,
+            ready_to_ship: 0,
+            shipped: 0,
+        })),
     };
 }
 
@@ -187,6 +207,66 @@ describe('<OrdersTable>', () => {
             '+ 2 more',
         ]);
         expect(table().queryByText(/Leather Tote/)).not.toBeInTheDocument();
+    });
+
+    it.each<[string, OrderLine, string]>([
+        [
+            'S 10 · M 20 · L 15 · XL 5',
+            sizedJacketLine,
+            '50 × Denim Jacket (S 10 · M 20 · L 15 · XL 5)',
+        ],
+        [
+            'a size with 0 units left out',
+            sizedLine([
+                ['S', 10],
+                ['M', 0],
+                ['XL', 5],
+            ]),
+            '15 × Denim Jacket (S 10 · XL 5)',
+        ],
+        [
+            'number sizes get a colon (S-60 F9)',
+            {
+                ...sizedLine([['S', 4]]),
+                product: {
+                    ...sizedJacketLine.product,
+                    name: 'Canvas Low Sneaker',
+                },
+                sizes: [
+                    ['36', 5, 4],
+                    ['37', 6, 8],
+                    ['38', 7, 0],
+                ].map(([label, id, units]) => ({
+                    size: { id: Number(id), label: String(label) },
+                    quantity: Number(units),
+                    to_start: Number(units),
+                    in_cutting: 0,
+                    ready_to_ship: 0,
+                    shipped: 0,
+                })),
+                quantity: 12,
+                to_start: 12,
+            },
+            '12 × Canvas Low Sneaker (36: 4 · 37: 8)',
+        ],
+        [
+            'a line counted as one size',
+            { ...line(2, 'Leather Tote', 12), size_mode: 'one_size' },
+            '12 × Leather Tote',
+        ],
+        [
+            'a line recorded before sizes',
+            line(1, 'Denim Jacket', 50),
+            '50 × Denim Jacket',
+        ],
+    ])('lists the products with their sizes: %s', (_case, orderLine, text) => {
+        renderTable([{ ...lina, lines: [orderLine] }]);
+
+        expect(
+            table()
+                .getAllByRole('listitem')
+                .map((item) => item.textContent),
+        ).toEqual([text]);
     });
 
     it('links an active product and leaves a deleted one as plain text', () => {

@@ -18,9 +18,9 @@ final readonly class UpdateOrder
      * order's row lock, which every move also takes first, so a started line (S-49) is checked against its saved counts: the form
      * request's own check ran on unlocked data.
      *
-     * @param  array<string, mixed>  $data  validated input: `client`, `ordered_on` (Y-m-d), optional `note`, and `lines` (a list of `product_id` and `quantity`)
+     * @param  array<string, mixed>  $data  validated input: `client`, `ordered_on` (Y-m-d), optional `note`, and `lines` (a list of `product_id` and `quantity` or `sizes`)
      *
-     * @throws ValidationException a started line was removed or given a quantity below its started units; nothing is saved
+     * @throws ValidationException a started line was removed or given fewer units than started (per size when counted by size), or a product's sizes changed; nothing is saved
      */
     public function handle(Order $order, array $data): Order
     {

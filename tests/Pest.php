@@ -6,6 +6,8 @@ use App\Models\Order;
 use App\Models\OrderLine;
 use App\Models\Product;
 use App\Models\Sale;
+use App\Models\Size;
+use App\Models\SizeList;
 use App\Models\StockMovement;
 use App\Models\User;
 use Carbon\CarbonImmutable;
@@ -288,7 +290,9 @@ function validSalePayload(array $overrides = []): array
 
 /**
  * A valid Store/UpdateOrderRequest payload, with overrides: Boutique Lina's order of the card (Denim Jacket 50, Denim Jeans 5-pocket 30).
- * Needs the demo products (`prepareDemo()`). The order date is today (the frozen clock), so it is never in the future.
+ * Each line carries both ways of counting (S-60): a `quantity` for a line that counts as one size (a line recorded before sizes), and
+ * `sizes` for a line counted by size (the server uses the one that fits and ignores the other): the jacket S 10 · M 20 · L 15 · XL 5, the
+ * jeans M 30. Needs the demo products (`prepareDemo()`). The order date is today (the frozen clock), so it is never in the future.
  *
  * @param  array<string, mixed>  $overrides
  * @return array<string, mixed>
@@ -300,11 +304,54 @@ function validOrderPayload(array $overrides = []): array
         'ordered_on' => now()->toDateString(),
         'note' => 'Deliver before 30 Oct, in 2 boxes',
         'lines' => [
-            ['product_id' => pid(1), 'quantity' => '50'],
-            ['product_id' => pid(5), 'quantity' => '30'],
+            ['product_id' => pid(1), 'quantity' => '50', 'sizes' => sizeIds(['S' => '10', 'M' => '20', 'L' => '15', 'XL' => '5'])],
+            ['product_id' => pid(5), 'quantity' => '30', 'sizes' => sizeIds(['M' => '30'])],
         ],
         ...$overrides,
     ];
+}
+
+/**
+ * The quantities of an order line by size id, from labels (S-60): `['M' => '20']` → `[<id of M> => '20']`. Labels of the Apparel list
+ * (S, M, L, XL) unless `$list` says another.
+ *
+ * @param  array<string, int|string|null>  $byLabel
+ * @return array<int, int|string|null>
+ */
+function sizeIds(array $byLabel, string $list = SizeList::S_TO_XL): array
+{
+    $ids = Size::query()->whereIn('size_list_id', SizeList::query()->where('code', $list)->select('id'))->pluck('id', 'label');
+    $sizes = [];
+
+    foreach ($byLabel as $label => $units) {
+        $sizes[$ids->get((string) $label) ?? throw new InvalidArgumentException("No size {$label} in {$list}.")] = $units;
+    }
+
+    return $sizes;
+}
+
+/**
+ * Each line of an order as the order's pages read it: its sizes in size order, `label => [quantity, in_cutting, ready_to_ship, shipped]`,
+ * by product id. And the rule every write must keep (ADR-0016): a line's quantity and three counts are the sums of its size rows.
+ *
+ * @return array<int, array<string, array{int, int, int, int}>>
+ */
+function sizedFigures(Order $order): array
+{
+    $figures = [];
+
+    foreach ($order->lines()->with('sizes.size')->get() as $line) {
+        $rows = $line->sizes->mapWithKeys(fn ($row): array => [$row->size->label => [$row->quantity, $row->in_cutting, $row->ready_to_ship, $row->shipped]]);
+
+        expect($line->quantity)->toBe($rows->sum(fn (array $row): int => $row[0]))
+            ->and($line->in_cutting)->toBe($rows->sum(fn (array $row): int => $row[1]))
+            ->and($line->ready_to_ship)->toBe($rows->sum(fn (array $row): int => $row[2]))
+            ->and($line->shipped)->toBe($rows->sum(fn (array $row): int => $row[3]));
+
+        $figures[$line->product_id] = $rows->all();
+    }
+
+    return $figures;
 }
 
 /**
@@ -536,6 +583,17 @@ function sizeListsMigration(): Migration
 }
 
 /**
+ * The order line sizes migration object (S-60-a): one table, `size_list_id` on `order_lines` and `sizes` on `stock_movements`. It points at
+ * order lines, size lists and sizes, and on PostgreSQL relies on `unique(workshop_id, id)` of `order_lines` (the cuts migration), so it is
+ * the newest of the hand-kept list (F-60): a test that rolls any older one back (the size lists, the cuts, the stage counts, the orders or
+ * anything below) must roll this one back first, and bring it back up last.
+ */
+function orderLineSizesMigration(): Migration
+{
+    return require database_path('migrations/2026_10_22_100000_create_order_line_sizes_table.php');
+}
+
+/**
  * An order of the current workshop with its lines (S-48-b). `$lines` is a list of `[Product, quantity]` in the order they are entered
  * (the position follows the list); by default Boutique Lina's order of the card: Denim Jacket 50 then Denim Jeans 5-pocket 30 (needs the
  * demo products). The lines are created last-first, so their ids run against their positions: a read that sorted by id would show.
@@ -553,6 +611,22 @@ function bookOrder(array $attributes = [], ?array $lines = null): Order
     foreach (array_reverse($lines, true) as $position => [$product, $quantity]) {
         OrderLine::factory()->create(['order_id' => $order->id, 'product_id' => $product->id, 'quantity' => $quantity, 'position' => $position]);
     }
+
+    return $order;
+}
+
+/**
+ * Boutique Lina's order (as `bookOrder()`) with one line counted by size (S-60-a): Denim Jacket (needs the demo products), `$sizes` being
+ * label => quantity, S 10 · M 20 · L 15 · XL 5 by default (50 units). `$stages` gives the stages of some sizes, label => [in_cutting,
+ * ready_to_ship, shipped], e.g. `['M' => [10, 0, 0]]`; the line's figures are the sums.
+ *
+ * @param  array<string, int>  $sizes
+ * @param  array<string, array{int, int, int}>  $stages
+ */
+function bookSizedOrder(array $sizes = ['S' => 10, 'M' => 20, 'L' => 15, 'XL' => 5], array $stages = []): Order
+{
+    $order = Order::factory()->create(['client' => 'Boutique Lina', 'ordered_on' => '2026-10-15', 'note' => 'Deliver before 30 Oct, in 2 boxes']);
+    OrderLine::factory()->sized($sizes, $stages)->create(['order_id' => $order->id, 'product_id' => demoProduct('PRD-JKT-001')->id, 'position' => 0]);
 
     return $order;
 }

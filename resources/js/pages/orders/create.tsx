@@ -3,7 +3,10 @@ import { OrderForm } from '@/components/orders/order-form';
 import { create, index, store } from '@/routes/orders';
 import type { OrderCreateProps } from '@/types/domain';
 
-export default function OrdersCreate({ products }: OrderCreateProps) {
+export default function OrdersCreate({
+    products,
+    size_lists,
+}: OrderCreateProps) {
     return (
         <>
             <Head title="New order" />
@@ -12,6 +15,7 @@ export default function OrdersCreate({ products }: OrderCreateProps) {
                 <OrderForm
                     title="New order"
                     products={products}
+                    sizeLists={size_lists}
                     action={store()}
                     cancelHref={index.url()}
                 />

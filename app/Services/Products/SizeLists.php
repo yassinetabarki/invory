@@ -17,6 +17,8 @@ final class SizeLists
 {
     private const CATEGORIES_ATTRIBUTE = 'invory.product_categories_with_sizes';
 
+    private const LISTS_ATTRIBUTE = 'invory.size_lists_with_sizes';
+
     /** The sizes of a category, in order. */
     public function of(ProductCategory $category): SizeList
     {
@@ -33,10 +35,44 @@ final class SizeLists
         return $this->categories()->mapWithKeys(fn (ProductCategory $category): array => [$category->code => $category->sizeList])->all();
     }
 
+    /**
+     * Every size list by its own code (`s_to_xl`, `eu_36_to_46`, `one_size`), each with its sizes: two queries, however the categories
+     * use them. For the screens that offer every list once (the order forms).
+     *
+     * @return array<string, SizeList>
+     */
+    public function lists(): array
+    {
+        return $this->allLists()->keyBy('code')->all();
+    }
+
+    /** The list with this id, with its sizes. */
+    public function list(int $id): SizeList
+    {
+        return $this->allLists()->get($id) ?? SizeList::query()->with('sizes')->findOrFail($id);
+    }
+
     /** The category with this id, carrying its size list and the sizes. */
     public function category(int $id): ProductCategory
     {
         return $this->categories()->get($id) ?? ProductCategory::query()->with('sizeList.sizes')->findOrFail($id);
+    }
+
+    /**
+     * Every size list by id, in id order, each with its sizes.
+     *
+     * @return Collection<int, SizeList>
+     */
+    private function allLists(): Collection
+    {
+        $attributes = request()->attributes;
+
+        if (! $attributes->has(self::LISTS_ATTRIBUTE)) {
+            $attributes->set(self::LISTS_ATTRIBUTE, SizeList::query()->with('sizes')->orderBy('id')->get()->keyBy('id'));
+        }
+
+        /** @var Collection<int, SizeList> */
+        return $attributes->get(self::LISTS_ATTRIBUTE);
     }
 
     /**

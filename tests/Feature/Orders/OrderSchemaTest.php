@@ -2,7 +2,9 @@
 
 use App\Models\Order;
 use App\Models\OrderLine;
+use App\Models\OrderLineSize;
 use App\Models\Product;
+use App\Models\SizeList;
 use App\Models\Workshop;
 use App\Services\Workshops\CurrentWorkshop;
 use Illuminate\Database\QueryException;
@@ -33,6 +35,7 @@ it('creates both tables with their columns, indexes and foreign keys, and drops 
         ->and($foreignKeys('order_lines', 'products')['on_delete'])->toBe('restrict');
 
     // Newest first: the cuts point at lines and stock movements, the stage counts are columns of `order_lines`.
+    orderLineSizesMigration()->down();
     cutsMigration()->down();
     stageCountsMigration()->down();
     ordersMigration()->down();
@@ -43,6 +46,7 @@ it('creates both tables with their columns, indexes and foreign keys, and drops 
     ordersMigration()->up();
     stageCountsMigration()->up();
     cutsMigration()->up();
+    orderLineSizesMigration()->up();
 
     $line = OrderLine::factory()->create();
 
@@ -67,7 +71,7 @@ it('makes PostgreSQL refuse an order line that breaks a workshop, quantity or du
         'mine' => $mine->id,
         'other' => $other->id,
     ];
-    $row = ['workshop_id' => $ids['mine'], 'order_id' => $ids['order'], 'product_id' => $ids['product'], 'quantity' => 1, 'position' => 0, 'created_at' => now(), 'updated_at' => now()];
+    $row = ['workshop_id' => $ids['mine'], 'order_id' => $ids['order'], 'product_id' => $ids['product'], 'size_list_id' => SizeList::query()->where('code', SizeList::ONE_SIZE)->value('id'), 'quantity' => 1, 'position' => 0, 'created_at' => now(), 'updated_at' => now()];
 
     // The order already holds the product once, so a second line of it is refused.
     DB::table('order_lines')->insert($row);
@@ -111,4 +115,42 @@ it('makes PostgreSQL refuse a negative stage count and counts that add up to mor
 })->with([
     'a negative count' => [['in_cutting' => -1], 'order_lines_stage_counts_check'],
     'counts above the quantity' => [['shipped' => 3], 'order_lines_stage_counts_total_check'],
+]);
+
+it('keeps every line equal to the sum of its size rows, whichever way the factory builds it (S-60-a)', function (Closure $make, string $list, array $labels) {
+    $line = OrderLine::with('sizes.size', 'sizeList')->findOrFail($make()->id);
+
+    expect($line->sizeList->code)->toBe($list)
+        ->and($line->sizes->map(fn (OrderLineSize $row) => $row->size->label)->all())->toBe($labels);
+
+    foreach (['quantity', 'in_cutting', 'ready_to_ship', 'shipped', 'to_start', 'started'] as $figure) {
+        expect($line->{$figure})->toBe($line->sizes->sum($figure), $figure);
+    }
+})->with([
+    'by default' => [fn () => OrderLine::factory()->create(['quantity' => 40]), 'one_size', ['One size']],
+    'stages()' => [fn () => OrderLine::factory()->stages(20, 10)->create(['quantity' => 50]), 'one_size', ['One size']],
+    'shipped()' => [fn () => OrderLine::factory()->shipped(12)->create(), 'one_size', ['One size']],
+    // Created out of order: the rows come back by the size's position, not by id.
+    'sized()' => [
+        fn () => OrderLine::factory()->sized(['XL' => 5, 'S' => 10, 'L' => 15, 'M' => 20], ['M' => [10, 0, 0], 'XL' => [0, 2, 3]])
+            ->create(['product_id' => Product::factory()->create(['category' => 'apparel'])->id]),
+        's_to_xl', ['S', 'M', 'L', 'XL'],
+    ],
+]);
+
+it('makes PostgreSQL refuse a size row that breaks a quantity, count or workshop rule (S-60-a)', function (Closure $override, string $constraint) {
+    if (DB::getDriverName() !== 'pgsql') {
+        $this->markTestSkipped('The composite foreign key and the CHECKs are PostgreSQL-only.');
+    }
+
+    $line = OrderLine::factory()->sized(['S' => 10])->create(['product_id' => Product::factory()->create(['category' => 'apparel'])->id]);
+
+    // A savepoint, so the rejected row doesn't abort the surrounding transaction; the message names the constraint that fired.
+    expect(fn () => DB::transaction(fn () => OrderLineSize::factory()->create(['order_line_id' => $line->id, ...$override(Workshop::factory()->create())])))
+        ->toThrow(QueryException::class, $constraint);
+})->with([
+    'a quantity of 0' => [fn () => ['quantity' => 0], 'order_line_sizes_quantity_check'],
+    'a negative count' => [fn () => ['quantity' => 5, 'in_cutting' => -1], 'order_line_sizes_stage_counts_check'],
+    'counts above the quantity' => [fn () => ['quantity' => 5, 'shipped' => 6], 'order_line_sizes_stage_counts_total_check'],
+    'a workshop that is not its line\'s' => [fn (Workshop $other) => ['workshop_id' => $other->id], 'order_line_sizes_workshop_line_foreign'],
 ]);

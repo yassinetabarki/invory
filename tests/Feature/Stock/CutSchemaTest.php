@@ -40,6 +40,7 @@ it('creates both tables and the three ledger columns, and removes them on rollba
     // A movement that exists before the rollback (SQLite rebuilds `stock_movements` for its new keys).
     $movement = StockMovement::factory()->restock('5.0000', '5.0000')->create();
 
+    orderLineSizesMigration()->down();
     cutsMigration()->down();
 
     expect(Schema::hasTable('order_line_cuts'))->toBeFalse()
@@ -50,6 +51,7 @@ it('creates both tables and the three ledger columns, and removes them on rollba
         ->and(StockMovement::query()->find($movement->id)->quantity)->toBe('5.0000');
 
     cutsMigration()->up();
+    orderLineSizesMigration()->up();
 
     $cut = OrderLineCut::factory()->create();
     $cutMaterial = OrderLineCutMaterial::factory()->create(['order_line_cut_id' => $cut->id]);

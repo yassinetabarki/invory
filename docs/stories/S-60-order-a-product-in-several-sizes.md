@@ -49,7 +49,7 @@ tags:
 
 ## Technical work
 > [!warning] Complex · CRITICAL · backend + frontend · 8 commits (S-60 and S-61 in one build)
-> Tech-lead · 2026-10-22 · approved 2026-10-22
+> Tech-lead · 2026-10-22 · approved 2026-10-22 · delivered 2026-10-22
 > Why complex: a database change (a row per size under every order line, filled in for the orders you already have), new business
 > rules (a quantity per size, limits per size once work has started, moves per size) and new data for the order pages, the order form
 > and the move window.
@@ -377,3 +377,16 @@ every gate on the combined tree, the full `composer test:pgsql` and `composer te
   per-request `SizeLists` service if a page needs them.
 - New messages and contract lines from two backend steps → S-60-c and S-61-a run one after the other.
 - The known Vitest timeouts (F-22) → the final run may use `npx vp test --maxWorkers=3`, as S-58 did.
+
+### Progress
+- 2026-10-22 · Build started in worktree `trusting-davinci-1ff3a5`. Setup done (composer, npm, .env, storage link); `composer test` green
+  on HEAD. Tech-lead docs of S-60-a written (ARCHITECTURE §4, business rules "Orders by size"). Wave 1 (S-60-a) dispatched.
+- 2026-10-22 · S-60-a APPROVED (round 2: a stopgap in `SyncOrderLines` keeps every new line "One size" with its size row, so the
+  PostgreSQL NOT NULL holds until S-60-c). S-60-b APPROVED (round 1; the size labels and list sizes come from subselects to keep the
+  pages within 10 queries; FE fixture pass done). Wave 3 (S-60-c ∥ S-61-b) dispatched.
+- 2026-10-22 · S-60-c APPROVED (round 2, after a cut-off resume and a test fix: `OrderActionsTest` used a random-category product,
+  F-68), S-61-b, S-60-d, S-60-e, S-61-a and S-61-c APPROVED (round 1). Final tree: every gate green, full PostgreSQL parity
+  (2516/2516) and the browser golden path green. F-64 closed; F-67 and F-68 added. Delivered.
+- 2026-10-23 · Fix round after Step 3 (F1–F9 from the product-owner and ui-ux-designer reviews): business rules updated first (new
+  sizes-changed sentences, per-size checks on the server only, number sizes named "size 36" / "36: 4"); all nine fixes APPROVED;
+  every gate, full PostgreSQL parity (2521/2521) and the browser golden path green. Nothing dropped to S-68.

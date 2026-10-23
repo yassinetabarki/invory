@@ -163,7 +163,7 @@ it('previews Move back to To start from the remembered cuts by material name, ch
     $move = app(MoveOrderLineUnits::class);
     $line = $order->lines()->get()[0];
 
-    $move->handle($line, OrderLineMove::StartCutting, 30, $this->user);
+    $move->handle($line, OrderLineMove::StartCutting, [$line->sizes()->value('size_id') => 30], $this->user);
     demoProduct('PRD-JKT-001')->delete();
     $before = [Material::query()->orderBy('id')->get()->toArray(), StockMovement::query()->orderBy('id')->get()->toArray(), OrderLineCut::query()->get()->toArray()];
 

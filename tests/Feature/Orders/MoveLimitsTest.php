@@ -67,15 +67,19 @@ it('limits a move to the count saved now, not the one on the screen (AC-4)', fun
     $order = bookOrderAtStages([[50, 20, 0, 0], [30, 0, 0, 0]]);
 
     // The screen showed 20 in cutting; someone else marks 15 of them ready meanwhile.
-    OrderLine::query()->where('order_id', $order->id)->where('position', 0)->update(['in_cutting' => 5, 'ready_to_ship' => 15]);
+    // The line's counts are the sums of its size row (ADR-0016): the row is what the move reads.
+    $saved = ['in_cutting' => 5, 'ready_to_ship' => 15];
+    $jacket = OrderLine::query()->where('order_id', $order->id)->where('position', 0)->firstOrFail();
+    OrderLine::query()->whereKey($jacket->id)->update($saved);
+    $jacket->sizes()->update($saved);
 
     limitsMove($order, 'mark_ready', 10)
         ->assertRedirect(route('orders.show', $order))
         ->assertSessionHasErrors(['units' => 'You can move at most 5 units.']);
 
     // Following the redirect, the page carries the saved counts.
-    $saved = pageProp(actingAs($this->user)->get(route('orders.show', $order))->assertOk(), 'order.lines.0');
+    $page = pageProp(actingAs($this->user)->get(route('orders.show', $order))->assertOk(), 'order.lines.0');
 
-    expect($saved)->toMatchArray(['to_start' => 30, 'in_cutting' => 5, 'ready_to_ship' => 15, 'shipped' => 0])
+    expect($page)->toMatchArray(['to_start' => 30, 'in_cutting' => 5, 'ready_to_ship' => 15, 'shipped' => 0])
         ->and(limitsStages($order))->toBe([30, 5, 15, 0]);
 });

@@ -27,7 +27,14 @@ final readonly class ReturnMaterialsFromCuts
         private AppendStockMovement $appendMovement,
     ) {}
 
-    public function handle(OrderLine $line, int $units, User $actor): ReturnPlan
+    /**
+     * `$units` is the total of the sizes moved; the cuts hold units, not sizes, so the latest cut comes back first whatever sizes it held
+     * (S-61-a). `$sizes` is the snapshot of the sizes moved, written on every history entry: a list of `{size_id, label, units}` in size
+     * order, or null for a line that counts as one size.
+     *
+     * @param  list<array{size_id: int, label: string, units: int}>|null  $sizes
+     */
+    public function handle(OrderLine $line, int $units, User $actor, ?array $sizes = null): ReturnPlan
     {
         ['plan' => $plan, 'materials' => $materials, 'cuts' => $cuts] = $this->preview->returnPlan($line, $units, lock: true);
 
@@ -52,6 +59,7 @@ final readonly class ReturnMaterialsFromCuts
                 'order_id' => $line->order_id,
                 'product_id' => $line->product_id,
                 'units' => $units,
+                'sizes' => $sizes,
             ]);
         }
 

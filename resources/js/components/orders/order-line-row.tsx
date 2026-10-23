@@ -1,4 +1,5 @@
 import { Trash2 } from 'lucide-react';
+import { OrderSizeFields } from '@/components/orders/order-size-fields';
 import { FormField } from '@/components/products/form-field';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,7 +12,14 @@ import {
 } from '@/components/ui/select';
 import { useAppSettings } from '@/hooks/use-app-settings';
 import { formatCount } from '@/lib/format';
-import type { OrderLineFormRow, OrderProduct } from '@/types/domain';
+import { cn } from '@/lib/utils';
+import type {
+    OrderFormProduct,
+    OrderLineFormRow,
+    OrderLineSizeMode,
+    Size,
+    SizeList,
+} from '@/types/domain';
 
 /**
  * A line in the form: the submitted fields plus a client-only `uid`, so React
@@ -30,6 +38,41 @@ export function newOrderLine(
     return { uid: `line-${lineCounter}`, ...fields };
 }
 
+/** How a line counts its units in the form: one field per size, or a single "Quantity". */
+export type LineCounting =
+    | { kind: 'sizes'; sizes: readonly Size[] }
+    | { kind: 'quantity'; beforeSizes: boolean };
+
+/**
+ * How the line counts (S-60): a product already on the saved order keeps its
+ * saved way (the server matches lines by product, so a removed line whose
+ * product is added back keeps it too); any other line follows its product's
+ * size list. Without a product, a single "Quantity".
+ */
+export function countingFor(
+    row: OrderLineFormRow,
+    products: readonly OrderFormProduct[],
+    sizeLists: Readonly<Record<string, SizeList>>,
+    savedModes?: ReadonlyMap<number, OrderLineSizeMode>,
+): LineCounting {
+    const product = products.find((option) => option.id === row.product_id);
+    const saved = product ? savedModes?.get(product.id) : undefined;
+
+    if (!product || saved === 'one_size') {
+        return { kind: 'quantity', beforeSizes: false };
+    }
+
+    if (saved === 'before_sizes') {
+        return { kind: 'quantity', beforeSizes: true };
+    }
+
+    const sizes = sizeLists[product.size_list_code]?.sizes ?? [];
+
+    return sizes.length > 1 || (saved === 'by_size' && sizes.length > 0)
+        ? { kind: 'sizes', sizes }
+        : { kind: 'quantity', beforeSizes: false };
+}
+
 /** A saved line with units in cutting, ready to ship or shipped (S-49): it keeps its product and can't be removed. */
 export type StartedLine = { name: string; count: number };
 
@@ -39,9 +82,15 @@ type OrderLineRowProps = {
     number: number;
     /** Prefix that makes this editor's element ids unique on the page. */
     idPrefix: string;
-    products: readonly OrderProduct[];
-    /** The server's messages for this line, by field. */
-    errors: { product_id?: string; quantity?: string };
+    products: readonly OrderFormProduct[];
+    counting: LineCounting;
+    /** The server's messages for this line: by field, `sizes` for the line's sizes as a whole, `bySize` by size id. */
+    errors: {
+        product_id?: string;
+        quantity?: string;
+        sizes?: string;
+        bySize?: Record<number, string | undefined>;
+    };
     /** Set when work has started on this saved line. */
     started?: StartedLine;
     onChange: (patch: Partial<OrderLineFormRow>) => void;
@@ -54,6 +103,7 @@ export function OrderLineRowFields({
     number,
     idPrefix,
     products,
+    counting,
     errors,
     started,
     onChange,
@@ -63,13 +113,19 @@ export function OrderLineRowFields({
     const product = products.find((option) => option.id === row.product_id);
     const base = `${idPrefix}-${row.uid}`;
     const removeHintId = `${base}-remove-hint`;
+    const bySize = counting.kind === 'sizes';
 
     return (
         <div
             role="group"
             aria-label={`Line ${number}`}
             data-line-uid={row.uid}
-            className="grid gap-3 rounded-lg border p-3 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto]"
+            className={cn(
+                'grid gap-3 rounded-lg border p-3',
+                bySize
+                    ? 'sm:grid-cols-[minmax(0,1fr)_auto]'
+                    : 'sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto]',
+            )}
         >
             <FormField
                 id={`${base}-product`}
@@ -113,24 +169,44 @@ export function OrderLineRowFields({
                     </Select>
                 )}
             </FormField>
-            <FormField
-                id={`${base}-quantity`}
-                label="Quantity"
-                error={errors.quantity}
-            >
-                {(control) => (
-                    <Input
-                        {...control}
-                        type="text"
-                        inputMode="numeric"
-                        autoComplete="off"
-                        value={row.quantity}
-                        onChange={(event) =>
-                            onChange({ quantity: event.target.value })
+            {counting.kind === 'sizes' ? (
+                <div className="sm:col-span-2 sm:row-start-2">
+                    <OrderSizeFields
+                        idPrefix={base}
+                        legend="Quantity per size"
+                        showLegend
+                        sizes={counting.sizes}
+                        values={row.sizes ?? {}}
+                        errors={errors.bySize}
+                        totalError={errors.sizes}
+                        onChange={(sizeId, value) =>
+                            onChange({
+                                sizes: { ...row.sizes, [sizeId]: value },
+                            })
                         }
                     />
-                )}
-            </FormField>
+                </div>
+            ) : (
+                <FormField
+                    id={`${base}-quantity`}
+                    label="Quantity"
+                    hint={counting.beforeSizes && 'Recorded before sizes.'}
+                    error={errors.quantity}
+                >
+                    {(control) => (
+                        <Input
+                            {...control}
+                            type="text"
+                            inputMode="numeric"
+                            autoComplete="off"
+                            value={row.quantity}
+                            onChange={(event) =>
+                                onChange({ quantity: event.target.value })
+                            }
+                        />
+                    )}
+                </FormField>
+            )}
             <Button
                 type="button"
                 variant="ghost"
@@ -139,7 +215,10 @@ export function OrderLineRowFields({
                 title="Remove"
                 disabled={started !== undefined}
                 aria-describedby={started ? removeHintId : undefined}
-                className="text-destructive-foreground hover:text-destructive-foreground sm:mt-7"
+                className={cn(
+                    'text-destructive-foreground hover:text-destructive-foreground',
+                    bySize ? 'sm:col-start-2 sm:row-start-1' : 'sm:mt-7',
+                )}
                 onClick={onRemove}
             >
                 <Trash2 aria-hidden="true" />
@@ -147,7 +226,7 @@ export function OrderLineRowFields({
             {started && (
                 <p
                     id={removeHintId}
-                    className="text-xs text-muted-foreground sm:col-span-3"
+                    className="text-xs text-muted-foreground sm:col-span-full"
                 >
                     {started.name} can't be removed:{' '}
                     {started.count === 1
