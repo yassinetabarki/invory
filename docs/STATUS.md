@@ -13,7 +13,7 @@
 
 | | Status | In one line |
 |---|---|---|
-| **Overall** | 🟡 **AMBER** | The MVP is built and every automated check passes on this computer. The checks now also run on GitHub, but nobody has seen a result yet. You haven't signed the MVP off. Since 2026-10-15 Phase 5 (customer orders) is under way: S-48, S-49, S-53, S-50, S-58, S-60 and S-61 are done, so orders have their own page and their four stages, cutting takes the materials out of stock, the Orders list shows each order's progress and the open-order totals, every product has the sizes of its category, and orders count and move each size. Every Phase 5 Must is done; next are the Shoulds S-56 and S-57 (`Ready`), for the tech-lead to plan. The rest of Phase 4 is on hold (D-12). |
+| **Overall** | 🟡 **AMBER** | The MVP is built and every automated check passes on this computer. The checks now also run on GitHub, but nobody has seen a result yet. You haven't signed the MVP off. Since 2026-10-15 Phase 5 (customer orders) is under way: S-48, S-49, S-53, S-50, S-58, S-60 and S-61 are done, so orders have their own page and their four stages, cutting takes the materials out of stock, the Orders list shows each order's progress and the open-order totals, every product has the sizes of its category, and orders count and move each size. Every Phase 5 Must is done, and Phase 5 stays open for its Shoulds (D-18), S-56 first: its Technical work is written and waits for your approval. The rest of Phase 4 is on hold (D-12). |
 | Scope (MVP features) | 🟡 AMBER | Every feature in the MVP goal and the 2026-10-08 scope additions works on real data. The preview layer is gone. Since 2026-10-15 every account sees only its own workshop's materials, products and sales (S-44, D-9), records its clients' orders (S-48), follows each product line through the four stages (S-49), cutting takes the materials out of stock (S-53), and the Orders list shows each order's progress, a Status filter and the open-order totals (S-50). Every product has the sizes of its category (S-58), and an order holds a quantity per size that moves size by size through the stages (S-60, S-61). Units and categories are still shared until S-45. |
 | Quality (automated) | 🟢 GREEN | All automated checks pass on this computer (tech-lead's S-60 and S-61 delivery report and its fix-round addendum, 2026-10-23): 2 521 backend tests (2 472 passed, 49 that run only on PostgreSQL skipped), the full PostgreSQL parity suite 2 521 of 2 521, 1 278 screen tests, 2 browser tests, code style, static analysis, type check and production build. That parity run covers the code of S-50 and S-58 too, which were delivered without it. |
 | Product acceptance | 🔴 RED | The MVP as a whole isn't signed off: the Phase 2 click-through has been pending since 2026-10-08, and the MVP walkthrough (S-30) is on hold since 2026-10-15 (D-12). S-43, S-44, S-48, S-49, S-53, S-50, S-58, S-60 and S-61 were accepted one by one (S-49 and S-53 in one click-through, 2026-10-21; S-50 and S-58 on 2026-10-22, S-58 after your click-through; S-60 and S-61 in one click-through, 2026-10-23). |
@@ -26,10 +26,10 @@ and S-53** (accepted 2026-10-21 after your one click-through; built in one build
 closing docs `f803cb1`), **S-50** (accepted 2026-10-22; `ba0a0cd`, `74f05a8`, `a23a5d7`, merged in `0270014`), **S-58**
 (accepted 2026-10-22 after your click-through; `2f02d87`, `9eeee19`, `f1074b6`, `ce9a36f`, `eb5ff13`, docs `69b064b`; on `main`),
 and **S-60 and S-61** (accepted 2026-10-23 after your one click-through; one commit `1db11bb`, on local `main`, not pushed).
-**Every Phase 5 Must is done, and the phase's exit criteria are met.** **Next:** the Shoulds, in your order: S-56 and S-57 (`Ready`
-since 2026-10-22, D-17, with a phone-width criterion each), then S-65 "Close a fully shipped order" (`Ready`), then S-66 and S-67
-(`Idea`, cards later). Whether Phase 5 stays open for them is D-18. Phase 5 tech allowance: F-41 only, now done. Nothing is in
-progress, so the two-story limit is free.
+**Every Phase 5 Must is done, and the phase's exit criteria are met.** Phase 5 stays open for its Shoulds (D-18, 2026-10-23), in
+your order: S-56 and S-57 (`Ready` since 2026-10-22, D-17, with a phone-width criterion each), then S-65 "Close a fully shipped order"
+(`Ready`), then S-66, S-67 and S-51 (`Idea`, cards later). The tech-lead has written S-56's Technical work (5 steps); it waits for
+your approval. Phase 5 tech allowance: F-41 only, now done. Nothing is in progress, so the two-story limit is free.
 **Phase 4: MVP release readiness** is on hold for later; S-08 and S-29 are done (closed as they stood, D-13; see [ROADMAP.md](ROADMAP.md)).
 
 ---
@@ -42,7 +42,30 @@ progress, so the two-story limit is free.
 | D-4 | Two early choices are still provisional (Phase 3 plan): **Q4** records are numbered with simple counters (already used everywhere) · **Q6** currency and language are set at installation, not in a settings screen. Keep both? (Q5 is closed: S-17 removed the preview layer. Q9 was replaced by D-10 on 2026-10-15) | Keep both; confirm before Phase 7 (production go-live, was Phase 6) |
 | D-5 | Production database host (needs PostgreSQL 13+ and `pg_trgm`) | Before S-26; not urgent |
 | D-6 | Delete the 5 merged branches and the stale worktree `.claude/worktrees/fix-hover-prefetch-bug`? | Yes (nothing unmerged) |
-| D-18 | Phase 5's exit criteria are met (every Must done, 2026-10-23). (a) Keep Phase 5 open for its Shoulds S-56, S-57, S-65, S-66, S-67 and S-51 · (b) close Phase 5 now and move the Shoulds to a new phase · (c) close it and go back to Phase 4 (S-45, S-30) | (a): the phase goal also names the finished units on the shelf (S-56), and you set this order on 2026-10-18 |
+
+**Decided on 2026-10-23: the S-56 card changes** (from the tech-lead's planning of S-56, finished products in stock per size):
+- **S-56 card changes approved.** AC-2: a size left empty counts as 0, and if the product's sizes change while "Update stock" is open,
+  nothing is saved and the window shows the new sizes with "The sizes of Denim Jacket have changed. Enter the stock again." AC-4: the
+  stock lock's message gets a second sentence ("… Keep a category with sizes S, M, L, XL.", or "Keep a "One size" category." for a
+  one-size product); when the jacket is also on an order, the S-58 message shows instead. S-56 stays `Ready`.
+- **Q-H1:** once cancelled orders add units to the stock (S-57), the last "Update stock" save wins: the count you save is the count
+  on the shelf. The tech-lead records it in ADR-0017.
+- **Deleting a product that has stock** deletes its stock with it, as today. No new story.
+- **Your answers to the tech-lead's questions Q1 to Q8** (all option (a) except Q2):
+  1. When both locks apply (units in stock and on an order), the S-58 message wins.
+  2. The stock lock's message gets a second sentence that says which category to keep (option (b)).
+  3. An empty size field in "Update stock" counts as 0.
+  4. The "sizes have changed" wording is as written in AC-2 above.
+  5. A one-size product's single field is labelled "One size".
+  6. A shoe's 11 sizes all show under "In stock", zeros included.
+  7. The product page's figures sit in a grid of two by two from tablet width, and one under another on a phone.
+  8. A product with stock can be deleted, and its stock goes with it.
+
+**Decided on 2026-10-23: D-18 Phase 5 stays open for its Shoulds.** Phase 5's exit criteria were met the same day (every Must done).
+You chose to keep the phase open and do its Shoulds next, in this order: S-56 (finished products in stock, per size), S-57 (cancel an
+order), S-65 (close a fully shipped order), S-66 (each shipment is remembered), S-67 (materials used by an order) and S-51 (units on
+order and in cutting on the product page and the dashboard). The Coulds S-62, S-68 and S-69 come after them if there is time. The rest
+of Phase 4 stays on hold (D-12).
 
 **Decided on 2026-10-23: S-60 and S-61 accepted.** You accepted both after your one click-through on a throwaway database, including
 the 11 shoe sizes two to a row on a phone. During the acceptance you chose how a size named by digits reads: "36: 4 · 37: 8" in lists,
@@ -363,8 +386,11 @@ The plan headers were corrected on 2026-10-14, and [plans/README.md](plans/READM
    CI runs on the push, and only you can see the result.
 2. Main session, with your yes: migrate `laravel` (R-19). Drop the throwaway database `invory_s60` and point the worktree back at
    `laravel`.
-3. Human: D-18 (does Phase 5 stay open for its Shoulds?).
-4. Tech-lead: plan S-56 (`Ready` since 2026-10-22, D-17), then S-57. After them come S-65 (`Ready`), S-66 and S-67.
+3. Done 2026-10-23: you decided D-18, so Phase 5 stays open for its Shoulds: S-56, S-57, S-65, S-66, S-67, S-51.
+4. Done 2026-10-23: you approved the S-56 card changes (AC-2, AC-4) and answered the tech-lead's questions Q1 to Q8 and Q-H1 (§2).
+   Main session: commit the S-56 card on `main` (your yes). Tech-lead: bring S-56's Technical work in line with these answers and
+   write ADR-0017 (last "Update stock" save wins); human: approve that Technical work, then the S-56 build starts. Then the tech-lead
+   plans S-57. After them come S-65 (`Ready`), S-66, S-67 and S-51.
 5. Product-owner, from a session on the main checkout: write the S-68 card when it comes up (S-69 stays an `Idea`).
 6. Tech-lead: F-60 to F-63, F-65 to F-68 are offered for a tech allowance (F-64 was closed by S-60).
 7. The rest of Phase 4 waits; S-45, S-30 and the known gaps K-1 to K-4 are dealt with before go-live (Phase 7).

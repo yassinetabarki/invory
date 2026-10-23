@@ -1,6 +1,6 @@
 # Invory — product roadmap
 
-> Owner: **product-owner** · Approved by: the human · Last updated: 2026-10-23 (S-60 and S-61 done, accepted after your click-through, so every Phase 5 Must is done and its exit criteria are met; Phase 5 stays open for its Shoulds until you decide D-18; S-68 and S-69 added as Coulds from the design review; earlier, 2026-10-22, D-17: the four size cards S-60, S-61, S-56 and S-57 approved, `Ready`, S-56 and S-57 with a phone-width criterion each; earlier the same day, S-58 done, accepted after your click-through; S-65 "Close a fully shipped order" approved, `Ready`, a Should after S-57, with S-66 and S-67 as Shoulds after it; before that, S-50 done, accepted; earlier, 2026-10-21: F-41, S-49 and S-53 done, accepted after your click-through; S-58 card and Technical work approved; earlier, 2026-10-18: D-15 and D-16 products by size: S-58, S-60, S-61 added to Phase 5, S-56 and S-57 per size, S-52 and S-54 Won't (this time); earlier, 2026-10-16: D-11 decided with your final answers: F-41, S-49 and S-53 `Planned`, S-50 `Ready`, S-56 and S-57 added; 2026-10-15: S-48 done, the first Phase 5 story; D-12: Phase 5 "Customer orders" started, the rest of Phase 4 on hold)
+> Owner: **product-owner** · Approved by: the human · Last updated: 2026-10-23 (D-18: Phase 5 stays open for its Shoulds S-56, S-57, S-65, S-66, S-67 and S-51, in that order; earlier the same day, S-60 and S-61 done, accepted after your click-through, so every Phase 5 Must is done and its exit criteria are met; S-68 and S-69 added as Coulds from the design review; earlier, 2026-10-22, D-17: the four size cards S-60, S-61, S-56 and S-57 approved, `Ready`, S-56 and S-57 with a phone-width criterion each; earlier the same day, S-58 done, accepted after your click-through; S-65 "Close a fully shipped order" approved, `Ready`, a Should after S-57, with S-66 and S-67 as Shoulds after it; before that, S-50 done, accepted; earlier, 2026-10-21: F-41, S-49 and S-53 done, accepted after your click-through; S-58 card and Technical work approved; earlier, 2026-10-18: D-15 and D-16 products by size: S-58, S-60, S-61 added to Phase 5, S-56 and S-57 per size, S-52 and S-54 Won't (this time); earlier, 2026-10-16: D-11 decided with your final answers: F-41, S-49 and S-53 `Planned`, S-50 `Ready`, S-56 and S-57 added; 2026-10-15: S-48 done, the first Phase 5 story; D-12: Phase 5 "Customer orders" started, the rest of Phase 4 on hold)
 > Format: **Now / Next / Later**, organised by outcomes, not dates. Each phase is one slice of the story map with one goal, a MoSCoW-labelled
 > set of stories and exit criteria. Detailed stories live in [BACKLOG.md](BACKLOG.md); progress lives in [STATUS.md](STATUS.md).
 
@@ -65,7 +65,7 @@ S-65 (close a fully shipped order, `Ready`), from your design; it comes after S-
 | Tech allowance (~15 %) | F-41 only (each material's total need, for S-53; done)        | —    |
 
 With the size stories the Musts were about 70 % of the phase, above the usual 60 %. Every Must is done since 2026-10-23 (S-48, S-49,
-S-53, S-50, S-58, S-60, S-61). Order of what's left: S-56, then S-57 (D-15, D-16), then S-65, S-66 and S-67. S-52 and S-54 became
+S-53, S-50, S-58, S-60, S-61). Order of what's left (D-18): S-56, then S-57 (D-15, D-16), then S-65, S-66, S-67 and S-51. S-52 and S-54 became
 Won't (this time) to make room. If time runs short, S-69 and S-68 slip first, then S-62, S-67, S-66 and S-51.
 
 - An order holds one or more products, each with its own quantity and its own four stages: To start, In cutting, Ready to ship, Shipped.
@@ -91,8 +91,8 @@ Won't (this time) to make room. If time runs short, S-69 and S-68 slip first, th
 **Exit criteria:** you have accepted S-48 (done 2026-10-15), S-49 and S-53 (done 2026-10-21), S-50 and S-58 (done 2026-10-22), S-60 and S-61 in a click-through (done 2026-10-23) · an order of
 Denim Jackets S 10 · M 20 · L 15 · XL 5 can be followed size by size through the four stages · cutting an order changes stock exactly as
 the cards say · another workshop never sees your orders · every gate green.
-**Met on 2026-10-23.** The phase goal also names the finished units on the shelf (S-56), so Phase 5 stays open for its Shoulds, in the
-order above, until you decide otherwise (D-18 in [STATUS.md](STATUS.md#2-decisions-needed-from-you)).
+**Met on 2026-10-23.** The phase goal also names the finished units on the shelf (S-56), so on 2026-10-23 you kept Phase 5 open for
+its Shoulds, in the order above: S-56, S-57, S-65, S-66, S-67, S-51 (D-18 in [STATUS.md](STATUS.md#2-decisions-needed-from-you)).
 
 ## ON HOLD — Phase 4: MVP release readiness (postponed 2026-10-15, D-12)
 **Goal:** the business owner has accepted every MVP screen, one automated test proves the golden path end to end, and each workshop sees
