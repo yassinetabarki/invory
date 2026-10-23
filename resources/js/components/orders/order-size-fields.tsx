@@ -3,6 +3,7 @@ import { formatUnits } from '@/components/orders/stage-figure';
 import { FormField } from '@/components/products/form-field';
 import { Input } from '@/components/ui/input';
 import { useAppSettings } from '@/hooks/use-app-settings';
+import { cn } from '@/lib/utils';
 import type { Size } from '@/types/domain';
 
 type OrderSizeFieldsProps = {
@@ -27,10 +28,12 @@ type OrderSizeFieldsProps = {
     messageId?: string;
     /** The "Total N units" line; on by default. */
     showTotal?: boolean;
+    /** Sizes (by id) whose field is highlighted as changed. */
+    changed?: ReadonlySet<number>;
 };
 
 /** The whole number typed; an empty or non-numeric field counts 0. */
-function typedUnits(value: string | undefined): number {
+export function typedUnits(value: string | undefined): number {
     const text = (value ?? '').trim();
 
     return /^\d+$/.test(text) ? Number(text) : 0;
@@ -54,6 +57,7 @@ export function OrderSizeFields({
     totalError,
     messageId,
     showTotal = true,
+    changed,
 }: OrderSizeFieldsProps) {
     const { locale } = useAppSettings();
     const totalErrorId = `${idPrefix}-total-error`;
@@ -95,7 +99,11 @@ export function OrderSizeFields({
                                     type="text"
                                     inputMode="numeric"
                                     autoComplete="off"
-                                    className="w-24"
+                                    className={cn(
+                                        'w-24',
+                                        changed?.has(size.id) &&
+                                            'border-primary ring-[3px] ring-primary/15',
+                                    )}
                                     aria-invalid={
                                         control['aria-invalid'] ??
                                         (wholeId ? true : undefined)

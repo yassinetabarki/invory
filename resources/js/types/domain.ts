@@ -206,6 +206,11 @@ export type SizeList = {
     sizes: Size[]; // in order, at least one
 };
 
+/** Finished units of a product on the shelf in one size (S-56). */
+export type FinishedStockSize = { size: Size; units: number };
+/** Every size of the product's list, in order, 0 included; `units` is their sum. */
+export type FinishedStock = { units: number; sizes: FinishedStockSize[] };
+
 export type Product = {
     id: number;
     sku: string;
@@ -566,6 +571,7 @@ export type ProductShowProps = {
     product?: Product; // deferred prop
     sales_last_30_days?: { units_sold: number; revenue: Decimal }; // deferred prop
     recent_sales?: Sale[]; // deferred prop: newest 5
+    finished_stock?: FinishedStock | null; // deferred prop (group 'stock'); null and listed in rescuedProps when it couldn't load
 };
 export type SalesIndexProps = {
     sales: Paginated<Sale>; // sold_on desc, then id desc

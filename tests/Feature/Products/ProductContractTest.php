@@ -1,5 +1,8 @@
 <?php
 
+use App\Models\ProductSizeStock;
+use App\Models\Size;
+
 use function Pest\Laravel\actingAs;
 
 /*
@@ -161,6 +164,21 @@ it('sends the other props of the show page as before', function () {
             ->and($sale['unit_price'])->toMatch(SCALE_4)
             ->and($sale['total'])->toMatch(SCALE_4);
     }
+});
+
+it('sends FinishedStock with its exact keys, order and types (S-56)', function () {
+    ProductSizeStock::factory()->create(['product_id' => pid(1), 'size_id' => Size::query()->where('label', 'M')->value('id'), 'units' => 4]);
+
+    $stock = loadedPageProp(actingAs($this->user)->get(route('products.show', pid(1))), 'finished_stock');
+
+    expect(keysOf($stock))->toBe(['units', 'sizes'])
+        ->and($stock['units'])->toBe(4)
+        ->and($stock['sizes'])->toHaveCount(4)
+        ->and(keysOf($stock['sizes'][1]))->toBe(['size', 'units'])
+        ->and(keysOf($stock['sizes'][1]['size']))->toBe(['id', 'label'])
+        ->and($stock['sizes'][1]['size']['id'])->toBeInt()
+        ->and($stock['sizes'][1]['size']['label'])->toBe('M')
+        ->and($stock['sizes'][1]['units'])->toBe(4);
 });
 
 it('sends the props of the create and edit pages (S-25: statuses, plus the product on edit, and no materials list)', function () {

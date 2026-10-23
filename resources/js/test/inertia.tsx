@@ -72,7 +72,14 @@
  * ```
  *
  * `data` may be an array (all keys must be present) or a dotted path
- * (`'stats.revenue'`). `rescue` is not simulated.
+ * (`'stats.revenue'`).
+ *
+ * A key listed in the page's `rescuedProps` (a deferred prop whose load failed
+ * on the server) shows `rescue` (a node, or a function of `{ reloading }`;
+ * `reloading` is always `false` here) instead of the children, like Inertia.
+ * Without a `rescue` it shows the fallback. Set it with
+ * `setPageProps(props, { rescuedProps: ['finished_stock'] })`; it stays until
+ * you pass another list (`[]` clears it) or call `resetInertiaMock()`.
  *
  * ## `useForm`
  *
@@ -211,6 +218,7 @@ type InertiaMockState = {
     props: TestPageProps;
     url: string;
     component: string;
+    rescuedProps: string[];
     router: ReturnType<typeof createRouterMock>;
     form: MockFormState;
     submissions: MockFormSubmission[];
@@ -226,6 +234,7 @@ export const inertiaMock: InertiaMockState = {
     props: { ...defaultPageProps },
     url: '/',
     component: 'Test',
+    rescuedProps: [],
     router: createRouterMock(),
     form: { errors: {}, processing: false },
     submissions: [],
@@ -260,11 +269,12 @@ function notify(): void {
 /** Merge `props` over the defaults (so `app` is always present unless overridden). */
 export function setPageProps(
     props: TestPageProps,
-    page: { url?: string; component?: string } = {},
+    page: { url?: string; component?: string; rescuedProps?: string[] } = {},
 ): void {
     inertiaMock.props = { ...defaultPageProps, ...props };
     inertiaMock.url = page.url ?? inertiaMock.url;
     inertiaMock.component = page.component ?? inertiaMock.component;
+    inertiaMock.rescuedProps = page.rescuedProps ?? inertiaMock.rescuedProps;
     notify();
 }
 
@@ -296,6 +306,7 @@ export function resetInertiaMock(): void {
     inertiaMock.props = { ...defaultPageProps };
     inertiaMock.url = '/';
     inertiaMock.component = 'Test';
+    inertiaMock.rescuedProps = [];
     inertiaMock.form = { errors: {}, processing: false };
     inertiaMock.submissions = [];
     inertiaMock.http = { requests: [], handler: null, abortWorks: true };
@@ -311,6 +322,7 @@ type PageSnapshot = {
     props: TestPageProps;
     url: string;
     component: string;
+    rescuedProps: string[];
     version: null;
 };
 
@@ -322,12 +334,14 @@ function getPageSnapshot(): PageSnapshot {
         pageSnapshot === null ||
         pageSnapshot.props !== inertiaMock.props ||
         pageSnapshot.url !== inertiaMock.url ||
-        pageSnapshot.component !== inertiaMock.component
+        pageSnapshot.component !== inertiaMock.component ||
+        pageSnapshot.rescuedProps !== inertiaMock.rescuedProps
     ) {
         pageSnapshot = {
             props: inertiaMock.props,
             url: inertiaMock.url,
             component: inertiaMock.component,
+            rescuedProps: inertiaMock.rescuedProps,
             version: null,
         };
     }
@@ -568,7 +582,7 @@ type MockDeferredProps = {
     rescue?: ReactNode | ((slot: { reloading: boolean }) => ReactNode);
 };
 
-function MockDeferred({ data, fallback, children }: MockDeferredProps) {
+function MockDeferred({ data, fallback, children, rescue }: MockDeferredProps) {
     if (!data) {
         throw new Error(
             '`<Deferred>` requires a `data` prop to be a string or array of strings',
@@ -579,16 +593,27 @@ function MockDeferred({ data, fallback, children }: MockDeferredProps) {
         throw new Error('`<Deferred>` requires a `fallback` prop');
     }
 
-    const { props } = usePageMock();
+    const { props, rescuedProps } = usePageMock();
     const keys = Array.isArray(data) ? data : [data];
     const loaded = keys.every((key) => getIn(props, key) !== undefined);
+    const rescued = keys.some((key) => rescuedProps.includes(key));
 
-    if (loaded) {
+    if (loaded && !rescued) {
         return (
             <>
                 {typeof children === 'function'
                     ? children({ reloading: false })
                     : children}
+            </>
+        );
+    }
+
+    if (rescued && rescue) {
+        return (
+            <>
+                {typeof rescue === 'function'
+                    ? rescue({ reloading: false })
+                    : rescue}
             </>
         );
     }

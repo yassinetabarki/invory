@@ -10,6 +10,7 @@ import {
     denimRecentSales,
     denimSalesLast30Days,
     jacketWithoutComposition,
+    sizeListSToXl,
 } from '@/test/fixtures/products';
 import {
     inertiaMock,
@@ -17,7 +18,7 @@ import {
     setPageProps,
     type TestPageProps,
 } from '@/test/inertia';
-import type { Product, ProductShowProps } from '@/types/domain';
+import type { FinishedStock, Product, ProductShowProps } from '@/types/domain';
 
 vi.mock('@inertiajs/react', async (importOriginal) => {
     const { createInertiaModule } = await import('@/test/inertia');
@@ -27,6 +28,15 @@ vi.mock('@inertiajs/react', async (importOriginal) => {
     );
 });
 
+/** The Denim Jacket's stock: S 3 · M 0 · L 5 · XL 2. */
+const denimStock: FinishedStock = {
+    units: 10,
+    sizes: sizeListSToXl.sizes.map((size, index) => ({
+        size,
+        units: [3, 0, 5, 2][index] ?? 0,
+    })),
+};
+
 function props(
     product: Product = denimJacket,
     overrides: Partial<ProductShowProps> = {},
@@ -35,6 +45,7 @@ function props(
         product,
         sales_last_30_days: denimSalesLast30Days,
         recent_sales: denimRecentSales,
+        finished_stock: denimStock,
         ...overrides,
     };
 }
@@ -230,7 +241,7 @@ describe('products/show page', () => {
     });
 
     describe('the worked example', () => {
-        it('shows the three hero cards: can produce, unit cost, sold', () => {
+        it('shows the four hero cards: can produce, in stock, unit cost, sold', () => {
             renderShow(props());
 
             const production = within(
@@ -240,6 +251,17 @@ describe('products/show page', () => {
             expect(production.getByText('Can produce now')).toBeInTheDocument();
             expect(production.getByText('112')).toBeInTheDocument();
             expect(production.getByText('units')).toBeInTheDocument();
+            const inStock = within(
+                screen.getByRole('region', { name: 'Finished stock' }),
+            );
+
+            expect(inStock.getByText('In stock')).toBeInTheDocument();
+            expect(inStock.getByText('units').parentElement).toHaveTextContent(
+                '10 units',
+            );
+            expect(
+                inStock.getByText('In stock per size: S 3, M 0, L 5, XL 2'),
+            ).toBeInTheDocument();
             expect(
                 within(
                     screen.getByRole('region', { name: 'Unit cost' }),
@@ -331,6 +353,72 @@ describe('products/show page', () => {
             expect(
                 screen.getByRole('link', { name: 'View all' }),
             ).toHaveAttribute('href', '/sales?product_id=1');
+        });
+    });
+
+    describe('the stock figure (S-56)', () => {
+        it('lays the four figures out one under the other on a phone and two by two from tablet width', () => {
+            renderShow(props());
+
+            const grid = screen.getByRole('region', {
+                name: 'Production capacity',
+            }).parentElement;
+
+            expect(
+                Array.from(grid?.children ?? []).map((figure) =>
+                    figure.getAttribute('aria-label'),
+                ),
+            ).toEqual([
+                'Production capacity',
+                'Finished stock',
+                'Unit cost',
+                'Sales, last 30 days',
+            ]);
+            expect(grid).toHaveClass('grid', 'sm:grid-cols-2');
+            expect(grid?.className).not.toMatch(/(?:md|lg|xl|2xl):grid-cols/);
+            // The sizes wrap instead of scrolling a phone sideways (jsdom has no layout).
+            expect(
+                screen
+                    .getByRole('region', { name: 'Finished stock' })
+                    .querySelector('[aria-hidden="true"]'),
+            ).toHaveClass('flex-wrap');
+        });
+
+        it('shows a placeholder while the stock loads, apart from the rest of the page', () => {
+            renderShow(props(denimJacket, { finished_stock: undefined }));
+
+            expect(screen.getByText('Loading In stock…')).toBeInTheDocument();
+            expect(
+                screen.queryByRole('region', { name: 'Finished stock' }),
+            ).not.toBeInTheDocument();
+            expect(
+                screen.getByRole('region', { name: 'Production capacity' }),
+            ).toBeInTheDocument();
+        });
+
+        it("says the stock couldn't load, and Try again reloads only that prop", async () => {
+            const user = userEvent.setup();
+            const rescued = props(denimJacket, { finished_stock: undefined });
+
+            setPageProps(
+                { ...rescued },
+                { url: '/products/1', rescuedProps: ['finished_stock'] },
+            );
+            render(<ProductsShow {...rescued} />);
+
+            expect(screen.getByRole('alert')).toHaveTextContent(
+                "Couldn't load the stock.",
+            );
+            // The rest of the page is there.
+            expect(
+                screen.getByRole('region', { name: 'Production capacity' }),
+            ).toBeInTheDocument();
+
+            await user.click(screen.getByRole('button', { name: 'Try again' }));
+
+            expect(inertiaMock.router.reload).toHaveBeenCalledExactlyOnceWith({
+                only: ['finished_stock'],
+            });
         });
     });
 

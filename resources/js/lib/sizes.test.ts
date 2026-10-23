@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vite-plus/test';
-import { formatSizes } from '@/lib/sizes';
+import { formatSizes, sizeLabelInText } from '@/lib/sizes';
 
 describe('formatSizes', () => {
     it.each([
@@ -23,6 +23,27 @@ describe('formatSizes', () => {
             ],
             locale: 'en',
             expected: 'S 10 · XL 5',
+        },
+        {
+            name: 'zeros are kept on request',
+            sizes: [
+                { label: '36', units: 0 },
+                { label: '37', units: 2 },
+            ],
+            locale: 'en',
+            keepZeros: true,
+            expected: '36: 0 · 37: 2',
+        },
+        {
+            name: 'a separator for a spoken list',
+            sizes: [
+                { label: '36', units: 0 },
+                { label: '37', units: 2 },
+            ],
+            locale: 'en',
+            keepZeros: true,
+            separator: ', ',
+            expected: '36: 0, 37: 2',
         },
         {
             name: 'thousands follow the locale',
@@ -55,7 +76,20 @@ describe('formatSizes', () => {
             locale: 'en',
             expected: 'One size 3 · 2XL 1',
         },
-    ])('$name', ({ sizes, locale, expected }) => {
-        expect(formatSizes(sizes, locale)).toBe(expected);
+    ])('$name', ({ sizes, locale, keepZeros, separator, expected }) => {
+        expect(formatSizes(sizes, locale, { keepZeros, separator })).toBe(
+            expected,
+        );
+    });
+});
+
+describe('sizeLabelInText', () => {
+    it.each([
+        ['36', '36:'],
+        ['S', 'S'],
+        ['One size', 'One size'],
+        ['2XL', '2XL'],
+    ])('writes %s as %s', (label, expected) => {
+        expect(sizeLabelInText(label)).toBe(expected);
     });
 });

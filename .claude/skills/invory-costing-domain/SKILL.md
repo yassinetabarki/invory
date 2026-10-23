@@ -36,6 +36,7 @@ If a rule here is wrong or incomplete, stop and ask the tech-lead to update it (
 | Order line size | One size of an order line: the units ordered in that size and its stage counts (In cutting, Ready to ship, Shipped; To start derived). Only sizes ordered have one. The line's quantity and stage counts are the sums of its sizes. A line recorded before sizes holds one "One size" row (S-60, S-61, ADR-0016) | `OrderLineSize` / `order_line_sizes`, `OrderLineSizeMode` |
 | Size list | The fixed sizes of a product category, in order, with the name the screens show: "S, M, L, XL" (Apparel), "36 to 46" (Footwear), "One size" (every other category). Installation-wide; no screen edits them (S-58, ADR-0015) | `SizeList` / `size_lists` |
 | Size | One size of a size list ("S", "36", "One size"). A product has every size of its category; later stories count orders, production and finished stock by size id | `Size` / `sizes` |
+| Finished stock | The finished units of a product on the shelf, counted per size of its list. Set by "Update stock" (a count, not a plus or minus; the last save wins); S-57 adds cancelled units. Never changes "Can produce now", the unit cost, the materials, sales, orders or the Inventory value (S-56, ADR-0017) | `ProductSizeStock` / `product_size_stocks`, `FinishedStock` |
 | Workshop | The business account. Every user belongs to one; every material, product, composition, stock movement, sale, order, order line, photo, unit and category belongs to one | `Workshop` / `workshops`, `workshop_id` |
 
 ## Workshops (added 2026-10-14, D-9, ADR-0013)
@@ -273,6 +274,27 @@ Worked example: Boutique Lina's Denim Jacket S 10 · M 20 · L 15 · XL 5 (line 
 thread and 14 pc Woven brand label. With the button at 100 pc, S 10 · M 10 is refused (at most 12). Moving M 5 back returns 9.9 m,
 40 pc, 630 m and 5 pc from the latest cut; M then reads To start 15 · In cutting 5.
 
+### Finished stock (added 2026-10-23, S-56, ADR-0017)
+
+```
+finished(P, z)        = the units of product P on the shelf in size z          (whole units ≥ 0; a row only while ≥ 1)
+in_stock(P)           = Σ finished(P, z) over every size z of sizes(P)         (shown with every size, 0 included, in size order)
+update_stock(P, n_z)  : finished(P, z)' = n_z for every size z of sizes(P)     n_z whole, 0 … 1 000 000; an empty size counts as 0
+```
+- **A count, not a movement.** "Update stock" saves what was typed for every size; the last save wins, also over units S-57 adds in
+  between (Q-H1). No history entry is written. "Enter a whole number from 0 to 1,000,000." under a size; if the product's sizes no
+  longer match what was submitted: "The sizes of <product> have changed. Enter the stock again." and nothing is saved.
+- **Changes no figure.** "Can produce now", the bottleneck, the unit cost, margin, the materials and their history, the Inventory value,
+  sales and the dashboard are as before. Recording a sale or an order never changes finished stock.
+- **Locks the category.** A product with units in stock can't move to a category with another size list: "<product> has units in stock,
+  so its category can't change to one with other sizes." + the S-58 ending ("Keep a category with sizes <list name>." or "Keep a "One
+  size" category."). When the product is also on an order the S-58 message shows instead; at 0 in stock the S-58 rule applies alone.
+- **Deleting a product deletes its finished stock.**
+- Every writer (Update stock, Update product, Delete product, S-57's cancel) takes the product's row lock first.
+
+Worked example: Denim Jacket S 3 · M 0 · L 5 · XL 2 → "In stock 10 units"; M set to 4 → 14 units, "Can produce now" still 112, unit cost
+still TND 35.754. Leather Tote ("One size") with 4 → "In stock 4 units".
+
 ## Precision and rounding (non-negotiable, see ADR-0002)
 
 1. **Never use floats** for money or quantities: no `float` casts, no `(float)`, no `+`/`*` on numeric strings in PHP, and no `Number(x) * y` in TypeScript.
@@ -373,3 +395,6 @@ Variant checks:
 - Added 2026-10-22 (S-60, S-61, ADR-0016): `App\Models\OrderLineSize`, `App\Models\Concerns\HasStageCounts` (To start and started for
   lines and sizes), `App\Enums\OrderLineSizeMode`, `App\Services\Orders\OrderLineSizing` (how a line counts), `SyncOrderLines` and
   `MoveOrderLineUnits` (the only writers of size rows and the line's sums).
+- Added 2026-10-23 (S-56, ADR-0017): `App\Models\ProductSizeStock`, `App\Services\Products\FinishedStock` (the only reader: every size,
+  0 included, and the total), `FinishedStockResource`, `App\Actions\Products\UpdateFinishedStock` (the "Update stock" writer) and the
+  stock reason of `ProductSizeLock::refusal()`.

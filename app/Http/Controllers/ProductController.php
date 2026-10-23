@@ -11,6 +11,7 @@ use App\Enums\ProductStatus;
 use App\Http\Requests\Products\IndexProductRequest;
 use App\Http\Requests\Products\StoreProductRequest;
 use App\Http\Requests\Products\UpdateProductRequest;
+use App\Http\Resources\FinishedStockResource;
 use App\Http\Resources\ProductListResource;
 use App\Http\Resources\ProductResource;
 use App\Http\Resources\SaleResource;
@@ -19,6 +20,7 @@ use App\Models\Product;
 use App\Models\SizeList;
 use App\Models\User;
 use App\Services\Costing\ProductCostingService;
+use App\Services\Products\FinishedStock;
 use App\Services\Products\ProductIndexQuery;
 use App\Services\Products\SizeLists;
 use App\Services\Sales\SalesReport;
@@ -93,6 +95,13 @@ final class ProductController extends Controller
             }),
             'sales_last_30_days' => Inertia::defer(fn (): array => $sales->lastThirtyDays($product)),
             'recent_sales' => Inertia::defer(fn (): array => SaleResource::collection($sales->recentOf($product))->resolve()),
+            // S-56: the finished stock has its own group and is rescued, so if only the stock fails to load the rest of the page
+            // still shows (the failure is reported and the prop is listed in `rescuedProps`).
+            'finished_stock' => Inertia::defer(
+                fn (): array => (new FinishedStockResource(app(FinishedStock::class)->of($product)))->resolve(),
+                'stock',
+                rescue: true,
+            ),
         ]);
     }
 

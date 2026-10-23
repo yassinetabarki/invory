@@ -31,6 +31,7 @@ function referenceMigration(): Migration
 {
     // The S-60-a order line sizes migration points at the size lists, the sizes and order lines, so it goes before all of them.
     if (Schema::hasTable('order_line_sizes')) {
+        productSizeStocksMigration()->down();
         orderLineSizesMigration()->down();
     }
 

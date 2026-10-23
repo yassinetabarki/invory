@@ -98,6 +98,8 @@ code testable and ready to scale.
                            │ (one Start cutting)│          │ (per unit + taken)   │
                            └────────────────────┘          └──────────────────────┘
 ```
+Status (2026-10-23): S-56 keeps the finished units of a product on the shelf, per size, in `product_size_stocks` (ADR-0017); nothing
+but "Update stock" (and, from S-57, a cancelled order) changes them, and no figure reads them.
 Status (2026-10-22): S-60 and S-61 count every order line by size: one `order_line_sizes` row per size ordered, the line keeping the
 sums (ADR-0016); moves go size by size, a cut still takes the materials of all its units together.
 Status (2026-10-16): S-49 adds stage counts to `order_lines` (To start is derived); S-53 makes "Start cutting" take materials out of stock
@@ -252,6 +254,23 @@ units (re-checked under the order row lock). A line keeps its product when that 
 Only `MoveOrderLineUnits` changes the counts; only its `start_cutting` and `back_to_start` touch `materials` and `stock_movements`
 (ADR-0014). Orders never touch `sales`.
 
+### `product_size_stocks` (S-56, [ADR-0017](adr/0017-finished-stock-per-size.md))
+
+| Column      | Type             | Rules                                                                                   |
+| ----------- | ---------------- | --------------------------------------------------------------------------------------- |
+| id          | bigint PK        |                                                                                         |
+| workshop_id | FK → workshops   | the product's workshop (composite FK to `products` on PostgreSQL)                       |
+| product_id  | FK → products    | `cascadeOnDelete` (fires only on a hard delete: products are soft-deleted)              |
+| size_id     | FK → sizes       | `restrictOnDelete`, indexed; a size of the product's category list                      |
+| units       | unsigned integer | finished units on the shelf in this size, at least 1 (CHECK `units >= 1` on PostgreSQL) |
+| timestamps  |                  |                                                                                         |
+
+Constraints: `unique(product_id, size_id)`. A row exists only while its size holds at least one unit, so "nothing in stock" is no rows
+and the category lock is one `exists`. No upper bound in the database: 1,000,000 per size is the input rule of "Update stock".
+`App\Services\Products\FinishedStock` is the only reader (every size of the list, in order, 0 included, and the total); the product
+page gets it as `finished_stock`, a deferred prop in its own group `stock`, rescued. Whole units only: it never reaches
+`App\Domain\Costing`, the products list, sales or the dashboard. Every writer takes the product's row lock first.
+
 ### `order_line_sizes` (S-60, [ADR-0016](adr/0016-order-lines-count-by-size.md))
 
 | Column                             | Type                        | Rules                                                                          |
@@ -331,6 +350,7 @@ All formulas, rounding rules, edge cases and a worked example live in the skill
 - A **material used in any non-deleted product's BOM cannot be deleted**: `DeleteMaterial` throws
   `MaterialInUseException`, and the controller turns it into a flash error listing the products.
 - Deleting a product soft-deletes it. Its BOM lines stay, for history and restore. Its order lines stay too and show its name without a link.
+  Its finished stock (`product_size_stocks`) is deleted with it, under the product's row lock (S-56, ADR-0017).
 - Deleting an order soft-deletes it (`DeleteOrder`); its lines and cuts stay with it. It is **refused** while any unit is in cutting or
   ready to ship (checked under the order row lock), so no material taken out of stock is lost by deleting (S-49, ADR-0014).
 
@@ -393,6 +413,7 @@ tests/
 | GET | /products/{product}/edit | products.edit | @edit | `products/edit` |
 | PUT | /products/{product} | products.update | @update | redirect → show |
 | DELETE | /products/{product} | products.destroy | @destroy | redirect → index |
+| PUT | /products/{product}/stock | products.stock.update | ProductStockController@update | redirect → show ("Stock updated."); S-56: `sizes` by size id, every size of the list; the window reloads only `finished_stock` |
 | POST | /materials/{material}/restocks | materials.restocks.store | MaterialRestockController@store | redirect back |
 | GET | /sales | sales.index | SaleController@index | `sales/index` (log, totals, record / edit panel) |
 | POST | /sales | sales.store | @store | redirect back |

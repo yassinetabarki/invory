@@ -110,6 +110,16 @@ class Product extends Model
         return $this->hasMany(Sale::class);
     }
 
+    /**
+     * The finished units on the shelf, one row per size that holds at least 1 unit (S-56, ADR-0017).
+     *
+     * @return HasMany<ProductSizeStock, $this>
+     */
+    public function sizeStocks(): HasMany
+    {
+        return $this->hasMany(ProductSizeStock::class);
+    }
+
     /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {

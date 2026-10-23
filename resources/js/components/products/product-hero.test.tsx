@@ -24,6 +24,7 @@ function renderHero(
             unitCost={denimJacket.cost.unit_cost}
             multipleSizes={multipleSizes}
             sales={sales}
+            stock={null}
         />,
     );
 }
@@ -45,6 +46,10 @@ describe('<ProductHero>', () => {
         expect(production.getByText('Can produce now')).toBeInTheDocument();
         expect(production.getByText('112')).toBeInTheDocument();
         expect(production.getByText('units')).toBeInTheDocument();
+        // A real space between the count and its word, not only a margin.
+        expect(production.getByText('units').parentElement?.textContent).toBe(
+            '112 units',
+        );
         expect(card('Production capacity')).toHaveClass('bg-primary');
         expect(card('Unit cost')).not.toHaveClass('bg-primary');
     });
@@ -142,7 +147,9 @@ describe('<ProductHero>', () => {
 
         expect(sold.getByText('Sold · last 30 days')).toBeInTheDocument();
         expect(sold.getByText('38')).toBeInTheDocument();
-        expect(sold.getByText('units')).toBeInTheDocument();
+        expect(sold.getByText('units').parentElement?.textContent).toBe(
+            '38 units',
+        );
         expect(sold.getByText(/in sales$/)).toHaveTextContent(
             '€3,382.00 in sales',
         );

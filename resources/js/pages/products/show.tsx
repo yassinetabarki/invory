@@ -7,6 +7,10 @@ import SaleController from '@/actions/App/Http/Controllers/SaleController';
 import { BottleneckCallout } from '@/components/products/bottleneck-callout';
 import { CompositionCard } from '@/components/products/composition-card';
 import { CostBreakdownCard } from '@/components/products/cost-breakdown-card';
+import {
+    FinishedStockError,
+    FinishedStockFigure,
+} from '@/components/products/finished-stock-figure';
 import { ProductHeader } from '@/components/products/product-header';
 import { ProductHero } from '@/components/products/product-hero';
 import { ProductPhoto } from '@/components/products/product-photo';
@@ -24,10 +28,17 @@ type ProductDetailsProps = {
     product: Product;
     sales: NonNullable<ProductShowProps['sales_last_30_days']>;
     recentSales: NonNullable<ProductShowProps['recent_sales']>;
+    /** The "In stock" figure's data; absent until it lands, and while it is rescued. */
+    finishedStock: ProductShowProps['finished_stock'];
 };
 
 /** The whole page body; rendered only once the deferred props have landed. */
-function ProductDetails({ product, sales, recentSales }: ProductDetailsProps) {
+function ProductDetails({
+    product,
+    sales,
+    recentSales,
+    finishedStock,
+}: ProductDetailsProps) {
     const [confirming, setConfirming] = useState(false);
     const [processing, setProcessing] = useState(false);
     const deleteButtonRef = useRef<HTMLButtonElement>(null);
@@ -115,6 +126,25 @@ function ProductDetails({ product, sales, recentSales }: ProductDetailsProps) {
                             unitCost={product.cost.unit_cost}
                             multipleSizes={product.size_list.sizes.length > 1}
                             sales={sales}
+                            stock={
+                                <Deferred
+                                    data="finished_stock"
+                                    fallback={<SkeletonStat label="In stock" />}
+                                    rescue={({ reloading }) => (
+                                        <FinishedStockError
+                                            reloading={reloading}
+                                        />
+                                    )}
+                                >
+                                    {/* Built eagerly: never read before it lands. */}
+                                    {finishedStock && (
+                                        <FinishedStockFigure
+                                            product={product}
+                                            stock={finishedStock}
+                                        />
+                                    )}
+                                </Deferred>
+                            }
                         />
                         <BottleneckCallout
                             productName={product.name}
@@ -181,8 +211,9 @@ function ProductPageSkeleton() {
                 <Skeleton className="h-8 w-64 max-w-full motion-reduce:animate-none" />
                 <Skeleton className="h-4 w-40 motion-reduce:animate-none" />
             </div>
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2">
                 <SkeletonStat label="Can produce now" />
+                <SkeletonStat label="In stock" />
                 <SkeletonStat label="Unit cost" />
                 <SkeletonStat label="Sold · last 30 days" />
             </div>
@@ -212,6 +243,7 @@ export default function ProductsShow({
     product,
     sales_last_30_days: sales,
     recent_sales: recentSales,
+    finished_stock: finishedStock,
 }: ProductShowProps) {
     return (
         <>
@@ -228,6 +260,7 @@ export default function ProductsShow({
                         product={product}
                         sales={sales}
                         recentSales={recentSales ?? []}
+                        finishedStock={finishedStock}
                     />
                 )}
             </Deferred>

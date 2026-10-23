@@ -291,6 +291,46 @@ describe('inertia test helper', () => {
             expect(screen.getByText('Top loaded')).toBeInTheDocument();
         });
 
+        it('shows the rescue slot for a key listed in rescuedProps, and the fallback without one', () => {
+            function Rescued({ withRescue }: { withRescue: boolean }) {
+                return (
+                    <Deferred
+                        data="stock"
+                        fallback={<p>Loading stock…</p>}
+                        rescue={
+                            withRescue
+                                ? ({ reloading }) => (
+                                      <p>
+                                          {reloading
+                                              ? 'Reloading'
+                                              : 'Stock failed'}
+                                      </p>
+                                  )
+                                : undefined
+                        }
+                    >
+                        <p>Stock loaded</p>
+                    </Deferred>
+                );
+            }
+
+            // A rescued prop is absent from the props.
+            setPageProps({}, { rescuedProps: ['stock'] });
+            const { rerender } = render(<Rescued withRescue />);
+
+            expect(screen.getByText('Stock failed')).toBeInTheDocument();
+
+            rerender(<Rescued withRescue={false} />);
+
+            expect(screen.getByText('Loading stock…')).toBeInTheDocument();
+
+            // A reload that works: the prop lands and the list is cleared.
+            setPageProps({ stock: { units: 1 } }, { rescuedProps: [] });
+            rerender(<Rescued withRescue />);
+
+            expect(screen.getByText('Stock loaded')).toBeInTheDocument();
+        });
+
         it('requires a fallback like the real component', () => {
             const consoleError = vi
                 .spyOn(console, 'error')

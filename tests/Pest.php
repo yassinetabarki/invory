@@ -594,6 +594,16 @@ function orderLineSizesMigration(): Migration
 }
 
 /**
+ * The finished stock migration object (S-56-a): one table, pointing at products (on PostgreSQL through `unique(workshop_id, id)`), the
+ * workshops and the sizes. It is the newest of the hand-kept list (F-60): a test that rolls any older one back (the order line sizes, the
+ * size lists, the workshop columns or anything below) must roll this one back first, and bring it back up last.
+ */
+function productSizeStocksMigration(): Migration
+{
+    return require database_path('migrations/2026_10_23_100000_create_product_size_stocks_table.php');
+}
+
+/**
  * An order of the current workshop with its lines (S-48-b). `$lines` is a list of `[Product, quantity]` in the order they are entered
  * (the position follows the list); by default Boutique Lina's order of the card: Denim Jacket 50 then Denim Jeans 5-pocket 30 (needs the
  * demo products). The lines are created last-first, so their ids run against their positions: a read that sorted by id would show.

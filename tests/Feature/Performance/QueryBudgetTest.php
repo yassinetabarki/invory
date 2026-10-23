@@ -3,7 +3,9 @@
 use App\Models\Material;
 use App\Models\OrderLine;
 use App\Models\Product;
+use App\Models\ProductSizeStock;
 use App\Models\Sale;
+use App\Models\Size;
 use Inertia\Testing\AssertableInertia as Assert;
 use PHPUnit\Framework\ExpectationFailedException;
 
@@ -258,6 +260,29 @@ it('stays within the query budget when the deferred props of the product page lo
 
     expect(count($few))->toBeLessThanOrEqual(QUERY_BUDGET, implode(PHP_EOL, $few))
         ->and(count($many))->toBe(count($few), implode(PHP_EOL, $many));
+});
+
+it('stays within the query budget when the deferred finished stock of the product page loads, however many sizes the product has', function () {
+    actingAs($this->user);
+    $stockQueries = function (int $productId): array {
+        $firstVisit = $this->get(route('products.show', $productId))->assertOk();
+
+        return partialReloadQueries($firstVisit, ['finished_stock'], fn (Assert $partial) => $partial->has('finished_stock.sizes'));
+    };
+    // Stock in every size of the shoe, and in one of the jacket: the rows read are one query either way.
+    foreach (range(36, 46) as $label) {
+        ProductSizeStock::factory()->create(['product_id' => pid(3), 'size_id' => Size::query()->where('label', (string) $label)->value('id'), 'units' => 2]);
+    }
+    ProductSizeStock::factory()->create(['product_id' => pid(1), 'units' => 2]);
+
+    // Warm up: the first request of a process may run one-off queries (schema introspection, the framework's own caches).
+    $stockQueries(pid(1));
+
+    $jacket = $stockQueries(pid(1));
+    $shoe = $stockQueries(pid(3));
+
+    expect(count($shoe))->toBeLessThanOrEqual(QUERY_BUDGET, implode(PHP_EOL, $shoe))
+        ->and(count($shoe))->toBe(count($jacket), implode(PHP_EOL, $shoe));
 });
 
 it('has a reusable query budget expectation', function () {

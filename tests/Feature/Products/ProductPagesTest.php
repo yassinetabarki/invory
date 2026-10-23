@@ -571,7 +571,8 @@ it('reads the materials table once per page and answers within a bounded number 
     // and the edit page costs the lines like the show page (5).
     // S-58: the sizes cost three reads (categories, size_lists, sizes), which replace the old category read where there was one:
     // show 8 -> 10, create 0 -> 3, edit 5 -> 7.
-    $budget = ['index' => 6, 'show' => 10, 'create' => 3, 'edit' => 7];
+    // S-56-a: the show page's stock group reads the product's stock rows (one query; the sizes come from the same three reads): show 10 -> 11.
+    $budget = ['index' => 6, 'show' => 11, 'create' => 3, 'edit' => 7];
     $materialReads = ['index' => 1, 'show' => 1, 'create' => 0, 'edit' => 1];
 
     $baseline = array_map($count, $urls);

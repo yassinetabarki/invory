@@ -119,7 +119,7 @@ it('a new user goes from sign-in to a sale on the dashboard', function () {
     }, $page);
 
     GoldenPathStep::run('product: can produce', function () use ($page) {
-        goldenShows($page, 'section[aria-label="Production capacity"]', 'Can produce now 112units');
+        goldenShows($page, 'section[aria-label="Production capacity"]', 'Can produce now 112 units');
     }, $page);
 
     GoldenPathStep::run('product: bottleneck', function () use ($page) {
@@ -170,7 +170,61 @@ it('a new user goes from sign-in to a sale on the dashboard', function () {
 
     GoldenPathStep::run('product: still 112 units', function () use ($page, $browser) {
         $browser->locator('ol[aria-labelledby] > li:first-child')->getByRole('link', ['name' => 'Denim Jacket'])->click();
-        goldenShows($page, 'section[aria-label="Production capacity"]', 'Can produce now 112units');
+        goldenShows($page, 'section[aria-label="Production capacity"]', 'Can produce now 112 units');
         goldenNoPlaceholders($page);
+    }, $page);
+
+    // S-56: the jacket starts with nothing on the shelf; "Update stock" sets a count per size.
+    GoldenPathStep::run('product: update stock', function () use ($page, $browser) {
+        // The figure reads label, button, total: "Update stock" sits on the label's row.
+        goldenShows($page, 'section[aria-label="Finished stock"]', 'In stock Update stock 0 units');
+        // At the top right of the card, on the same row as "In stock".
+        $page->assertScript(<<<'JS'
+        (() => {
+            const card = document.querySelector('section[aria-label="Finished stock"]');
+            const button = Array.from(card.querySelectorAll('button')).find((el) => el.textContent.trim() === 'Update stock');
+            const label = Array.from(card.querySelectorAll('span')).find((el) => el.textContent.trim() === 'In stock');
+            const c = card.getBoundingClientRect();
+            const b = button.getBoundingClientRect();
+            const l = label.getBoundingClientRect();
+            const sameRow = b.top < l.bottom && b.bottom > l.top;
+            const atRight = c.right - b.right <= 32;
+            return sameRow && atRight ? 'top right' : JSON.stringify({ sameRow, gapToRightEdge: c.right - b.right });
+        })()
+        JS, 'top right');
+        // Saving reloads only `finished_stock`: the page must never fall back to its placeholders.
+        $page->assertScript(<<<'JS'
+        (() => {
+            window.__placeholderSeen = false;
+            new MutationObserver(() => {
+                const seen = Array.from(document.querySelectorAll('[role="status"]'))
+                    .some((el) => /^(Loading|Checking) /.test(el.textContent.trim()));
+                window.__placeholderSeen = window.__placeholderSeen || seen;
+            }).observe(document.body, { childList: true, subtree: true });
+            return 'watching';
+        })()
+        JS, 'watching');
+
+        $browser->getByRole('button', ['name' => 'Update stock', 'exact' => true])->click();
+        $window = $browser->getByRole('dialog', ['name' => 'Update stock · Denim Jacket']);
+
+        foreach (['S' => '3', 'M' => '4', 'L' => '5', 'XL' => '2'] as $size => $units) {
+            $window->getByLabel($size, true)->fill($units);
+        }
+
+        $window->getByRole('button', ['name' => 'Save', 'exact' => true])->click();
+        $page->assertSee('Stock updated.');
+        goldenShows($page, 'section[aria-label="Finished stock"]', 'In stock Update stock 14 units');
+        // Screen readers hear the sizes as one line (the chips are hidden from them).
+        $page->assertScript(<<<'JS'
+        (() => {
+            const text = (document.querySelector('section[aria-label="Finished stock"]')?.innerText ?? '').replace(/\s+/g, ' ');
+            return text.includes('In stock per size: S 3, M 4, L 5, XL 2') ? 'spoken' : text;
+        })()
+        JS, 'spoken');
+        $page->assertDontSee('Update stock · Denim Jacket');
+        $page->assertScript('window.__placeholderSeen', false);
+        // Nothing else moved: capacity is still 112.
+        goldenShows($page, 'section[aria-label="Production capacity"]', 'Can produce now 112 units');
     }, $page);
 });

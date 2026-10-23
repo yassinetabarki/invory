@@ -14,19 +14,35 @@ type ProductHeroProps = {
     multipleSizes: boolean;
     /** Sales of the last 30 days. */
     sales: SalesFigure;
+    /** The "In stock" figure (S-56): the grid's second cell, with its own loading state. */
+    stock: ReactNode;
 };
 
-function HeroCard({
+export function HeroCard({
     label,
     ariaLabel,
     primary = false,
+    action,
     children,
 }: {
     label: string;
     ariaLabel: string;
     primary?: boolean;
+    /** A control at the top right, on the label's row ("Update stock"). */
+    action?: ReactNode;
     children: ReactNode;
 }) {
+    const labelText = (
+        <span
+            className={cn(
+                'text-[0.8125rem] font-semibold',
+                !primary && 'text-muted-foreground',
+            )}
+        >
+            {label}
+        </span>
+    );
+
     return (
         <section
             aria-label={ariaLabel}
@@ -37,24 +53,26 @@ function HeroCard({
                     : 'bg-card text-card-foreground',
             )}
         >
-            <span
-                className={cn(
-                    'text-[0.8125rem] font-semibold',
-                    !primary && 'text-muted-foreground',
-                )}
-            >
-                {label}
-            </span>
+            {action ? (
+                <div className="flex items-center justify-between gap-2">
+                    {labelText}
+                    {action}
+                </div>
+            ) : (
+                labelText
+            )}
             {children}
         </section>
     );
 }
 
-const BIG = 'text-[2rem] leading-[1.1] font-bold tracking-tight tabular-nums';
+export const BIG =
+    'text-[2rem] leading-[1.1] font-bold tracking-tight tabular-nums';
 const BIG_TEXT = 'text-[1.625rem] leading-[1.2] font-bold tracking-tight';
-const UNITS = 'ml-1 text-lg font-semibold';
+/** The unit word after a count; the count and the word are separated by a real space in the text. */
+export const UNITS = 'text-lg font-semibold';
 
-function unitsWord(count: number): string {
+export function unitsWord(count: number): string {
     return count === 1 ? 'unit' : 'units';
 }
 
@@ -64,7 +82,7 @@ function SoldCard({ sales }: { sales: SalesFigure }) {
     return (
         <HeroCard label="Sold · last 30 days" ariaLabel="Sales, last 30 days">
             <span className={BIG}>
-                {formatCount(sales.units_sold, locale)}
+                {formatCount(sales.units_sold, locale)}{' '}
                 <span className={UNITS}>{unitsWord(sales.units_sold)}</span>
             </span>
             <span className="text-[0.8125rem] text-muted-foreground">
@@ -75,20 +93,22 @@ function SoldCard({ sales }: { sales: SalesFigure }) {
 }
 
 /**
- * The three numbers that matter on a product: how many can be produced now
- * (the primary card), what one unit costs, and what sold in the last 30 days.
+ * The numbers that matter on a product: how many can be produced now (the
+ * primary card), how many are in stock (`stock`), what one unit costs, and
+ * what sold in the last 30 days. One column on a phone, two by two from `sm`.
  */
 export function ProductHero({
     capacity,
     unitCost,
     multipleSizes,
     sales,
+    stock,
 }: ProductHeroProps) {
     const { locale } = useAppSettings();
     const { max_producible: producible } = capacity;
 
     return (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2">
             <HeroCard
                 label="Can produce now"
                 ariaLabel="Production capacity"
@@ -113,7 +133,7 @@ export function ProductHero({
                 {producible !== null && producible > 0 && (
                     <>
                         <span className={BIG}>
-                            {formatCount(producible, locale)}
+                            {formatCount(producible, locale)}{' '}
                             <span className={UNITS}>
                                 {unitsWord(producible)}
                             </span>
@@ -126,6 +146,8 @@ export function ProductHero({
                     </>
                 )}
             </HeroCard>
+
+            {stock}
 
             <HeroCard label="Unit cost" ariaLabel="Unit cost">
                 <span className={BIG}>

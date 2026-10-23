@@ -4,7 +4,7 @@
 > phase's "tech allowance" in [BACKLOG.md](BACKLOG.md) (about 15 % of a phase). User-visible behaviour or UX items don't belong here: they
 > go to the product-owner as story candidates.
 > Open items only. Closed items: [archive/backlog-2026-10-14.md](archive/backlog-2026-10-14.md) §"Follow-ups from reviews", and the
-> "Closed" sections at the end. Next free ID: **F-69**.
+> "Closed" sections at the end. Next free ID: **F-72**.
 
 "Proposed phase" is the tech-lead's suggestion; the phase lists in [BACKLOG.md](BACKLOG.md) are the source of truth. Phase numbers follow
 the renumbering of 2026-10-15 (D-10): 5 customer orders, 6 speed at real catalogue sizes, 7 production go-live. Phase 4 is on hold (D-12).
@@ -49,6 +49,9 @@ Severity: **MAJOR** (fix before release) · **MINOR** (fix when touching the are
 | F-62 | MINOR | FE tests   | The shared `useHttp` mock in `resources/js/test/inertia.tsx` never calls `onError`, so a JSON route answering 422 can't be simulated; S-53-e wraps it locally in `move-units-dialog.test.tsx`. Let `respondToHttp` return validation errors that the mock turns into `onError(errors)`. Cost of delay: Each new JSON-route test re-invents the wrapper                                                             |
 | F-63 | NIT   | BE         | Counts inside server messages are printed raw ("You can move at most 1000000 units.", the preview's `units` max message; S-49 delete refusal with large counts). Format them with the locale's grouping in `OrderMessages`. Cost of delay: Odd-looking numbers only for very large orders                                                                                                                          |
 | F-66 | NOTE  | BE         | Edit product now runs exactly 10 queries, the page budget (S-58 added the size lists: categories, size_lists, sizes), and the create page's payload limit is 6 KB (`category_sizes` adds about 90 bytes per category). The next prop on Edit product must read the size lists in one joined query first ([ADR-0015](adr/0015-sizes-come-from-the-product-category.md))                                             |
+| F-69 | MINOR | FE a11y    | S-56-d: after a refused save, the "Update stock" window doesn't move focus to the first invalid field (`MoveUnitsDialog` does); the message is a `role="alert"` and fields are `aria-invalid`, so it is announced. ~12 lines in `update-stock-dialog.tsx`                                                                                                                                                          |
+| F-70 | NIT   | BE tests   | S-56-c: the "sizes have changed" refusal thrown by `UpdateFinishedStock` under the lock is tested by a direct call only, not through HTTP (the request path's redirect back is tested; both are `ValidationException`)                                                                                                                                                                                             |
+| F-71 | NIT   | contract   | `ProductShowProps.finished_stock` says "null … when it couldn't load"; inertia-laravel 3.5.1 leaves a rescued prop out of `props` (absent) and lists it in `rescuedProps`. Reword the comment the next time `domain.ts` is touched                                                                                                                                                                                 |
 
 ## Notes (known behaviour, no action)
 - **F-28:** system units accept only `name` and `position` on update; `factor_to_base` arrives as a scale-12 string and is trimmed for display.

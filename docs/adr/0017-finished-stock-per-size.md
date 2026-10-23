@@ -1,7 +1,7 @@
 # ADR-0017 — Finished stock per size: a count per product and size, set by "Update stock"
 
-- **Status:** Proposed · 2026-10-23 (tech-lead, with the Technical work of S-56; the human's decisions of 2026-10-23, STATUS §2 "the
-  S-56 card changes", Q-H1 and Q1 to Q8; becomes Accepted when the human approves the Technical work)
+- **Status:** Accepted · 2026-10-23 (approved by the human with the Technical work of S-56; tech-lead; the human's decisions of
+  2026-10-23, STATUS §2 "the S-56 card changes", Q-H1 and Q1 to Q8)
 - **Keeps:** [ADR-0015](0015-sizes-come-from-the-product-category.md) (fixed size lists, a product has its category's sizes, later
   stories point at `sizes.id`; the category lock), [ADR-0016](0016-order-lines-count-by-size.md) (order lines count by size),
   [ADR-0013](0013-one-workshop-per-account.md) (every record belongs to a workshop), [ADR-0004](0004-pure-costing-domain.md) (nothing

@@ -4,6 +4,8 @@ use App\Actions\Products\UpdateProduct;
 use App\Models\Product;
 use App\Models\ProductCategory;
 use App\Models\ProductComponent;
+use App\Models\ProductSizeStock;
+use App\Models\Size;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Testing\TestResponse;
@@ -18,6 +20,7 @@ use function Pest\Laravel\actingAs;
 |
 | A product on an order that isn't deleted (also once fully shipped) can't change to a category with another size list. Checked by
 | UpdateProductRequest (the error sits on `category`) and again by UpdateProduct under the product row lock. Rule: ADR-0015 decision 4.
+| S-56-e (AC-4) adds the same lock while the product has finished units in stock (ADR-0017 decision 5); the order message wins.
 */
 
 beforeEach(function () {
@@ -28,6 +31,23 @@ beforeEach(function () {
 const SIZE_LOCK_JACKET = 'Denim Jacket is on orders, so its category can\'t change to one with other sizes. Keep a category with sizes S, M, L, XL.';
 const SIZE_LOCK_SNEAKER = 'Canvas Low Sneaker is on orders, so its category can\'t change to one with other sizes. Keep a category with sizes 36 to 46.';
 const SIZE_LOCK_TOTE = 'Leather Tote is on orders, so its category can\'t change to one with other sizes. Keep a "One size" category.';
+
+const SIZE_LOCK_STOCK_JACKET = 'Denim Jacket has units in stock, so its category can\'t change to one with other sizes. Keep a category with sizes S, M, L, XL.';
+const SIZE_LOCK_STOCK_TOTE = 'Leather Tote has units in stock, so its category can\'t change to one with other sizes. Keep a "One size" category.';
+
+/** Put finished units in stock for demo product `$id`: size label => units (a row per size, as the Action stores them). */
+function stockForSizeLock(int $id, array $units): void
+{
+    $listId = Product::query()->with('category')->findOrFail($id)->category->size_list_id;
+
+    foreach ($units as $label => $count) {
+        ProductSizeStock::factory()->create([
+            'product_id' => $id,
+            'size_id' => Size::query()->where('size_list_id', $listId)->where('label', $label)->value('id'),
+            'units' => $count,
+        ]);
+    }
+}
 
 /** What a refused save must leave alone: name, category and composition. */
 function sizeLockState(int $id): array
@@ -134,4 +154,46 @@ it('checks again in UpdateProduct and saves nothing, not even the photo', functi
     expect($save)->toThrow(fn (ValidationException $e) => expect($e->errors())->toBe(['category' => [SIZE_LOCK_JACKET]]));
     expect(sizeLockState($jacket->id))->toBe($before)
         ->and(Storage::disk('public')->allFiles())->toBe([]);
+});
+
+it('keeps the sizes of a product while it has units in stock', function (int $number, array $stock, bool $onOrder, string $category, ?string $message) {
+    $id = pid($number);
+    stockForSizeLock($id, $stock);
+    $onOrder && bookForSizeLock('open', $number);
+    $before = sizeLockState($id);
+
+    $response = updateForSizeLock($this, $id, ['category' => $category]);
+
+    if ($message !== null) {
+        $response->assertRedirect(route('products.edit', $id))->assertSessionHasErrors(['category' => $message]);
+        expect(sizeLockState($id))->toBe($before);
+
+        return;
+    }
+
+    $response->assertSessionHasNoErrors();
+    expect(sizeLockState($id))->not->toBe($before);
+})->with([
+    '14 jackets in stock, to Footwear' => [1, ['S' => 3, 'M' => 4, 'L' => 5, 'XL' => 2], false, 'footwear', SIZE_LOCK_STOCK_JACKET],
+    'no jacket in stock, to Footwear' => [1, [], false, 'footwear', null],
+    'jackets in stock and on an order: the order message wins' => [1, ['S' => 3, 'M' => 4, 'L' => 5, 'XL' => 2], true, 'footwear', SIZE_LOCK_JACKET],
+    'no jacket in stock but on an order' => [1, [], true, 'footwear', SIZE_LOCK_JACKET],
+    'totes in stock, to Accessory (same list)' => [4, ['One size' => 4], false, 'accessory', null],
+    'totes in stock, to Apparel' => [4, ['One size' => 4], false, 'apparel', SIZE_LOCK_STOCK_TOTE],
+]);
+
+it('checks the stock again in UpdateProduct when it was written after the request, and saves nothing', function () {
+    $jacket = Product::query()->findOrFail(pid(1));
+    $before = sizeLockState($jacket->id);
+    actingAs($this->user);
+    stockForSizeLock($jacket->id, ['M' => 6]);
+
+    $save = fn () => app(UpdateProduct::class)->handle(
+        $jacket,
+        validProductPayload(['sku' => $jacket->sku, 'name' => 'Changed', 'category' => 'footwear']),
+        $this->user,
+    );
+
+    expect($save)->toThrow(fn (ValidationException $e) => expect($e->errors())->toBe(['category' => [SIZE_LOCK_STOCK_JACKET]]));
+    expect(sizeLockState($jacket->id))->toBe($before);
 });

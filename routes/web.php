@@ -8,6 +8,7 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\OrderLineMoveController;
 use App\Http\Controllers\OrderLineMovePreviewController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ProductStockController;
 use App\Http\Controllers\SaleController;
 use Illuminate\Support\Facades\Route;
 
@@ -29,6 +30,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // {product} is route-model bound (an unknown or soft-deleted product is a 404). The digit constraint keeps a malformed id a 404
     // too, instead of a bigint query error on PostgreSQL.
     Route::resource('products', ProductController::class)->where(['product' => '[0-9]{1,18}']);
+
+    // "Update stock" (S-56): the finished units of a product, set size by size.
+    Route::put('products/{product}/stock', [ProductStockController::class, 'update'])
+        ->where('product', '[0-9]{1,18}')
+        ->name('products.stock.update');
 
     // {order} is route-model bound (an unknown, soft-deleted or other workshop's order is a 404); the digit constraint keeps a
     // malformed id a 404 too.

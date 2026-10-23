@@ -30,12 +30,14 @@ tags:
 - [ ] **AC-1 · In stock on the product page.** Next to "Can produce now 112", the Denim Jacket's page shows "In stock 10 units" and under
   it "S 3 · M 0 · L 5 · XL 2". A product with nothing in stock shows "In stock 0 units". A "One size" product shows only "In stock 4
   units".
-- [ ] **AC-2 · Update the count.** "Update stock", a button on the "In stock" figure under its sizes, opens "Update stock · Denim
-  Jacket" with a field per size holding today's count (S 3, M 0, L 5, XL 2). Changing M to 4 and clicking "Save" shows "Stock
-  updated." and the page reads "In stock 14 units" and "S 3 · M 4 · L 5 · XL 2". Each size takes a whole number from 0 to 1,000,000
-  ("Enter a whole number from 0 to 1,000,000."). A size left empty counts as 0. If the product's sizes change while the window is
-  open, nothing is saved and the window shows the new sizes with "The sizes of Denim Jacket have changed. Enter the stock again."
-  "Cancel" changes nothing.
+- [ ] **AC-2 · Update the count.** On the "In stock" figure each size under "10 units" is a chip with its label and count: "S 3",
+  "M 0", "L 5", "XL 2". A size at 0, like "M 0", is greyed. Screen readers hear "In stock per size: S 3, M 0, L 5, XL 2". At 375 px
+  the chips wrap onto more lines. "Update stock", a button at the top right of the figure on the same row as "In stock", opens
+  "Update stock · Denim Jacket" with a field per size holding today's count (S 3, M 0, L 5, XL 2). Changing M to 4 and clicking
+  "Save" shows "Stock updated." and the page reads "In stock 14 units" with the chips "S 3", "M 4", "L 5", "XL 2". Each size takes a
+  whole number from 0 to 1,000,000 ("Enter a whole number from 0 to 1,000,000."). A size left empty counts as 0. If the product's
+  sizes change while the window is open, nothing is saved and the window shows the new sizes with "The sizes of Denim Jacket have
+  changed. Enter the stock again." "Cancel" changes nothing.
 - [ ] **AC-3 · Nothing else changes.** After the update, "Can produce now" (112), the unit cost (TND 35.754), the materials' stock and the
   dashboard's Inventory value read as before. Recording a sale of 2 Denim Jackets leaves "In stock 14 units". A new order of Denim
   Jackets doesn't change it either.
@@ -45,15 +47,18 @@ tags:
   on an order, the S-58 message shows instead. At "In stock 0 units" the S-58 rule applies alone.
 - [ ] **AC-5 · States.** If the stock can't be loaded, the figure shows "Couldn't load the stock." with "Try again". If saving fails, the
   window stays open with what you typed and shows "Couldn't save the stock. Try again."
-- [ ] **AC-6 · Phone width.** At 375 px "In stock 10 units" sits right under "Can produce now", with "S 3 · M 0 · L 5 · XL 2" under it
-  and "Update stock" below. A shoe's 11 sizes (36 to 46) wrap onto several lines without scrolling sideways. In "Update stock · Denim
-  Jacket" the size fields wrap onto several rows, each with its label, and "Save" and "Cancel" sit under the last row.
+- [ ] **AC-6 · The "Update stock" window, and phone width.** "Update stock · Denim Jacket" shows the note "Doesn't change materials,
+  "Can produce now" or sales." and the line "Total after saving 10 units", which follows what you type: changing M from 0 to 4 makes
+  it "Total after saving 14 units" and shows "was 0" under M. A size you haven't changed shows no "was" hint, and putting M back to 0
+  removes it. A size left empty counts as 0 in the total. At 375 px "In stock 10 units" sits right under "Can produce now", a shoe's
+  11 sizes (36 to 46) wrap onto several lines without scrolling sideways, and in the window the size fields wrap onto several rows,
+  each with its label, with "Save" and "Cancel" under the last row.
 
 ---
 
 ## Technical work
 > [!warning] Complex · CRITICAL · backend + frontend · 5 commits
-> Tech-lead · 2026-10-23 · proposed
+> Tech-lead · 2026-10-23 · approved 2026-10-23
 > Why complex: a new table (finished units per product and size), a new business rule on the category (locked while there is
 > stock), a new route that writes counts, and new data for the product page.
 
@@ -108,9 +113,8 @@ runs the full `composer test:pgsql` and `composer test:browser` (the product gol
 - `ProductController::show` adds `finished_stock`: `Inertia::defer(…, 'stock', rescue: true)`, its own group, so a failure is
   reported and only this prop comes back empty (Inertia lists it in `rescuedProps`) while `product` and the sales load as before.
   `FinishedStockResource` shapes it. `domain.ts` as in the contract below.
-- The tech-lead writes in this commit: [ADR-0017](../adr/0017-finished-stock-per-size.md) (written at planning as Proposed; its status
-  becomes Accepted once the human approves this Technical work), `docs/ARCHITECTURE.md` §4 (the new table) and, once the human has
-  approved it, the business rules file (glossary "Finished stock"; a short "Finished stock (S-56)" section: what it is, a count set by
+- The tech-lead writes in this commit: `docs/ARCHITECTURE.md` §4 (the new table) and the business rules file (approved by the human with
+  this Technical work on 2026-10-23; [ADR-0017](../adr/0017-finished-stock-per-size.md) was written and accepted at planning) (glossary "Finished stock"; a short "Finished stock (S-56)" section: what it is, a count set by
   "Update stock" where the last save wins, what never changes it, the lock and which message wins, deleting a product deletes it).
 
 **Tests**
@@ -316,7 +320,7 @@ runs the full `composer test:pgsql` and `composer test:browser` (the product gol
 - **Locks:** `UpdateFinishedStock`, `UpdateProduct` and `DeleteProduct` take the same product row lock. S-57 will add cancelled units
   through its own Action on the same rows, under that same lock.
 - Finished stock never reaches `App\Domain\Costing` and has no money: whole units only, plain integers.
-- [ADR-0017](../adr/0017-finished-stock-per-size.md) (Proposed) records the table, the count-not-delta rule, the last save winning,
+- [ADR-0017](../adr/0017-finished-stock-per-size.md) (Accepted 2026-10-23) records the table, the count-not-delta rule, the last save winning,
   the lock and which message wins, the delete, and the S-57 hook.
 
 ### Order
@@ -338,3 +342,6 @@ after S-56-c's route) ∥ S-56-e (backend).
   fields are rebuilt from the reloaded `finished_stock`, not by remounting the form, which would drop the message.
 - Deleting a product now writes to a second table → `DeleteProduct` does it in its existing transaction under the product's lock;
   S-56-c's test checks nothing else changes.
+
+### Progress
+- 2026-10-23 · acceptance fix round (frontend, against the design board): size chips with a spoken line, "Update stock" at the top right, "Total after saving" and "was N" in the window, "31 units" spacing. Gates green.

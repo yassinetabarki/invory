@@ -11,6 +11,7 @@ use App\Models\OrderLineSize;
 use App\Models\Product;
 use App\Models\ProductCategory;
 use App\Models\ProductComponent;
+use App\Models\ProductSizeStock;
 use App\Models\Sale;
 use App\Models\Size;
 use App\Models\SizeList;
@@ -32,7 +33,7 @@ use App\Models\Workshop;
 const WORKSHOP_ADR = 'docs/adr/0013-one-workshop-per-account.md';
 
 /** The tables of workshop data (S-45 adds units and the two category tables). */
-const WORKSHOP_TABLES = ['materials', 'products', 'product_components', 'stock_movements', 'sales', 'orders', 'order_lines', 'order_line_cuts', 'order_line_cut_materials', 'order_line_sizes'];
+const WORKSHOP_TABLES = ['materials', 'products', 'product_components', 'stock_movements', 'sales', 'orders', 'order_lines', 'order_line_cuts', 'order_line_cut_materials', 'order_line_sizes', 'product_size_stocks'];
 
 /**
  * Every PHP file under `app/`, as [path relative to the project root, source without comments]: a comment that talks about
@@ -123,7 +124,7 @@ it('validates against a table of workshop data only through WorkshopRule in app/
     // Both spellings of each: the table (`materials`) and the model class (`Material::class`, `App\Models\Material`).
     $targets = array_merge(WORKSHOP_TABLES, array_map(
         static fn (string $model): string => '(?:\\\\?App\\\\{1,2}Models\\\\{1,2})?'.class_basename($model).'(?:::class)?',
-        [Material::class, Product::class, ProductComponent::class, StockMovement::class, Sale::class, Order::class, OrderLine::class, OrderLineCut::class, OrderLineCutMaterial::class, OrderLineSize::class],
+        [Material::class, Product::class, ProductComponent::class, StockMovement::class, Sale::class, Order::class, OrderLine::class, OrderLineCut::class, OrderLineCutMaterial::class, OrderLineSize::class, ProductSizeStock::class],
     ));
     $named = '(?:'.implode('|', $targets).')\b';
     $found = [];
