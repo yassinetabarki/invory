@@ -10,6 +10,8 @@ use App\Models\Order;
 use App\Models\OrderLine;
 use App\Services\Orders\OrderLineSizing;
 use App\Services\Orders\OrderMessages;
+use App\Services\Products\SizeLists;
+use App\Services\Products\SizeNames;
 use Illuminate\Auth\Access\Response;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
@@ -60,8 +62,15 @@ final class MoveOrderLineUnitsRequest extends FormRequest
     {
         $units = __('Enter a whole number of units, at least 1.');
         $size = OrderMessages::wholeUnits();
+        $messages = [];
 
-        return [
+        // A size of the line's list names itself (S-70-a). They come first: the validator takes the first message that matches, and
+        // `sizes.*` also matches these keys. A key that is not a size of the line keeps the bare message.
+        foreach ($this->sizeLabels() as $id => $label) {
+            $messages["sizes.{$id}.integer"] = $messages["sizes.{$id}.min"] = SizeNames::prefixed($label, $size);
+        }
+
+        return $messages + [
             'units.required' => $units,
             'units.integer' => $units,
             'units.min' => $units,
@@ -69,6 +78,20 @@ final class MoveOrderLineUnitsRequest extends FormRequest
             'sizes.*.integer' => $size,
             'sizes.*.min' => $size,
         ];
+    }
+
+    /**
+     * The labels of the line's size list by size id; none for a line that counts as one size. The list is the request's own cached one.
+     *
+     * @return array<int, string>
+     */
+    private function sizeLabels(): array
+    {
+        $line = $this->orderLine();
+
+        return $this->bySize() && $line->size_list_id !== null
+            ? app(SizeLists::class)->list($line->size_list_id)->sizes->pluck('label', 'id')->all()
+            : [];
     }
 
     /**

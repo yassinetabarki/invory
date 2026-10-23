@@ -7,9 +7,12 @@ namespace App\Http\Requests\Products;
 use App\Actions\Products\UpdateFinishedStock;
 use App\Models\Product;
 use App\Models\Size;
+use App\Services\Orders\OrderMessages;
 use App\Services\Products\SizeLists;
+use App\Services\Products\SizeNames;
 use Illuminate\Auth\Access\Response;
 use Illuminate\Contracts\Validation\Validator;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Gate;
 
@@ -42,9 +45,17 @@ final class UpdateFinishedStockRequest extends FormRequest
     /** @return array<string, string> */
     public function messages(): array
     {
-        $message = __('Enter a whole number from 0 to 1,000,000.');
+        $message = OrderMessages::sizeQuantity();
+        $messages = [];
 
-        return ['sizes.*.integer' => $message, 'sizes.*.min' => $message, 'sizes.*.max' => $message];
+        // Each size of the product's list names itself (S-70-a). They come first: the validator takes the first message that matches,
+        // and `sizes.*` also matches these keys. A key that is not a size of the list keeps the bare message.
+        foreach ($this->productSizes() as $size) {
+            $named = SizeNames::prefixed($size->label, $message);
+            $messages["sizes.{$size->id}.integer"] = $messages["sizes.{$size->id}.min"] = $messages["sizes.{$size->id}.max"] = $named;
+        }
+
+        return $messages + ['sizes.*.integer' => $message, 'sizes.*.min' => $message, 'sizes.*.max' => $message];
     }
 
     /** @return list<callable(Validator): void> */
@@ -77,9 +88,18 @@ final class UpdateFinishedStockRequest extends FormRequest
     private function hasProductSizes(): bool
     {
         $sizes = $this->input('sizes');
-        $list = app(SizeLists::class)->category($this->product()->category_id)->sizeList->sizes;
 
-        return is_array($sizes) && UpdateFinishedStock::sameSizes(array_keys($sizes), $list->map(fn (Size $size): int => $size->id)->all());
+        return is_array($sizes) && UpdateFinishedStock::sameSizes(array_keys($sizes), $this->productSizes()->map(fn (Size $size): int => $size->id)->all());
+    }
+
+    /**
+     * The sizes of the product's list, from the request's cached lists.
+     *
+     * @return Collection<int, Size>
+     */
+    private function productSizes(): Collection
+    {
+        return app(SizeLists::class)->category($this->product()->category_id)->sizeList->sizes;
     }
 
     private function product(): Product

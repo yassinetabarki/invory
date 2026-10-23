@@ -11,6 +11,7 @@ use App\Models\Order;
 use App\Models\OrderLine;
 use App\Models\Product;
 use App\Services\Orders\OrderMessages;
+use App\Services\Products\SizeNames;
 use Closure;
 use Illuminate\Auth\Access\Response;
 use Illuminate\Database\Eloquent\Collection;
@@ -201,20 +202,20 @@ class StoreOrderRequest extends FormRequest
             return;
         }
 
-        $ids = $list->sizes->pluck('id')->all();
+        $labels = $list->sizes->pluck('label', 'id')->all();
         $total = 0;
         $foreign = false;
         $failed = false;
 
         foreach (is_array($line['sizes'] ?? null) ? $line['sizes'] : [] as $id => $units) {
-            if (! in_array($id, $ids, true)) {
+            if (! array_key_exists($id, $labels)) {
                 $foreign = true;
             } elseif ($units !== null && $units !== '') {
                 if (self::wholeNumber($units, 0)) {
                     $total += (int) $units;
                 } else {
                     $failed = true;
-                    $validator->errors()->add("{$field}.sizes.{$id}", OrderMessages::sizeQuantity());
+                    $validator->errors()->add("{$field}.sizes.{$id}", SizeNames::prefixed($labels[$id], OrderMessages::sizeQuantity()));
                 }
             }
         }

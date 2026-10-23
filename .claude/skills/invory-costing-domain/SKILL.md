@@ -258,8 +258,11 @@ size_mode(L)          = by_size        when L's size list has several sizes
 - **How a size is named in text** (S-60/S-61 fix round, human decision 2026-10-22): a letter size by its label ("S 10 · M 20",
   "…at most 20 units of M.", "M can't be less than…"); a size whose label is a number with a colon and the word "size" ("36: 4 ·
   37: 8", "…at most 20 units of size 36.", "Size 36 can't be less than…"). "A number" = the label is digits only. Applies to the
-  sizes under a line heading, the Orders list, a material's history and the per-size messages; the size fields and table rows show
-  the bare label.
+  Orders list, a material's history and the per-size messages; the size fields and table rows show the bare label.
+- **Chips and per-size messages** (S-70, approved 2026-10-23): a size chip (under a line heading, the "In stock" figure) shows the
+  bare label, [36 | 4], and is spoken as the text rule says, "36: 4". A per-size message that doesn't already name its size starts
+  with it: "M: Enter a whole number from 0 to 1,000,000.", "Size 36: Enter a whole number of units."; a message that names it stays
+  as it is ("You can move at most 20 units of M.", "M can't be less than…").
 - **Cutting is per line, not per size.** Start cutting takes the materials of the total, exactly as one cut of that many units
   (the formulas of "Cutting and returning stock" with N = Σ units over the sizes); the short-stock check counts every size together.
   Move back to To start returns from the line's cuts for the total, latest cut first, whatever sizes those cuts held. Every size uses

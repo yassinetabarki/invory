@@ -105,7 +105,7 @@ it('refuses what a size can\'t move or the form can\'t read, and changes nothing
 
     expect(sizedSnapshot($order))->toBe($before);
 })->with(function () {
-    $whole = 'Enter a whole number of units.';
+    $whole = 'M: Enter a whole number of units.';
 
     return [
         'every size empty' => [['S' => '', 'M' => ''], 'sizes', 'Enter at least one unit to move.', []],
@@ -148,6 +148,11 @@ it('names a size of digits "size 36" in the limit (F9)', function () {
     actingAs($this->user)->from(route('orders.show', $order))
         ->post(route('orders.lines.moves.store', [$order, $order->lines()->firstOrFail()]), ['move' => 'start_cutting', 'sizes' => [$size => 11]])
         ->assertSessionHasErrors(["sizes.{$size}" => 'You can move at most 10 units of size 36.']);
+
+    // A size that is not a number names itself too, as "Size 36" at the start of its message (S-70-a).
+    actingAs($this->user)->from(route('orders.show', $order))
+        ->post(route('orders.lines.moves.store', [$order, $order->lines()->firstOrFail()]), ['move' => 'start_cutting', 'sizes' => [$size => '-1']])
+        ->assertSessionHasErrors(["sizes.{$size}" => 'Size 36: Enter a whole number of units.']);
 
     expect(sizedSnapshot($order))->toBe($before);
 });

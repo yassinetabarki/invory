@@ -6,6 +6,7 @@ namespace App\Services\Orders;
 
 use App\Domain\Stock\CutPlan;
 use App\Enums\OrderLineMove;
+use App\Services\Products\SizeNames;
 use LogicException;
 
 /**
@@ -92,7 +93,7 @@ final readonly class OrderMessages
         return trans_choice(
             '{1} You can move at most :count unit of :size.|[0,*] You can move at most :count units of :size.',
             $held,
-            ['size' => self::sizeName($size)],
+            ['size' => SizeNames::inText($size)],
         );
     }
 
@@ -131,7 +132,7 @@ final readonly class OrderMessages
             "{1} :size can't be less than the :count unit already in cutting, ready to ship or shipped."
             ."|[2,*] :size can't be less than the :count units already in cutting, ready to ship or shipped.",
             $started,
-            ['size' => self::sizeName($size, true)],
+            ['size' => SizeNames::inText($size, true)],
         );
     }
 
@@ -166,14 +167,6 @@ final readonly class OrderMessages
     public static function moveSizesChanged(string $product): string
     {
         return __('The sizes ordered for :product have changed. Enter the units again.', ['product' => $product]);
-    }
-
-    /** How a size is named in a sentence: a size of digits only reads "size 36", a letter size stays "M"; `$first` capitalises it. */
-    private static function sizeName(string $label, bool $first = false): string
-    {
-        $name = ctype_digit($label) ? "size {$label}" : $label;
-
-        return $first ? ucfirst($name) : $name;
     }
 
     /** Why a started line can't leave the order (also when its product is swapped, since lines are matched by product). */

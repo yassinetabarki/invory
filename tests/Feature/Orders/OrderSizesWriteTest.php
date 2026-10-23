@@ -64,11 +64,11 @@ it('records a quantity per size, with a size left empty having no row, and a "On
         ->and($second->lines()->value('quantity'))->toBe(45);
 });
 
-it('refuses a size that is not a whole number from 0 to 1,000,000, a line with no unit or too many, and sizes of another list (S-60 AC-2)', function (?array $sizes, string $list, ?string $size, string $message) {
+it('refuses a size that is not a whole number from 0 to 1,000,000, a line with no unit or too many, and sizes of another list (S-60 AC-2)', function (?array $sizes, string $list, ?string $size, string $message, int $product = 1) {
     $typed = $sizes === null ? ['quantity' => '50'] : ['sizes' => sizeIds($sizes, $list)];
-    $key = $size === null ? 'lines.0.sizes' : 'lines.0.sizes.'.array_key_first(sizeIds([$size => 0]));
+    $key = $size === null ? 'lines.0.sizes' : 'lines.0.sizes.'.array_key_first(sizeIds([$size => 0], $list));
 
-    actingAs($this->user)->from(route('orders.create'))->post(route('orders.store'), validOrderPayload(['lines' => [['product_id' => pid(1), ...$typed]]]))
+    actingAs($this->user)->from(route('orders.create'))->post(route('orders.store'), validOrderPayload(['lines' => [['product_id' => pid($product), ...$typed]]]))
         ->assertRedirect(route('orders.create'))
         ->assertInertiaFlashMissing('toast');
 
@@ -77,10 +77,11 @@ it('refuses a size that is not a whole number from 0 to 1,000,000, a line with n
         ->and(session('errors')->get($key))->toBe([$message])
         ->and([Order::query()->count(), OrderLine::query()->count(), OrderLineSize::query()->count()])->toBe([0, 0, 0]);
 })->with([
-    'M -1' => [['S' => '10', 'M' => '-1'], SizeList::S_TO_XL, 'M', 'Enter a whole number from 0 to 1,000,000.'],
-    'M 2.5' => [['S' => '10', 'M' => '2.5'], SizeList::S_TO_XL, 'M', 'Enter a whole number from 0 to 1,000,000.'],
-    'M abc' => [['S' => '10', 'M' => 'abc'], SizeList::S_TO_XL, 'M', 'Enter a whole number from 0 to 1,000,000.'],
-    'M 1,000,001' => [['S' => '10', 'M' => '1000001'], SizeList::S_TO_XL, 'M', 'Enter a whole number from 0 to 1,000,000.'],
+    'M -1' => [['S' => '10', 'M' => '-1'], SizeList::S_TO_XL, 'M', 'M: Enter a whole number from 0 to 1,000,000.'],
+    'M 2.5' => [['S' => '10', 'M' => '2.5'], SizeList::S_TO_XL, 'M', 'M: Enter a whole number from 0 to 1,000,000.'],
+    'M abc' => [['S' => '10', 'M' => 'abc'], SizeList::S_TO_XL, 'M', 'M: Enter a whole number from 0 to 1,000,000.'],
+    'M 1,000,001' => [['S' => '10', 'M' => '1000001'], SizeList::S_TO_XL, 'M', 'M: Enter a whole number from 0 to 1,000,000.'],
+    'a shoe size is named "Size 36"' => [['36' => 'x', '37' => '4'], SizeList::EU_36_TO_46, '36', 'Size 36: Enter a whole number from 0 to 1,000,000.', 3],
     'every size empty' => [['S' => '', 'M' => ''], SizeList::S_TO_XL, null, 'Enter at least one unit of Denim Jacket.'],
     'every size 0' => [['S' => '0', 'M' => '0', 'L' => '0', 'XL' => '0'], SizeList::S_TO_XL, null, 'Enter at least one unit of Denim Jacket.'],
     'S 1,000,000 and M 1' => [['S' => '1000000', 'M' => '1'], SizeList::S_TO_XL, null, 'A line can hold up to 1,000,000 units.'],

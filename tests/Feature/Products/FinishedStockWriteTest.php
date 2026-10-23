@@ -81,17 +81,27 @@ it('refuses a bad count or the wrong sizes with one message and saves nothing (A
     $before = ProductSizeStock::query()->orderBy('id')->get()->toArray();
     $sizes = sizeIds(['S' => '3', 'M' => '0', 'L' => '5', 'XL' => '2']);
     $medium = array_key_first(sizeIds(['M' => '']));
+    $product = $this->jacket;
+
+    // The shoe row types a letter in size 36 of the sneaker, whose list is 36 to 46: `{M}` then stands for that size.
+    if ($case === 'shoe letters') {
+        $product = demoProduct('PRD-SNK-003');
+        $sizes = array_map(fn (): string => '1', sizeIds(array_fill_keys(range(36, 46), ''), SizeList::EU_36_TO_46));
+        $medium = array_key_first(sizeIds(['36' => ''], SizeList::EU_36_TO_46));
+        $sizes[$medium] = 'x';
+    }
 
     $sizes = match ($case) {
         'shoe size added' => $sizes + sizeIds(['36' => '1'], SizeList::EU_36_TO_46),
         'XL missing' => array_diff_key($sizes, sizeIds(['XL' => ''])),
+        'shoe letters' => $sizes,
         default => [$medium => $case] + $sizes,
     };
 
     actingAs($this->user)
-        ->from(route('products.show', $this->jacket))
-        ->put(route('products.stock.update', $this->jacket), ['sizes' => $sizes])
-        ->assertRedirect(route('products.show', $this->jacket))
+        ->from(route('products.show', $product))
+        ->put(route('products.stock.update', $product), ['sizes' => $sizes])
+        ->assertRedirect(route('products.show', $product))
         ->assertInertiaFlashMissing('toast');
 
     $key = str_replace('{M}', (string) $medium, $key);
@@ -100,10 +110,11 @@ it('refuses a bad count or the wrong sizes with one message and saves nothing (A
         ->and(session('errors')->get($key))->toBe([$message])
         ->and(ProductSizeStock::query()->orderBy('id')->get()->toArray())->toBe($before);
 })->with([
-    'negative' => ['-1', 'sizes.{M}', WHOLE_NUMBER],
-    'decimal' => ['2.5', 'sizes.{M}', WHOLE_NUMBER],
-    'letters' => ['abc', 'sizes.{M}', WHOLE_NUMBER],
-    'above a million' => ['1000001', 'sizes.{M}', WHOLE_NUMBER],
+    'negative' => ['-1', 'sizes.{M}', 'M: '.WHOLE_NUMBER],
+    'decimal' => ['2.5', 'sizes.{M}', 'M: '.WHOLE_NUMBER],
+    'letters' => ['abc', 'sizes.{M}', 'M: '.WHOLE_NUMBER],
+    'above a million' => ['1000001', 'sizes.{M}', 'M: '.WHOLE_NUMBER],
+    'a shoe size is named "Size 36"' => ['shoe letters', 'sizes.{M}', 'Size 36: '.WHOLE_NUMBER],
     'a size of the shoe list added' => ['shoe size added', 'sizes', SIZES_CHANGED],
     'a size missing' => ['XL missing', 'sizes', SIZES_CHANGED],
 ]);
