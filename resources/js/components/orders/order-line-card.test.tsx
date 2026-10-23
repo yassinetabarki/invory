@@ -206,18 +206,63 @@ describe('<OrderLineCard>', () => {
         );
 
         it.each([
-            ['S 10 · M 20 · L 15 · XL 5', sizedJacketLine],
-            ['S 10 · XL 5', sOnlyAndXl],
-            ['One size 50', jacketLine()],
-            [null, tote],
-        ])('writes %j under the line heading', (expected, line) => {
+            [
+                'four chips and the sizes spoken once',
+                sizedJacketLine,
+                [
+                    ['S', '10'],
+                    ['M', '20'],
+                    ['L', '15'],
+                    ['XL', '5'],
+                ],
+                'S 10, M 20, L 15, XL 5',
+            ],
+            [
+                'no chip for a size at 0',
+                sOnlyAndXl,
+                [
+                    ['S', '10'],
+                    ['XL', '5'],
+                ],
+                'S 10, XL 5',
+            ],
+            [
+                'one chip on a line recorded before sizes',
+                jacketLine(),
+                [['One size', '50']],
+                'One size 50',
+            ],
+            ['no chip for a "One size" product', tote, [], null],
+        ])('AC-1: %s', (_name, line, chips, spoken) => {
             renderCard(line);
 
             const heading = screen.getByRole('heading', { level: 3 });
 
-            expect(heading.nextElementSibling?.textContent ?? null).toBe(
-                expected,
+            expect(heading).toHaveTextContent(
+                `${line.product.name} · ${line.product.sku} · ${line.quantity} units`,
             );
+            // The SKU is in the number font.
+            expect(screen.getByText(line.product.sku)).toHaveClass('font-mono');
+
+            const row = heading.parentElement?.querySelector(
+                '[aria-hidden="true"]',
+            );
+
+            expect(
+                Array.from(row?.children ?? []).map((chip) => [
+                    chip.children[0].textContent,
+                    chip.children[1].textContent,
+                ]),
+            ).toEqual(chips);
+
+            if (spoken === null) {
+                expect(row).toBeNull();
+                return;
+            }
+
+            // Heard once, as one line, not as one chip per size.
+            expect(screen.getAllByText(spoken)).toHaveLength(1);
+            expect(screen.getByText(spoken)).toHaveClass('sr-only');
         });
 
         it('shows a table with a row per size and the buttons in the Total row only', async () => {

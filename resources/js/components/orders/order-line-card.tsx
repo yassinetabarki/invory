@@ -4,10 +4,11 @@ import { lineHeadingId, MOVES } from '@/components/orders/move-units-dialog';
 import { ProgressStatus } from '@/components/orders/progress-status';
 import { SizeStagesTable } from '@/components/orders/size-stages-table';
 import { formatUnits, StageFigure } from '@/components/orders/stage-figure';
+import { SizeChips } from '@/components/shared/size-chips';
 import { Button } from '@/components/ui/button';
 import { useAppSettings } from '@/hooks/use-app-settings';
 import { formatCount } from '@/lib/format';
-import { formatSizes, orderLineSizeCounts } from '@/lib/sizes';
+import { orderLineSizeCounts } from '@/lib/sizes';
 import { show } from '@/routes/products';
 import type { OrderLine, OrderLineMove, OrderStage } from '@/types/domain';
 
@@ -62,12 +63,6 @@ export function OrderLineCard({ line, onMove }: OrderLineCardProps) {
     const uid = useId();
     const { locale } = useAppSettings();
     const { product } = line;
-    // "S 10 · M 20" on a counted-by-size line, "One size 50" on one recorded before sizes; nothing for a one-size product.
-    const sizesText =
-        line.size_mode === 'one_size'
-            ? ''
-            : formatSizes(orderLineSizeCounts(line.sizes), locale);
-
     // The buttons that move units out of a stage.
     const stageButtons = ({ moves }: StageSpec) =>
         moves.map(([move, label]) => {
@@ -111,12 +106,15 @@ export function OrderLineCard({ line, onMove }: OrderLineCardProps) {
                                 {product.name}
                             </Link>
                         )}{' '}
-                        · {product.sku} · {formatUnits(line.quantity, locale)}
+                        ·{' '}
+                        <span className="font-mono text-[0.8125rem] tabular-nums">
+                            {product.sku}
+                        </span>{' '}
+                        · {formatUnits(line.quantity, locale)}
                     </h3>
-                    {sizesText && (
-                        <p className="text-sm text-muted-foreground">
-                            {sizesText}
-                        </p>
+                    {/* Chips of a counted-by-size line; one "One size 50" chip on a line recorded before sizes; none for a one-size product. */}
+                    {line.size_mode !== 'one_size' && (
+                        <SizeChips sizes={orderLineSizeCounts(line.sizes)} />
                     )}
                 </div>
                 <div className="flex flex-wrap items-center gap-3">

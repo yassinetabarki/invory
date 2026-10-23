@@ -7,11 +7,10 @@ import {
     unitsWord,
 } from '@/components/products/product-hero';
 import { UpdateStockDialog } from '@/components/products/update-stock-dialog';
+import { SizeChips } from '@/components/shared/size-chips';
 import { Button } from '@/components/ui/button';
 import { useAppSettings } from '@/hooks/use-app-settings';
 import { formatCount } from '@/lib/format';
-import { formatSizes, sizeLabelInText } from '@/lib/sizes';
-import { cn } from '@/lib/utils';
 import type { FinishedStock, Product } from '@/types/domain';
 
 /**
@@ -55,45 +54,15 @@ export function FinishedStockFigure({
                 <span className={UNITS}>{unitsWord(stock.units)}</span>
             </span>
             {showSizes && (
-                <>
-                    <p className="sr-only">
-                        In stock per size:{' '}
-                        {formatSizes(
-                            stock.sizes.map(({ size, units }) => ({
-                                label: size.label,
-                                units,
-                            })),
-                            locale,
-                            { keepZeros: true, separator: ', ' },
-                        )}
-                    </p>
-                    <div
-                        aria-hidden="true"
-                        className="mt-2 flex flex-wrap gap-1.5"
-                    >
-                        {stock.sizes.map(({ size, units }) => (
-                            <span
-                                key={size.id}
-                                data-zero={units === 0 ? '' : undefined}
-                                className="inline-flex items-stretch overflow-hidden rounded-md border text-sm leading-none"
-                            >
-                                <b className="bg-muted px-2 py-1.5 font-semibold">
-                                    {sizeLabelInText(size.label)}
-                                </b>
-                                <span
-                                    className={cn(
-                                        'px-2 py-1.5 font-mono text-[0.8125rem] tabular-nums',
-                                        units === 0
-                                            ? 'font-normal text-muted-foreground'
-                                            : 'font-semibold',
-                                    )}
-                                >
-                                    {formatCount(units, locale)}
-                                </span>
-                            </span>
-                        ))}
-                    </div>
-                </>
+                <SizeChips
+                    sizes={stock.sizes.map(({ size, units }) => ({
+                        label: size.label,
+                        units,
+                    }))}
+                    keepZeros
+                    spokenPrefix="In stock per size: "
+                    className="mt-2"
+                />
             )}
             <UpdateStockDialog
                 product={product}

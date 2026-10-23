@@ -60,7 +60,7 @@ function ProductLines({ order }: { order: Order }) {
 
                 return (
                     <li key={line.id} className="break-words">
-                        <span className="tabular-nums">
+                        <span className="font-mono tabular-nums">
                             {formatCount(line.quantity, locale)}
                         </span>{' '}
                         ×{' '}
@@ -75,7 +75,10 @@ function ProductLines({ order }: { order: Order }) {
                             </Link>
                         )}
                         {sizes && (
-                            <span className="tabular-nums"> ({sizes})</span>
+                            <span className="text-muted-foreground tabular-nums">
+                                {' '}
+                                ({sizes})
+                            </span>
                         )}
                     </li>
                 );
