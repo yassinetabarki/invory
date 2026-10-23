@@ -1,6 +1,6 @@
 # Invory — product roadmap
 
-> Owner: **product-owner** · Approved by: the human · Last updated: 2026-10-23 (S-70 "Sizes look the same on every screen" added as a Should, next in line, from your request, and approved, so `Ready`; S-69 merged into it; earlier the same day, S-56 done, accepted and committed on `main` as `83062eb`: each product shows its finished units per size; S-68 widened to the product page and the materials screens; earlier the same day, D-18: Phase 5 stays open for its Shoulds S-56, S-57, S-65, S-66, S-67 and S-51, in that order; earlier the same day, S-60 and S-61 done, accepted after your click-through, so every Phase 5 Must is done and its exit criteria are met; S-68 and S-69 added as Coulds from the design review; earlier, 2026-10-22, D-17: the four size cards S-60, S-61, S-56 and S-57 approved, `Ready`, S-56 and S-57 with a phone-width criterion each; earlier the same day, S-58 done, accepted after your click-through; S-65 "Close a fully shipped order" approved, `Ready`, a Should after S-57, with S-66 and S-67 as Shoulds after it; before that, S-50 done, accepted; earlier, 2026-10-21: F-41, S-49 and S-53 done, accepted after your click-through; S-58 card and Technical work approved; earlier, 2026-10-18: D-15 and D-16 products by size: S-58, S-60, S-61 added to Phase 5, S-56 and S-57 per size, S-52 and S-54 Won't (this time); earlier, 2026-10-16: D-11 decided with your final answers: F-41, S-49 and S-53 `Planned`, S-50 `Ready`, S-56 and S-57 added; 2026-10-15: S-48 done, the first Phase 5 story; D-12: Phase 5 "Customer orders" started, the rest of Phase 4 on hold)
+> Owner: **product-owner** · Approved by: the human · Last updated: 2026-10-23 (S-70 "Sizes look the same on every screen" done: accepted after one fix round and your click-through, six commits `b200905` … `4d646e9` on `main`; S-57 is next. Earlier the same day, S-70 was added as a Should, next in line, from your request, and approved, so `Ready`; S-69 merged into it; earlier the same day, S-56 done, accepted and committed on `main` as `83062eb`: each product shows its finished units per size; S-68 widened to the product page and the materials screens; earlier the same day, D-18: Phase 5 stays open for its Shoulds S-56, S-57, S-65, S-66, S-67 and S-51, in that order; earlier the same day, S-60 and S-61 done, accepted after your click-through, so every Phase 5 Must is done and its exit criteria are met; S-68 and S-69 added as Coulds from the design review; earlier, 2026-10-22, D-17: the four size cards S-60, S-61, S-56 and S-57 approved, `Ready`, S-56 and S-57 with a phone-width criterion each; earlier the same day, S-58 done, accepted after your click-through; S-65 "Close a fully shipped order" approved, `Ready`, a Should after S-57, with S-66 and S-67 as Shoulds after it; before that, S-50 done, accepted; earlier, 2026-10-21: F-41, S-49 and S-53 done, accepted after your click-through; S-58 card and Technical work approved; earlier, 2026-10-18: D-15 and D-16 products by size: S-58, S-60, S-61 added to Phase 5, S-56 and S-57 per size, S-52 and S-54 Won't (this time); earlier, 2026-10-16: D-11 decided with your final answers: F-41, S-49 and S-53 `Planned`, S-50 `Ready`, S-56 and S-57 added; 2026-10-15: S-48 done, the first Phase 5 story; D-12: Phase 5 "Customer orders" started, the rest of Phase 4 on hold)
 > Format: **Now / Next / Later**, organised by outcomes, not dates. Each phase is one slice of the story map with one goal, a MoSCoW-labelled
 > set of stories and exit criteria. Detailed stories live in [BACKLOG.md](BACKLOG.md); progress lives in [STATUS.md](STATUS.md).
 
@@ -13,7 +13,7 @@ A small fashion workshop knows, at any moment, **what each product costs to make
 | Activity | Built (Phases 1–3) | Phase 4 | Phase 5 (orders) | Phase 6 (speed) | Phase 7 (go-live) | Phase 8 + Vision |
 |---|---|---|---|---|---|---|
 | **Keep stock of materials** | List, filters, CRUD, photo, restock, history, status badges | Acceptance | | History on demand (S-33) | | Suppliers and purchase orders, CSV import (S-11) |
-| **Define products** | Product CRUD, composition editor, selling price, photo | Acceptance; overhead cost optional (S-43, done) | Sizes from the category (S-58, done); finished products in stock per size (S-56, done); units on order on the product page (S-51) | Instant edit page (S-35) | | More fabric for bigger sizes (S-63), own sole per shoe size (S-64), sub-assemblies, unit conversions |
+| **Define products** | Product CRUD, composition editor, selling price, photo | Acceptance; overhead cost optional (S-43, done) | Sizes from the category (S-58, done); finished products in stock per size (S-56, done); sizes look the same on every screen (S-70, done); units on order on the product page (S-51) | Instant edit page (S-35) | | More fabric for bigger sizes (S-63), own sole per shoe size (S-64), sub-assemblies, unit conversions |
 | **Take client orders** | Nothing yet | | Orders with several products (S-48, done); to start, in cutting, ready to ship, shipped per line (S-49, done); cutting takes materials out of stock (S-53, done); progress and totals on the list (S-50, done); a quantity per size (S-60, done) and the stages per size (S-61, done); cancel an order (S-57); close a fully shipped order (S-65), with its shipments (S-66) and the materials it used (S-67); open orders by size (S-62) | | | A client list |
 | **Know cost and capacity** | Unit cost, can produce, bottleneck, next limit, margin, "what you can make with it" | Acceptance, E2E (S-08) | | Fast at 500 products (S-23, S-27) | | Live cost preview (S-09), production planner (S-10), cost history |
 | **Sell** | Sales log, totals, filters, record/edit/delete | Acceptance | | Instant delete feedback (S-36) | | Custom date range (S-37) |
@@ -40,8 +40,8 @@ units are counted per size on orders, through the stages and on the shelf, and e
 done** (accepted 2026-10-22 after your click-through): every product has the sizes of its category. **S-60 and S-61 are done**
 (accepted 2026-10-23 after your one click-through, one commit `1db11bb`): an order holds a quantity per size, and every size is followed
 through the four stages. **S-56 is done** (accepted 2026-10-23, one commit `83062eb`): each product shows "In stock" with its
-units per size, and "Update stock" sets them. Next comes S-70 (sizes look the same on every screen, `Ready`, your request of
-2026-10-23), then S-57, written per size, `Ready` since 2026-10-22 (D-17). On 2026-10-22 you also approved
+units per size, and "Update stock" sets them. **S-70 is done** (accepted 2026-10-23 after your click-through, six commits
+`b200905` … `4d646e9`): sizes look the same on every screen. Next comes S-57, written per size, `Ready` since 2026-10-22 (D-17). On 2026-10-22 you also approved
 S-65 (close a fully shipped order, `Ready`), from your design; it comes after S-57, followed by S-66 and S-67, whose cards come later.
 
 | Priority               | Story                                                         | Size |
@@ -54,7 +54,7 @@ S-65 (close a fully shipped order, `Ready`), from your design; it comes after S-
 | Must                   | S-60 Order a product in several sizes (done)                  | M    |
 | Must                   | S-61 Follow each size through the stages (done)               | M    |
 | Should                 | S-56 Finished products in stock, per size (done)              | M    |
-| Should                 | S-70 Sizes look the same on every screen                      | M    |
+| Should                 | S-70 Sizes look the same on every screen (done)               | M    |
 | Should                 | S-57 Cancel an order                                          | M    |
 | Should                 | S-65 Close a fully shipped order                              | M    |
 | Should                 | S-66 Each shipment is remembered                              | M    |
@@ -67,7 +67,7 @@ S-65 (close a fully shipped order, `Ready`), from your design; it comes after S-
 | Tech allowance (~15 %) | F-41 only (each material's total need, for S-53; done)        | —    |
 
 With the size stories the Musts were about 70 % of the phase, above the usual 60 %. Every Must is done since 2026-10-23 (S-48, S-49,
-S-53, S-50, S-58, S-60, S-61). Order of what's left: S-70 (your request of 2026-10-23, `Ready`), then S-57 (D-18, D-15, D-16; S-56 done 2026-10-23), then S-65, S-66, S-67 and S-51. S-52 and S-54 became
+S-53, S-50, S-58, S-60, S-61). Order of what's left: S-57 (D-18, D-15, D-16; S-56 and S-70 done 2026-10-23), then S-65, S-66, S-67 and S-51. S-52 and S-54 became
 Won't (this time) to make room. If time runs short, S-68 slips first (S-69 is now part of S-70), then S-62, S-67, S-66 and S-51.
 
 - An order holds one or more products, each with its own quantity and its own four stages: To start, In cutting, Ready to ship, Shipped.

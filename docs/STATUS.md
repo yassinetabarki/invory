@@ -13,10 +13,10 @@
 
 | | Status | In one line |
 |---|---|---|
-| **Overall** | 🟡 **AMBER** | The MVP is built and every automated check passes on this computer. The checks now also run on GitHub, but nobody has seen a result yet. You haven't signed the MVP off. Since 2026-10-15 Phase 5 (customer orders) is under way: S-48, S-49, S-53, S-50, S-58, S-60, S-61 and S-56 are done, so orders have their own page and their four stages, cutting takes the materials out of stock, the Orders list shows each order's progress and the open-order totals, every product has the sizes of its category, orders count and move each size, and each product shows its finished units on the shelf per size. Every Phase 5 Must is done, and Phase 5 stays open for its Shoulds (D-18): S-56 is done, S-57 (cancel an order) is next. The rest of Phase 4 is on hold (D-12). |
-| Scope (MVP features) | 🟡 AMBER | Every feature in the MVP goal and the 2026-10-08 scope additions works on real data. The preview layer is gone. Since 2026-10-15 every account sees only its own workshop's materials, products and sales (S-44, D-9), records its clients' orders (S-48), follows each product line through the four stages (S-49), cutting takes the materials out of stock (S-53), and the Orders list shows each order's progress, a Status filter and the open-order totals (S-50). Every product has the sizes of its category (S-58), and an order holds a quantity per size that moves size by size through the stages (S-60, S-61). Each product shows its finished units on the shelf per size, and "Update stock" sets them (S-56). Units and categories are still shared until S-45. |
-| Quality (automated) | 🟢 GREEN | All automated checks pass on this computer (tech-lead's S-56 fix-round report, 2026-10-23): 2 555 backend tests (2 503 passed, 52 that run only on PostgreSQL skipped), 1 308 screen tests, code style, static analysis, type check and production build; the 2 browser tests (53 checks) passed again on the main checkout after the commit. The full PostgreSQL parity suite passed 2 555 of 2 555 in S-56's first delivery the same day; the fix round changed only the screens. Not checked by any test: 375 px and dark mode in a real browser (your click-through). |
-| Product acceptance | 🔴 RED | The MVP as a whole isn't signed off: the Phase 2 click-through has been pending since 2026-10-08, and the MVP walkthrough (S-30) is on hold since 2026-10-15 (D-12). S-43, S-44, S-48, S-49, S-53, S-50, S-58, S-60, S-61 and S-56 were accepted one by one (S-49 and S-53 in one click-through, 2026-10-21; S-50 and S-58 on 2026-10-22, S-58 after your click-through; S-60 and S-61 in one click-through, 2026-10-23; S-56 on 2026-10-23, when you had it committed). |
+| **Overall** | 🟡 **AMBER** | The MVP is built and every automated check passes on this computer. The checks now also run on GitHub, but nobody has seen a result yet. You haven't signed the MVP off. Since 2026-10-15 Phase 5 (customer orders) is under way: S-48, S-49, S-53, S-50, S-58, S-60, S-61, S-56 and S-70 are done, so orders have their own page and their four stages, cutting takes the materials out of stock, the Orders list shows each order's progress and the open-order totals, every product has the sizes of its category, orders count and move each size, each product shows its finished units on the shelf per size, and sizes look the same on every screen. Every Phase 5 Must is done, and Phase 5 stays open for its Shoulds (D-18): S-56 and S-70 are done, S-57 (cancel an order) is next. The rest of Phase 4 is on hold (D-12). |
+| Scope (MVP features) | 🟡 AMBER | Every feature in the MVP goal and the 2026-10-08 scope additions works on real data. The preview layer is gone. Since 2026-10-15 every account sees only its own workshop's materials, products and sales (S-44, D-9), records its clients' orders (S-48), follows each product line through the four stages (S-49), cutting takes the materials out of stock (S-53), and the Orders list shows each order's progress, a Status filter and the open-order totals (S-50). Every product has the sizes of its category (S-58), and an order holds a quantity per size that moves size by size through the stages (S-60, S-61). Each product shows its finished units on the shelf per size, and "Update stock" sets them (S-56). Sizes look the same on every screen: the same chips, badge, tags and size fields everywhere, a size's message under the row naming the size, and "At least 10" under a started size in "Edit order" (S-70). Units and categories are still shared until S-45. |
+| Quality (automated) | 🟢 GREEN | All automated checks pass on this computer (tech-lead's S-70 delivery report, 2026-10-23): 2 558 backend tests (2 506 passed, 52 that run only on PostgreSQL skipped), 1 321 screen tests, code style, static analysis, type check, production build, the full PostgreSQL parity suite (2 558 of 2 558) and the 2 browser tests. S-70's fix round changed only the screens, and every gate and the browser tests passed again after it. The size fields were measured in a real browser at 375 px and 320 px; you checked the rest of 375 px and dark mode in your click-through. |
+| Product acceptance | 🔴 RED | The MVP as a whole isn't signed off: the Phase 2 click-through has been pending since 2026-10-08, and the MVP walkthrough (S-30) is on hold since 2026-10-15 (D-12). S-43, S-44, S-48, S-49, S-53, S-50, S-58, S-60, S-61, S-56 and S-70 were accepted one by one (S-49 and S-53 in one click-through, 2026-10-21; S-50 and S-58 on 2026-10-22, S-58 after your click-through; S-60 and S-61 in one click-through, 2026-10-23; S-56 on 2026-10-23, when you had it committed; S-70 on 2026-10-23 after your click-through). |
 | Dev environment | 🟡 AMBER | The app runs on `php artisan serve` (http://localhost:8000); Docker runs PostgreSQL and the test mailbox (http://localhost:8026). Sail is gone (S-29, done 2026-10-15). Not yet seen: a password-reset email in the test mailbox, and the page-speed target (S-18), which may not hold on the built-in server (known gaps K-3, K-4). |
 | Release readiness | 🔴 RED | Missing: the MVP sign-off (S-30), a live server with a chosen database, and separate units and categories for each workshop (S-45). Both S-30 and S-45 are on hold (D-12) and must be done before go-live. S-08 and S-29 were closed as they stood (D-13), leaving four known gaps for go-live (§6.4). |
 | Process | 🟡 AMBER | Roles are split: product-owner (what and why) and tech-lead (how). Phase 5 started before Phase 4 closed, by your choice (D-12). S-08 and S-29 were closed without their last checks, by your choice (D-13). |
@@ -25,11 +25,12 @@
 and S-53** (accepted 2026-10-21 after your one click-through; built in one build and landed on `main` together, `e99615e` … `8ab9df8`,
 closing docs `f803cb1`), **S-50** (accepted 2026-10-22; `ba0a0cd`, `74f05a8`, `a23a5d7`, merged in `0270014`), **S-58**
 (accepted 2026-10-22 after your click-through; `2f02d87`, `9eeee19`, `f1074b6`, `ce9a36f`, `eb5ff13`, docs `69b064b`; on `main`),
-**S-60 and S-61** (accepted 2026-10-23 after your one click-through; one commit `1db11bb`, on local `main`, not pushed), and **S-56**
-(accepted 2026-10-23; one commit `83062eb`, on local `main`, not pushed).
+**S-60 and S-61** (accepted 2026-10-23 after your one click-through; one commit `1db11bb`, on local `main`, not pushed), **S-56**
+(accepted 2026-10-23; one commit `83062eb`, on local `main`, not pushed), and **S-70** (accepted 2026-10-23 after one fix round and
+your click-through; six commits `b200905` … `4d646e9`, on local `main`, not pushed).
 **Every Phase 5 Must is done, and the phase's exit criteria are met.** Phase 5 stays open for its Shoulds (D-18, 2026-10-23), in
-your order: S-56 (done), then S-70 "Sizes look the same on every screen" (`Ready`, your request of 2026-10-23, card approved the same
-day), S-57 (`Ready` since 2026-10-22, D-17), then S-65 "Close a fully shipped order" (`Ready`), then S-66, S-67
+your order: S-56 (done), S-70 "Sizes look the same on every screen" (done), then S-57 "Cancel an order" (`Ready` since 2026-10-22,
+D-17), then S-65 "Close a fully shipped order" (`Ready`), then S-66, S-67
 and S-51 (`Idea`, cards later). Phase 5 tech allowance: F-41 only, now done. Nothing is in progress, so the two-story limit is free.
 **Phase 4: MVP release readiness** is on hold for later; S-08 and S-29 are done (closed as they stood, D-13; see [ROADMAP.md](ROADMAP.md)).
 
@@ -44,6 +45,24 @@ and S-51 (`Idea`, cards later). Phase 5 tech allowance: F-41 only, now done. Not
 | D-5 | Production database host (needs PostgreSQL 13+ and `pg_trgm`) | Before S-26; not urgent |
 | D-6 | Delete the 5 merged branches and the stale worktree `.claude/worktrees/fix-hover-prefetch-bug`? | Yes (nothing unmerged) |
 | D-19 | The canvas note "sizenote" says zero sizes are left out of summaries, while "In stock" lists "M 0" greyed (designer's Q8). (a) You edit the note to "Zero sizes are left out of order summaries (order page, Orders list, history). The In stock figure lists every size, 0 greyed." · (b) The designer drafts it on the canvas for your review | (a), the designer's default; no screen changes either way |
+
+**Decided on 2026-10-23: S-70 accepted.** You accepted S-70 after your click-through ("Click-through passed. I accept S-70."). It
+is on `main` as six commits, `b200905`, `ce9ca1d`, `d6a6815`, `99daefe`, `b28eaad` and `4d646e9`, and its criteria are ticked with them.
+- **One fix round before your click-through**, from the product-owner's and the designer's reviews (all six items):
+  - each size label sits with its own field;
+  - from tablet width, size fields are 8 px apart;
+  - on a phone, the "Start cutting" and "Update stock" titles wrap before the ✕;
+  - "At least 10" stays one phrase, with the lock above it when it doesn't fit;
+  - the SKU in a line heading stays bold, one size smaller than the product name, as the board shows;
+  - the sizes badge is as heavy as the other badges.
+- **Your choices:**
+  - The "At least 10" hint stays grey like the other hints, not the board's blue. The board gets a note.
+  - Kept as built: on a phone, "At least 1,000" and larger may still wrap inside a size field.
+  - Kept as built: from tablet width, a size field is 80 px wide with 8 px of space inside, just enough for 7 digits.
+  - The Orders list keeps the counts in brackets grey, in the normal font, as the board shows.
+- **Into S-68:**
+  - The close ✕ of every window is a 16 px target; Invory's rule is 44 px.
+  - The product picker of "New order" and "Edit order" cuts off the product's name at 375 px. It did before S-70 too.
 
 **Decided on 2026-10-23: S-70 approved.** You asked "start S-58 UI": the designer compared the board "Size building blocks and
 states" with the app, and you answered its questions. Every gap goes into one story, S-70 "Sizes look the same on every screen",
@@ -308,6 +327,7 @@ a PostgreSQL parity suite (last green: 2 555 of 2 555 on 2026-10-23, during S-56
 | **5 — Customer orders** | S-58 every product gets the sizes of its category (D-15, D-16) | 2026-10-22 (card `506a56c`, Technical work `3a6a008`, on `main`; S-58-a `2f02d87`, S-58-b `9eeee19`, S-58-c `f1074b6`, S-58-d `ce9a36f`, S-58-e `eb5ff13`, docs `69b064b`; on `main`) | ✅ Done, accepted 2026-10-22 after your click-through. Tech-lead APPROVED, every step in round 1 except S-58-b (round 2). Every gate green: 2 463 backend tests, 1 225 screen tests, 2 browser tests. Full PostgreSQL parity not run then (your choice); it passed on 2026-10-23 with S-60 and S-61. New tech debt F-66 |
 | **5 — Customer orders** | S-60 order a product in several sizes · S-61 follow each size through the stages (D-15, D-16, D-17) | 2026-10-23 (cards `97edab1`, Technical work `1ad079b`; one commit `1db11bb` for all 8 steps and the fix round; on local `main`, not pushed) | ✅ Done, accepted 2026-10-23 after your one click-through on a throwaway database. Tech-lead APPROVED (S-60-a and S-60-c in round 2, the rest in round 1); one fix round after the design review (F1–F9). Every gate green: 2 521 backend tests, PostgreSQL parity 2 521, 1 278 screen tests, 2 browser tests. F-64 closed; new tech debt F-67, F-68 |
 | **5 — Customer orders** | S-56 finished products in stock, per size (D-15, D-16, D-17) | 2026-10-23 (card `97edab1`, Technical work `e9c5432`; one commit `83062eb` for all 5 steps and the fix round; on local `main`, not pushed) | ✅ Done, accepted 2026-10-23 when you had it committed. Tech-lead APPROVED, every step in round 1; a fix round after acceptance brought the screens in line with the design board (AC-2, AC-6 rewritten). Every gate green: 2 555 backend tests, PostgreSQL parity 2 555 (first delivery), 1 308 screen tests, 2 browser tests. New tech debt F-69, F-70, F-71 |
+| **5 — Customer orders** | S-70 sizes look the same on every screen (from the design board; takes in S-69) | 2026-10-23 (card `4de57e8`, Technical work `1591dc4`; S-70-a `b200905`, S-70-b `ce9ca1d`, S-70-d `d6a6815`, S-70-c `99daefe`, S-70-e `b28eaad`, S-70-f `4d646e9`; on local `main`, not pushed) | ✅ Done, accepted 2026-10-23 after your click-through. Tech-lead APPROVED, every step in round 1; one fix round after the product-owner's and the designer's reviews (six layout items). Every gate green: 2 558 backend tests, PostgreSQL parity 2 558, 1 321 screen tests, 2 browser tests |
 
 All phase branches (`phase/1-materials`, `phase/2-ui-first-preview`, `phase/3-performance-spa-data`, `fix/rl-02-product-show-loading`,
 `worktree-fix-hover-prefetch-bug`) are fully merged into `main`. They and the worktree under `.claude/worktrees/` can be deleted (human decision D-6).
@@ -411,19 +431,18 @@ The plan headers were corrected on 2026-10-14, and [plans/README.md](plans/READM
 
 ## 9. Next steps (recommended order)
 **From 2026-10-15 (D-12): Phase 5 first.** Updated 2026-10-23.
-1. Done 2026-10-23: you accepted S-56; it is on `main` as `83062eb`, its criteria are ticked with it, and BACKLOG, ROADMAP and this
-   report are updated on the main checkout. Main session: commit these closing docs on `main` (your yes). Push when you choose; CI
-   runs on the push, and only you can see the result.
+1. Done 2026-10-23: you accepted S-70. It is on `main` as six commits (`b200905` … `4d646e9`), and its criteria are ticked with
+   them. The card, BACKLOG, ROADMAP and this report were updated on its build branch. Main session: commit these closing docs (your
+   yes) so they reach `main`. Local `main` is 35 commits ahead of GitHub; push when you choose. CI runs on the push, and only you can
+   see the result.
 2. Main session, with your yes: migrate `laravel` (R-19). Done 2026-10-23: the old S-56 worktree and branch were removed without
    merging (R-20).
-3. Human, in a real browser: a quick look at "In stock" and "Update stock" at 375 px and in dark mode, which no test checks. Anything
-   off becomes a new story.
-4. Done 2026-10-23: you approved the S-70 card ("Sizes look the same on every screen", from the design board; it takes in S-69), so
-   it is `Ready`. Main session: commit the card on `main`. Tech-lead: plan S-70, then S-57 (cancel an order, `Ready`), from a session
-   on the main checkout. After them come S-65 (`Ready`), S-66, S-67 and S-51.
+3. Done 2026-10-23: your S-70 click-through covered "In stock", "Update stock" and every size screen at 375 px and in dark mode.
+4. Next: S-57 "Cancel an order" (`Ready`). Tech-lead: plan it from a session on the main checkout. After it come S-65 (`Ready`),
+   S-66, S-67 and S-51.
 5. Human: D-19 (the canvas note "sizenote").
 6. Product-owner, from a session on the main checkout: write the S-68 card when it comes up, now covering the order screens, the
-   product page and the materials screens (the size fields moved to S-70).
+   product page, the materials screens, every window's close ✕ and the cut-off product picker (both added at S-70's acceptance).
 7. Tech-lead: F-60 to F-63, F-65 to F-71 are offered for a tech allowance (F-64 was closed by S-60).
 8. The rest of Phase 4 waits; S-45, S-30 and the known gaps K-1 to K-4 are dealt with before go-live (Phase 7).
 
