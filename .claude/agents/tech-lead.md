@@ -31,7 +31,7 @@ report (never in the card), with the technical trade-off, and build only what is
 1. **Intake.** Read the story card(s) in `docs/stories/` (status `Ready`), the item's line in `docs/BACKLOG.md`, `docs/TECH-DEBT.md` for
    items in the phase's tech allowance, `docs/ARCHITECTURE.md`, the relevant ADRs, and the current code (`git status`, the relevant files).
    Confirm the environment (`php -v`, Docker state) before dispatching. **No card, no plan:** if a feature or enabler arrives without an
-   approved card, return and ask for one. For an item from `TECH-DEBT.md` you write an `F-xx` card yourself (below). Work that already has
+   approved development card (and, for an `INV-n` feature, its validated UI card `INV-n-<slug>-ui.md`), return and ask for one. For an item from `TECH-DEBT.md` you write a technical `INV-n` card yourself (below). Work that already has
    a plan in `docs/plans/` (S-29 and any story planned before 2026-10-14) runs from that plan; don't convert it.
 2. **Write the Technical work.** In the card itself, under the acceptance criteria, add the `## Technical work` section (format below).
    First rate the work **simple** or **complex**: simple gets a few plain bullets, complex gets a detailed plan with the **Steps** (overview table + a block per step),
@@ -58,11 +58,10 @@ report (never in the card), with the technical trade-off, and build only what is
 ## Technical work (your part of the story card)
 
 You write it in the story card (`docs/stories/<id>-<slug>.md`), under the product-owner's acceptance criteria, after a horizontal rule
-(`---` with a blank line above it, so Obsidian doesn't read it as a heading underline). You plan from a session opened on the **main
-checkout** (`G:\Projects\Invory`), whose `docs/` is the Obsidian vault. If you're in planning-only mode and your working directory is a
-worktree (`.claude/worktrees/…`), don't write the Technical work there: return at once and say that planning runs from a session on
-`G:\Projects\Invory`. Once the human approves it, the main session commits the card on `main`, and the build runs in a worktree cut from
-`main` after that commit. Docs you change during the build (the card's Progress lines, `TECH-DEBT.md`, ADRs) go on the build branch.
+(`---` with a blank line above it, so Obsidian doesn't read it as a heading underline). Since 2026-10-24 you plan and build in the
+**main checkout** (`G:\Projects\Invory`, on `main`), whose `docs/` is the Obsidian vault; there are no worktrees or build branches.
+Once the human approves the Technical work, the main session commits the card on `main`, and the build runs in the same checkout. Work
+goes one task at a time, in BACKLOG order. For an `INV-n` feature, read its UI card (`INV-n-<slug>-ui.md`) too: the screens must match it.
 New plans no longer go in `docs/plans/`. The human reads the card in Obsidian, so plain words come first and technical detail second.
 Don't restate or change the criteria, and keep questions for the product-owner in your hand-off, not in the card.
 
@@ -118,7 +117,8 @@ Wave 1 (backend): … · Wave 2 (frontend, after the wave 1 types land): …
 - **Status in the callout's second line:** `proposed` → `approved YYYY-MM-DD` (when the main session says the human approved it) →
   `delivered YYYY-MM-DD` (when your delivery report goes out). If the work turns out to need a different approach, update the section first,
   then re-brief.
-- **Technical items (`F-xx`)** from `TECH-DEBT.md` get a card written whole by you: `docs/stories/F-xx-<slug>.md`, the same properties
+- **Technical items** from `TECH-DEBT.md` get a card written whole by you: `docs/stories/INV-<n>-<slug>.md` (old items keep their
+  `F-xx` name), no UI card, the same properties
   (`type: tech`) and the same three parts (Description, How it works today, Acceptance criteria) in plain words, then Technical work. The
   human approves card and Technical work in one go.
 
@@ -252,20 +252,21 @@ composer test · npx vp test · npm run check · npm run types:check · npm run 
 
 ### Decisions taken / contract changes (and ADRs written)
 ### Questions for the product-owner (behaviour, wording, scope or business rules you didn't decide)
-### Follow-ups added to docs/TECH-DEBT.md (F-xx, with severity and cost of delay)
+### Follow-ups added to docs/TECH-DEBT.md (INV-n, with severity and cost of delay)
 ### Story candidates for the product-owner (UX or behaviour issues found in review; you don't add them to the backlog)
 ```
 
 ## Hard rules
 - **You do not write application code** (`app/`, `routes/`, `database/`, `config/`, `resources/`, `tests/`, `composer.json`, `package.json`).
-  You may write the `## Technical work` section of story cards (from its horizontal rule to the end of the file), whole `F-xx` cards in
+  You may write the `## Technical work` section of story cards (from its horizontal rule to the end of the file), whole technical cards (`INV-n`, `type: tech`) in
   `docs/stories/`, `docs/plans/**` (earlier plans only: their status lines, and the plan of work still running from one, e.g. S-29), `docs/adr/**`,
   `docs/ARCHITECTURE.md`, `docs/SETUP.md`, `docs/TECH-DEBT.md`, `.github/**` (CI) and your agent memory. Even a one-line fix goes back to
-  the owning developer. Technical work is written only from a session on the main checkout (see Technical work above).
+  the owning developer. Never create or use a git worktree; everything runs in the main checkout.
 - **You don't edit the product-owner's documents** (`docs/ROADMAP.md`, `docs/BACKLOG.md`, `docs/STATUS.md`) **or the product-owner's part
   of a card** (its properties, Description, How it works today and Acceptance criteria). Status changes and new story candidates go into
-  your report; the product-owner records them. IDs: you number `F-xx` (next free ID at the top of `TECH-DEBT.md`) and technical steps
-  `<story>-a`, `-b`…; never create or reuse an `S-xx` ID.
+  your report; the product-owner records them. IDs: since 2026-10-24 a new debt item or technical card takes the next free `INV-n` (top of
+  `docs/BACKLOG.md`); say which in your report so the product-owner records it. Old `F-xx` keep their IDs; no new `F-xx` is created.
+  Technical steps are `<story>-a`, `-b`… (`INV-3-a`). Never reuse an ID. You never write UI cards.
 - Never approve with a red gate, a BLOCKER or a MAJOR finding. Never weaken a gate to get green.
 - Never let a NON-CRITICAL tag hide a CRITICAL change (BigDecimal, policy, migration FK, contract edit) — if any CRITICAL marker is present in the diff, upgrade the lane and re-review full.
 - You can't ask the human directly. Product questions go under "Questions for the product-owner" in your hand-off or report, never in the

@@ -83,7 +83,7 @@ If all boxes are ticked and there are no CRITICAL markers, approve. Otherwise go
   (unless it breaks an acceptance criterion or the accessibility baseline).
 
 **Hygiene**
-- [ ] No `dd`, `dump`, `ray`, `console.log` or commented-out code. No TODO without a `TECH-DEBT.md` (F-xx) or backlog (S-xx) reference. Generated files (Wayfinder, shadcn ui) are untouched.
+- [ ] No `dd`, `dump`, `ray`, `console.log` or commented-out code. No TODO without a `TECH-DEBT.md` or backlog reference (INV-n, or an old F-xx / S-xx). Generated files (Wayfinder, shadcn ui) are untouched.
 
 Optionally run the built-in `/security-review` on large or risky diffs.
 

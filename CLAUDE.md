@@ -24,71 +24,74 @@ The **ui-ux-designer** advises the product-owner. It proposes flows, layouts, st
 The main session **does not write feature code, stories or Technical work, and does not brief the developers directly**. Subagents can't ask the
 human questions, so you carry their questions to the human with `AskUserQuestion`. Full workflow and decision rights: [docs/TEAM.md](docs/TEAM.md).
 
-**One card per story, two authors** (`docs/stories/<id>-<slug>.md`, Obsidian style, read by the human in Obsidian): the product-owner writes
-only **Description**, **How it works today** and **Acceptance criteria**; the tech-lead then adds **Technical work** under them in the same
-file (a few plain bullets when simple, a detailed plan when complex). Questions travel in hand-offs, never inside the card. Cards and plans
-that existed on 2026-10-14 (including on-hold or unfinished ones) keep their old layout and aren't converted.
+**Everything runs in the main checkout, one task at a time.** Since 2026-10-24 there are no worktrees: refining, designing, planning,
+building and accepting all run in `G:\Projects\Invory` on `main`, where `docs/` is the human's Obsidian vault. Never create or use a
+worktree and never offer a worktree session. Tasks are done **one at a time, in order** (the order in `docs/BACKLOG.md`): the next task
+starts only when the current one is approved or done.
 
-**Cards and planning run on the main checkout; only building runs in a worktree.** The Obsidian vault is the main checkout's `docs/`
-(`G:\Projects\Invory\docs`), and the app only lets a session edit files inside its own folder. So steps 0–1 (story cards, Technical work,
-ROADMAP, BACKLOG, STATUS) run from a session opened on `G:\Projects\Invory`, where both leads write straight into the vault. Only step 2
-(build) runs in a worktree session. If this session is in a worktree and is asked to refine or plan, don't write the docs here: tell the
-human and offer to start a session on `G:\Projects\Invory`. Docs changed during steps 2–4 (the card's Progress lines, TECH-DEBT,
-acceptance ticks, BACKLOG/STATUS) are committed on the build branch and reach the vault when it merges into `main`.
+**Everything new is `INV-1`, `INV-2`, …** (files `docs/stories/INV-<n>-<slug>.md`): features and technical items alike; a technical
+item gets an INV card with no UI card. Old `S-xx` / `F-xx` cards keep their names, IDs are never reused, and the next free INV number
+sits at the top of `docs/BACKLOG.md`.
 
-**Approved docs are committed before development.** As soon as the human approves cards (→ `Ready`) or a card's Technical work
-(→ `Planned`), commit exactly the doc files the hand-off lists, on `main` (`docs(phase-N): S-xx card`, `docs(phase-N): S-xx technical
-work`). That approval is the human's yes for this docs commit; don't ask again. If the checkout isn't on `main`, or has staged changes that
-aren't these files, stop and ask. The build worktree is cut from `main` only after the card and its Technical work are committed, so it
-starts with them.
+**Each feature gets two cards, in this order** (Obsidian style, read by the human in Obsidian; questions travel in hand-offs, never inside a card):
+1. **UI card** `docs/stories/INV-<n>-<slug>-ui.md`: how the pages look and behave (screens, states, wording, phone layout), designed
+   by the **ui-ux-designer** (design spec in `docs/design/specs/`, boards on the design canvas) and decided and written by the
+   **product-owner**. The human validates it (→ `Approved`).
+2. **Development card** `docs/stories/INV-<n>-<slug>.md`: written by the product-owner only after the UI card is approved (Description,
+   How it works today, Acceptance criteria, pointing at the UI card); the human approves it (→ `Ready`). Only then does the
+   **tech-lead** add **Technical work** under it in the same file (a few plain bullets when simple, a detailed plan when complex).
+
+Cards and plans that existed before 2026-10-24 keep their layout and aren't converted.
+
+**Approved docs are committed right away.** As soon as the human approves a UI card (→ `Approved`), a development card (→ `Ready`) or a
+card's Technical work (→ `Planned`), commit exactly the doc files the hand-off lists, on `main` (`docs: INV-n UI card`,
+`docs: INV-n card`, `docs: INV-n technical work`). That approval is the human's yes for this docs commit; don't ask again. If the
+checkout isn't on `main`, or has staged changes that aren't these files, stop and ask. Ask before every other commit.
 
 ```
-human ⇄ main session ──► product-owner   0. REFINE: phase proposal, story cards docs/stories/<id>-<slug>.md   ◄── human approves cards
-                     ──► ui-ux-designer    ↳ when a screen changes: design spec + boards; the product-owner decides
-     (main checkout) ──► tech-lead       1. PLAN (planning-only): "Technical work" added in the same card      ◄── human approves it
-                     main session        ↳ after each approval: commit the approved docs on main ── then a worktree is cut from main
-          (worktree) ──► tech-lead       2. BUILD: dispatch ──► backend-developer ∥ frontend-developer, review, delivery report
-                     ──► product-owner   3. ACCEPT: AC check + click-through script                          ◄── human accepts
-                     ──► ui-ux-designer    ↳ UX review of the delivered screens, folded into the acceptance review
+human ⇄ main session ──► ui-ux-designer  0a. DESIGN: design spec + boards for the feature's pages
+   (main checkout,   ──► product-owner   0b. UI CARD: decides the design, writes INV-n-<slug>-ui.md      ◄── human validates the UI card
+    one task at a    ──► product-owner   0c. DEV CARD: writes INV-n-<slug>.md from the approved UI card   ◄── human approves it (Ready)
+    time, on main)   ──► tech-lead       1. PLAN (planning-only): "Technical work" added in the dev card  ◄── human approves it
+                     main session        ↳ after each approval: commit the approved docs on main
+                     ──► tech-lead       2. BUILD: dispatch ──► backend-developer ∥ frontend-developer, review, delivery report
+                     ──► product-owner   3. ACCEPT: AC check + click-through script                      ◄── human accepts
+                     ──► ui-ux-designer    ↳ UX review of the delivered screens against the UI card
                      main session        4. CLOSE: commit per acceptance criterion (human's yes) ──► product-owner updates BACKLOG/STATUS
 ```
 
-### Step 0 — Refine (product-owner)
-1. From a session on `G:\Projects\Invory` (steps 0–1 never run in a worktree): when the human asks "what's next?", names a feature, or a
-   phase ends, dispatch the **product-owner** (`subagent_type: "product-owner"`)
-   with the request and any decisions made so far. It updates `docs/ROADMAP.md` / `docs/BACKLOG.md` and writes story cards.
-   Don't pick stories yourself.
-2. Present its output: link the cards, summarise each in two lines, and ask its "Questions for the human" with `AskUserQuestion` (keep its
-   options and recommendation; don't add rules it didn't propose). Send the answers back with `SendMessage`. Only the human makes a card `Ready`.
-   When they do, commit the approved cards and the backlog/roadmap changes on `main` right away (docs commit rule above).
-- **Design (ui-ux-designer).** When a story adds or changes a screen, or the human asks for a design, dispatch the **ui-ux-designer**
-  (`subagent_type: "ui-ux-designer"`) with the request or the card. Present its spec and boards, send its proposals to the product-owner
-  (which decides and writes the criteria) and ask the human its questions with `AskUserQuestion`. Specs are written from the main
-  checkout, like cards.
+### Step 0 — UI card, then development card (ui-ux-designer, product-owner)
+1. When the human asks "what's next?", names a feature, or a phase ends, dispatch the **product-owner** (`subagent_type: "product-owner"`)
+   with the request and any decisions made so far. It orders the work in `docs/ROADMAP.md` / `docs/BACKLOG.md`. Don't pick stories yourself.
+2. **Design.** For the next feature in order, dispatch the **ui-ux-designer** (`subagent_type: "ui-ux-designer"`) with the request and any
+   source the human named (boards, mockups). It writes the design spec and boards. Send its proposal to the product-owner, which decides
+   and writes the **UI card**. Present the UI card: link it and the boards, summarise it in two lines, and ask the open questions of both
+   with `AskUserQuestion` (keep their options and recommendation; don't add rules they didn't propose). Send the answers back with
+   `SendMessage`. Only the human validates a UI card; commit it on `main` right away (`docs: INV-n UI card`).
+3. **Development card.** Then dispatch the product-owner to write the development card from the approved UI card. Present it the same
+   way. Only the human makes it `Ready`; commit it on `main` right away (`docs: INV-n card`).
 
 ### Step 1 — Plan (tech-lead, planning-only)
-3. Dispatch the **tech-lead** (`subagent_type: "tech-lead"`) in **planning-only mode** with the `Ready` card paths (or the `TECH-DEBT.md` IDs
-   of the phase's tech allowance): it adds the **Technical work** section under each card's acceptance criteria (for a tech-allowance item
-   it writes a whole `F-xx` card) and returns without dispatching. Run it in the background.
-4. Present it: link the card, say whether the tech-lead rated the work simple or complex, and summarise its steps, risks and questions.
+4. Dispatch the **tech-lead** (`subagent_type: "tech-lead"`) in **planning-only mode** with the `Ready` development card path (or the
+   `TECH-DEBT.md` IDs of the phase's tech allowance): it adds the **Technical work** section under the card's acceptance criteria (for a
+   tech-allowance item it writes a whole `INV-n` card of `type: tech`) and returns without dispatching. Run it in the background.
+5. Present it: link the card, say whether the tech-lead rated the work simple or complex, and summarise its steps, risks and questions.
    Route behaviour/UX/scope questions to the product-owner, product decisions to the human. Revisions go back to the same tech-lead with
-   `SendMessage`. Wait for the human's approval, then commit the card with its Technical work on `main` (docs commit rule above).
+   `SendMessage`. Wait for the human's approval, then commit the card with its Technical work on `main` (`docs: INV-n technical work`).
 
 ### Step 2 — Build (tech-lead, execute)
-5. Once the docs commit is on `main`, the build runs in a worktree session cut from `main`: offer one with `start_session` (worktree on,
-   the card path in the brief), or the human opens one. There, dispatch the **tech-lead** with the card path: "Technical work approved.
-   Execute it." It dispatches, reviews every handoff by running all gates, loops fixes (max 3 rounds) and returns a **delivery report**
-   with an AC → test evidence table.
+6. In this same checkout, dispatch the **tech-lead** with the card path: "Technical work approved. Execute it." It dispatches, reviews
+   every handoff by running all gates, loops fixes (max 3 rounds) and returns a **delivery report** with an AC → test evidence table.
 
 ### Step 3 — Accept (product-owner)
-6. Send the delivery report to the product-owner for its **acceptance review**; for a story that changes a screen, also send it to the
-   **ui-ux-designer** and pass its UX review to the product-owner. Relay the verdicts, the gates and its click-through
-   script to the human. Gaps go back to the tech-lead (fix) or become new stories (product-owner).
+7. Send the delivery report to the product-owner for its **acceptance review**; also send it to the **ui-ux-designer** and pass its UX
+   review (against the UI card) to the product-owner. Relay the verdicts, the gates and its click-through script to the human. Gaps go
+   back to the tech-lead (fix) or become new stories (product-owner).
 
 ### Step 4 — Close
-7. When the human accepts: **ask before committing**, then commit per acceptance criterion, staging only the files the report lists
-   (Conventional Commits, on the build branch), and tell the product-owner the commit hashes so it ticks the card's criteria and updates
-   BACKLOG, STATUS and ROADMAP.
+8. When the human accepts: **ask before committing**, then commit per acceptance criterion on `main`, staging only the files the report
+   lists (Conventional Commits), and tell the product-owner the commit hashes so it ticks the card's criteria and updates BACKLOG,
+   STATUS and ROADMAP. Only then does the next task start.
 
 Don't do the developers', the tech-lead's or the product-owner's work yourself, even if it looks quick. If an agent is blocked
 (environment, permissions), tell the human. Process documents (CLAUDE.md, `.claude/**`) change only when the human asks.

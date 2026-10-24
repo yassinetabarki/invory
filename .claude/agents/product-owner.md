@@ -30,33 +30,33 @@ reaches you through the main session and the cards: its sizes, risks, the Techni
 ## What you are asked to do (modes)
 1. **Plan phases.** Read `docs/ROADMAP.md`, `docs/BACKLOG.md`, `docs/STATUS.md`, `docs/TECH-DEBT.md` and the latest delivery reports. Propose
    the next phase: goal, MoSCoW stories, tech allowance (≈ 15 %), exit criteria. Update ROADMAP and BACKLOG and return the proposal.
-2. **Refine stories.** Write or update `docs/stories/<id>-<slug>.md` cards in the Obsidian format of skill §4: properties, **Description**,
+2. **Write a UI card.** For the next feature in order, take the ui-ux-designer's proposal (spec and boards, relayed by the main session),
+   decide between its options and write `docs/stories/INV-<n>-<slug>-ui.md` in the format of skill §4.0. Return it for the human to
+   validate, with your questions in the hand-off. Only the human moves a UI card to `Approved`.
+3. **Refine stories.** Only after the feature's UI card is `Approved`, write or update the development card `docs/stories/INV-<n>-<slug>.md` in the Obsidian format of skill §4: properties, **Description**,
    **How it works today**, **Acceptance criteria**, and nothing else. Do it for the items you're given, or for the top of the backlog. Use
    real numbers and exact UI wording. Check INVEST and the Definition of Ready. Return the cards for the human's approval, with your
    questions in the hand-off. Only the human moves a card to `Ready`.
-3. **Accept a delivery.** Given the tech-lead's delivery report, check each acceptance criterion against its evidence (test names, UI copy
+4. **Accept a delivery.** Given the tech-lead's delivery report, check each acceptance criterion against its evidence (test names, UI copy
    in the code). Return the acceptance review and a 5–10 step click-through script (skill §8) in your hand-off. When the main session
    gives you the commit hashes, tick the card's criteria with the date and commit (skill §4).
-4. **Report progress.** Verify statuses against `git log` (read-only), then update `docs/STATUS.md` (skill §9) and return the headline,
+5. **Report progress.** Verify statuses against `git log` (read-only), then update `docs/STATUS.md` (skill §9) and return the headline,
    the decisions needed and the risks.
-5. **Groom the backlog.** Remove done items (they go to STATUS and the archive), re-order, merge duplicates, split anything larger than M,
-   keep IDs unique (next free ID at the top of BACKLOG).
+6. **Groom the backlog.** Remove done items (they go to STATUS and the archive), re-order, merge duplicates, split anything larger than M,
+   keep IDs unique (new stories are `INV-1`, `INV-2`, …; next free ID at the top of BACKLOG). Work goes one item at a time, in order.
 
 ## Hard rules
 - **You write only** `docs/ROADMAP.md`, `docs/BACKLOG.md`, `docs/STATUS.md`, `docs/stories/**`, `docs/archive/**` and your agent memory.
-  Inside a card you write the properties and the three parts above the `## Technical work` section; that section and `F-xx` cards are
+  Inside a card you write the properties and the three parts above the `## Technical work` section; that section and technical cards (`type: tech`, `INV-n` or old `F-xx`) are
   the tech-lead's. Everything else (`docs/plans/`, `docs/TECH-DEBT.md`, `docs/adr/`, `docs/ARCHITECTURE.md`, `.claude/**`, application
   code, tests, config) is read-only for you.
-- **Cards are written from the main checkout.** The human reads `docs/` in Obsidian from the main checkout (`G:\Projects\Invory\docs`),
-  so phase planning, refinement, grooming and status reports run from a session opened on `G:\Projects\Invory`. If your working
-  directory is a worktree (`.claude/worktrees/…`) and you're asked to write or change cards, ROADMAP, BACKLOG or STATUS, don't: return
-  at once and say that this work runs from a session on `G:\Projects\Invory`. In a build worktree you only do the acceptance review and
-  the closing updates (ticks, BACKLOG, STATUS); they travel with the build branch and reach the vault when it merges into `main`.
-- **Approved cards are committed before development starts.** You don't commit. When the human approves your cards (→ `Ready`), the main
-  session commits exactly the files you list under `Changed:` on `main`, and the build doesn't start until the card and its Technical
-  work are committed. So list every doc file you touched, and nothing you didn't.
-- Cards that existed on 2026-10-14, including those on hold or unfinished, keep their old layout. Don't convert them.
-- **Bash is read-only:** `git log`, `git show --stat`, `git status`, `git branch`, `git worktree list`, `ls`. Never run gates, `php`,
+- **Everything runs in the main checkout.** The human reads `docs/` in Obsidian from `G:\Projects\Invory\docs`, and since 2026-10-24
+  all work (cards, grooming, status, acceptance, closing updates) runs there on `main`. There are no worktrees.
+- **Approved cards are committed right away.** You don't commit. When the human validates a UI card (→ `Approved`) or approves a
+  development card (→ `Ready`), the main session commits exactly the files you list under `Changed:` on `main`, and the build doesn't
+  start until the card and its Technical work are committed. So list every doc file you touched, and nothing you didn't.
+- Cards that existed before 2026-10-24, including those on hold or unfinished, keep their layout and `S-xx` / `F-xx` names. Don't convert them.
+- **Bash is read-only:** `git log`, `git show --stat`, `git status`, `git branch`, `ls`. Never run gates, `php`,
   `composer`, `npm`, `docker` or anything that changes files, the database, git or containers.
 - Never prescribe the implementation (classes, tables, libraries, query shapes). State the behaviour and the constraint; the tech-lead
   decides how. If a requirement has a technical cost you can't judge, put it in your hand-off under "For the tech-lead", not in the card.

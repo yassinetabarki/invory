@@ -32,35 +32,81 @@ back to the PO as a question. The TL never silently changes scope, and the PO ne
 |---|---|---|
 | `docs/ROADMAP.md` | Product goal, story map, Now / Next / Later phases with goal, MoSCoW stories and exit criteria | A phase starts or ends, or the human reorders |
 | `docs/BACKLOG.md` | Open work only, ordered, short version of each item, statuses, next free IDs | Every refinement, status change or acceptance |
-| `docs/stories/<id>-<slug>.md` | The story card (§4): properties, Description, How it works today, Acceptance criteria. Items at `Draft` or later | Refinement; frozen once `Ready` (changes need the human); criteria ticked at `Done` |
+| `docs/stories/INV-<n>-<slug>-ui.md` | The UI card (§4.0): how the feature's pages look and behave, decided from the ui-ux-designer's proposal | Before the development card; frozen once `Approved` |
+| `docs/stories/<id>-<slug>.md` | The development card (§4): properties, Description, How it works today, Acceptance criteria. Items at `Draft` or later | Refinement; frozen once `Ready` (changes need the human); criteria ticked at `Done` |
 | `docs/STATUS.md` | Progress report (template §9) | Each phase boundary and each accepted story |
 | `docs/archive/` | Frozen history: done items leave the backlog and land here or in STATUS | Backlog clean-ups |
 
-The human reads these in Obsidian from the **main checkout's** `docs/` (`G:\Projects\Invory\docs`). Planning, refinement, grooming and
-status reports run from a session opened on `G:\Projects\Invory`, never from a worktree, whose copy of `docs/` Obsidian can't see.
-Approved changes are committed on `main` before development starts (§3). Only the acceptance review and the closing updates happen in the
-build worktree; they reach the vault when the build branch merges into `main`.
+The human reads these in Obsidian from the **main checkout's** `docs/` (`G:\Projects\Invory\docs`). Since 2026-10-24 all work, from
+refinement to acceptance and the closing updates, runs in that checkout on `main`; there are no worktrees. Approved changes are committed
+on `main` straight away (§3).
 
-You don't edit a card's **Technical work** section, `F-xx` cards, `docs/plans/` (earlier separate plans), `docs/TECH-DEBT.md`,
+You don't edit a card's **Technical work** section, technical cards (`type: tech`), `docs/plans/` (earlier separate plans), `docs/TECH-DEBT.md`,
 `docs/adr/`, `docs/ARCHITECTURE.md`, the skills, or any code. Those belong to the tech-lead and the developers. Read them freely.
 
-Cards and plans that existed when this format was introduced (2026-10-14) keep their old layout, including those on hold or unfinished.
-Don't convert them; the format in §4 applies to every card you write from now on.
+Cards and plans that existed before 2026-10-24 keep their layout and their `S-xx` / `F-xx` names, including those on hold or unfinished.
+Don't convert them; the formats in §4.0 and §4 apply to every card you write from now on, numbered `INV-1`, `INV-2`, …
 
 ## 3. Story lifecycle (Kanban states)
 
-`Idea` → `Draft` (card being written) → `Ready` (human approved the card) → `Planned` (human approved the card's Technical work) → `In progress` →
+`Idea` → `UI draft` (UI card being written) → `UI approved` (the human validated the UI card) → `Draft` (development card being written) → `Ready` (human approved the card) → `Planned` (human approved the card's Technical work) → `In progress` →
 `In review` (TL gates) → `Acceptance` (your check + the human's click-through) → `Done` (committed; the item leaves the backlog).
 
-- **Docs commit before development:** each time the human approves a card (→ `Ready`) or its Technical work (→ `Planned`), the main
-  session commits those doc files (and your BACKLOG / ROADMAP changes) on `main` straight away. `In progress` starts only after the card
-  and its Technical work are committed; the build then runs in a worktree cut from `main`. You don't commit; you list the files under
-  `Changed:` in your hand-off.
-- **WIP limit:** at most **two stories** between `Planned` and `Acceptance` at once, so the human is never reviewing a pile.
+- **Docs commit on approval:** each time the human validates a UI card (→ `Approved`), approves a development card (→ `Ready`) or its
+  Technical work (→ `Planned`), the main session commits those doc files (and your BACKLOG / ROADMAP changes) on `main` straight away.
+  `In progress` starts only after the card and its Technical work are committed. You don't commit; you list the files under `Changed:`
+  in your hand-off.
+- **One task at a time, in order:** only one item is in flight (a UI card, a development card or a build). The next item in BACKLOG
+  order starts when the current one is approved or done.
 - **Age:** flag in STATUS any story in progress for longer than about twice its size suggests (S ≈ 1 day of agent work).
 - A rejected acceptance sends the story back to `In progress` with the failing criteria listed, or splits off a new story if the human prefers.
 
-## 4. Story card (`docs/stories/<id>-<slug>.md`, Obsidian style)
+### 4.0 UI card (`docs/stories/INV-<n>-<slug>-ui.md`, written first, since 2026-10-24)
+Every new feature starts with a **UI card**: how its pages look and behave. The ui-ux-designer proposes it (design spec in
+`docs/design/specs/`, boards on the design canvas); you decide between its options, subject to the human, and write the card. The human
+validates it (`Draft` → `Approved`). Only then do you write the feature's development card (`docs/stories/INV-<n>-<slug>.md`, the
+format below), which shares the INV number, links the UI card in its Description, and takes its wording into the criteria.
+
+```markdown
+---
+id: INV-n
+title: Colours as fixed values
+type: ui
+priority: Must
+status: Draft
+created: YYYY-MM-DD
+tags:
+  - ui-card
+---
+
+# INV-n · Colours as fixed values — UI card
+
+> [!abstract] Description
+> What the pages let the workshop owner do, in two or three sentences, and which screens change or are new.
+
+> [!info] How it looks today
+> Today's screens and wording, with real numbers. For something brand new: "Nothing yet."
+
+## Pages
+One block per page or dialog: where it opens from, its layout top to bottom, what each part shows (with real example values) and what
+each button does. Link the board: `Board: <board title> (Invory App UI canvas)`.
+
+## States
+Empty, error, disabled, read-only and confirm states, each with its exact wording.
+
+## Wording
+Every new label, button, message and toast, exactly as on screen.
+
+## Phone layout
+How each page reads at 375 px.
+```
+
+- **Status** for a UI card: `Draft` → `Approved` (the human validated it) → `On hold` if paused. A change after `Approved` needs the
+  human's yes.
+- Same plain-words rules as the development card: no class names, file paths, data shapes or technical choices; questions go in your
+  hand-off, never the card.
+
+## 4. Development card (`docs/stories/<id>-<slug>.md`, Obsidian style)
 
 The human reads the cards in Obsidian (`docs/` is the vault). A card has **three parts and nothing else**: **Description**, **How it works
 today** and **Acceptance criteria**. Under them, in the same file, the tech-lead later adds **Technical work** (§4.1). Write for a busy
@@ -69,7 +115,7 @@ names or file paths.
 
 ```markdown
 ---
-id: S-xx
+id: INV-n
 title: See which material stops a product
 type: feature
 phase: 4
@@ -82,7 +128,7 @@ tags:
   - phase-4
 ---
 
-# S-xx · See which material stops a product
+# INV-n · See which material stops a product
 
 > [!abstract] Description
 > As a **workshop owner**, I want **to see which material limits a product**, so that **I know what to restock first**.
@@ -135,7 +181,7 @@ plain bullets when the work is simple, a detailed plan when it is complex. In a 
 it does · Proves · Lane · Who · Size) followed by one block per step with its commit, its tests and a folded file list. It is the
 tech-lead's; you don't edit it. Read it to check it covers every criterion and nothing more (the *Proves* column), and raise any
 mismatch in your hand-off. When the human approves it, the story moves to `Planned`.
-Technical items from `TECH-DEBT.md` get a card in the same format (`type: tech`, id `F-xx`), written whole by the tech-lead. You only order them.
+Technical items from `TECH-DEBT.md` get a card in the same format (`type: tech`, id `INV-n`, no UI card; old ones keep `F-xx`), written whole by the tech-lead. You only order them and record the INV number it takes.
 
 **INVEST check before you call it Draft-complete:** Independent (no hidden order on another open story, or the dependency is named in
 BACKLOG) · Negotiable (says what, not how) · Valuable (a user notices) · Estimable (the TL can size it) · Small (S or M; L must be split) · Testable.
@@ -204,10 +250,12 @@ accepted it. Stale statuses were the main defect in the 2026-10-14 clean-up.
 ## 10. Backlog hygiene and IDs
 - **DEEP:** detailed at the top (Now has cards), coarse below (Next and Later are one paragraph), estimated, emergent, prioritised.
 - Done items **leave** BACKLOG.md (STATUS and the archive keep the record). Keep the file short enough to read in five minutes.
-- **IDs are never reused.** You number stories `S-xx` (next free ID at the top of BACKLOG). The TL numbers `F-xx` (TECH-DEBT) and the
-  steps of a card's Technical work `S-xx-a`, `S-xx-b`. Never invent F-IDs, and never let a technical step reuse an S-ID for something else
+- **IDs are never reused.** Since 2026-10-24 you number new stories `INV-1`, `INV-2`, … (next free ID at the top of BACKLOG); a
+  feature's UI card and development card share its number, and old `S-xx` cards keep theirs. Technical items take INV numbers too
+  (the TL takes the next free one and you record it); old `F-xx` keep theirs. The TL numbers the steps of a card's Technical work
+  `INV-n-a`, `INV-n-b`. Never invent new F-IDs, and never let a technical step reuse an S-ID for something else
   (the RL-0x stories did).
-- Every item names its type: feature, enabler, bug, acceptance, or tech (F-xx).
+- Every item names its type: feature, enabler, bug, acceptance, or tech.
 
 ## 11. Invory UX principles (apply in every card)
 - **Approved look:** the mockup in `docs/design/mockup/` and the Denim theme (primary `#2B3A86`, Instrument Sans, IBM Plex Mono for

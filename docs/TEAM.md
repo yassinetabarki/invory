@@ -17,9 +17,9 @@ Five Claude Code subagents (in `.claude/agents/`) build Invory, split by **what/
 
 | Agent | Model | Owns | Can spawn | Never does |
 |---|---|---|---|---|
-| **product-owner** | opus | Roadmap and phases (`docs/ROADMAP.md`), backlog order (`docs/BACKLOG.md`), story cards (`docs/stories/`: properties, Description, How it works today, Acceptance criteria), behaviour and UX, acceptance review, progress report (`docs/STATUS.md`) | nothing | Write code or Technical work, dispatch developers, review code, run gates, commit |
-| **ui-ux-designer** | opus | UX proposals: design specs (`docs/design/specs/`), boards on the claude.ai design canvas, card reviews for UX gaps, UX review of delivered UI (Step 3) | nothing | Decide UX, write cards, Technical work or code, edit existing canvas boards, run gates, commit |
-| **tech-lead** | opus | The **Technical work** section of every card, `F-xx` cards, contracts, dispatching, code review and gates, architecture, ADRs, `docs/TECH-DEBT.md`, `docs/SETUP.md`, CI (`.github/`); earlier plans in `docs/plans/` | `backend-developer`, `frontend-developer` | Write application code, decide behaviour/UX/priority, edit the product-owner's files or part of a card, commit |
+| **product-owner** | opus | Roadmap and phases (`docs/ROADMAP.md`), backlog order (`docs/BACKLOG.md`), UI cards and development cards (`docs/stories/`: properties, Description, How it works today, Acceptance criteria), behaviour and UX, acceptance review, progress report (`docs/STATUS.md`) | nothing | Write code or Technical work, dispatch developers, review code, run gates, commit |
+| **ui-ux-designer** | opus | UX proposals for every UI card: design specs (`docs/design/specs/`), boards on the claude.ai design canvas, card reviews for UX gaps, UX review of delivered UI (Step 3) | nothing | Decide UX, write cards, Technical work or code, edit existing canvas boards, run gates, commit |
+| **tech-lead** | opus | The **Technical work** section of every card, whole technical cards (`INV-n`, `type: tech`; old `F-xx`), contracts, dispatching, code review and gates, architecture, ADRs, `docs/TECH-DEBT.md`, `docs/SETUP.md`, CI (`.github/`); earlier plans in `docs/plans/` | `backend-developer`, `frontend-developer` | Write application code, decide behaviour/UX/priority, edit the product-owner's files or part of a card, commit |
 | **backend-developer** | sonnet | `app/`, `routes/`, `database/`, `config/`, `tests/` (PHP), `resources/js/types/domain.ts`, `sharedPageProps` | nothing | Build UI (page *stubs* only), invent business rules, commit |
 | **frontend-developer** | sonnet | `resources/js/**` (except contract files and generated code), `resources/css`, Vitest and browser tests | nothing | Touch PHP or the contract files, invent copy or UX, commit |
 | *main session* | — | Relaying, `AskUserQuestion`, commits after your yes | `product-owner`, `ui-ux-designer`, `tech-lead` | Write stories, Technical work or code itself; brief developers directly |
@@ -61,58 +61,60 @@ Project skills live in `.claude/skills/invory-*` and are committed. The three th
 
 ## Workflow
 
+Everything runs in the **main checkout** (`G:\Projects\Invory`, on `main`), **one task at a time, in order**. There are no worktrees
+(since 2026-10-24): refining, designing, planning, building and accepting all happen in the folder whose `docs/` you read in Obsidian.
+
 ```
  human ⇄ main session (liaison)
               │
-   0. REFINE  ├──► product-owner: phase proposal + story cards (docs/stories/<id>-<slug>.md, Obsidian style)
-              │       ui-ux-designer (when a story changes a screen): design spec + canvas boards → the PO decides
+   0a. DESIGN ├──► ui-ux-designer: design spec (docs/design/specs/) + canvas boards for the feature's pages
+   0b. UI     ├──► product-owner: decides the design, writes the UI card docs/stories/INV-<n>-<slug>-ui.md
+              │◄── UI card ──► you validate it ──► status Approved ──► main session commits it on main ("docs: INV-n UI card")
+   0c. CARD   ├──► product-owner: development card docs/stories/INV-<n>-<slug>.md, written from the approved UI card
               │       Description · How it works today · Acceptance criteria — questions with options in its hand-off
-              │◄── cards ──► human approves each card ──► status Ready ──► main session commits the docs on main
+              │◄── card ──► you approve it ──► status Ready ──► main session commits it on main
               │
    1. PLAN    ├──► tech-lead (planning-only): "Technical work" added under the card's criteria, same file
-              │       simple → a few plain bullets · complex → steps S-xx-a, -b…, contract, order, risks
-              │◄── card ──► human approves the Technical work ──► status Planned ──► main session commits the card on main
+              │       simple → a few plain bullets · complex → steps INV-n-a, -b…, contract, order, risks
+              │◄── card ──► you approve the Technical work ──► status Planned ──► main session commits the card on main
               │       (questions for the PO go back through step 0)
               │
-   2. BUILD   ├──► tech-lead (execute): dispatch ──► backend-developer ┐ same message = parallel
-              │                                   ──► frontend-developer ┘
-              │       in a worktree session cut from main after the docs commit
+   2. BUILD   ├──► tech-lead (execute), in the same checkout: dispatch ──► backend-developer ┐ same message = parallel
+              │                                                        ──► frontend-developer ┘
               │                         review (all gates + parity) · fix loop, max 3 rounds
               │◄── delivery report: verdicts, gates, AC → test evidence, proposed commits
               │
    3. ACCEPT  ├──► product-owner: acceptance review (each AC vs evidence) + click-through script
-              │       ui-ux-designer: UX review of the delivered screens (spec, states, WCAG) → folded into the PO's review
-              │◄── human clicks through and accepts (or a gap goes back to step 2 / a new story)
+              │       ui-ux-designer: UX review of the delivered screens against the UI card → folded into the PO's review
+              │◄── you click through and accept (or a gap goes back to step 2 / a new story)
               │
-   4. CLOSE   └── main session commits per acceptance criterion (your yes) ──► product-owner updates BACKLOG / STATUS / ROADMAP
+   4. CLOSE   └── main session commits per acceptance criterion on main (your yes) ──► product-owner updates BACKLOG / STATUS / ROADMAP
 ```
 
-Small technical items from `TECH-DEBT.md` in a phase's tech allowance skip step 0 and step 3 (no click-through): the tech-lead writes
-the whole card (`F-xx`, same format), you approve it once, and it's built, reviewed and committed.
+Small technical items from `TECH-DEBT.md` in a phase's tech allowance skip steps 0a–0b and step 3 (no UI card, no click-through): the
+tech-lead writes the whole card (`INV-n`, `type: tech`, same format, no UI card), you approve it once, and it's built, reviewed and committed.
 
-**Flow limits:** at most two stories between `Planned` and `Acceptance` at once. The product-owner flags any story older than its size suggests.
+**One task at a time, in order.** Only one task is in flight: the next one (in BACKLOG order) starts when the current one is approved
+(a UI card) or done (a built story). The product-owner flags any task older than its size suggests.
 
-### Cards and planning on the main checkout, building in a worktree
-You read `docs/` in Obsidian from the **main checkout** (`G:\Projects\Invory\docs`). The app only lets a session edit files inside its
-own folder, and a worktree's copy of `docs/` is invisible to Obsidian. So steps 0–1 (cards, Technical work, ROADMAP, BACKLOG, STATUS) run
-from a session opened on `G:\Projects\Invory`, and only step 2 (building) runs in a worktree session.
+### Approved docs are committed right away
+Each time you validate a UI card (→ `Approved`), approve a development card (→ `Ready`) or a card's Technical work (→ `Planned`), the main
+session commits exactly those doc files on `main` straight away: your approval is the yes for that commit. Every other commit (code,
+acceptance ticks, BACKLOG and STATUS updates, process docs) waits for your yes.
 
-Each time you approve cards (→ `Ready`) or a card's Technical work (→ `Planned`), the main session commits exactly those doc files on
-`main` straight away: your approval is the yes for that commit. The build worktree is cut from `main` only after the card and its
-Technical work are committed, so it starts with them. Docs changed during the build and acceptance (the card's Progress lines,
-TECH-DEBT, acceptance ticks, BACKLOG and STATUS) are committed on the build branch and show up in Obsidian when it merges into `main`.
+### Two cards per feature (`docs/stories/INV-<n>-<slug>-ui.md`, then `docs/stories/INV-<n>-<slug>.md`)
+You read cards in Obsidian (`docs/` in the main checkout is the vault). New work is numbered **INV-1, INV-2, …**; old `S-xx` and `F-xx`
+cards keep their names. A feature's UI card and development card share its INV number.
 
-### One card, two authors (`docs/stories/<id>-<slug>.md`)
-You read cards in Obsidian (`docs/` in the main checkout is the vault). Each card is one file with two parts:
-
-| Part | Written by | What it holds |
-|---|---|---|
-| Properties, **Description**, **How it works today**, **Acceptance criteria** | product-owner, you approve → `Ready` | Only these three parts: what changes for the user and why, today's behaviour, and 3–7 ticked-at-the-end criteria with real numbers and exact wording. No "what's next", questions or out-of-scope sections. |
-| **Technical work** (after a horizontal rule) | tech-lead, you approve → `Planned` | **Simple** work: a few plain bullets and which test proves each criterion. **Complex** work (money maths, database, business rule, contract, more than two commits, real risk): a plain summary, then steps, contract, decisions, order and risks. |
+| Card | Part | Written by | What it holds |
+|---|---|---|---|
+| **UI card** (`…-ui.md`, `type: ui`) | Properties, **Description**, **Pages** (one block per page or dialog: layout, what each part shows, actions), **States** (empty, error, disabled, read-only, confirm), **Wording**, **Phone layout**, links to the boards and the design spec | product-owner, from the ui-ux-designer's proposal; you validate → `Approved` | How the pages look and behave. No technical detail, no acceptance criteria. |
+| **Development card** (`type: feature`) | Properties, **Description**, **How it works today**, **Acceptance criteria**, a link to the UI card | product-owner, after the UI card is approved; you approve → `Ready` | What changes for the user and why, today's behaviour, and 3–7 ticked-at-the-end criteria with real numbers and exact wording (taken from the UI card). No "what's next", questions or out-of-scope sections. |
+| | **Technical work** (after a horizontal rule) | tech-lead, you approve → `Planned` | **Simple** work: a few plain bullets and which test proves each criterion. **Complex** work (money maths, database, business rule, contract, more than two commits, real risk): a plain summary, then steps, contract, decisions, order and risks. |
 
 ```markdown
 ---
-id: S-xx
+id: INV-n
 title: See which material stops a product
 type: feature
 phase: 4
@@ -125,7 +127,7 @@ tags:
   - phase-4
 ---
 
-# S-xx · See which material stops a product
+# INV-n · See which material stops a product
 
 > [!abstract] Description
 > As a **workshop owner**, I want **to see which material limits a product**, so that **I know what to restock first**.
@@ -152,7 +154,7 @@ Definition of Ready and Done in §6–§7) and in the [tech-lead agent](../.clau
 rule and both layouts). Questions from either lead come to you through the main session, never inside the card. When a story is `Done`,
 the product-owner ticks each criterion with its date and commit (`✅ 2026-10-15 · 4644a08`).
 
-Cards and plans that existed on 2026-10-14 keep their old layout, including those on hold or unfinished; they aren't converted.
+Cards and plans that existed before 2026-10-24 keep their layout, including those on hold or unfinished; they aren't converted.
 Earlier technical plans stay in [`docs/plans/`](plans/README.md) as history.
 
 The main session presents the Technical work by linking the card and saying whether it is simple or complex, with its steps, risks and
@@ -160,14 +162,14 @@ questions. Execution doesn't start until you say "approved" (or equivalent). Cha
 about behaviour go to the product-owner.
 
 ### Rules of engagement
-1. **Card first, then contract first.** No Technical work without an approved card (tech-allowance items get an `F-xx` card from the
-   tech-lead; S-29 runs from its earlier plan). In complex Technical work the contract (routes, props, `domain.ts`, PHP APIs) is frozen
+1. **UI card first, then development card, then contract first.** No development card without a validated UI card, and no Technical
+   work without an approved development card (tech-allowance items get an `INV-n` technical card from the tech-lead). In complex Technical work the contract (routes, props, `domain.ts`, PHP APIs) is frozen
    before dispatch, and the backend writes the types first, so the frontend can build in parallel.
 2. **One shared working tree, so disjoint files per wave.** Agents touch only the files in their brief and run focused checks while others work.
    The tech-lead runs the full gates once the wave is complete.
-3. **Git:** one branch per phase (`phase/4-release-readiness`), **one commit per acceptance criterion** (not per story), staged from that
-   criterion's file list. Conventional Commits (`feat(materials): …`, `test(costing): …`). You approve every commit, push and merge. Agents never commit.
-   Approved cards and Technical work are the exception: they're committed straight to `main` before the build branch exists (see above).
+3. **Git:** everything is committed on `main` in the main checkout (no worktrees, no build branches), **one commit per acceptance
+   criterion** (not per story), staged from that criterion's file list. Conventional Commits (`feat(materials): …`, `test(costing): …`). You approve every commit, push and merge. Agents never commit.
+   Validated UI cards, approved cards and Technical work are committed straight away on your approval (see above).
 4. **Handoff reports are mandatory** and use the exact template in each agent file. The tech-lead re-runs every gate. Pasted output is not proof.
 5. **Disagreements:** technical ones are settled by the tech-lead; behaviour, UX, scope and priority by the product-owner, with you deciding
    anything the card doesn't settle. The UI/UX designer proposes and reviews; where it disagrees with the product-owner, the main session
@@ -175,8 +177,10 @@ about behaviour go to the product-owner.
 6. **Domain changes** (a formula, rounding, a new edge case) are product decisions: the product-owner proposes the rule, you decide, it
    becomes an acceptance criterion, and the tech-lead updates `invory-costing-domain` before any code changes. Code follows the skill,
    never the other way round.
-7. **IDs are never reused.** The product-owner numbers stories `S-xx`; the tech-lead numbers technical steps `S-xx-a…` and debt `F-xx`.
-   Next free IDs sit at the top of `BACKLOG.md` and `TECH-DEBT.md`.
+7. **IDs are never reused.** Since 2026-10-24 everything new is numbered `INV-1`, `INV-2`, …: features (whose UI card and development
+   card share the number) and technical items alike. Old `S-xx` and `F-xx` keep theirs. The next free INV number sits at the top of
+   `BACKLOG.md`; the tech-lead takes it for a new debt item or technical card and says so in its report, and the product-owner records
+   it. Technical steps are `INV-n-a`, `-b`…
 
 ## Two-lane delivery (CRITICAL vs NON-CRITICAL)
 
@@ -257,8 +261,9 @@ Lane · Who · Size), then one block per step with its commit, its tests and a f
 
 ## Example prompts for the main session
 - "What's next?" → the product-owner proposes the next phase or the next stories, with cards to approve.
-- "Write the cards for Phase 4." → the product-owner refines S-30, S-08, S-31, S-32; you approve them; then the tech-lead plans.
-- "Design the order sizes screen." → the ui-ux-designer writes a design spec with options and boards; the product-owner turns your choice into the card.
-- "Plan S-31." → the tech-lead adds the Technical work under S-31's approved card (simple or complex), then stops for your approval.
+- "Design the colours screen." → the ui-ux-designer writes a design spec with options and boards; the product-owner turns your choice
+  into the UI card; you validate it.
+- "UI card approved, write the card." → the product-owner writes the development card from the UI card; you approve it; then the tech-lead plans.
+- "Plan INV-1." → the tech-lead adds the Technical work under S-31's approved card (simple or complex), then stops for your approval.
 - "Approved, build it." → the tech-lead dispatches, reviews and returns a delivery report; then the product-owner prepares your acceptance check.
 - "Where are we?" → the product-owner refreshes `docs/STATUS.md`.
