@@ -199,6 +199,26 @@ it('records an order with two products, starts cutting 14 jackets by size and fi
                 issues.push('the Total 0 under Shipped is ' + getComputedStyle(shippedZero).color + ', the heading ' + getComputedStyle(shippedHeading).color);
             }
 
+            // S-71-c AC-5: a button that can't be clicked is grey, not faded. Total 36 · 14 · 0 · 0: "Ship" and the
+            // Ready to ship "Move back" hold nothing; "Start cutting" is enabled and filled blue.
+            const buttonNamed = (label, nth = 0) => buttons.filter((button) => button.innerText.trim() === label)[nth];
+            const cutting = buttonNamed('Start cutting');
+            const ship = buttonNamed('Ship');
+            const readyBack = buttonNamed('Move back', 1);
+            if (!cutting || !ship || !readyBack || !ship.disabled || !readyBack.disabled || cutting.disabled) {
+                issues.push('the buttons to compare are missing or in the wrong state');
+            } else {
+                if (getComputedStyle(ship).opacity !== '1') {
+                    issues.push('the disabled Ship has opacity ' + getComputedStyle(ship).opacity);
+                }
+                if (getComputedStyle(ship).backgroundColor === getComputedStyle(cutting).backgroundColor) {
+                    issues.push('the disabled Ship is filled like Start cutting (' + getComputedStyle(ship).backgroundColor + ')');
+                }
+                if (getComputedStyle(readyBack).opacity !== '1') {
+                    issues.push('the disabled Move back under Ready to ship has opacity ' + getComputedStyle(readyBack).opacity);
+                }
+            }
+
             return issues.length === 0 ? 'ok' : issues.join('; ');
         })()
         JS, 'ok');

@@ -1,5 +1,6 @@
 import { Link } from '@inertiajs/react';
 import { useId } from 'react';
+import { MoveButton } from '@/components/orders/move-button';
 import { lineHeadingId, MOVES } from '@/components/orders/move-units-dialog';
 import { ProgressStatus } from '@/components/orders/progress-status';
 import { SizeStagesTable } from '@/components/orders/size-stages-table';
@@ -9,7 +10,6 @@ import {
     StageFigure,
 } from '@/components/orders/stage-figure';
 import { SizeChips } from '@/components/shared/size-chips';
-import { Button } from '@/components/ui/button';
 import { useAppSettings } from '@/hooks/use-app-settings';
 import { formatCount } from '@/lib/format';
 import { orderLineSizeCounts } from '@/lib/sizes';
@@ -73,7 +73,7 @@ export function OrderLineCard({ line, onMove }: OrderLineCardProps) {
         const cutBlocked = move === 'start_cutting' && product.deleted;
 
         return (
-            <Button
+            <MoveButton
                 type="button"
                 size="sm"
                 variant={move.startsWith('back_') ? 'outline' : 'default'}
@@ -82,7 +82,7 @@ export function OrderLineCard({ line, onMove }: OrderLineCardProps) {
                 onClick={() => onMove(line, move)}
             >
                 {label}
-            </Button>
+            </MoveButton>
         );
     };
     const forwardOf = ({ forward }: StageSpec) =>
