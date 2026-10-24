@@ -1,7 +1,7 @@
 import { render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { ProductHero } from '@/components/products/product-hero';
-import { denimJacket, denimSalesLast30Days } from '@/test/fixtures/products';
+import { denimJacket } from '@/test/fixtures/products';
 import { resetInertiaMock, setPageProps } from '@/test/inertia';
 import type { Capacity } from '@/types/domain';
 
@@ -15,7 +15,6 @@ vi.mock('@inertiajs/react', async (importOriginal) => {
 
 function renderHero(
     capacity: Capacity = denimJacket.capacity,
-    sales = denimSalesLast30Days,
     multipleSizes = true,
 ) {
     return render(
@@ -23,7 +22,6 @@ function renderHero(
             capacity={capacity}
             unitCost={denimJacket.cost.unit_cost}
             multipleSizes={multipleSizes}
-            sales={sales}
             stock={null}
         />,
     );
@@ -77,7 +75,7 @@ describe('<ProductHero>', () => {
     ] satisfies [string, Capacity, boolean, string][])(
         'reads the capacity sub-line for %s',
         (_, capacity, multipleSizes, subLine) => {
-            renderHero(capacity, denimSalesLast30Days, multipleSizes);
+            renderHero(capacity, multipleSizes);
 
             const production = within(card('Production capacity'));
 
@@ -130,7 +128,7 @@ describe('<ProductHero>', () => {
         ['several sizes', true, 'same for every size'],
         ['one size', false, 'materials, labor and overhead'],
     ])('reads the unit cost sub-line for %s', (_, multipleSizes, subLine) => {
-        renderHero(denimJacket.capacity, denimSalesLast30Days, multipleSizes);
+        renderHero(denimJacket.capacity, multipleSizes);
 
         expect(
             within(card('Unit cost')).getByText(subLine),
@@ -146,30 +144,5 @@ describe('<ProductHero>', () => {
         expect(
             within(card('Unit cost')).getByText('TND 35.754'),
         ).toBeInTheDocument();
-    });
-
-    it('shows what sold in the last 30 days with its revenue', () => {
-        renderHero();
-
-        const sold = within(card('Sales, last 30 days'));
-
-        expect(sold.getByText('Sold · last 30 days')).toBeInTheDocument();
-        expect(sold.getByText('38')).toBeInTheDocument();
-        expect(sold.getByText('units').parentElement?.textContent).toBe(
-            '38 units',
-        );
-        expect(sold.getByText(/in sales$/)).toHaveTextContent(
-            '€3,382.00 in sales',
-        );
-    });
-
-    it('shows zero sales as 0 units', () => {
-        renderHero(denimJacket.capacity, { units_sold: 0, revenue: '0.0000' });
-
-        const sold = within(card('Sales, last 30 days'));
-
-        expect(sold.getByText('0')).toBeInTheDocument();
-        expect(sold.getByText('units')).toBeInTheDocument();
-        expect(sold.getByText(/in sales$/)).toHaveTextContent('€0.00 in sales');
     });
 });

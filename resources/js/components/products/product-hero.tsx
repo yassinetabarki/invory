@@ -5,15 +5,11 @@ import { formatCount } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { Capacity, Decimal } from '@/types/domain';
 
-type SalesFigure = { units_sold: number; revenue: Decimal };
-
 type ProductHeroProps = {
     capacity: Capacity;
     unitCost: Decimal;
     /** The product has more than one size (S-58). */
     multipleSizes: boolean;
-    /** Sales of the last 30 days. */
-    sales: SalesFigure;
     /** The "In stock" figure (S-56): the grid's second cell, with its own loading state. */
     stock: ReactNode;
 };
@@ -76,32 +72,16 @@ export function unitsWord(count: number): string {
     return count === 1 ? 'unit' : 'units';
 }
 
-function SoldCard({ sales }: { sales: SalesFigure }) {
-    const { locale } = useAppSettings();
-
-    return (
-        <HeroCard label="Sold · last 30 days" ariaLabel="Sales, last 30 days">
-            <span className={BIG}>
-                {formatCount(sales.units_sold, locale)}{' '}
-                <span className={UNITS}>{unitsWord(sales.units_sold)}</span>
-            </span>
-            <span className="text-[0.8125rem] text-muted-foreground">
-                <Money value={sales.revenue} /> in sales
-            </span>
-        </HeroCard>
-    );
-}
-
 /**
  * The numbers that matter on a product: how many can be produced now (the
- * primary card), how many are in stock (`stock`), what one unit costs, and
- * what sold in the last 30 days. One column on a phone, two by two from `sm`.
+ * primary card), how many are in stock (`stock`) and what one unit costs.
+ * One column on a phone, two by two from `sm`. The 30-day sales figure lives
+ * under "Recent sales" (S-73).
  */
 export function ProductHero({
     capacity,
     unitCost,
     multipleSizes,
-    sales,
     stock,
 }: ProductHeroProps) {
     const { locale } = useAppSettings();
@@ -159,8 +139,6 @@ export function ProductHero({
                         : 'materials, labor and overhead'}
                 </span>
             </HeroCard>
-
-            <SoldCard sales={sales} />
         </div>
     );
 }

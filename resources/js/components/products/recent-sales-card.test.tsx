@@ -3,10 +3,11 @@ import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { RecentSalesCard } from '@/components/products/recent-sales-card';
 import {
     denimRecentSales,
+    denimSalesLast30Days,
     denimSaleWithoutNote,
 } from '@/test/fixtures/products';
 import { resetInertiaMock, setPageProps } from '@/test/inertia';
-import type { Sale } from '@/types/domain';
+import type { Decimal, Sale } from '@/types/domain';
 
 vi.mock('@inertiajs/react', async (importOriginal) => {
     const { createInertiaModule } = await import('@/test/inertia');
@@ -22,10 +23,12 @@ const RECORD = '/sales?record=1&record_product_id=1';
 function renderCard(
     sales: Sale[] = denimRecentSales,
     recordHref: string | null = RECORD,
+    last30Days: { units_sold: number; revenue: Decimal } = denimSalesLast30Days,
 ) {
     return render(
         <RecentSalesCard
             sales={sales}
+            last30Days={last30Days}
             viewAllHref={VIEW_ALL}
             recordHref={recordHref}
         />,
@@ -110,9 +113,68 @@ describe('<RecentSalesCard>', () => {
         expect(cards[0]).toHaveTextContent('Web shop');
     });
 
+    it.each([
+        [
+            '38 units',
+            denimRecentSales,
+            { units_sold: 38, revenue: '3382.0000' },
+            '38 units sold in the last 30 days · €3,382.00',
+        ],
+        [
+            '1 unit',
+            denimRecentSales,
+            { units_sold: 1, revenue: '89.0000' },
+            '1 unit sold in the last 30 days · €89.00',
+        ],
+        [
+            'older sales only',
+            denimRecentSales,
+            { units_sold: 0, revenue: '0.0000' },
+            'No sales in the last 30 days.',
+        ],
+        ['never sold', [], { units_sold: 0, revenue: '0.0000' }, null],
+    ] satisfies [
+        string,
+        Sale[],
+        { units_sold: number; revenue: Decimal },
+        string | null,
+    ][])(
+        'reads the 30-day figure above the list for %s',
+        (_, sales, last30Days, line) => {
+            renderCard(sales, RECORD, last30Days);
+
+            if (line === null) {
+                // Neither line: only the empty text stays.
+                expect(screen.queryByText(/in the last 30 days/)).toBeNull();
+                expect(
+                    screen.getByText('No sales recorded for this product yet.'),
+                ).toBeInTheDocument();
+
+                return;
+            }
+
+            const text = screen.getByText(/in the last 30 days/);
+
+            expect(text).toHaveTextContent(line);
+
+            // Plain text under the heading, above the list.
+            expect(
+                screen
+                    .getByRole('heading', { name: 'Recent sales' })
+                    .compareDocumentPosition(text) &
+                    Node.DOCUMENT_POSITION_FOLLOWING,
+            ).toBeTruthy();
+            expect(
+                text.compareDocumentPosition(
+                    screen.getByRole('table', { name: 'Recent sales' }),
+                ) & Node.DOCUMENT_POSITION_FOLLOWING,
+            ).toBeTruthy();
+        },
+    );
+
     describe('with no sales yet', () => {
         it('says so and offers to record one', () => {
-            renderCard([]);
+            renderCard([], RECORD, { units_sold: 0, revenue: '0.0000' });
 
             expect(
                 screen.getByText('No sales recorded for this product yet.'),
@@ -131,6 +193,7 @@ describe('<RecentSalesCard>', () => {
             render(
                 <RecentSalesCard
                     sales={[]}
+                    last30Days={{ units_sold: 0, revenue: '0.0000' }}
                     viewAllHref={VIEW_ALL}
                     recordHref={null}
                 />,

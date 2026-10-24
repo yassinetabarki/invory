@@ -123,11 +123,6 @@ describe('products/show page', () => {
                 screen.getByRole('table', { name: 'Composition' }),
             ).toBeInTheDocument();
             expect(
-                within(
-                    screen.getByRole('region', { name: 'Sales, last 30 days' }),
-                ).getByText('38'),
-            ).toBeInTheDocument();
-            expect(
                 screen.getByRole('table', { name: 'Recent sales' }),
             ).toBeInTheDocument();
             expect(screen.queryByRole('status')).not.toBeInTheDocument();
@@ -241,7 +236,7 @@ describe('products/show page', () => {
     });
 
     describe('the worked example', () => {
-        it('shows the four hero cards: can produce, in stock, unit cost, sold', () => {
+        it('shows the hero cards: can produce, in stock, unit cost', () => {
             renderShow(props());
 
             const production = within(
@@ -267,14 +262,20 @@ describe('products/show page', () => {
                     screen.getByRole('region', { name: 'Unit cost' }),
                 ).getByText('€35.75'),
             ).toBeInTheDocument();
+        });
 
-            const sold = within(
-                screen.getByRole('region', { name: 'Sales, last 30 days' }),
-            );
+        it('has no "Sold" card: the 30-day figure reads under "Recent sales"', () => {
+            renderShow(props());
 
-            expect(sold.getByText('38')).toBeInTheDocument();
-            expect(sold.getByText(/in sales$/)).toHaveTextContent(
-                '€3,382.00 in sales',
+            expect(
+                screen.queryByRole('region', { name: 'Sales, last 30 days' }),
+            ).toBeNull();
+            expect(
+                within(
+                    screen.getByRole('region', { name: 'Recent sales' }),
+                ).getByText(/in the last 30 days/),
+            ).toHaveTextContent(
+                '38 units sold in the last 30 days · €3,382.00',
             );
         });
 
@@ -357,7 +358,7 @@ describe('products/show page', () => {
     });
 
     describe('the stock figure (S-56)', () => {
-        it('lays the four figures out one under the other on a phone and two by two from tablet width', () => {
+        it('lays the three figures out one under the other on a phone and two by two from tablet width', () => {
             renderShow(props());
 
             const grid = screen.getByRole('region', {
@@ -368,12 +369,7 @@ describe('products/show page', () => {
                 Array.from(grid?.children ?? []).map((figure) =>
                     figure.getAttribute('aria-label'),
                 ),
-            ).toEqual([
-                'Production capacity',
-                'Finished stock',
-                'Unit cost',
-                'Sales, last 30 days',
-            ]);
+            ).toEqual(['Production capacity', 'Finished stock', 'Unit cost']);
             expect(grid).toHaveClass('grid', 'sm:grid-cols-2');
             expect(grid?.className).not.toMatch(/(?:md|lg|xl|2xl):grid-cols/);
             // The sizes wrap instead of scrolling a phone sideways (jsdom has no layout).

@@ -171,6 +171,8 @@ it('a new user goes from sign-in to a sale on the dashboard', function () {
     GoldenPathStep::run('product: still 112 units', function () use ($page, $browser) {
         $browser->locator('ol[aria-labelledby] > li:first-child')->getByRole('link', ['name' => 'Denim Jacket'])->click();
         goldenShows($page, 'section[aria-label="Production capacity"]', 'Can produce now 112 units');
+        // S-73: the 30-day sales figure sits under "Recent sales" (3 units at 89.000 = the sale's total).
+        goldenShows($page, 'section[aria-labelledby="recent-sales-title"] p', '3 units sold in the last 30 days · '.goldenTnd('267.000'));
         goldenNoPlaceholders($page);
     }, $page);
 

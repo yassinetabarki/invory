@@ -1,4 +1,5 @@
 import { Link } from '@inertiajs/react';
+import { unitsWord } from '@/components/products/product-hero';
 import { Money } from '@/components/shared/money';
 import {
     Table,
@@ -11,10 +12,12 @@ import {
 } from '@/components/ui/table';
 import { useAppSettings } from '@/hooks/use-app-settings';
 import { EMPTY_VALUE, formatCount, formatDate } from '@/lib/format';
-import type { Sale } from '@/types/domain';
+import type { Decimal, Sale } from '@/types/domain';
 
 type RecentSalesCardProps = {
     sales: Sale[];
+    /** Units sold and revenue of the last 30 days (the page's `sales_last_30_days`). */
+    last30Days: { units_sold: number; revenue: Decimal };
     /** Sales page filtered to this product ("View all"). */
     viewAllHref: string;
     /** Sales page with "Record a sale" open for this product; null when it can't be sold (not active). */
@@ -24,6 +27,7 @@ type RecentSalesCardProps = {
 /** The product's newest sales, with a link to the full list. */
 export function RecentSalesCard({
     sales,
+    last30Days,
     viewAllHref,
     recordHref,
 }: RecentSalesCardProps) {
@@ -60,6 +64,17 @@ export function RecentSalesCard({
                 </p>
             ) : (
                 <>
+                    <p className="px-4 pb-3 text-sm text-muted-foreground md:px-5">
+                        {last30Days.units_sold === 0 ? (
+                            'No sales in the last 30 days.'
+                        ) : (
+                            <>
+                                {`${formatCount(last30Days.units_sold, locale)} ${unitsWord(last30Days.units_sold)} sold in the last 30 days · `}
+                                <Money value={last30Days.revenue} />
+                            </>
+                        )}
+                    </p>
+
                     {/* >= md: table */}
                     <div className="hidden md:block">
                         <Table>

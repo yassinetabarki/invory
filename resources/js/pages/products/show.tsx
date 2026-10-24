@@ -125,7 +125,6 @@ function ProductDetails({
                             capacity={product.capacity}
                             unitCost={product.cost.unit_cost}
                             multipleSizes={product.size_list.sizes.length > 1}
-                            sales={sales}
                             stock={
                                 <Deferred
                                     data="finished_stock"
@@ -173,6 +172,7 @@ function ProductDetails({
 
                 <RecentSalesCard
                     sales={recentSales}
+                    last30Days={sales}
                     recordHref={recordHref}
                     viewAllHref={SaleController.index.url({
                         query: { product_id: product.id },
