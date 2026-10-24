@@ -25,7 +25,9 @@
 size, restock of finished products, clients and a production progress page. **Every open story of every phase is on hold** (cards
 `On hold`), and nothing is planned, in progress or waiting for acceptance. The next work, in your order (D-21): **INV-1** colours,
 INV-2 product sizes × colours with stock and a barcode per variant, INV-3 restock of finished products, INV-4 clients, INV-5 a
-production progress page. Each gets a UI card first and then a development card. None has a card yet.
+production progress page. Each gets a UI card first and then a development card. **INV-1 "Colours as fixed values" is `UI
+approved`** (you validated its UI card on 2026-10-25); its development card comes when you ask for it. **In flight:** INV-2's UI
+card (product details: stock per size and colour, and a Barcode tab) is being designed.
 **Phase 5: Customer orders** (started 2026-10-15, D-12; on hold since 2026-10-24). **Done:** S-48 (accepted 2026-10-15), and **F-41, S-49
 and S-53** (accepted 2026-10-21 after your one click-through; built in one build and landed on `main` together, `e99615e` … `8ab9df8`,
 closing docs `f803cb1`), **S-50** (accepted 2026-10-22; `ba0a0cd`, `74f05a8`, `a23a5d7`, merged in `0270014`), **S-58**
@@ -55,6 +57,20 @@ Phases 6, 7 and 8 are on hold too (D-20).
 | D-5 | Production database host (needs PostgreSQL 13+ and `pg_trgm`) | Before S-26; not urgent |
 | D-6 | Delete the 5 merged branches and the stale worktree `.claude/worktrees/fix-hover-prefetch-bug`? | Yes (nothing unmerged) |
 | D-19 | The canvas note "sizenote" says zero sizes are left out of summaries, while "In stock" lists "M 0" greyed (designer's Q8). (a) You edit the note to "Zero sizes are left out of order summaries (order page, Orders list, history). The In stock figure lists every size, 0 greyed." · (b) The designer drafts it on the canvas for your review | (a), the designer's default; no screen changes either way |
+
+**Decided on 2026-10-25: INV-1 colours, your answers on the UI card.** You then validated the UI card the same day, so INV-1 is
+`UI approved`. You also removed the Colours field's states from the board, and kept the saving spinner and the long scrolling picker:
+1. **Each workshop has its own colour list** in Settings › Colours, starting from the 20 default colours (White WHT … Forest green
+   FGR), every workshop included. Colours can be added and edited (name, code, swatch); the code never changes.
+2. **Colours are never removed in INV-1**, in your words: "ignore this cases for now image that the color will never be removed".
+   There is no archive, restore or delete for colours, and no message about it; the buttons just aren't there.
+3. **A product's colours are optional**: a product with none reads "Colours None yet · Add colours".
+4. **The 20 default colours stay as listed** (names up to 32 characters, codes of 2 to 4 capital letters or digits).
+5. **The swatch's edge is the field-border grey** (3.2:1 on the card, light and dark), not your boards' fainter edge.
+6. **A product's colours show in the order of Settings › Colours**, the same on every product (Black, Indigo, Light wash).
+- Decided by the product-owner from the designer's options: colours are chosen in a Colours field in Add / Edit product, with a
+  searchable list (a full-screen sheet on a phone); the spelling is "Colour" everywhere; the materials' "Colour" field stays free text;
+  no colours on the Products list in INV-1.
 
 **Decided on 2026-10-24: D-20 the card flow is paused.** You are reworking the product model around **colour × size variants**:
 fixed colours, stock per variant, a barcode per variant, restock of finished products, a client entity and a production progress page.
@@ -509,11 +525,13 @@ The plan headers were corrected on 2026-10-14, and [plans/README.md](plans/READM
 - New **product-owner** agent; the tech-lead now owns technical planning and code review only (see [TEAM.md](TEAM.md)).
 
 ## 9. Next steps (recommended order)
-**From 2026-10-24 (D-20): the colour × size variant rework first; every open story is on hold.** Updated 2026-10-24.
-1. Human: ask for INV-1 (colours) when you are ready. The product-owner writes its UI card from a session on the main checkout;
-   the development card follows. Then INV-2 to INV-5 in the order of D-21.
-2. Main session: update the process documents for the new way of working (UI card, then development card, INV IDs), at your request.
-3. Product-owner: before any on-hold story resumes, check its card against the new product model (R-21).
+**From 2026-10-24 (D-20): the colour × size variant rework first; every open story is on hold.** Updated 2026-10-25.
+1. Now: INV-2's UI card (product details: stock per size and colour, and a Barcode tab) is being designed. The designer proposes it;
+   the product-owner then decides and writes the UI card for your validation.
+2. When you ask for it: the product-owner writes INV-1's development card from its approved UI card (done 2026-10-25). Then INV-3 to
+   INV-5 follow in the order of D-21.
+3. Done 2026-10-24: the process documents describe the new way of working (UI card, then development card, INV IDs; `e2be378`).
+4. Product-owner: before any on-hold story resumes, check its card against the new product model (R-21).
 
 **Steps before the pause (2026-10-24), kept for the record:**
 1. Done 2026-10-24: you accepted S-73. Its three commits (`51ba6ce`, `078bead`, `bf5db86`) are on its build branch

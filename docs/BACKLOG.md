@@ -28,14 +28,20 @@ each item is checked against the new product model before its card goes back to 
 (`INV-n-<slug>-ui.md`), then a development card (`INV-n-<slug>.md`). Each item is an `Idea`; its cards come from a session on the
 main checkout when you ask for them.
 
-| ID    | What it brings                                         | Type    | Status |
-| ----- | ------------------------------------------------------ | ------- | ------ |
-| INV-1 | Colours: a fixed list                                  | feature | `Idea` |
-| INV-2 | Product sizes × colours: stock and barcode per variant | feature | `Idea` |
-| INV-3 | Restock of finished products                           | feature | `Idea` |
-| INV-4 | Clients                                                | feature | `Idea` |
-| INV-5 | A production progress page                             | feature | `Idea` |
+| ID    | What it brings                                         | Type    | Status        |
+| ----- | ------------------------------------------------------ | ------- | ------------- |
+| INV-1 | Colours: a fixed list                                  | feature | `UI approved` |
+| INV-2 | Product sizes × colours: stock and barcode per variant | feature | `Idea`        |
+| INV-3 | Restock of finished products                           | feature | `Idea`        |
+| INV-4 | Clients                                                | feature | `Idea`        |
+| INV-5 | A production progress page                             | feature | `Idea`        |
 
+- **INV-1 · Colours as fixed values** (Must; `UI approved`: you validated the UI card on 2026-10-25):
+  [stories/INV-1-colours-ui.md](stories/INV-1-colours-ui.md). Each workshop keeps its colours in Settings › Colours (20 to start, added
+  and edited, never removed), a product picks its colours in Add / Edit product (optional), and the product page shows a "Colours"
+  line. Stock, barcodes, orders and sales per colour are INV-2 and later. Its development card comes when you ask for it.
+- **INV-2 · Product sizes × colours: stock and barcode per variant** (`Idea`): the designer is designing its UI card now (the
+  product details with stock per size and colour, and a Barcode tab).
 - On-hold items stay on hold (your answer, D-20): each one is checked against the variant model before it resumes.
 
 ---
