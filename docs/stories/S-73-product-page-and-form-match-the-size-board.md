@@ -62,7 +62,7 @@ tags:
 
 ## Technical work
 > [!warning] Complex · NON-CRITICAL · frontend · 3 commits
-> Tech-lead · 2026-10-24 · approved 2026-10-24
+> Tech-lead · 2026-10-24 · approved 2026-10-24 · delivered 2026-10-24
 > Why complex: three commits, and the board's 36 px unit cost doesn't fit a row of three at 1280 px as the page is today, so the
 > fix is a design choice worth recording (see Decisions).
 
@@ -207,3 +207,7 @@ but the golden path file is shared, so they run one after the other).
   the designer checks light and dark mode in the acceptance review.
 - S-71 is built first, on its own branch → S-73's worktree is cut from `main` after S-71 merges, and the file lists are checked
   again at dispatch in case S-71 touched a shared component.
+
+### Progress
+- 2026-10-24 · S-73-a approved (round 1) · S-73-b approved (round 2: a debug print removed from the golden path) · S-73-c approved
+  (round 1). All gates green on each step; golden path green; the three cards measure 218.7 px each at 1280 px.

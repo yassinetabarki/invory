@@ -163,6 +163,16 @@ it('a new user goes from sign-in to a sale on the dashboard', function () {
         $field('SKU')->fill('E2E-JKT');
         $field('Name')->fill('Denim Jacket');
         $choose('Category', 'Apparel');
+        // S-73-c: the size tags under "Category" are drawn as on the size board (13 px semibold).
+        $page->assertScript(<<<'JS'
+        (() => {
+            const line = Array.from(document.querySelectorAll('p[aria-hidden="true"]')).find((el) => el.textContent.trim().startsWith('Sizes:') && el.textContent.includes('XL'));
+            const tag = line && Array.from(line.querySelectorAll('span')).find((el) => el.textContent.trim() === 'M');
+            if (!tag) return 'no tag';
+            const style = getComputedStyle(tag);
+            return style.fontSize + ' ' + style.fontWeight;
+        })()
+        JS, '13px 600');
         $choose('Status', 'Active');
         $field('Labor cost')->fill('12.000');
         $field('Overhead cost (optional)')->fill('3.500');

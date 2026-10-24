@@ -142,7 +142,11 @@ function SizesLine({
                         <span className="text-muted-foreground">Sizes:</span>
                         {list.sizes.length <= MAX_SIZE_TAGS ? (
                             list.sizes.map((size) => (
-                                <Badge key={size.id} variant="outline">
+                                <Badge
+                                    key={size.id}
+                                    variant="outline"
+                                    className="rounded-md border-input/50 bg-card px-2.5 py-1 text-[0.8125rem] font-semibold"
+                                >
                                     {size.label}
                                 </Badge>
                             ))

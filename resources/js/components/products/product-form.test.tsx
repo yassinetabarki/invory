@@ -183,6 +183,20 @@ describe('<ProductForm>', () => {
                         (badge) => badge.textContent,
                     ),
                 ).toEqual(tags);
+
+                // The board's look (13 px semibold on the card, a stronger border); the tags are plain text, not controls.
+                for (const badge of field.querySelectorAll(
+                    '[data-slot="badge"]',
+                )) {
+                    expect(badge).toHaveClass(
+                        'text-[0.8125rem]',
+                        'font-semibold',
+                        'bg-card',
+                        'border-input/50',
+                    );
+                    expect(badge).not.toHaveAttribute('tabindex');
+                    expect(badge.closest('button, a')).toBeNull();
+                }
                 expect(field.querySelector('strong')?.textContent).toBe(
                     bold ?? undefined,
                 );
