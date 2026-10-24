@@ -119,9 +119,9 @@ describe('<ProductHero>', () => {
     it('shows the unit cost of the worked example (35.7540 → €35.75)', () => {
         renderHero();
 
-        const cost = within(card('Unit cost'));
-
-        expect(cost.getByText('€35.75')).toBeInTheDocument();
+        // The currency is drawn at the size of "units", yet the figure reads as one text.
+        expect(card('Unit cost')).toHaveTextContent('Unit cost€35.75');
+        expect(within(card('Unit cost')).getByText('€')).toHaveClass('text-lg');
     });
 
     it.each([
@@ -141,8 +141,6 @@ describe('<ProductHero>', () => {
         });
         renderHero();
 
-        expect(
-            within(card('Unit cost')).getByText('TND 35.754'),
-        ).toBeInTheDocument();
+        expect(card('Unit cost')).toHaveTextContent('Unit costTND 35.754');
     });
 });

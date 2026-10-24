@@ -80,21 +80,13 @@ export type FormatMoneyOptions = {
 };
 
 /**
- * Money is shown with the currency's own ISO minor-unit digits (decided
- * 2026-10-08, backlog F-10): `"35.7540"` → `TND 35.754` (en, TND; the
- * separator is a no-break space), `€35.75` (EUR) or `¥36` (JPY). With
- * `precise`, amounts below one minor unit keep 4 digits: EUR `"0.0040"` →
- * `€0.0040`, TND `"0.0004"` → `TND 0.0004`, while TND `"0.0040"` → `TND 0.004`.
- * Null, undefined, empty or malformed input renders as an em dash.
+ * The one builder behind `formatMoney` and `formatMoneyParts`, so the parts
+ * always join to the same text. Takes a value already checked as numeric.
  */
-export function formatMoney(
-    value: Maybe<Decimal>,
+function moneyFormatter(
+    value: NumericString,
     { currency, locale, precise = false }: FormatMoneyOptions,
-): string {
-    if (value == null || !isNumericString(value)) {
-        return EMPTY_VALUE;
-    }
-
+): Intl.NumberFormat {
     const currencyDigits = currencyFractionDigits(currency, locale);
     const fractionDigits =
         precise && isBelowMinorUnit(value, currencyDigits)
@@ -108,7 +100,43 @@ export function formatMoney(
         maximumFractionDigits: fractionDigits,
         // Hides the minus sign of values that round to zero ("-TND 0.000").
         signDisplay: 'negative',
-    }).format(value);
+    });
+}
+
+/**
+ * Money is shown with the currency's own ISO minor-unit digits (decided
+ * 2026-10-08, backlog F-10): `"35.7540"` → `TND 35.754` (en, TND; the
+ * separator is a no-break space), `€35.75` (EUR) or `¥36` (JPY). With
+ * `precise`, amounts below one minor unit keep 4 digits: EUR `"0.0040"` →
+ * `€0.0040`, TND `"0.0004"` → `TND 0.0004`, while TND `"0.0040"` → `TND 0.004`.
+ * Null, undefined, empty or malformed input renders as an em dash.
+ */
+export function formatMoney(
+    value: Maybe<Decimal>,
+    options: FormatMoneyOptions,
+): string {
+    if (value == null || !isNumericString(value)) {
+        return EMPTY_VALUE;
+    }
+
+    return moneyFormatter(value, options).format(value);
+}
+
+/**
+ * The pieces of `formatMoney`, in the locale's order (`currency`, `literal`,
+ * `integer`…), so a screen can draw the currency apart from the amount; the
+ * pieces always join to the `formatMoney` text. Null, undefined, empty or
+ * malformed input is one literal piece holding the em dash.
+ */
+export function formatMoneyParts(
+    value: Maybe<Decimal>,
+    options: FormatMoneyOptions,
+): Intl.NumberFormatPart[] {
+    if (value == null || !isNumericString(value)) {
+        return [{ type: 'literal', value: EMPTY_VALUE }];
+    }
+
+    return moneyFormatter(value, options).formatToParts(value);
 }
 
 export type FormatQuantityOptions = {

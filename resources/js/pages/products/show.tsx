@@ -12,7 +12,7 @@ import {
     FinishedStockFigure,
 } from '@/components/products/finished-stock-figure';
 import { ProductHeader } from '@/components/products/product-header';
-import { ProductHero } from '@/components/products/product-hero';
+import { HERO_ROW, ProductHero } from '@/components/products/product-hero';
 import { ProductPhoto } from '@/components/products/product-photo';
 import { RecentSalesCard } from '@/components/products/recent-sales-card';
 import { ConfirmDeleteDialog } from '@/components/shared/confirm-delete-dialog';
@@ -211,11 +211,10 @@ function ProductPageSkeleton() {
                 <Skeleton className="h-8 w-64 max-w-full motion-reduce:animate-none" />
                 <Skeleton className="h-4 w-40 motion-reduce:animate-none" />
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className={HERO_ROW}>
                 <SkeletonStat label="Can produce now" />
                 <SkeletonStat label="In stock" />
                 <SkeletonStat label="Unit cost" />
-                <SkeletonStat label="Sold · last 30 days" />
             </div>
             <SkeletonCard
                 title="Cost breakdown"

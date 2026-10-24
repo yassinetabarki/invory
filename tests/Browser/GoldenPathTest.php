@@ -47,6 +47,73 @@ function goldenNoPlaceholders(PendingAwaitablePage $page): void
     JS, '');
 }
 
+/**
+ * S-73-b: measures the three figure cards of the product page ("Production capacity", "Finished stock", "Unit cost"):
+ * the size of their words, where "Update stock" sits, and (mode `wide`) one row of equal cards of at least 200 px or
+ * (mode `narrow`) a stack in order without a sideways scroll. The layout needs a moment after a resize, so it re-reads
+ * for up to two seconds. Returns "ok", or the problems found.
+ */
+function goldenHeroCards(string $mode): string
+{
+    return str_replace('__MODE__', $mode, <<<'JS'
+    (async () => {
+        const mode = '__MODE__';
+        const cards = [['Production capacity', 'Can produce now'], ['Finished stock', 'In stock'], ['Unit cost', 'Unit cost']];
+        const measure = () => {
+            const issues = [];
+            const sections = cards.map(([name]) => document.querySelector('section[aria-label="' + name + '"]'));
+            if (sections.some((section) => !section)) {
+                return { issues: ['a card is missing'], widths: [] };
+            }
+
+            const rects = sections.map((section) => section.getBoundingClientRect());
+            const widths = rects.map((rect) => Math.round(rect.width * 10) / 10);
+
+            if (mode === 'wide') {
+                if (window.innerWidth !== 1280) issues.push('the window is ' + window.innerWidth + ' px wide');
+                if (rects.some((rect) => Math.abs(rect.top - rects[0].top) > 1)) issues.push('the cards do not share one top: ' + rects.map((rect) => rect.top).join(', '));
+                if (Math.max(...widths) - Math.min(...widths) > 1) issues.push('the cards are not equal: ' + widths.join(', '));
+                if (Math.min(...widths) < 200) issues.push('a card is under 200 px: ' + widths.join(', '));
+                if (rects.some((rect, i) => i > 0 && rect.left < rects[i - 1].right - 1)) issues.push('the cards are not left to right in order');
+            } else {
+                if (rects.some((rect, i) => i > 0 && rect.top < rects[i - 1].bottom - 1)) issues.push('the cards do not stack in order: tops ' + rects.map((rect) => rect.top).join(', '));
+                if (document.documentElement.scrollWidth > window.innerWidth) issues.push('the page scrolls sideways: ' + document.documentElement.scrollWidth + ' > ' + window.innerWidth);
+            }
+
+            sections.forEach((section, i) => {
+                const [name, labelText] = cards[i];
+                const label = Array.from(section.querySelectorAll('span')).find((el) => el.textContent.trim() === labelText);
+                const figure = section.children[1];
+                const size = (el) => (el ? getComputedStyle(el).fontSize : 'missing');
+                if (size(figure) !== '36px') issues.push(name + ': the figure is ' + size(figure));
+                if (size(label) !== '15px') issues.push(name + ': the label is ' + size(label));
+                if (figure && figure.scrollWidth > figure.clientWidth + 1) issues.push(name + ': the figure overflows its card');
+            });
+
+            const stock = sections[1];
+            const button = Array.from(stock.querySelectorAll('button')).find((el) => el.textContent.trim() === 'Update stock');
+            const label = Array.from(stock.querySelectorAll('span')).find((el) => el.textContent.trim() === 'In stock');
+            const figure = stock.children[1].getBoundingClientRect();
+            const b = button.getBoundingClientRect();
+            const l = label.getBoundingClientRect();
+            if (!(b.top < l.bottom && b.bottom > l.top)) issues.push('"Update stock" is not on the "In stock" row');
+            if (b.bottom > figure.top + 1 && b.top < figure.bottom - 1 && b.right > figure.left && b.left < figure.right) issues.push('"Update stock" covers the units');
+            if (b.right > rects[1].right) issues.push('"Update stock" is outside its card');
+
+            return { issues, widths };
+        };
+
+        let result = measure();
+        for (let attempt = 0; attempt < 20 && result.issues.length > 0; attempt++) {
+            await new Promise((resolve) => setTimeout(resolve, 100));
+            result = measure();
+        }
+
+        return result.issues.length === 0 ? 'ok' : result.issues.join(' | ');
+    })()
+    JS);
+}
+
 it('a new user goes from sign-in to a sale on the dashboard', function () {
     GoldenPathStep::run('database: throwaway', function () {
         expect(DB::connection()->getDatabaseName())->toBe(':memory:');
@@ -228,5 +295,26 @@ it('a new user goes from sign-in to a sale on the dashboard', function () {
         $page->assertScript('window.__placeholderSeen', false);
         // Nothing else moved: capacity is still 112.
         goldenShows($page, 'section[aria-label="Production capacity"]', 'Can produce now 112 units');
+    }, $page);
+
+    // S-73-b: the three figures are one row of equal cards at the size board's size, and stack on a phone.
+    GoldenPathStep::run('product: three figures in one row at 1280 px', function () use ($page) {
+        $page->resize(1280, 900);
+        $page->assertScript(goldenHeroCards('wide'), 'ok');
+        // The currency part of the unit cost is drawn at the size of "units"; the text is still the money text.
+        $page->assertScript(<<<'JS'
+        (() => {
+            const figure = document.querySelector('section[aria-label="Unit cost"]').children[1];
+            const code = figure.firstElementChild;
+            return code && getComputedStyle(code).fontSize === '18px' && /^TND\s35\.130$/.test(figure.textContent) ? 'ok' : figure.textContent + ' / ' + code?.textContent;
+        })()
+        JS, 'ok');
+    }, $page);
+
+    GoldenPathStep::run('product: the figures stack in order at 375 px', function () use ($page) {
+        $page->resize(375, 812);
+        $page->assertScript(goldenHeroCards('narrow'), 'ok');
+        // Back to the size the other steps use.
+        $page->resize(1280, 720);
     }, $page);
 });

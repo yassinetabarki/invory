@@ -1,6 +1,7 @@
 import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
+import { HERO_ROW } from '@/components/products/product-hero';
 import ProductsShow from '@/pages/products/show';
 import {
     canvasLowSneaker,
@@ -10,6 +11,7 @@ import {
     denimRecentSales,
     denimSalesLast30Days,
     jacketWithoutComposition,
+    sizeListEu36To46,
     sizeListSToXl,
 } from '@/test/fixtures/products';
 import {
@@ -35,6 +37,12 @@ const denimStock: FinishedStock = {
         size,
         units: [3, 0, 5, 2][index] ?? 0,
     })),
+};
+
+/** The sneaker's stock: 11 sizes, 36 to 46, 2 pairs each. */
+const sneakerStock: FinishedStock = {
+    units: 22,
+    sizes: sizeListEu36To46.sizes.map((size) => ({ size, units: 2 })),
 };
 
 function props(
@@ -99,7 +107,23 @@ describe('products/show page', () => {
             });
             const { rerender } = render(<ProductsShow {...first} />);
 
-            expect(screen.getByText('Loading Unit cost…')).toBeInTheDocument();
+            // Three figure placeholders in the row (not four), then the other cards'.
+            const row =
+                screen.getByText('Loading Unit cost…').parentElement
+                    ?.parentElement;
+
+            expect(
+                Array.from(row?.children ?? []).map(
+                    (placeholder) =>
+                        within(placeholder as HTMLElement).getByRole('status')
+                            .textContent,
+                ),
+            ).toEqual([
+                'Loading Can produce now…',
+                'Loading In stock…',
+                'Loading Unit cost…',
+            ]);
+            expect(row).toHaveClass(...HERO_ROW.split(' '));
             expect(
                 screen.getByText('Loading recent sales…'),
             ).toBeInTheDocument();
@@ -257,11 +281,10 @@ describe('products/show page', () => {
             expect(
                 inStock.getByText('In stock per size: S 3, M 0, L 5, XL 2'),
             ).toBeInTheDocument();
+            // The currency part is drawn apart, but the text is one.
             expect(
-                within(
-                    screen.getByRole('region', { name: 'Unit cost' }),
-                ).getByText('€35.75'),
-            ).toBeInTheDocument();
+                screen.getByRole('region', { name: 'Unit cost' }),
+            ).toHaveTextContent('Unit cost€35.75');
         });
 
         it('has no "Sold" card: the 30-day figure reads under "Recent sales"', () => {
@@ -285,10 +308,8 @@ describe('products/show page', () => {
             });
 
             expect(
-                within(
-                    screen.getByRole('region', { name: 'Unit cost' }),
-                ).getByText('TND 35.754'),
-            ).toBeInTheDocument();
+                screen.getByRole('region', { name: 'Unit cost' }),
+            ).toHaveTextContent('Unit costTND 35.754');
             expect(
                 within(
                     screen.getByRole('region', { name: 'Cost breakdown' }),
@@ -358,26 +379,33 @@ describe('products/show page', () => {
     });
 
     describe('the stock figure (S-56)', () => {
-        it('lays the three figures out one under the other on a phone and two by two from tablet width', () => {
-            renderShow(props());
+        it('lays the three figures out in one row, in order, and wraps the sizes', () => {
+            const { unmount } = renderShow(props());
 
-            const grid = screen.getByRole('region', {
+            const row = screen.getByRole('region', {
                 name: 'Production capacity',
             }).parentElement;
 
             expect(
-                Array.from(grid?.children ?? []).map((figure) =>
+                Array.from(row?.children ?? []).map((figure) =>
                     figure.getAttribute('aria-label'),
                 ),
             ).toEqual(['Production capacity', 'Finished stock', 'Unit cost']);
-            expect(grid).toHaveClass('grid', 'sm:grid-cols-2');
-            expect(grid?.className).not.toMatch(/(?:md|lg|xl|2xl):grid-cols/);
-            // The sizes wrap instead of scrolling a phone sideways (jsdom has no layout).
-            expect(
-                screen
-                    .getByRole('region', { name: 'Finished stock' })
-                    .querySelector('[aria-hidden="true"]'),
-            ).toHaveClass('flex-wrap');
+            expect(row).toHaveClass(...HERO_ROW.split(' '));
+            unmount();
+
+            // A shoe's 11 sizes wrap inside the card instead of scrolling a phone sideways (jsdom has no layout).
+            renderShow(
+                props(canvasLowSneaker, { finished_stock: sneakerStock }),
+                { url: '/products/3' },
+            );
+
+            const chips = screen
+                .getByRole('region', { name: 'Finished stock' })
+                .querySelector('[aria-hidden="true"]');
+
+            expect(chips?.children).toHaveLength(11);
+            expect(chips).toHaveClass('flex-wrap');
         });
 
         it('shows a placeholder while the stock loads, apart from the rest of the page', () => {

@@ -4,6 +4,7 @@ import {
     formatCount,
     formatDate,
     formatMoney,
+    formatMoneyParts,
     formatPercent,
     formatQuantity,
 } from './format';
@@ -110,6 +111,49 @@ describe('formatMoney', () => {
         'renders %j as an em dash',
         (value) => {
             expect(formatMoney(value, eur)).toBe(EMPTY_VALUE);
+        },
+    );
+});
+
+describe('formatMoneyParts', () => {
+    it.each([
+        [
+            'TND',
+            'TND',
+            '35.7540',
+            ['currency', 'literal', 'integer', 'decimal', 'fraction'],
+        ],
+        [
+            'EUR',
+            'EUR',
+            '35.7540',
+            ['currency', 'integer', 'decimal', 'fraction'],
+        ],
+        ['JPY', 'JPY', '35.7540', ['currency', 'integer']],
+        [
+            'a negative',
+            'TND',
+            '-12.5000',
+            [
+                'minusSign',
+                'currency',
+                'literal',
+                'integer',
+                'decimal',
+                'fraction',
+            ],
+        ],
+        ['no value', 'TND', null, ['literal']],
+    ] as const)(
+        'splits %s by type, and the pieces join to formatMoney',
+        (_, currency, value, types) => {
+            const options = { currency, locale: 'en' };
+            const parts = formatMoneyParts(value, options);
+
+            expect(parts.map((part) => part.type)).toEqual(types);
+            expect(parts.map((part) => part.value).join('')).toBe(
+                formatMoney(value, options),
+            );
         },
     );
 });

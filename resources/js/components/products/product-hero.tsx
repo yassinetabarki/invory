@@ -1,7 +1,7 @@
+import { Fragment } from 'react';
 import type { ReactNode } from 'react';
-import { Money } from '@/components/shared/money';
 import { useAppSettings } from '@/hooks/use-app-settings';
-import { formatCount } from '@/lib/format';
+import { formatCount, formatMoneyParts } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { Capacity, Decimal } from '@/types/domain';
 
@@ -31,7 +31,7 @@ export function HeroCard({
     const labelText = (
         <span
             className={cn(
-                'text-[0.8125rem] font-semibold',
+                'text-[0.9375rem] font-semibold',
                 !primary && 'text-muted-foreground',
             )}
         >
@@ -43,14 +43,14 @@ export function HeroCard({
         <section
             aria-label={ariaLabel}
             className={cn(
-                'flex flex-col gap-1 rounded-xl border px-5 py-[18px]',
+                'flex min-w-0 flex-col gap-1 rounded-xl border px-5 py-[18px]',
                 primary
                     ? 'border-primary bg-primary text-primary-foreground'
                     : 'bg-card text-card-foreground',
             )}
         >
             {action ? (
-                <div className="flex items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                     {labelText}
                     {action}
                 </div>
@@ -62,8 +62,15 @@ export function HeroCard({
     );
 }
 
+/**
+ * The row of the three figures: the size board's own rule. Equal cards that
+ * wrap (two, then one) rather than go under 200 px; on a phone they stack in
+ * DOM order. Shared with the page skeleton.
+ */
+export const HERO_ROW =
+    'grid gap-4 grid-cols-[repeat(auto-fit,minmax(min(200px,100%),1fr))]';
 export const BIG =
-    'text-[2rem] leading-[1.1] font-bold tracking-tight tabular-nums';
+    'text-[2.25rem] leading-[1.1] font-bold tracking-tight tabular-nums';
 const BIG_TEXT = 'text-[1.625rem] leading-[1.2] font-bold tracking-tight';
 /** The unit word after a count; the count and the word are separated by a real space in the text. */
 export const UNITS = 'text-lg font-semibold';
@@ -73,10 +80,48 @@ export function unitsWord(count: number): string {
 }
 
 /**
+ * The unit cost at the big size, its currency part (`TND`, `€`) at the size of
+ * "units" so the figure fits a card of the row. The pieces join to exactly the
+ * `formatMoney` text; a `<wbr>` after the space lets a large cost put its
+ * amount under the code. Parts are told apart by type, never by position.
+ */
+function UnitCostFigure({ value }: { value: Decimal }) {
+    const { currency, locale } = useAppSettings();
+    const parts = formatMoneyParts(value, { currency, locale });
+
+    return (
+        <span className={BIG}>
+            {parts.map((part, index) => {
+                if (part.type === 'currency') {
+                    return (
+                        <span key={index} className={UNITS}>
+                            {part.value}
+                        </span>
+                    );
+                }
+
+                const beside = [parts[index - 1], parts[index + 1]].some(
+                    (other) => other?.type === 'currency',
+                );
+
+                return part.type === 'literal' && beside ? (
+                    <Fragment key={index}>
+                        {part.value}
+                        <wbr />
+                    </Fragment>
+                ) : (
+                    <Fragment key={index}>{part.value}</Fragment>
+                );
+            })}
+        </span>
+    );
+}
+
+/**
  * The numbers that matter on a product: how many can be produced now (the
  * primary card), how many are in stock (`stock`) and what one unit costs.
- * One column on a phone, two by two from `sm`. The 30-day sales figure lives
- * under "Recent sales" (S-73).
+ * One row of three equal cards (`HERO_ROW`), stacked on a phone. The 30-day
+ * sales figure lives under "Recent sales" (S-73).
  */
 export function ProductHero({
     capacity,
@@ -88,7 +133,7 @@ export function ProductHero({
     const { max_producible: producible } = capacity;
 
     return (
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className={HERO_ROW}>
             <HeroCard
                 label="Can produce now"
                 ariaLabel="Production capacity"
@@ -130,9 +175,7 @@ export function ProductHero({
             {stock}
 
             <HeroCard label="Unit cost" ariaLabel="Unit cost">
-                <span className={BIG}>
-                    <Money value={unitCost} />
-                </span>
+                <UnitCostFigure value={unitCost} />
                 <span className="text-[0.8125rem] text-muted-foreground">
                     {multipleSizes
                         ? 'same for every size'

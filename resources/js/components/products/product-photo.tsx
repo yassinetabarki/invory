@@ -13,7 +13,7 @@ export function ProductPhoto({
     description,
 }: ProductPhotoProps) {
     return (
-        <figure className="m-0 flex w-full max-w-xs flex-col gap-2.5 rounded-xl border bg-card p-3 text-card-foreground lg:max-w-80">
+        <figure className="m-0 flex w-full max-w-xs flex-col gap-2.5 rounded-xl border bg-card p-3 text-card-foreground lg:max-w-64">
             <PhotoThumb
                 src={photoUrl}
                 alt={`Photo of ${name}`}
