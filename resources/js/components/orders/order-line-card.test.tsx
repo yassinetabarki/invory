@@ -394,6 +394,74 @@ describe('<OrderLineCard>', () => {
             ).toHaveFocus();
         });
 
+        it('AC-4: the table sits in a frame, with a grey band, figures in the number font and grey zeros', () => {
+            renderCard(cutJacket);
+
+            const table = screen.getByRole('table');
+            const rows = within(table).getAllByRole('row');
+            const total = rows[rows.length - 1];
+            const figureCells = rows
+                .slice(1)
+                .flatMap((row) => within(row).getAllByRole('cell'));
+
+            // Frame and band (jsdom has no CSS: the classes are what is checked).
+            expect(table.parentElement).toHaveClass('rounded-lg', 'border');
+            expect(rows[0]).toHaveClass('bg-muted/60');
+            // Every figure, the Total's included, in the number font.
+            expect(figureCells).toHaveLength(20);
+            for (const cell of figureCells) {
+                expect(cell).toHaveClass('font-mono');
+            }
+            // Exactly the zeros are grey, in the size rows and in the Total row.
+            for (const cell of figureCells) {
+                expect(cell.classList.contains('text-muted-foreground')).toBe(
+                    cell.textContent === '0',
+                );
+            }
+            expect(
+                within(total)
+                    .getAllByRole('cell')
+                    .map((cell) => [
+                        cell.textContent,
+                        cell.classList.contains('text-muted-foreground'),
+                    ]),
+            ).toEqual([
+                ['36', false],
+                ['14', false],
+                ['0', true],
+                ['0', true],
+            ]);
+            // The Total row is shaded with a heavier line above it; the labels stay in the body font.
+            expect(total).toHaveClass('bg-muted/60');
+            for (const cell of [
+                ...within(total).getAllByRole('cell'),
+                within(total).getByRole('rowheader'),
+            ]) {
+                expect(cell).toHaveClass('border-t-2');
+            }
+            const rowHeaders = within(table).getAllByRole('rowheader');
+            const totalHeader = rowHeaders[rowHeaders.length - 1];
+            for (const header of rowHeaders) {
+                expect(header).not.toHaveClass('font-mono');
+            }
+            // Size labels are semibold like the size chips; the Total stays bold through its row.
+            for (const header of rowHeaders.slice(0, -1)) {
+                expect(header).toHaveClass('font-semibold');
+                expect(header).not.toHaveClass('font-bold');
+            }
+            expect(totalHeader).toHaveTextContent('Total');
+            expect(total).toHaveClass('font-bold');
+            expect(totalHeader).not.toHaveClass('font-semibold');
+            // The Size column's cells carry the figure cells' horizontal padding, so none touches the frame.
+            const sizeCells = [
+                within(rows[0]).getAllByRole('columnheader')[0],
+                ...rowHeaders,
+            ];
+            for (const cell of [...sizeCells, ...figureCells]) {
+                expect(cell).toHaveClass('px-3');
+            }
+        });
+
         it('AC-3: across the boxes of a one-size line, the forward buttons share one line and the Move backs the line below', () => {
             renderCard({
                 ...tote,

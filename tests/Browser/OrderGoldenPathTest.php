@@ -169,6 +169,36 @@ it('records an order with two products, starts cutting 14 jackets by size and fi
                 }
             });
 
+            // S-71-b: inside the frame, the space left of the "S" label equals the space right of its Shipped figure.
+            const textBox = (cell) => {
+                const range = document.createRange();
+                range.selectNodeContents(cell);
+                return range.getBoundingClientRect();
+            };
+            const firstRow = table.querySelector('tbody tr');
+            const sizeLabel = firstRow?.querySelector('th');
+            const shippedFigure = firstRow?.querySelector('td:last-child');
+            if (!sizeLabel || !shippedFigure || sizeLabel.innerText.trim() !== 'S') {
+                issues.push('no "S" row to measure the frame padding on');
+            } else {
+                const frame = wide.getBoundingClientRect();
+                const frameStyle = getComputedStyle(wide);
+                const left = textBox(sizeLabel).left - (frame.left + parseFloat(frameStyle.borderLeftWidth));
+                const right = (frame.right - parseFloat(frameStyle.borderRightWidth)) - textBox(shippedFigure).right;
+                if (Math.abs(left - right) > 1) {
+                    issues.push('space left of the "S" label is ' + left.toFixed(1) + ' px, right of its Shipped figure ' + right.toFixed(1) + ' px');
+                }
+            }
+
+            // S-71-b AC-4: the Total's 0 under Shipped is in the grey of the "Shipped" heading.
+            const shippedHeading = table.querySelector('thead th:last-child');
+            const shippedZero = totals[3];
+            if (!shippedHeading || !shippedZero || shippedZero.innerText.trim() !== '0') {
+                issues.push('no 0 under Shipped in the Total row');
+            } else if (getComputedStyle(shippedZero).color !== getComputedStyle(shippedHeading).color) {
+                issues.push('the Total 0 under Shipped is ' + getComputedStyle(shippedZero).color + ', the heading ' + getComputedStyle(shippedHeading).color);
+            }
+
             return issues.length === 0 ? 'ok' : issues.join('; ');
         })()
         JS, 'ok');

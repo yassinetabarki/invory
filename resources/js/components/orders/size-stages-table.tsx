@@ -14,6 +14,9 @@ import { cn } from '@/lib/utils';
 const SIZE_COLUMN = 'w-24';
 const ROW_COLUMNS = 'grid-cols-[6rem_repeat(4,minmax(0,1fr))]';
 const CELL_X = 'px-3';
+// A figure is in the number font like the size chips; a 0 is in the column headings' grey.
+const FIGURE = 'text-right font-mono tabular-nums';
+const ZERO = 'text-muted-foreground';
 const BUTTON_LINES = ['forward', 'back'] as const;
 
 export type SizeStagesColumn = {
@@ -62,7 +65,7 @@ export function SizeStagesTable({
 
     return (
         <>
-            <div className="hidden lg:block">
+            <div className="hidden overflow-hidden rounded-lg border lg:block">
                 <table className="w-full table-fixed text-sm">
                     <caption className="sr-only">
                         {productName}: units by size and stage
@@ -74,8 +77,11 @@ export function SizeStagesTable({
                         ))}
                     </colgroup>
                     <thead>
-                        <tr className="border-b text-left text-muted-foreground">
-                            <th scope="col" className="py-2 pr-3 font-medium">
+                        <tr className="border-b bg-muted/60 text-left text-muted-foreground">
+                            <th
+                                scope="col"
+                                className={cn(CELL_X, 'py-2 font-medium')}
+                            >
                                 Size
                             </th>
                             {columns.map(({ key, caption, captionId }) => (
@@ -98,7 +104,10 @@ export function SizeStagesTable({
                             <tr key={id} className="border-b">
                                 <th
                                     scope="row"
-                                    className="py-2 pr-3 text-left font-medium"
+                                    className={cn(
+                                        CELL_X,
+                                        'py-2 text-left font-semibold',
+                                    )}
                                 >
                                     {label}
                                 </th>
@@ -107,7 +116,9 @@ export function SizeStagesTable({
                                         key={key}
                                         className={cn(
                                             CELL_X,
-                                            'py-2 text-right tabular-nums',
+                                            FIGURE,
+                                            'py-2',
+                                            figures[key] === 0 && ZERO,
                                         )}
                                     >
                                         {formatCount(figures[key], locale)}
@@ -115,8 +126,14 @@ export function SizeStagesTable({
                                 ))}
                             </tr>
                         ))}
-                        <tr className="font-bold">
-                            <th scope="row" className="py-2 pr-3 text-left">
+                        <tr className="bg-muted/60 font-bold">
+                            <th
+                                scope="row"
+                                className={cn(
+                                    CELL_X,
+                                    'border-t-2 py-2 text-left',
+                                )}
+                            >
                                 Total
                             </th>
                             {columns.map(({ key }) => (
@@ -124,7 +141,9 @@ export function SizeStagesTable({
                                     key={key}
                                     className={cn(
                                         CELL_X,
-                                        'py-2 text-right tabular-nums',
+                                        FIGURE,
+                                        'border-t-2 py-2',
+                                        total[key] === 0 && ZERO,
                                     )}
                                 >
                                     {formatCount(total[key], locale)}
@@ -133,7 +152,7 @@ export function SizeStagesTable({
                         </tr>
                     </tbody>
                 </table>
-                <div className={cn('mt-2 grid gap-y-2', ROW_COLUMNS)}>
+                <div className={cn('grid gap-y-2 pt-2 pb-3', ROW_COLUMNS)}>
                     {BUTTON_LINES.map((line) => (
                         <Fragment key={line}>
                             <div data-line={line} />
