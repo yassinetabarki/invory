@@ -5,7 +5,7 @@ type: feature
 phase: 4
 priority: Must
 size: S
-status: Ready
+status: On hold
 created: 2026-10-14
 tags:
   - story

@@ -1,5 +1,5 @@
 # S-40 — Fill a fresh install with a realistic catalogue of 100 products
-> Phase 4 · Priority Could (planned after S-08; slips to Phase 5 first) · Size M · Status **Ready** (approved by the human 2026-10-14; the
+> Phase 4 · Priority Could (planned after S-08; slips to Phase 5 first) · Size M · Status **On hold** since 2026-10-24 (colour × size variant refactor; card **Ready**, approved by the human 2026-10-14; the
 > tech-lead plans it after S-08) · Type enabler (demo data)
 > Links: [Roadmap, Phase 4](../ROADMAP.md#now--phase-4-mvp-release-readiness) · [Backlog](../BACKLOG.md) · Depends on: [S-08](S-08-golden-path-test-and-demo-data.md)
 > (the demo-data step this builds on) · Followed by: [S-41](S-41-real-photos-for-the-catalogue.md) (a real photo on every item) · Related: S-27

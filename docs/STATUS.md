@@ -13,15 +13,20 @@
 
 | | Status | In one line |
 |---|---|---|
-| **Overall** | 🟡 **AMBER** | The MVP is built and every automated check passes on this computer. The checks now also run on GitHub, but nobody has seen a result yet. You haven't signed the MVP off. Since 2026-10-15 Phase 5 (customer orders) is under way: S-48, S-49, S-53, S-50, S-58, S-60, S-61, S-56, S-70, S-71 and S-73 are done, so orders have their own page and their four stages, cutting takes the materials out of stock, the Orders list shows each order's progress and the open-order totals, every product has the sizes of its category, orders count and move each size, each product shows its finished units on the shelf per size, sizes look the same on every screen, and the order page and the product page look like their design boards. Every Phase 5 Must is done, and Phase 5 stays open for its Shoulds (D-18): S-56, S-70, S-71 and S-73 are done, S-57 (cancel an order) is next, then S-74 (long figures on the product page). The rest of Phase 4 is on hold (D-12). |
-| Scope (MVP features) | 🟡 AMBER | Every feature in the MVP goal and the 2026-10-08 scope additions works on real data. The preview layer is gone. Since 2026-10-15 every account sees only its own workshop's materials, products and sales (S-44, D-9), records its clients' orders (S-48), follows each product line through the four stages (S-49), cutting takes the materials out of stock (S-53), and the Orders list shows each order's progress, a Status filter and the open-order totals (S-50). Every product has the sizes of its category (S-58), and an order holds a quantity per size that moves size by size through the stages (S-60, S-61). Each product shows its finished units on the shelf per size, and "Update stock" sets them (S-56). Sizes look the same on every screen: the same chips, badge, tags and size fields everywhere, a size's message under the row naming the size, and "At least 10" under a started size in "Edit order" (S-70). The order page follows its design board: the moves in two rows under each line's Total, lined up with the figures, a framed table with figures in the number font and grey zeros, and grey buttons that can't be clicked (S-71). The product page follows its board too: "Can produce now", "In stock" and "Unit cost" in one row of three, and the 30-day sales as a line under "Recent sales" (S-73). Units and categories are still shared until S-45. |
+| **Overall** | 🟡 **AMBER** | The MVP is built and every automated check passes on this computer. The checks now also run on GitHub, but nobody has seen a result yet. You haven't signed the MVP off. Since 2026-10-15 Phase 5 (customer orders) is under way: S-48, S-49, S-53, S-50, S-58, S-60, S-61, S-56, S-70, S-71 and S-73 are done, so orders have their own page and their four stages, cutting takes the materials out of stock, the Orders list shows each order's progress and the open-order totals, every product has the sizes of its category, orders count and move each size, each product shows its finished units on the shelf per size, sizes look the same on every screen, and the order page and the product page look like their design boards. Every Phase 5 Must is done. **Since 2026-10-24 every open story is on hold (D-20)** while you rework the product around colour × size variants; the next work is numbered INV-1, INV-2 …, a UI card first and then a development card. |
+| Scope (MVP features) | 🟡 AMBER | Every feature in the MVP goal and the 2026-10-08 scope additions works on real data. The preview layer is gone. Since 2026-10-15 every account sees only its own workshop's materials, products and sales (S-44, D-9), records its clients' orders (S-48), follows each product line through the four stages (S-49), cutting takes the materials out of stock (S-53), and the Orders list shows each order's progress, a Status filter and the open-order totals (S-50). Every product has the sizes of its category (S-58), and an order holds a quantity per size that moves size by size through the stages (S-60, S-61). Each product shows its finished units on the shelf per size, and "Update stock" sets them (S-56). Sizes look the same on every screen: the same chips, badge, tags and size fields everywhere, a size's message under the row naming the size, and "At least 10" under a started size in "Edit order" (S-70). The order page follows its design board: the moves in two rows under each line's Total, lined up with the figures, a framed table with figures in the number font and grey zeros, and grey buttons that can't be clicked (S-71). The product page follows its board too: "Can produce now", "In stock" and "Unit cost" in one row of three, and the 30-day sales as a line under "Recent sales" (S-73). Units and categories are still shared until S-45. Every open story is on hold since 2026-10-24 (D-20); the colour × size variant rework will change how products, their stock and orders are counted. |
 | Quality (automated) | 🟢 GREEN | All automated checks pass on this computer (tech-lead's S-73 delivery report, 2026-10-24, final tree): 2 558 backend tests (2 506 passed, 52 that run only on PostgreSQL skipped), 1 334 screen tests, code style, static analysis, type check, production build and the 2 browser tests, which now also measure the product page's three figures at 1280 px and 375 px. S-73 changed only screens, so PostgreSQL parity wasn't needed; it last passed with S-70 (2 558 of 2 558, 2026-10-23). The designer found no blockers; long figures (from about 100,000,000 units, or a unit cost from TND 10,000) can run past their card, which S-74 fixes. |
 | Product acceptance | 🔴 RED | The MVP as a whole isn't signed off: the Phase 2 click-through has been pending since 2026-10-08, and the MVP walkthrough (S-30) is on hold since 2026-10-15 (D-12). S-43, S-44, S-48, S-49, S-53, S-50, S-58, S-60, S-61, S-56, S-70, S-71 and S-73 were accepted one by one (S-49 and S-53 in one click-through, 2026-10-21; S-50 and S-58 on 2026-10-22, S-58 after your click-through; S-60 and S-61 in one click-through, 2026-10-23; S-56 on 2026-10-23, when you had it committed; S-70 on 2026-10-23 after your click-through; S-71 on 2026-10-24 after one fix round and your click-through; S-73 on 2026-10-24 after the designer's review and your click-through). |
 | Dev environment | 🟡 AMBER | The app runs on `php artisan serve` (http://localhost:8000); Docker runs PostgreSQL and the test mailbox (http://localhost:8026). Sail is gone (S-29, done 2026-10-15). Not yet seen: a password-reset email in the test mailbox, and the page-speed target (S-18), which may not hold on the built-in server (known gaps K-3, K-4). |
 | Release readiness | 🔴 RED | Missing: the MVP sign-off (S-30), a live server with a chosen database, and separate units and categories for each workshop (S-45). Both S-30 and S-45 are on hold (D-12) and must be done before go-live. S-08 and S-29 were closed as they stood (D-13), leaving four known gaps for go-live (§6.4). |
-| Process | 🟡 AMBER | Roles are split: product-owner (what and why) and tech-lead (how). Phase 5 started before Phase 4 closed, by your choice (D-12). S-08 and S-29 were closed without their last checks, by your choice (D-13). |
+| Process | 🟡 AMBER | Roles are split: product-owner (what and why) and tech-lead (how). Phase 5 started before Phase 4 closed, by your choice (D-12). S-08 and S-29 were closed without their last checks, by your choice (D-13). Since 2026-10-24 the card flow is paused (D-20): new work gets a UI card first, then a development card, numbered INV-1, INV-2 …; the process documents are the main session's to update. |
 
-**Current phase:** **Phase 5: Customer orders** (started 2026-10-15, D-12). **Done:** S-48 (accepted 2026-10-15), and **F-41, S-49
+**Current work:** **the colour × size variant rework** (since 2026-10-24, D-20): fixed colours, stock and a barcode per colour and
+size, restock of finished products, clients and a production progress page. **Every open story of every phase is on hold** (cards
+`On hold`), and nothing is planned, in progress or waiting for acceptance. The next work, in your order (D-21): **INV-1** colours,
+INV-2 product sizes × colours with stock and a barcode per variant, INV-3 restock of finished products, INV-4 clients, INV-5 a
+production progress page. Each gets a UI card first and then a development card. None has a card yet.
+**Phase 5: Customer orders** (started 2026-10-15, D-12; on hold since 2026-10-24). **Done:** S-48 (accepted 2026-10-15), and **F-41, S-49
 and S-53** (accepted 2026-10-21 after your one click-through; built in one build and landed on `main` together, `e99615e` … `8ab9df8`,
 closing docs `f803cb1`), **S-50** (accepted 2026-10-22; `ba0a0cd`, `74f05a8`, `a23a5d7`, merged in `0270014`), **S-58**
 (accepted 2026-10-22 after your click-through; `2f02d87`, `9eeee19`, `f1074b6`, `ce9a36f`, `eb5ff13`, docs `69b064b`; on `main`),
@@ -29,14 +34,15 @@ closing docs `f803cb1`), **S-50** (accepted 2026-10-22; `ba0a0cd`, `74f05a8`, `a
 (accepted 2026-10-23; one commit `83062eb`, on `main`), and **S-70** (accepted 2026-10-23 after one fix round and
 your click-through; six commits `b200905` … `4d646e9`, on `main`), and **S-71** (accepted 2026-10-24 after one
 fix round and your click-through; `722638c`, `7e00fff`, `da6ff31`, card `c3b0eb3`, on `main`), and **S-73** (accepted 2026-10-24
-after the designer's review and your click-through; `51ba6ce`, `078bead`, `bf5db86`, on local `main`, not pushed). Everything up
-to S-71 is on GitHub (`origin/main` at `57063b0`).
-**Every Phase 5 Must is done, and the phase's exit criteria are met.** Phase 5 stays open for its Shoulds (D-18, 2026-10-23), in
-your order: S-56 (done), S-70 "Sizes look the same on every screen" (done), S-71 "The order page's stage table and its buttons
-look like the design" (done), S-73 "The product page and form match the size board" (done), then S-57 "Cancel an order" (`Ready`
-since 2026-10-22, D-17), then S-74 "Long figures and small leftovers on the product page" (`Idea`, added 2026-10-24, card to
-come), then S-65 "Close a fully shipped order" (`Ready`), then S-66, S-67 and S-51 (`Idea`, cards later). Phase 5 tech allowance: F-41 only, now done. Nothing is in progress, so the two-story limit is free.
+after the designer's review and your click-through; `51ba6ce`, `078bead`, `bf5db86`, closing docs `507ff22`, on `main`).
+Everything, S-73 included, is on GitHub (`origin/main` at `507ff22`, checked 2026-10-24).
+**Every Phase 5 Must is done, and the phase's exit criteria are met.** Phase 5 stayed open for its Shoulds (D-18, 2026-10-23):
+S-56, S-70, S-71 and S-73 are done. The rest is on hold since 2026-10-24 (D-20); the order before the pause was S-57 "Cancel an
+order" (card approved 2026-10-22, D-17), then S-74 "Long figures and small leftovers on the product page" (no card yet), then S-65
+"Close a fully shipped order" (card approved), then S-66, S-67 and S-51 (no cards yet). Phase 5 tech allowance: F-41 only, done.
+Nothing is in progress, so the two-story limit is free.
 **Phase 4: MVP release readiness** is on hold for later; S-08 and S-29 are done (closed as they stood, D-13; see [ROADMAP.md](ROADMAP.md)).
+Phases 6, 7 and 8 are on hold too (D-20).
 
 ---
 
@@ -50,8 +56,24 @@ come), then S-65 "Close a fully shipped order" (`Ready`), then S-66, S-67 and S-
 | D-6 | Delete the 5 merged branches and the stale worktree `.claude/worktrees/fix-hover-prefetch-bug`? | Yes (nothing unmerged) |
 | D-19 | The canvas note "sizenote" says zero sizes are left out of summaries, while "In stock" lists "M 0" greyed (designer's Q8). (a) You edit the note to "Zero sizes are left out of order summaries (order page, Orders list, history). The In stock figure lists every size, 0 greyed." · (b) The designer drafts it on the canvas for your review | (a), the designer's default; no screen changes either way |
 
+**Decided on 2026-10-24: D-20 the card flow is paused.** You are reworking the product model around **colour × size variants**:
+fixed colours, stock per variant, a barcode per variant, restock of finished products, a client entity and a production progress page.
+- **Every open item is on hold** from 2026-10-24: each card that isn't `Done` now reads `On hold` (S-57, S-65, S-72, S-45, S-46 and the
+  older cards S-30, S-31, S-32, S-40, S-41, S-42), and every backlog item without a card too (S-74, S-66, S-67, S-51, S-62, S-68,
+  S-52, S-54, and Phases 6 to 8). Nothing is dropped. They all stay on hold, and each is checked against the variant model before it
+  resumes (your answer).
+- **A new way of working for new work:** each feature gets a UI card first, then a development card.
+- Every F-xx technical item in the tech-lead's register waits too; F-41, the only technical item with a card, is done.
+
+**Decided on 2026-10-24: D-21 the INV order and numbering** (your answers to the product-owner's questions):
+- **Everything new is INV-n, technical items too**: a technical item gets an INV number and no UI card. Old S- and F- items keep
+  their IDs, which are never reused (the last story ID given was S-74).
+- **The order:** INV-1 colours (a fixed list) → INV-2 product sizes × colours, with stock and a barcode per variant → INV-3 restock
+  of finished products → INV-4 clients → INV-5 a production progress page. The next free ID is INV-6.
+- D-19 (the canvas note "sizenote") stays as it is.
+
 **Decided on 2026-10-24: S-73 accepted.** You accepted S-73 after the designer's review and your click-through ("I accept S-73"),
-with no fix round. It is on local `main` (not pushed) as `51ba6ce` (the 30-day sales line under "Recent sales"), `078bead` (three
+with no fix round. It is on `main` (pushed) as `51ba6ce` (the 30-day sales line under "Recent sales"), `078bead` (three
 figures in one row) and `bf5db86` (the form's size tags). Its criteria are ticked with them.
 - **What changed on the product page:**
   - "Can produce now", "In stock" and "Unit cost" sit in one row of three equal cards, with 36 px figures and 15 px labels, as on
@@ -468,6 +490,8 @@ The plan headers were corrected on 2026-10-14, and [plans/README.md](plans/READM
 | R-18 | Risk (closed 2026-10-23) | With the size stories, Phase 5's Musts were about 70 % of the phase (usual limit 60 %) | — | Closed: every Must is done; S-60 and S-61 were accepted in one click-through on 2026-10-23 |
 | R-19 | Risk | `laravel` may not have the S-60 change yet, and S-56 adds one more table. Until it is migrated, the order pages fail (S-60), and the product page's "In stock" can't load and deleting a product fails (S-56) | Medium | Main session: `php artisan migrate` on `laravel` with your yes, now that `main` holds `83062eb`; existing order lines become "One size" (S-60 AC-5), and every product starts at "In stock 0 units" |
 | R-20 | Risk (closed 2026-10-23) | The S-56 build branch `claude/agitated-kowalevski-561893` held an earlier copy of S-56 (four step commits and closing docs from before the fix round); merging it would have brought back old wording | — | Closed: at your answer, the main session removed that worktree and branch without merging; `main` keeps the final S-56 in `83062eb` |
+| R-21 | Risk | The on-hold cards (S-57, S-65, S-72, S-45, S-46 and the older ones) were written before colour × size variants. Once colours, variant stock and clients exist, some of their criteria may no longer fit (for example S-57 puts cancelled units into stock per size, and S-65 shows ordered and shipped per size) | Medium | Product-owner: check each on-hold card against the new product model before it resumes, and bring any change to you; nothing resumes as written without that check |
+| R-22 | Risk | The variant rework changes what was just built: finished stock per size (S-56), orders by size (S-60, S-61) and the size lists (S-58). Existing records in `laravel` would need to move to variants | Medium | Tech-lead: say in the INV development cards how today's records carry over; you approve before any change to `laravel` |
 | R-17 | Risk | Orders are built on screens nobody has signed off: the MVP walkthrough (S-30) is on hold (D-12) | Medium | Each Phase 5 story gets its own click-through (S-48's passed 2026-10-15); S-30 is walked before go-live |
 | R-15 | Risk (reduced 2026-10-21) | With S-53, Invory changes material stock by itself for the first time (D-10). Delivered and accepted on 2026-10-21 against the worked example. A wrong amount would quietly spoil stock, "Can produce" and the inventory value | Medium | S-53 shows the materials before you confirm, writes a history entry per material, and "Move back" returns what was taken; the tech-lead encodes the rule before code and tests it against the worked example (30 Denim Jackets → Inventory value TND 9,936.680) |
 
@@ -485,7 +509,13 @@ The plan headers were corrected on 2026-10-14, and [plans/README.md](plans/READM
 - New **product-owner** agent; the tech-lead now owns technical planning and code review only (see [TEAM.md](TEAM.md)).
 
 ## 9. Next steps (recommended order)
-**From 2026-10-15 (D-12): Phase 5 first.** Updated 2026-10-24.
+**From 2026-10-24 (D-20): the colour × size variant rework first; every open story is on hold.** Updated 2026-10-24.
+1. Human: ask for INV-1 (colours) when you are ready. The product-owner writes its UI card from a session on the main checkout;
+   the development card follows. Then INV-2 to INV-5 in the order of D-21.
+2. Main session: update the process documents for the new way of working (UI card, then development card, INV IDs), at your request.
+3. Product-owner: before any on-hold story resumes, check its card against the new product model (R-21).
+
+**Steps before the pause (2026-10-24), kept for the record:**
 1. Done 2026-10-24: you accepted S-73. Its three commits (`51ba6ce`, `078bead`, `bf5db86`) are on its build branch
    `claude/dreamy-goldberg-11d71e` and on local `main`, and its criteria are ticked with them. The card, BACKLOG, ROADMAP and this
    report were updated on that branch. Main session: commit these closing docs (your yes), then bring them to local `main` (your

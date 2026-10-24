@@ -13,7 +13,10 @@ tags:
 
 # Story Cards (Product-Owner & Tech-Lead)
 
-This document tracks all story cards across active and past phases. Each story card is stored in a standalone Markdown file inside the `docs/` vault using the naming convention `<id>-<slug>.md` (e.g., `S-31-deferred-retry.md`).
+This document tracks all story cards across active and past phases. Each story card is stored in a standalone Markdown file inside the `docs/` vault using these naming conventions:
+
+- **New work (from 2026-10-24, D-21):** every item is numbered `INV-<n>`. A feature has two cards: the UI card first, `INV-<n>-<slug>-ui.md` (e.g., `INV-1-colours-ui.md`), then the development card, `INV-<n>-<slug>.md` (e.g., `INV-1-colours.md`). A technical item is `INV-<n>` too and has only a development card, `INV-<n>-<slug>.md`.
+- **Older cards:** S- and F- cards keep their names, `<id>-<slug>.md` (e.g., `S-31-deferred-section-try-again.md`, `F-41-summed-requirement-per-material.md`). Their IDs are never reused.
 
 ## 📋 Story Card Lifecycle & Rules
 
@@ -40,11 +43,11 @@ This document tracks all story cards across active and past phases. Each story c
     
 - **Done:** Ticked by the Product Owner with completion dates and commit hashes.
     
-- **Tech Debt:** Technical items from `TECH-DEBT.md` use the format `F-xx-<slug>.md` and are authored fully by the Tech Lead.
+- **Tech Debt:** Technical items from `TECH-DEBT.md` used the format `F-xx-<slug>.md` and are authored fully by the Tech Lead. From 2026-10-24 (D-21) a new technical item is `INV-<n>-<slug>.md`, with no UI card.
     
 - **Legacy Exemption:** Cards existing prior to **2026-10-14** retain their original layout (`story`, `UX`, `out of scope`, `questions`, `acceptance check`, `plan in docs/plans/`) and are not converted.
     
-- **On Hold:** Paused cards state `"Ready, on hold since [Date]"`. Since **2026-10-15 (D-12)**, Phase 5 is actively under way, and remaining Phase 4 work is paused.
+- **On Hold:** Paused cards have the status `On hold`. Since **2026-10-24 (D-20)** every card that isn't `Done` is on hold while the product is reworked around colour × size variants. New work is INV-1 to INV-5 (colours, product sizes × colours with stock and barcode per variant, restock of finished products, clients, a production progress page; D-21); the next free ID is **INV-6**. On-hold cards are checked against the variant model before they resume.
     
 
 > [!NOTE] Special Note on S-29
@@ -67,18 +70,18 @@ This document tracks all story cards across active and past phases. Each story c
 | **S-70** — Sizes look the same on every screen                                                     | 5         | Should         | M        | `Done` (accepted 2026-10-23; `b200905` … `4d646e9`, six commits)                                       |
 | **S-71** — The order page's stage table and its buttons look like the design                       | 5         | Should         | S        | `Done` (accepted 2026-10-24; `722638c`, `7e00fff`, `da6ff31`)                                          |
 | **S-73** — The product page and form match the size board                                          | 5         | Should         | S        | `Done` (accepted 2026-10-24; `51ba6ce`, `078bead`, `bf5db86`)                                          |
-| **S-57** — Cancel an order                                                                         | 5         | Should         | M        | `Ready` (approved 2026-10-22, D-17; next: tech-lead plans it)                                          |
-| **S-65** — Close a fully shipped order                                                             | 5         | Should         | M        | `Ready` (approved 2026-10-22; next: tech-lead plans after S-57)                                        |
-| **S-72** — The order page shows the whole order at a glance                                        | 5         | Could          | S        | `Draft` (added 2026-10-24; after S-68)                                                                 |
+| **S-57** — Cancel an order                                                                         | 5         | Should         | M        | `On hold` since 2026-10-24 (was `Ready`, approved 2026-10-22, D-17)                                    |
+| **S-65** — Close a fully shipped order                                                             | 5         | Should         | M        | `On hold` since 2026-10-24 (was `Ready`, approved 2026-10-22)                                          |
+| **S-72** — The order page shows the whole order at a glance                                        | 5         | Could          | S        | `On hold` since 2026-10-24 (was `Draft`, added 2026-10-24)                                             |
 | **F-41** — The cost engine gives the total need of each material                                   | 5         | Tech Allowance | S        | `Done` (accepted 2026-10-21; `e99615e`)                                                                |
 | **S-08** — One automated test walks the whole journey, and a fresh install shows the demo workshop | 4         | Must           | M        | `Done` (closed as is 2026-10-15; on main: `723f57a` … `5241147`)                                       |
 | **S-44** — Each workshop sees only its own materials, products and sales                           | 4         | Must           | M        | `Done` (accepted 2026-10-15; on main: `672937f`, `a54856f`, `9a48cd3`)                                 |
-| **S-45** — Each workshop has its own units and categories                                          | 4         | Must           | S        | `Ready` (on hold since 2026-10-15; Phase 4 postponed, D-12)                                            |
-| **S-30** — Walk through every MVP screen and sign it off                                           | 4         | Must           | S        | `Ready` (on hold since 2026-10-15; Phase 4 postponed, D-12)                                            |
-| **S-46** — Name your workshop                                                                      | 4         | Should         | S        | `Ready` (on hold since 2026-10-15; Phase 4 postponed, D-12)                                            |
-| **S-31** — A section that fails to load offers "Try again"                                         | 4         | Should         | S        | `Ready` (on hold since 2026-10-14)                                                                     |
-| **S-32** — A duplicate SKU saved at the same moment shows a clear message                          | 4         | Should         | S        | `Ready` (on hold since 2026-10-14)                                                                     |
+| **S-45** — Each workshop has its own units and categories                                          | 4         | Must           | S        | `On hold` since 2026-10-24 (was `Ready`, on hold since 2026-10-15, D-12)                               |
+| **S-30** — Walk through every MVP screen and sign it off                                           | 4         | Must           | S        | `On hold` since 2026-10-24 (was `Ready`, on hold since 2026-10-15, D-12)                               |
+| **S-46** — Name your workshop                                                                      | 4         | Should         | S        | `On hold` since 2026-10-24 (was `Ready`, on hold since 2026-10-15, D-12)                               |
+| **S-31** — A section that fails to load offers "Try again"                                         | 4         | Should         | S        | `On hold` since 2026-10-24 (was `Ready`, on hold since 2026-10-14)                                     |
+| **S-32** — A duplicate SKU saved at the same moment shows a clear message                          | 4         | Should         | S        | `On hold` since 2026-10-24 (was `Ready`, on hold since 2026-10-14)                                     |
 | **S-43** — Save a product without filling in the overhead cost                                     | 4         | Should         | S        | `Done` (accepted 2026-10-14; on main: `6179d52`, `4644a08`, `9fc8e98`, `9df0ca0`, close-out `eccb09a`) |
-| **S-40** — Fill a fresh install with a realistic catalogue of 100 products                         | 4         | Could          | M        | `Ready` (on hold since 2026-10-15; postponed, kept for later)                                          |
-| **S-41** — A real photo on every item of the demo catalogue                                        | 4         | Could          | M        | `Ready` (on hold since 2026-10-15; postponed, needs Pexels key)                                        |
-| **S-42** — Screen readers hear "112 units", not "112units"                                         | 4         | Could          | S        | `Ready` (on hold since 2026-10-15; postponed, kept for later)                                          |
+| **S-40** — Fill a fresh install with a realistic catalogue of 100 products                         | 4         | Could          | M        | `On hold` since 2026-10-24 (was `Ready`, postponed 2026-10-15, kept for later)                         |
+| **S-41** — A real photo on every item of the demo catalogue                                        | 4         | Could          | M        | `On hold` since 2026-10-24 (was `Ready`, postponed 2026-10-15, needs Pexels key)                       |
+| **S-42** — Screen readers hear "112 units", not "112units"                                         | 4         | Could          | S        | `On hold` since 2026-10-24 (was `Ready`, postponed 2026-10-15, kept for later)                         |

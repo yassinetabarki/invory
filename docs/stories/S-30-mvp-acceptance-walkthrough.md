@@ -1,5 +1,5 @@
 # S-30 — Walk through every MVP screen and sign it off
-> Phase 4 · Priority Must · Size S · Status **Ready** (approved by the human 2026-10-14) · Type acceptance
+> Phase 4 · Priority Must · Size S · Status **On hold** since 2026-10-24 (colour × size variant refactor; card **Ready**, approved by the human 2026-10-14) · Type acceptance
 > Links: [Roadmap, Phase 4](../ROADMAP.md#now--phase-4-mvp-release-readiness) · [Backlog](../BACKLOG.md) · Decision D-7 (2026-10-14) ·
 > Depends on S-29 (the final dev setup in place, mail working) · Technical plan: none (no code change; findings become new stories)
 

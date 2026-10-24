@@ -5,7 +5,7 @@ type: feature
 phase: 5
 priority: Could
 size: S
-status: Draft
+status: On hold
 created: 2026-10-24
 tags:
   - story

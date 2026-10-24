@@ -1,6 +1,6 @@
 # Invory — product roadmap
 
-> Owner: **product-owner** · Approved by: the human · Last updated: 2026-10-24 (S-73 "The product page and form match the size board" done: accepted after the designer's review and your click-through, `51ba6ce`, `078bead`, `bf5db86` on local `main`, not pushed; S-74 "Long figures and small leftovers on the product page" added as a Should after S-57, from the designer's review; S-57 is next. Earlier the same day, S-71 "The order page's stage table and its buttons look like the design" done: accepted after one fix round and your click-through, `722638c`, `7e00fff`, `da6ff31`, now on `main`. Earlier the same day, S-71 "The order page's stage table and its buttons look like the design" and S-73 "The product page and form match the size board" added as Shoulds before S-57, from your requests, both approved, so `Ready`; S-72 "The order page shows the whole order at a glance, like the design" added as a `Draft` Could after S-68). Earlier, 2026-10-23 (S-70 "Sizes look the same on every screen" done: accepted after one fix round and your click-through, six commits `b200905` … `4d646e9` on `main`; S-57 is next. Earlier the same day, S-70 was added as a Should, next in line, from your request, and approved, so `Ready`; S-69 merged into it; earlier the same day, S-56 done, accepted and committed on `main` as `83062eb`: each product shows its finished units per size; S-68 widened to the product page and the materials screens; earlier the same day, D-18: Phase 5 stays open for its Shoulds S-56, S-57, S-65, S-66, S-67 and S-51, in that order; earlier the same day, S-60 and S-61 done, accepted after your click-through, so every Phase 5 Must is done and its exit criteria are met; S-68 and S-69 added as Coulds from the design review; earlier, 2026-10-22, D-17: the four size cards S-60, S-61, S-56 and S-57 approved, `Ready`, S-56 and S-57 with a phone-width criterion each; earlier the same day, S-58 done, accepted after your click-through; S-65 "Close a fully shipped order" approved, `Ready`, a Should after S-57, with S-66 and S-67 as Shoulds after it; before that, S-50 done, accepted; earlier, 2026-10-21: F-41, S-49 and S-53 done, accepted after your click-through; S-58 card and Technical work approved; earlier, 2026-10-18: D-15 and D-16 products by size: S-58, S-60, S-61 added to Phase 5, S-56 and S-57 per size, S-52 and S-54 Won't (this time); earlier, 2026-10-16: D-11 decided with your final answers: F-41, S-49 and S-53 `Planned`, S-50 `Ready`, S-56 and S-57 added; 2026-10-15: S-48 done, the first Phase 5 story; D-12: Phase 5 "Customer orders" started, the rest of Phase 4 on hold)
+> Owner: **product-owner** · Approved by: the human · Last updated: 2026-10-24 (**D-20: the card flow is paused** for the colour × size variant rework; every open story of every phase is on hold, and new work is numbered INV-1, INV-2 …, a UI card first and then a development card; D-21: INV-1 colours, INV-2 product sizes × colours with stock and a barcode per variant, INV-3 restock of finished products, INV-4 clients, INV-5 a production progress page. Earlier the same day, S-73 "The product page and form match the size board" done: accepted after the designer's review and your click-through, `51ba6ce`, `078bead`, `bf5db86` on local `main`, not pushed; S-74 "Long figures and small leftovers on the product page" added as a Should after S-57, from the designer's review; S-57 is next. Earlier the same day, S-71 "The order page's stage table and its buttons look like the design" done: accepted after one fix round and your click-through, `722638c`, `7e00fff`, `da6ff31`, now on `main`. Earlier the same day, S-71 "The order page's stage table and its buttons look like the design" and S-73 "The product page and form match the size board" added as Shoulds before S-57, from your requests, both approved, so `Ready`; S-72 "The order page shows the whole order at a glance, like the design" added as a `Draft` Could after S-68). Earlier, 2026-10-23 (S-70 "Sizes look the same on every screen" done: accepted after one fix round and your click-through, six commits `b200905` … `4d646e9` on `main`; S-57 is next. Earlier the same day, S-70 was added as a Should, next in line, from your request, and approved, so `Ready`; S-69 merged into it; earlier the same day, S-56 done, accepted and committed on `main` as `83062eb`: each product shows its finished units per size; S-68 widened to the product page and the materials screens; earlier the same day, D-18: Phase 5 stays open for its Shoulds S-56, S-57, S-65, S-66, S-67 and S-51, in that order; earlier the same day, S-60 and S-61 done, accepted after your click-through, so every Phase 5 Must is done and its exit criteria are met; S-68 and S-69 added as Coulds from the design review; earlier, 2026-10-22, D-17: the four size cards S-60, S-61, S-56 and S-57 approved, `Ready`, S-56 and S-57 with a phone-width criterion each; earlier the same day, S-58 done, accepted after your click-through; S-65 "Close a fully shipped order" approved, `Ready`, a Should after S-57, with S-66 and S-67 as Shoulds after it; before that, S-50 done, accepted; earlier, 2026-10-21: F-41, S-49 and S-53 done, accepted after your click-through; S-58 card and Technical work approved; earlier, 2026-10-18: D-15 and D-16 products by size: S-58, S-60, S-61 added to Phase 5, S-56 and S-57 per size, S-52 and S-54 Won't (this time); earlier, 2026-10-16: D-11 decided with your final answers: F-41, S-49 and S-53 `Planned`, S-50 `Ready`, S-56 and S-57 added; 2026-10-15: S-48 done, the first Phase 5 story; D-12: Phase 5 "Customer orders" started, the rest of Phase 4 on hold)
 > Format: **Now / Next / Later**, organised by outcomes, not dates. Each phase is one slice of the story map with one goal, a MoSCoW-labelled
 > set of stories and exit criteria. Detailed stories live in [BACKLOG.md](BACKLOG.md); progress lives in [STATUS.md](STATUS.md).
 
@@ -25,7 +25,27 @@ Cards written before that day say "Phase 5" for speed (S-27, S-23), and "slips t
 
 ---
 
-## NOW — Phase 5: Customer orders (started 2026-10-15, D-12)
+## NOW — Colour × size variants (paused card flow since 2026-10-24, D-20; order decided the same day, D-21)
+**Goal:** each product comes in fixed colours and in its sizes, every colour-and-size variant has its own stock and barcode, finished
+products can be restocked, orders belong to clients, and one page shows how production is going.
+You paused the card flow on 2026-10-24 to rework the product model this way. Every open story of every phase is on hold until then,
+and nothing is planned, in progress or waiting for acceptance. Nothing is dropped: when work resumes, each on-hold story is checked
+against the new product model first.
+Everything new is numbered **INV-n**, technical items too. Each feature gets a UI card first and then a development card; a
+technical item gets only a development card. The five features, in this order (your answer of 2026-10-24, D-21):
+
+| ID    | Feature                                                | Status |
+| ----- | ------------------------------------------------------ | ------ |
+| INV-1 | Colours: a fixed list                                  | `Idea` |
+| INV-2 | Product sizes × colours: stock and barcode per variant | `Idea` |
+| INV-3 | Restock of finished products                           | `Idea` |
+| INV-4 | Clients                                                | `Idea` |
+| INV-5 | A production progress page                             | `Idea` |
+
+**Exit criteria:** to be set with the INV cards.
+
+## ON HOLD — Phase 5: Customer orders (started 2026-10-15, D-12; on hold since 2026-10-24, D-20)
+Every story below that isn't marked done is on hold since 2026-10-24 (D-20).
 **Goal:** the workshop records every client order and sees at any moment how many units of each order, in each size, are still to
 start, in cutting, ready to ship and shipped, how many units are being made across all open orders, and how many finished units of each
 size are on the shelf.
@@ -44,9 +64,10 @@ units per size, and "Update stock" sets them. **S-70 is done** (accepted 2026-10
 `b200905` … `4d646e9`): sizes look the same on every screen. **S-71 is done** (accepted 2026-10-24 after one fix round and your
 click-through, `722638c`, `7e00fff`, `da6ff31`): the order page's stage table and its buttons look like the design board. **S-73 is
 done** (accepted 2026-10-24, `51ba6ce`, `078bead`, `bf5db86`): the product page and form match the size board.
-S-72 (the whole order at a glance, `Draft`) is a Could after S-68. Next comes S-57, written per size, `Ready` since 2026-10-22 (D-17),
-then S-74 (long figures and small leftovers on the product page, from S-73's design review, card to come). On 2026-10-22 you also approved
-S-65 (close a fully shipped order, `Ready`), from your design; it comes after S-57, followed by S-66 and S-67, whose cards come later.
+Since 2026-10-24 the rest is on hold (D-20). The order before the pause: S-57 (written per size, card approved 2026-10-22, D-17),
+then S-74 (long figures and small leftovers on the product page, from S-73's design review, card to come), then S-65 (close a fully
+shipped order, card approved 2026-10-22, from your design), followed by S-66 and S-67, whose cards come later. S-72 (the whole order at
+a glance, first draft) was a Could after S-68.
 
 | Priority               | Story                                                         | Size |
 | ---------------------- | ------------------------------------------------------------- | ---- |
@@ -75,7 +96,7 @@ S-65 (close a fully shipped order, `Ready`), from your design; it comes after S-
 | Tech allowance (~15 %) | F-41 only (each material's total need, for S-53; done)        | —    |
 
 With the size stories the Musts were about 70 % of the phase, above the usual 60 %. Every Must is done since 2026-10-23 (S-48, S-49,
-S-53, S-50, S-58, S-60, S-61). Order of what's left: S-57 (D-18, D-15, D-16; S-71 and S-73 done 2026-10-24), then S-74 (from S-73's acceptance), then S-65, S-66, S-67 and S-51. S-52 and S-54 became
+S-53, S-50, S-58, S-60, S-61). Order of what's left before the pause (D-20): S-57 (D-18, D-15, D-16; S-71 and S-73 done 2026-10-24), then S-74 (from S-73's acceptance), then S-65, S-66, S-67 and S-51. S-52 and S-54 became
 Won't (this time) to make room. If time runs short, S-68 slips first (S-69 is now part of S-70), then S-74, S-62, S-67, S-66 and S-51.
 
 - An order holds one or more products, each with its own quantity and its own four stages: To start, In cutting, Ready to ship, Shipped.
@@ -105,7 +126,7 @@ the cards say · another workshop never sees your orders · every gate green.
 its Shoulds, in the order above: S-56, S-57, S-65, S-66, S-67, S-51 (D-18 in [STATUS.md](STATUS.md#2-decisions-needed-from-you)).
 S-56 is done (accepted 2026-10-23), so the shelf part of the goal is met; S-57 adds cancelled units to it.
 
-## ON HOLD — Phase 4: MVP release readiness (postponed 2026-10-15, D-12)
+## ON HOLD — Phase 4: MVP release readiness (postponed 2026-10-15, D-12; still on hold, D-20)
 **Goal:** the business owner has accepted every MVP screen, one automated test proves the golden path end to end, and each workshop sees
 only its own data.
 **Postponed on 2026-10-15** (D-12): you put the rest of Phase 4 on hold for later. The same day you closed S-08 and S-29 as they stood
@@ -124,9 +145,9 @@ the production server goes live (Phase 7).
 | Should   | S-46 Name your workshop                                            | On hold since 2026-10-15          | S    |
 | Should   | S-31 A section that fails to load offers "Try again"               | On hold since 2026-10-14          | S    |
 | Should   | S-32 A duplicate SKU saved at once shows a clear message           | On hold since 2026-10-14          | S    |
-| Could    | S-42 Screen readers hear "112 units", not "112units"               | Postponed, kept for later         | S    |
-| Could    | S-40 A realistic catalogue of 100 products on a fresh install      | Postponed, kept for later         | M    |
-| Could    | S-41 A real photo on every item of the demo catalogue              | Postponed, kept for later         | M    |
+| Could    | S-42 Screen readers hear "112 units", not "112units"               | On hold since 2026-10-15          | S    |
+| Could    | S-40 A realistic catalogue of 100 products on a fresh install      | On hold since 2026-10-15          | M    |
+| Could    | S-41 A real photo on every item of the demo catalogue              | On hold since 2026-10-15          | M    |
 
 - S-44 commits: `672937f`, `a54856f`, `9a48cd3`. S-43 commits: `6179d52`, `4644a08`, `9fc8e98`, `9df0ca0`, close-out `eccb09a`.
 - S-08 commits: `723f57a`, `932f01a`, `1b40f75`, `af3d6de`, `5241147`. S-29 commits: `d351514`, `7b0fb05`, `c70109f`, `a68043e`.
@@ -136,7 +157,7 @@ the production server goes live (Phase 7).
 **Exit criteria:** S-30 accepted by the human · S-45 accepted by the human · every gate green. The two criteria S-08 and S-29 left open
 (S-08 seen green in CI on GitHub; the S-18 page-speed target measured, p95 ≤ 150 ms) moved to Phase 7's known gaps (D-13).
 
-## NEXT — Phase 6: Fast at real catalogue sizes (was Phase 5 until 2026-10-15)
+## ON HOLD — Phase 6: Fast at real catalogue sizes (was Phase 5 until 2026-10-15; on hold since 2026-10-24, D-20)
 **Goal:** every page stays within its speed budget with 2 000 materials, 500 products and 50 000 sales.
 
 | Priority | Story | Size |
@@ -151,7 +172,7 @@ the production server goes live (Phase 7).
 
 **Exit criteria:** S-27's report shows every page within budget, and the human has accepted S-33 and S-35.
 
-## NEXT — Phase 7: Production go-live (was Phase 6 until 2026-10-15)
+## ON HOLD — Phase 7: Production go-live (was Phase 6 until 2026-10-15; on hold since 2026-10-24, D-20)
 **Goal:** Invory runs on a production server the business can rely on: backups, health check, fast static assets.
 
 | Priority | Story | Size |
@@ -164,7 +185,7 @@ The rest of Phase 4 (at least S-45 and the S-30 sign-off) is done before the ser
 S-08 and S-29 were closed as they stood (D-13): the `golden-path` check seen green on GitHub, the fresh-install demo click-through, a
 password-reset email seen in the test mailbox, and the page-speed target (S-18) measured.
 
-## LATER — Phase 8: Planning features (was Phase 7 until 2026-10-15; order to be confirmed with the human)
+## ON HOLD — Phase 8: Planning features (was Phase 7 until 2026-10-15; order to be confirmed with the human; on hold since 2026-10-24, D-20)
 | Candidate | Value |
 |---|---|
 | S-10 Production planner: "plan N units" shows each material's requirement, the stock and the shortage to buy | High: turns capacity into a shopping list |

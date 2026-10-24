@@ -1,5 +1,5 @@
 # S-42 — Screen readers hear "112 units", not "112units"
-> Phase 4 · Priority Could (after S-32; slips to Phase 5 first) · Size S · Status **Ready** (approved by the human 2026-10-14; the tech-lead
+> Phase 4 · Priority Could (after S-32; slips to Phase 5 first) · Size S · Status **On hold** since 2026-10-24 (colour × size variant refactor; card **Ready**, approved by the human 2026-10-14; the tech-lead
 > plans it after S-32) · Type bug (accessibility)
 > Links: [Roadmap, Phase 4](../ROADMAP.md#now--phase-4-mvp-release-readiness) · [Backlog](../BACKLOG.md) · Found in: [S-08](S-08-golden-path-test-and-demo-data.md)
 > acceptance review (2026-10-14) · Technical plan: added by the tech-lead

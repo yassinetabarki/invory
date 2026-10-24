@@ -1,5 +1,5 @@
 # S-41 — A real photo on every item of the demo catalogue
-> Phase 4 · Priority Could (right after S-40; first to slip to Phase 5) · Size M · Status **Ready** (approved by the human 2026-10-14;
+> Phase 4 · Priority Could (right after S-40; first to slip to Phase 5) · Size M · Status **On hold** since 2026-10-24 (colour × size variant refactor; card **Ready**, approved by the human 2026-10-14;
 > the tech-lead plans it after S-40) · Type enabler (demo data)
 > **Can't start until your Pexels key exists:** you create a free Pexels account and key and put the key in your local settings (never
 > committed). The work starts once you say it's there.
