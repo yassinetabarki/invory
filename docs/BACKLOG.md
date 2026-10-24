@@ -2,7 +2,7 @@
 
 > Owner: **product-owner** (order, wording, acceptance criteria) · Technical detail: **tech-lead** ([TECH-DEBT.md](TECH-DEBT.md), [plans/](plans/README.md))
 > Phases and goals: [ROADMAP.md](ROADMAP.md) · Progress: [STATUS.md](STATUS.md) · Done work and full history: [archive/backlog-2026-10-14.md](archive/backlog-2026-10-14.md)
-> Last cleaned: 2026-10-23 (S-70 "Sizes look the same on every screen" done: you accepted it after one fix round and your click-through, and it was committed on `main` in six commits, `b200905` to `4d646e9`, so it left this file; S-68 gained the windows' small close ✕ and the product picker that cuts off a name on a phone. Earlier the same day, S-70 was added as a Should, next in line, and approved the same day, so it is `Ready`, from your request "start S-58 UI" and your answers to the designer; it takes in S-69 ("At least 10" under a started size), so S-69 left this file, and the size fields leave S-68). Earlier the same day, S-56 done: you accepted it and had it committed on `main` as `83062eb`, after a fix round that made it match the design board (size chips, "Update stock" at the top right, "Total after saving" and the "was" hints), so it left this file; S-68 widened at your answer during S-56's first acceptance round: the 44 px rule also covers "Update stock" and the "Try again" buttons on the product page and the materials screens). Earlier the same day, S-60 and S-61 done: you accepted them after your click-through, including the 11 shoe sizes two per row on a phone, so they left this file; S-68 "Easier to tap and clearer buttons on the order screens" added as a Could from the design review, and S-69 "Edit order shows how many units of each size have started" as an `Idea` Could. Before that, 2026-10-22 (D-17: you approved the four size cards, so S-60, S-61, S-56 and S-57 are `Ready`; S-60 and S-61 go to the tech-lead for planning first. S-56 and S-57 gained a phone-width criterion, plus where "Update stock" sits and the "Cancelled" icon, and you approved that wording). Earlier the same day, S-58 done: you accepted it after your click-through, kept the sizes between the category and the status, and wanted no follow-up story for the lock message, so it left this file. Earlier the same day, S-65 "Close a fully shipped order" added as a Should after S-57, from your design, with your eight answers written into its card, then approved, so it is `Ready`; S-66 "Each shipment is remembered" and S-67 "Materials used by an order" added after it as `Idea` Shoulds in Phase 5, their cards to come later. Before that, S-50 done: you accepted it, so it left this file. Before that, 2026-10-21 (F-41, S-49 and S-53 done: you accepted them after your click-through, so they left this file; S-58 card and then its Technical work approved, so it is `Planned`: its sizes lock while the product is on any order that isn't deleted, and Settings shows no sizes). Before that, 2026-10-18 (D-15 and D-16 products by size: S-58, S-60 and S-61 added as Musts, S-56 and S-57 written per size, all five cards `Draft`; S-52 and S-54 become Won't (this time); S-62 added as a Could; S-63 and S-64 to Phase 8). Before that, 2026-10-16 (D-11 decided with your final answers: S-49 and S-53 revised, then their revised Technical work approved, so F-41, S-49 and S-53 are `Planned` and S-50 is `Ready`; S-56 and S-57 added; on 2026-10-15 S-48 done and accepted, so it left this file; before that, D-12: Phase 5 starts now, the rest of Phase 4 is on hold; D-13: S-08 and S-29 done). **Open work only**, top = next.
+> Last cleaned: 2026-10-24 (S-73 "The product page and form match the size board" added as a Should, after S-71 and before S-57, from your request to bring the product page and form in line with the design board "Sizes · products" and the designer's review, and approved the same day, so it is `Ready`: three figures in one row at the board's size, "Sold · last 30 days" as a line under "Recent sales", and the form's size tags as on the board; it was first drafted as S-71 and renumbered, as S-71 and S-72 went to the order-page cards. Earlier the same day, S-71 "The order page's stage table and its buttons look like the design" added as a Should, next in line before S-57, from your look at an order page and the designer's comparison with the board "Order detail per size"; you approved its card the same day, so it is `Ready`, and as a one-off its card travels on the build branch instead of being committed on `main` first. S-72 "The order page shows the whole order at a glance, like the design" added as a `Draft` Could after S-68, with the rest of that comparison. Before that, 2026-10-23: S-70 "Sizes look the same on every screen" done: you accepted it after one fix round and your click-through, and it was committed on `main` in six commits, `b200905` to `4d646e9`, so it left this file; S-68 gained the windows' small close ✕ and the product picker that cuts off a name on a phone. Earlier the same day, S-70 was added as a Should, next in line, and approved the same day, so it is `Ready`, from your request "start S-58 UI" and your answers to the designer; it takes in S-69 ("At least 10" under a started size), so S-69 left this file, and the size fields leave S-68). Earlier the same day, S-56 done: you accepted it and had it committed on `main` as `83062eb`, after a fix round that made it match the design board (size chips, "Update stock" at the top right, "Total after saving" and the "was" hints), so it left this file; S-68 widened at your answer during S-56's first acceptance round: the 44 px rule also covers "Update stock" and the "Try again" buttons on the product page and the materials screens). Earlier the same day, S-60 and S-61 done: you accepted them after your click-through, including the 11 shoe sizes two per row on a phone, so they left this file; S-68 "Easier to tap and clearer buttons on the order screens" added as a Could from the design review, and S-69 "Edit order shows how many units of each size have started" as an `Idea` Could. Before that, 2026-10-22 (D-17: you approved the four size cards, so S-60, S-61, S-56 and S-57 are `Ready`; S-60 and S-61 go to the tech-lead for planning first. S-56 and S-57 gained a phone-width criterion, plus where "Update stock" sits and the "Cancelled" icon, and you approved that wording). Earlier the same day, S-58 done: you accepted it after your click-through, kept the sizes between the category and the status, and wanted no follow-up story for the lock message, so it left this file. Earlier the same day, S-65 "Close a fully shipped order" added as a Should after S-57, from your design, with your eight answers written into its card, then approved, so it is `Ready`; S-66 "Each shipment is remembered" and S-67 "Materials used by an order" added after it as `Idea` Shoulds in Phase 5, their cards to come later. Before that, S-50 done: you accepted it, so it left this file. Before that, 2026-10-21 (F-41, S-49 and S-53 done: you accepted them after your click-through, so they left this file; S-58 card and then its Technical work approved, so it is `Planned`: its sizes lock while the product is on any order that isn't deleted, and Settings shows no sizes). Before that, 2026-10-18 (D-15 and D-16 products by size: S-58, S-60 and S-61 added as Musts, S-56 and S-57 written per size, all five cards `Draft`; S-52 and S-54 become Won't (this time); S-62 added as a Could; S-63 and S-64 to Phase 8). Before that, 2026-10-16 (D-11 decided with your final answers: S-49 and S-53 revised, then their revised Technical work approved, so F-41, S-49 and S-53 are `Planned` and S-50 is `Ready`; S-56 and S-57 added; on 2026-10-15 S-48 done and accepted, so it left this file; before that, D-12: Phase 5 starts now, the rest of Phase 4 is on hold; D-13: S-08 and S-29 done). **Open work only**, top = next.
 > Done items leave this file; they are recorded in STATUS.md and the archive.
 
 ## How to read an item
@@ -12,7 +12,7 @@
 - **Priority** (MoSCoW, per phase): Must · Should · Could · Won't (this time). **Size:** S (≤ 1 day of agent work) · M · L (split it).
 - **Card:** the full story card (story, acceptance criteria with examples, what you will see, out of scope, questions) lives in
   `docs/stories/<id>-<slug>.md` once the product-owner writes it. Items below show the short version.
-- **IDs:** `S-` stories are numbered by the product-owner, `F-` technical items by the tech-lead. IDs are never reused. Next free: **S-71** (S-47 was dropped on 2026-10-14; S-59 was never used, folded into S-58 on 2026-10-18; S-69 was merged into S-70 on 2026-10-23), **F-72** (F-IDs: see [TECH-DEBT.md](TECH-DEBT.md)).
+- **IDs:** `S-` stories are numbered by the product-owner, `F-` technical items by the tech-lead. IDs are never reused. Next free: **S-74** (S-47 was dropped on 2026-10-14; S-59 was never used, folded into S-58 on 2026-10-18; S-69 was merged into S-70 on 2026-10-23; S-73 was first drafted as S-71 on 2026-10-24 and renumbered before it reached this file), **F-72** (F-IDs: see [TECH-DEBT.md](TECH-DEBT.md)).
 
 ---
 
@@ -32,7 +32,7 @@ and landed on `main` together, as D-11 asked), **S-50 is done** (you accepted it
 it on 2026-10-22: every product has the sizes of its category), and **S-60 and S-61 are done** (you accepted them on 2026-10-23
 after your one click-through: orders count each size, and every move goes size by size), and **S-56 is done** (you accepted it on
 2026-10-23: each product shows its finished units per size), and **S-70 is done** (you accepted it on 2026-10-23: sizes look the
-same on every screen). Next comes the Should S-57 "Cancel an order" (`Ready` since you approved its card on 2026-10-22, D-17), then
+same on every screen). Next comes S-71 (the order page's table and buttons look like the design board; `Ready` since 2026-10-24, your own request), then S-73 (the product page and form match the size board; `Ready` since 2026-10-24, your own request), then the Should S-57 "Cancel an order" (`Ready` since you approved its card on 2026-10-22, D-17), then
 S-65 (close a fully shipped order), S-66, S-67 and S-51 (D-18).
 
 **Products by size (D-15 and D-16, your answers of 2026-10-18):** S-58 came first on its own (done), then S-60 and S-61 in one build
@@ -74,6 +74,26 @@ S-57 is `Ready` (D-17, 2026-10-22).
   Size fields are small, centred and 44 px high, four to a row on a phone. A size's message goes under the row and names the size ("M:
   Enter a whole number from 0 to 1,000,000."), and a started size shows "At least 10" with a lock in "Edit order". One fix round to
   match the design board (label spacing, window titles clear of the ✕, a smaller bold SKU, the badge's weight).
+
+### S-71 · The order page's stage table and its buttons look like the design · Should · S · bug · `Ready` (added and approved 2026-10-24, from your look at an order page and the designer's comparison with the board "Order detail per size")
+Next in line, before S-57: your own request. Card: [stories/S-71-order-page-table-and-buttons-match-the-design.md](stories/S-71-order-page-table-and-buttons-match-the-design.md).
+S-49 and S-61 met their criteria as written, and both are done, so this is a new story rather than a reopening. As a one-off, the
+card travels on the build branch and reaches `main` when the build merges.
+**You get:** under each line's Total, the moves in two rows lined up with the figures: "Start cutting", "Mark ready" and "Ship" on the
+first, the three "Move back"s on the second, none stretched; the same on one-size lines. The table in a frame with a grey header band,
+figures in the number font, every 0 grey (the Total row's too), a shaded Total row. A button that can't be clicked looks grey, not
+pale blue. The buttons keep their height (44 px is S-68).
+**Why:** the build met the cards' words but not the approved board; next to it the page reads as a different table.
+
+### S-73 · The product page and form match the size board · Should · S · feature · `Ready` (added and approved 2026-10-24, your request, from the design board "Sizes · products" and the designer's review)
+After S-71, before S-57: your own request. Card: [stories/S-73-product-page-and-form-match-the-size-board.md](stories/S-73-product-page-and-form-match-the-size-board.md).
+After S-56 and S-70 (both done). Changes the look only; no figure or rule changes. No Technical work yet.
+**You get:** on a product's page, "Can produce now", "In stock" and "Unit cost" side by side in one row of three, as on the board,
+with the board's larger figures; "Sold · last 30 days" becomes a line under "Recent sales" ("38 units sold in the last 30 days
+· TND 3,382.000"). In "Edit product", the size tags [S] [M] [L] [XL] under Category are bolder, with a visible border, as on the board.
+**Why:** since S-56 added "In stock", the figures sit two by two and "Can produce now", the page's main answer, is half a column wide.
+**Left out (your answers, 2026-10-24):** taller fields and 44 px buttons (S-68 and a later story for every form), the page title's
+size, and the bottleneck's "units" (the board's "jackets" is only an example).
 
 ### S-57 · Cancel an order · Should · M · feature · `Ready` (card written 2026-10-18, per size, D-15, D-16; phone-width criterion added and approved 2026-10-22, D-17)
 Card: [stories/S-57-cancel-an-order.md](stories/S-57-cancel-an-order.md). Depends on S-56 (done). Separate from "Delete", which stays for orders
@@ -143,6 +163,15 @@ needs a decision on how to change it (both found at S-70's acceptance, 2026-10-2
 **Why:** Invory is used on a phone at the cutting table; small targets and three buttons with the same name slow you down. One story
 keeps one look across the app.
 
+### S-72 · The order page shows the whole order at a glance, like the design · Could · S · feature · `Draft` (added 2026-10-24, the rest of the same comparison as S-71)
+After S-71. Card (first draft, refined again when its turn comes): [stories/S-72-order-page-whole-order-at-a-glance.md](stories/S-72-order-page-whole-order-at-a-glance.md).
+**You get:** the order's five figures under the header ("Ordered 80 units", "To start 66 units"…), a progress bar under each line
+with a legend that now holds "0 of 50 shipped", the product's photo and a grey SKU on each line, and on a phone each size as a
+two-by-two grid. Your answers of 2026-10-24: no "⋯" menu on the lines and no blue tint on "In cutting" figures.
+**For the tech-lead when sizing:** the photo needs the product's photo on each order line (a value the page doesn't get today); the
+five figures need no new value.
+**Why:** the order's state at a glance, without adding up the lines.
+
 ### S-52 · Each order keeps a history of its moves · Won't (this time) · S · feature · `Idea` (was Could; D-15, 2026-10-18, to make room for sizes)
 **You get:** the order page lists every move, newest first, with who did it: "15 Oct 2026 · 30 units of Denim Jacket moved to In cutting ·
 by Sami".
@@ -199,7 +228,8 @@ Card: [stories/S-32-duplicate-sku-clear-message.md](stories/S-32-duplicate-sku-c
 ### S-42 · Screen readers hear "112 units", not "112units" · Could · S · bug (accessibility) · `Ready`, on hold since 2026-10-15 (postponed, kept for later)
 Card: [stories/S-42-screen-readers-hear-units.md](stories/S-42-screen-readers-hear-units.md). After S-32.
 **You get:** on the product page, "Can produce now 112 units" and "Sold · last 30 days 38 units" are read aloud with a space between the
-number and its unit.
+number and its unit. Once S-73 lands, the sales figure is the line under "Recent sales", so S-42's second criterion needs rewording
+(your yes) when it resumes.
 
 ### S-40 · A realistic catalogue of 100 products on a fresh install · Could · M · enabler · `Ready`, on hold since 2026-10-15 (postponed, kept for later)
 Card: [stories/S-40-realistic-catalogue-100-products.md](stories/S-40-realistic-catalogue-100-products.md). Depends on S-08.
@@ -356,5 +386,8 @@ a lock under a started size; "same for every size" under the unit cost of a prod
 width, window titles wrap before the ✕, the SKU in a line heading bold and one size smaller than the product name, the sizes badge as
 heavy as the other badges); the "At least 10" hint stays grey, not the board's blue (the board gets a note); two limits are kept as
 built: on a phone "At least 1,000" and larger may wrap inside a size field, and from tablet width a size field is 80 px wide with
-8 px inside, just enough for 7 digits.
+8 px inside, just enough for 7 digits. · **S-73 the product page matches the size board** (your answers, 2026-10-24, all
+recommended): "Can produce now", "In stock" and "Unit cost" in one row of three, figures at the board's size (36 px, labels 15 px);
+"Sold · last 30 days" becomes the line under "Recent sales"; the bottleneck keeps "units" (no plural product name); field heights,
+15 px labels and 44 px buttons stay out of it (one story for every form later, beside S-68); S-73 goes after S-71 and before S-57.
 Pending: [STATUS.md §2](STATUS.md#2-decisions-needed-from-you).
