@@ -5,7 +5,7 @@ type: bug
 phase: 5
 priority: Should
 size: S
-status: Ready
+status: Done
 created: 2026-10-24
 tags:
   - story
@@ -36,36 +36,36 @@ tags:
 >   cutting" lines up with the "Move back"s, not with "Mark ready".
 
 ## Acceptance criteria
-- [ ] **AC-1 · Two rows of buttons under the Total.** Take Boutique Lina's Denim Jacket at Total 36 · 14 · 0 · 0. Under the Total row,
+- [x] **AC-1 · Two rows of buttons under the Total.** Take Boutique Lina's Denim Jacket at Total 36 · 14 · 0 · 0. Under the Total row,
   the first row of buttons reads "Start cutting" under To start, "Mark ready" under In cutting and "Ship" under Ready to ship, with
   nothing under Shipped. The row below reads "Move back" under In cutting, Ready to ship and Shipped, with nothing under To start. The
-  Total row itself holds only the figures 36, 14, 0 and 0. Each button opens the same window as today and moves units in the same way.
-- [ ] **AC-2 · Every button sits under its figure.** Each button is only as wide as its word: "Start cutting" is no wider than those two
+  Total row itself holds only the figures 36, 14, 0 and 0. Each button opens the same window as today and moves units in the same way. ✅ 2026-10-24 · 722638c
+- [x] **AC-2 · Every button sits under its figure.** Each button is only as wide as its word: "Start cutting" is no wider than those two
   words need. Its right edge lines up with the right edge of the figures above it. Buttons keep today's height. At 1024 px with the
   sidebar open, the table and both rows fit without scrolling sideways. With the keyboard, Tab goes through the first row left to right
   and then the second: "Start cutting", "Mark ready", "Ship", then the three "Move back"s. Buttons that can't be clicked are skipped, as
-  today. Screen readers still hear the table as its sizes and the Total; the button rows aren't read out as sizes.
-- [ ] **AC-3 · One-size lines and narrow screens.** Take the Leather Tote ("One size", 12 units: To start 8 · In cutting 4 · Ready to
+  today. Screen readers still hear the table as its sizes and the Total; the button rows aren't read out as sizes. ✅ 2026-10-24 · 722638c
+- [x] **AC-3 · One-size lines and narrow screens.** Take the Leather Tote ("One size", 12 units: To start 8 · In cutting 4 · Ready to
   ship 0 · Shipped 0). Across its four boxes, "Start cutting", "Mark ready" and "Ship" sit on one line, and the three "Move back"s on
   the line below. The To start box has nothing on the second line and the Shipped box nothing on the first. Each button is only as
   wide as its word and lines up with the left edge of its figure. When the boxes go two per row (below 1024 px, and for the Total of
   a line with sizes), the same holds in each row of boxes. "Start cutting" lines up with "Mark ready", and Shipped's "Move back" with
-  Ready to ship's "Move back".
-- [ ] **AC-4 · The table reads like the design.** The table sits in a light frame with rounded corners. The header row ("Size", "To
+  Ready to ship's "Move back". ✅ 2026-10-24 · 722638c
+- [x] **AC-4 · The table reads like the design.** The table sits in a light frame with rounded corners. The header row ("Size", "To
   start", "In cutting", "Ready to ship", "Shipped") is on a grey band. Every figure, the Total row's included, is in the number font,
   the same as the size chips above it. Every 0 is in the same grey as the column headings, which stays readable (6.3:1 on white):
   in the size rows and in the Total row alike, so the Total's 0 under Ready to ship and under Shipped is grey too. The Total row is
   shaded grey and has a heavier line above it than the lines between the sizes. The size labels are semibold in the body font, the
   board's and the size chips' weight. The size labels and "Total" sit as far from the frame's left edge as the figures sit from its
-  right edge. In dark mode, the frame, the band, the shading and the grey zeros follow the dark theme, and the zeros stay readable.
-- [ ] **AC-5 · A button that can't be clicked looks grey.** Every move button on the order page that can't be clicked shows as a grey
+  right edge. In dark mode, the frame, the band, the shading and the grey zeros follow the dark theme, and the zeros stay readable. ✅ 2026-10-24 · 7e00fff
+- [x] **AC-5 · A button that can't be clicked looks grey.** Every move button on the order page that can't be clicked shows as a grey
   button (grey fill, grey word, thin border), not a pale blue one. That means "Mark ready" with 0 in cutting, "Ship" with 0 ready to
   ship, a "Move back" whose stage holds 0, and "Start cutting" on a deleted product. A grey "Move back" stays clearly visible. These
   buttons still can't be clicked. The hint "Denim Jacket was deleted, so it can't be cut." stays. Buttons that can be clicked keep their
-  look: "Start cutting", "Mark ready" and "Ship" filled blue, "Move back" outlined. This holds in the table, in the boxes and on a phone.
-- [ ] **AC-6 · Nothing shipped yet.** With 0 shipped (Denim Jacket at 36 · 14 · 0 · 0), the Shipped column has nothing in the first row
+  look: "Start cutting", "Mark ready" and "Ship" filled blue, "Move back" outlined. This holds in the table, in the boxes and on a phone. ✅ 2026-10-24 · da6ff31
+- [x] **AC-6 · Nothing shipped yet.** With 0 shipped (Denim Jacket at 36 · 14 · 0 · 0), the Shipped column has nothing in the first row
   and a grey "Move back" in the second. No "Nothing to move" text shows anywhere. Once units have shipped, that "Move back" is the
-  outlined one and moves them back to Ready to ship, as today.
+  outlined one and moves them back to Ready to ship, as today. ✅ 2026-10-24 · 722638c
 
 ---
 
