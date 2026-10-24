@@ -8,7 +8,7 @@ tags:
     
     vault_path: docs/
     
-    updated: 2026-10-23
+    updated: 2026-10-24
     
 
 # Story Cards (Product-Owner & Tech-Lead)
@@ -66,7 +66,7 @@ This document tracks all story cards across active and past phases. Each story c
 | **S-56** — Finished products in stock, per size                                                    | 5         | Should         | M        | `Done` (accepted 2026-10-23; `83062eb`, one commit with its fix round)                                 |
 | **S-70** — Sizes look the same on every screen                                                     | 5         | Should         | M        | `Done` (accepted 2026-10-23; `b200905` … `4d646e9`, six commits)                                       |
 | **S-71** — The order page's stage table and its buttons look like the design                       | 5         | Should         | S        | `Done` (accepted 2026-10-24; `722638c`, `7e00fff`, `da6ff31`)                                          |
-| **S-73** — The product page and form match the size board                                          | 5         | Should         | S        | `Ready` (approved 2026-10-24; next: tech-lead plans it)                                                |
+| **S-73** — The product page and form match the size board                                          | 5         | Should         | S        | `Done` (accepted 2026-10-24; `51ba6ce`, `078bead`, `bf5db86`)                                          |
 | **S-57** — Cancel an order                                                                         | 5         | Should         | M        | `Ready` (approved 2026-10-22, D-17; next: tech-lead plans it)                                          |
 | **S-65** — Close a fully shipped order                                                             | 5         | Should         | M        | `Ready` (approved 2026-10-22; next: tech-lead plans after S-57)                                        |
 | **S-72** — The order page shows the whole order at a glance                                        | 5         | Could          | S        | `Draft` (added 2026-10-24; after S-68)                                                                 |

@@ -5,7 +5,7 @@ type: feature
 phase: 5
 priority: Should
 size: S
-status: Ready
+status: Done
 created: 2026-10-24
 tags:
   - story
@@ -34,29 +34,30 @@ tags:
 >   medium weight, with a faint border, so they look lighter and rounder than on the board.
 
 ## Acceptance criteria
-- [ ] **AC-1 · Three figures in one row.** On the Denim Jacket's page on a wide screen (1280 px), next to the photo, one row of three
+- [x] **AC-1 · Three figures in one row.** On the Denim Jacket's page on a wide screen (1280 px), next to the photo, one row of three
   equal cards in this order: "Can produce now 112 units" (blue, "from current stock, any mix of sizes"), "In stock 10 units" (with
-  "Update stock" at the top right and the chips S 3 · M 0 · L 5 · XL 2) and "Unit cost TND 35.754" ("same for every size"). Each
-  figure is 36 px bold with a 15 px label, as on the board. Under the row come the bottleneck banner and then "Cost breakdown", as
-  today. "No composition" and "Can't produce" keep their words. Screen readers meet the three cards in the same order, under the
-  names they have today.
-- [ ] **AC-2 · The sales figure moves into "Recent sales".** The product page has no "Sold · last 30 days" card. Under the "Recent
+  "Update stock" at the top right and the chips S 3 · M 0 · L 5 · XL 2) and "Unit cost TND 35.754" ("same for every size"). The
+  amounts are 36 px bold with a 15 px label, as on the board; the unit cost's "TND" is drawn at the size of "units". Under the row
+  come the bottleneck banner and then "Cost breakdown", as today. "No composition" and "Can't produce" keep their words. Screen
+  readers meet the three cards in the same order, under the names they have today. ✅ 2026-10-24 · 078bead
+- [x] **AC-2 · The sales figure moves into "Recent sales".** The product page has no "Sold · last 30 days" card. Under the "Recent
   sales" heading it reads "38 units sold in the last 30 days · TND 3,382.000", or "1 unit sold in the last 30 days · TND 89.000" for
   one unit. These are the same two figures the card shows today. A product with older sales but none in the last 30 days reads "No
   sales in the last 30 days." above its list. A product that was never sold keeps only "No sales recorded for this product yet." and,
-  when it is active, "Record a sale", as today.
-- [ ] **AC-3 · Narrower screens and loading.** From tablet width the three cards stay in one row while each can be at least 200 px
+  when it is active, "Record a sale", as today. ✅ 2026-10-24 · 51ba6ce
+- [x] **AC-3 · Narrower screens and loading.** From tablet width the three cards stay in one row while each can be at least 200 px
   wide. When there is less room, they wrap (two, then one under them) instead of getting narrower than that. At 375 px they stack in
   the same order: Can produce now, In stock, Unit cost. "Update stock" stays on the "In stock" label row. If the row is too narrow, it
   may drop under the label but never covers "1,000,000 units". A shoe's 11 chips wrap inside the "In stock" card, and nothing scrolls
   sideways. While the page loads, three placeholders fill the row (Can produce now, In stock, Unit cost), not four, and "Recent sales"
   keeps its placeholder. If the stock can't be read, the "In stock" card shows "Couldn't load the stock." and "Try again", as today.
-- [ ] **AC-4 · Size tags in the form, as on the board.** On "Edit product" for the Denim Jacket, under Category, "Sizes:" is followed
+  ✅ 2026-10-24 · 078bead
+- [x] **AC-4 · Size tags in the form, as on the board.** On "Edit product" for the Denim Jacket, under Category, "Sizes:" is followed
   by [S] [M] [L] [XL] drawn as on the board: 13 px semibold text on the card's background (white in light mode), a clearly visible grey
   border darker than the lines between rows, slightly rounded corners and a little more room inside. They look the same way in dark
   mode. Only the form's tags change: the "Apparel", "Sizes S, M, L, XL" and "Active" badges on the product page keep their look.
   Footwear still reads "Sizes: **36 to 46**" and Bag "**One size**". Screen readers still hear "Sizes: S, M, L, XL", then "Sizes come
-  with the category.". The tags still can't be clicked.
+  with the category.". The tags still can't be clicked. ✅ 2026-10-24 · bf5db86
 
 ---
 
