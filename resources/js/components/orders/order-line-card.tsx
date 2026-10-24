@@ -3,7 +3,11 @@ import { useId } from 'react';
 import { lineHeadingId, MOVES } from '@/components/orders/move-units-dialog';
 import { ProgressStatus } from '@/components/orders/progress-status';
 import { SizeStagesTable } from '@/components/orders/size-stages-table';
-import { formatUnits, StageFigure } from '@/components/orders/stage-figure';
+import {
+    formatUnits,
+    STAGE_BOXES,
+    StageFigure,
+} from '@/components/orders/stage-figure';
 import { SizeChips } from '@/components/shared/size-chips';
 import { Button } from '@/components/ui/button';
 import { useAppSettings } from '@/hooks/use-app-settings';
@@ -18,11 +22,15 @@ type OrderLineCardProps = {
     onMove: (line: OrderLine, move: OrderLineMove) => void;
 };
 
+type MoveSpec = [OrderLineMove, string];
+
 type StageSpec = {
     stage: OrderStage;
     caption: string;
-    /** Buttons under the stage, as [move, label]. */
-    moves: [OrderLineMove, string][];
+    /** The button that moves units on from this stage, as [move, label]. */
+    forward?: MoveSpec;
+    /** The button that moves them back, as [move, label]. */
+    back?: MoveSpec;
 };
 
 // Fixed UI copy (the props carry no stage labels).
@@ -30,28 +38,24 @@ const STAGES: StageSpec[] = [
     {
         stage: 'to_start',
         caption: 'To start',
-        moves: [['start_cutting', 'Start cutting']],
+        forward: ['start_cutting', 'Start cutting'],
     },
     {
         stage: 'in_cutting',
         caption: 'In cutting',
-        moves: [
-            ['mark_ready', 'Mark ready'],
-            ['back_to_start', 'Move back'],
-        ],
+        forward: ['mark_ready', 'Mark ready'],
+        back: ['back_to_start', 'Move back'],
     },
     {
         stage: 'ready_to_ship',
         caption: 'Ready to ship',
-        moves: [
-            ['ship', 'Ship'],
-            ['back_to_cutting', 'Move back'],
-        ],
+        forward: ['ship', 'Ship'],
+        back: ['back_to_cutting', 'Move back'],
     },
     {
         stage: 'shipped',
         caption: 'Shipped',
-        moves: [['back_to_ready', 'Move back']],
+        back: ['back_to_ready', 'Move back'],
     },
 ];
 
@@ -63,26 +67,30 @@ export function OrderLineCard({ line, onMove }: OrderLineCardProps) {
     const uid = useId();
     const { locale } = useAppSettings();
     const { product } = line;
-    // The buttons that move units out of a stage.
-    const stageButtons = ({ moves }: StageSpec) =>
-        moves.map(([move, label]) => {
-            // A deleted product's units still move on and back, but never into cutting.
-            const cutBlocked = move === 'start_cutting' && product.deleted;
+    // One move button. A "Move back" is described by its stage's caption (`describedBy`).
+    const moveButton = ([move, label]: MoveSpec, describedBy?: string) => {
+        // A deleted product's units still move on and back, but never into cutting.
+        const cutBlocked = move === 'start_cutting' && product.deleted;
 
-            return (
-                <Button
-                    key={move}
-                    type="button"
-                    size="sm"
-                    variant={move.startsWith('back_') ? 'outline' : 'default'}
-                    disabled={line[MOVES[move].from] === 0 || cutBlocked}
-                    aria-describedby={cutBlocked ? `${uid}-deleted` : undefined}
-                    onClick={() => onMove(line, move)}
-                >
-                    {label}
-                </Button>
-            );
-        });
+        return (
+            <Button
+                type="button"
+                size="sm"
+                variant={move.startsWith('back_') ? 'outline' : 'default'}
+                disabled={line[MOVES[move].from] === 0 || cutBlocked}
+                aria-describedby={cutBlocked ? `${uid}-deleted` : describedBy}
+                onClick={() => onMove(line, move)}
+            >
+                {label}
+            </Button>
+        );
+    };
+    const forwardOf = ({ forward }: StageSpec) =>
+        forward && moveButton(forward);
+    const backOf = ({ back }: StageSpec, captionId: string) =>
+        back && moveButton(back, captionId);
+    const columnId = (stage: OrderStage) => `${uid}-column-${stage}`;
+    const boxCaptionId = (stage: OrderStage) => `${uid}-box-${stage}`;
 
     return (
         <section
@@ -135,7 +143,9 @@ export function OrderLineCard({ line, onMove }: OrderLineCardProps) {
                     columns={STAGES.map((spec) => ({
                         key: spec.stage,
                         caption: spec.caption,
-                        actions: stageButtons(spec),
+                        captionId: columnId(spec.stage),
+                        forward: forwardOf(spec),
+                        back: backOf(spec, columnId(spec.stage)),
                     }))}
                     rows={line.sizes.map((size) => ({
                         id: size.size.id,
@@ -145,15 +155,16 @@ export function OrderLineCard({ line, onMove }: OrderLineCardProps) {
                     total={figuresOf(line)}
                 />
             ) : (
-                <ol className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                <ol className={`${STAGE_BOXES} lg:grid-cols-4`}>
                     {STAGES.map((spec) => (
                         <StageFigure
                             key={spec.stage}
                             caption={spec.caption}
+                            captionId={boxCaptionId(spec.stage)}
                             value={formatUnits(line[spec.stage], locale)}
-                        >
-                            {stageButtons(spec)}
-                        </StageFigure>
+                            forward={forwardOf(spec)}
+                            back={backOf(spec, boxCaptionId(spec.stage))}
+                        />
                     ))}
                 </ol>
             )}

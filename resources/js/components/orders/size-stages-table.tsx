@@ -1,16 +1,32 @@
 import { Fragment, useId } from 'react';
 import type { ReactNode } from 'react';
-import { formatUnits, StageFigure } from '@/components/orders/stage-figure';
+import {
+    formatUnits,
+    STAGE_BOXES,
+    StageFigure,
+} from '@/components/orders/stage-figure';
 import { useAppSettings } from '@/hooks/use-app-settings';
 import { formatCount } from '@/lib/format';
+import { cn } from '@/lib/utils';
+
+// The table and the button rows under it share one column template and one cell padding, so a
+// button ends where the figures above it end. Four stage columns; the Size column is 6rem wide.
+const SIZE_COLUMN = 'w-24';
+const ROW_COLUMNS = 'grid-cols-[6rem_repeat(4,minmax(0,1fr))]';
+const CELL_X = 'px-3';
+const BUTTON_LINES = ['forward', 'back'] as const;
 
 export type SizeStagesColumn = {
     /** Key of this column's figure in each row and in `total`. */
     key: string;
     /** The column's caption ("To start", "In cutting"…). */
     caption: string;
-    /** Buttons shown under the Total figure of this column. */
-    actions?: ReactNode;
+    /** Id of the column heading, so a "Move back" can be described by it. */
+    captionId: string;
+    /** The button that moves units on from this stage (first row under the table). */
+    forward?: ReactNode;
+    /** The button that moves units back (second row under the table). */
+    back?: ReactNode;
 };
 
 export type SizeStagesRow = {
@@ -32,7 +48,8 @@ type SizeStagesTableProps = {
 /**
  * Each size of an order line against the stages, with the Total row last on a
  * wide screen (table, from 1024 px) and first on a phone (cards). It only shows the figures
- * it is given; the buttons come in as each column's `actions`.
+ * it is given; the buttons come in as each column's `forward` and `back`, in two rows under the
+ * table (outside it, so a screen reader hears the sizes and the Total only).
  */
 export function SizeStagesTable({
     productName,
@@ -45,81 +62,108 @@ export function SizeStagesTable({
 
     return (
         <>
-            <table className="hidden w-full text-sm lg:table">
-                <caption className="sr-only">
-                    {productName}: units by size and stage
-                </caption>
-                <thead>
-                    <tr className="border-b text-left text-muted-foreground">
-                        <th scope="col" className="py-2 pr-3 font-medium">
-                            Size
-                        </th>
-                        {columns.map(({ key, caption }) => (
-                            <th
-                                key={key}
-                                scope="col"
-                                className="px-3 py-2 text-right font-medium"
-                            >
-                                {caption}
-                            </th>
+            <div className="hidden lg:block">
+                <table className="w-full table-fixed text-sm">
+                    <caption className="sr-only">
+                        {productName}: units by size and stage
+                    </caption>
+                    <colgroup>
+                        <col className={SIZE_COLUMN} />
+                        {columns.map(({ key }) => (
+                            <col key={key} />
                         ))}
-                    </tr>
-                </thead>
-                <tbody>
-                    {rows.map(({ id, label, figures }) => (
-                        <tr key={id} className="border-b">
-                            <th
-                                scope="row"
-                                className="py-2 pr-3 text-left font-medium"
-                            >
-                                {label}
+                    </colgroup>
+                    <thead>
+                        <tr className="border-b text-left text-muted-foreground">
+                            <th scope="col" className="py-2 pr-3 font-medium">
+                                Size
+                            </th>
+                            {columns.map(({ key, caption, captionId }) => (
+                                <th
+                                    key={key}
+                                    id={captionId}
+                                    scope="col"
+                                    className={cn(
+                                        CELL_X,
+                                        'py-2 text-right font-medium',
+                                    )}
+                                >
+                                    {caption}
+                                </th>
+                            ))}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {rows.map(({ id, label, figures }) => (
+                            <tr key={id} className="border-b">
+                                <th
+                                    scope="row"
+                                    className="py-2 pr-3 text-left font-medium"
+                                >
+                                    {label}
+                                </th>
+                                {columns.map(({ key }) => (
+                                    <td
+                                        key={key}
+                                        className={cn(
+                                            CELL_X,
+                                            'py-2 text-right tabular-nums',
+                                        )}
+                                    >
+                                        {formatCount(figures[key], locale)}
+                                    </td>
+                                ))}
+                            </tr>
+                        ))}
+                        <tr className="font-bold">
+                            <th scope="row" className="py-2 pr-3 text-left">
+                                Total
                             </th>
                             {columns.map(({ key }) => (
                                 <td
                                     key={key}
-                                    className="px-3 py-2 text-right tabular-nums"
+                                    className={cn(
+                                        CELL_X,
+                                        'py-2 text-right tabular-nums',
+                                    )}
                                 >
-                                    {formatCount(figures[key], locale)}
+                                    {formatCount(total[key], locale)}
                                 </td>
                             ))}
                         </tr>
+                    </tbody>
+                </table>
+                <div className={cn('mt-2 grid gap-y-2', ROW_COLUMNS)}>
+                    {BUTTON_LINES.map((line) => (
+                        <Fragment key={line}>
+                            <div data-line={line} />
+                            {columns.map((column) => (
+                                <div
+                                    key={column.key}
+                                    data-line={line}
+                                    className={cn(CELL_X, 'flex justify-end')}
+                                >
+                                    {column[line]}
+                                </div>
+                            ))}
+                        </Fragment>
                     ))}
-                    <tr className="align-top font-bold">
-                        <th scope="row" className="py-3 pr-3 text-left">
-                            Total
-                        </th>
-                        {columns.map(({ key, actions }) => (
-                            <td key={key} className="px-3 py-3 text-right">
-                                <span className="tabular-nums">
-                                    {formatCount(total[key], locale)}
-                                </span>
-                                {actions && (
-                                    <div className="mt-2 flex flex-col gap-2 font-normal">
-                                        {actions}
-                                    </div>
-                                )}
-                            </td>
-                        ))}
-                    </tr>
-                </tbody>
-            </table>
+                </div>
+            </div>
 
             <div className="flex flex-col gap-3 lg:hidden">
                 <p id={totalId} className="text-sm font-bold">
                     Total
                 </p>
-                <ol
-                    aria-labelledby={totalId}
-                    className="grid grid-cols-2 gap-3"
-                >
-                    {columns.map(({ key, caption, actions }) => (
+                <ol aria-labelledby={totalId} className={STAGE_BOXES}>
+                    {columns.map(({ key, caption, forward, back }) => (
                         <StageFigure
                             key={key}
                             caption={caption}
                             value={formatUnits(total[key], locale)}
-                        >
-                            {actions}
-                        </StageFigure>
+                            forward={forward}
+                            back={back}
+                        />
                     ))}
                 </ol>
                 <ul aria-label="Sizes" className="flex flex-col gap-2">

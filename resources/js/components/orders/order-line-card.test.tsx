@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { OrderLineCard } from '@/components/orders/order-line-card';
@@ -185,6 +185,22 @@ describe('<OrderLineCard>', () => {
             ],
         };
 
+        // The jacket after cutting S 4 · M 10: Total 36 · 14 · 0 · 0.
+        const cutJacket: OrderLine = {
+            ...sizedJacketLine,
+            to_start: 36,
+            in_cutting: 14,
+            started: 14,
+            status: 'in_progress',
+            status_label: 'In progress',
+            sizes: [
+                sizeRow(sizeIds.S, 'S', 10, { to_start: 6, in_cutting: 4 }),
+                sizeRow(sizeIds.M, 'M', 20, { to_start: 10, in_cutting: 10 }),
+                sizeRow(sizeIds.L, 'L', 15),
+                sizeRow(sizeIds.XL, 'XL', 5),
+            ],
+        };
+
         const tote = withOneSize(
             {
                 ...jacketLine(),
@@ -265,15 +281,22 @@ describe('<OrderLineCard>', () => {
             expect(screen.getByText(spoken)).toHaveClass('sr-only');
         });
 
-        it('shows a table with a row per size and the buttons in the Total row only', async () => {
+        // The text of each cell of one line of buttons, in order.
+        const lineOf = (scope: HTMLElement, line: 'forward' | 'back') =>
+            Array.from(scope.querySelectorAll(`[data-line="${line}"]`)).map(
+                (cell) => cell.textContent,
+            );
+
+        it('the table holds only figures; the buttons sit in two rows under the Total', async () => {
             const { onMove, user } = renderCard(sizedJacketLine);
 
             // From 1024 px (lg) a table, named after the product; below it the cards (F2, F7).
             const table = screen.getByRole('table', {
                 name: 'Denim Jacket: units by size and stage',
             });
+            const wide = table.parentElement as HTMLElement;
 
-            expect(table).toHaveClass('lg:table');
+            expect(wide).toHaveClass('lg:block');
             expect(
                 within(table)
                     .getAllByRole('columnheader')
@@ -300,26 +323,100 @@ describe('<OrderLineCard>', () => {
                 ['M', '20', '0', '0', '0'],
                 ['L', '15', '0', '0', '0'],
                 ['XL', '5', '0', '0', '0'],
-                [
-                    'Total',
-                    '50Start cutting',
-                    '0Mark readyMove back',
-                    '0ShipMove back',
-                    '0Move back',
-                ],
+                ['Total', '50', '0', '0', '0'],
             ]);
-            for (const row of rows.slice(0, 4)) {
-                expect(within(row).queryByRole('button')).toBeNull();
-            }
+            expect(within(table).queryByRole('button')).toBeNull();
+
+            // The first row: forward moves; the second: the Move backs (nothing under To start).
+            expect(lineOf(wide, 'forward')).toEqual([
+                '',
+                'Start cutting',
+                'Mark ready',
+                'Ship',
+                '',
+            ]);
+            expect(lineOf(wide, 'back')).toEqual([
+                '',
+                '',
+                'Move back',
+                'Move back',
+                'Move back',
+            ]);
+
+            const backs = within(wide).getAllByRole('button', {
+                name: 'Move back',
+            });
+
+            // Nothing shipped yet: the Shipped one can't be clicked, and no text says so.
+            expect(backs[2]).toBeDisabled();
+            expect(screen.queryByText('Nothing to move')).toBeNull();
+            // Each Move back is described by its column's heading.
+            expect(backs).toHaveLength(3);
+            ['In cutting', 'Ready to ship', 'Shipped'].forEach(
+                (name, index) => {
+                    expect(backs[index]).toHaveAccessibleDescription(name);
+                },
+            );
 
             await user.click(
-                within(rows[4]).getByRole('button', { name: 'Start cutting' }),
+                within(wide).getByRole('button', { name: 'Start cutting' }),
             );
 
             expect(onMove).toHaveBeenCalledExactlyOnceWith(
                 sizedJacketLine,
                 'start_cutting',
             );
+        });
+
+        it('AC-2: Tab goes through the first row, then the second, skipping buttons that cannot be clicked', async () => {
+            const { user } = renderCard(cutJacket);
+
+            // The table's buttons come first in the page; the boxes for a phone follow.
+            const wide = within(
+                screen.getByRole('table').parentElement as HTMLElement,
+            );
+
+            act(() =>
+                screen.getByRole('link', { name: 'Denim Jacket' }).focus(),
+            );
+            await user.tab();
+            expect(
+                wide.getByRole('button', { name: 'Start cutting' }),
+            ).toHaveFocus();
+            await user.tab();
+            expect(
+                wide.getByRole('button', { name: 'Mark ready' }),
+            ).toHaveFocus();
+            // Ship (0 ready to ship) is skipped; the second row follows with In cutting's Move back.
+            await user.tab();
+            expect(
+                wide.getAllByRole('button', { name: 'Move back' })[0],
+            ).toHaveFocus();
+        });
+
+        it('AC-3: across the boxes of a one-size line, the forward buttons share one line and the Move backs the line below', () => {
+            renderCard({
+                ...tote,
+                quantity: 12,
+                to_start: 8,
+                in_cutting: 4,
+                started: 4,
+            });
+
+            const boxes = screen.getByRole('list');
+
+            expect(lineOf(boxes, 'forward')).toEqual([
+                'Start cutting',
+                'Mark ready',
+                'Ship',
+                '',
+            ]);
+            expect(lineOf(boxes, 'back')).toEqual([
+                '',
+                'Move back',
+                'Move back',
+                'Move back',
+            ]);
         });
 
         it('leaves a one-size product without a table', () => {
@@ -355,12 +452,7 @@ describe('<OrderLineCard>', () => {
                 within(rows[rows.length - 1])
                     .getAllByRole('cell')
                     .map((cell) => cell.textContent),
-            ).toEqual([
-                '14Start cutting',
-                '4Mark readyMove back',
-                '5ShipMove back',
-                '7Move back',
-            ]);
+            ).toEqual(['14', '4', '5', '7']);
         });
 
         it('stacks on a phone: the Total card with its buttons first, then each size as labelled figures', () => {
@@ -387,6 +479,19 @@ describe('<OrderLineCard>', () => {
             expect(
                 within(total).getByRole('button', { name: 'Start cutting' }),
             ).toBeEnabled();
+            // The same two lines as the table's rows: forward moves, then the Move backs.
+            expect(lineOf(total, 'forward')).toEqual([
+                'Start cutting',
+                'Mark ready',
+                'Ship',
+                '',
+            ]);
+            expect(lineOf(total, 'back')).toEqual([
+                '',
+                'Move back',
+                'Move back',
+                'Move back',
+            ]);
 
             const [first, second] = within(sizes).getAllByRole('listitem');
 

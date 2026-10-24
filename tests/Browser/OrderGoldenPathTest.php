@@ -97,12 +97,81 @@ it('records an order with two products, starts cutting 14 jackets by size and fi
             return jacket
                 ? Array.from(jacket.querySelectorAll('table tbody tr'))
                     .map((row) => Array.from(row.children)
-                        .map((cell) => (cell.querySelector('span.tabular-nums') ?? cell).innerText.trim())
+                        .map((cell) => cell.innerText.trim())
                         .join(' '))
                     .join(' | ')
                 : '';
         })()
         JS, 'S 6 4 0 0 | M 10 10 0 0 | L 15 0 0 0 | XL 5 0 0 0 | Total 36 14 0 0');
+        $page->assertNoJavaScriptErrors();
+    }, $page);
+
+    GoldenPathStep::run('order page at 1024 px: two rows of buttons under the Total', function () use ($page) {
+        // S-71-a AC-1, AC-2: at 1024 px with the sidebar open the table and both rows fit; each button sits under its figure.
+        $page->resize(1024, 768);
+        $page->assertScript(<<<'JS'
+        (() => {
+            const issues = [];
+            const sidebar = document.querySelector('[data-slot="sidebar"][data-state]');
+            if (sidebar?.dataset.state !== 'expanded') {
+                issues.push('sidebar is not expanded');
+            }
+
+            const card = Array.from(document.querySelectorAll('h3'))
+                .find((heading) => heading.innerText.startsWith('Denim Jacket'))
+                ?.closest('section');
+            const table = card?.querySelector('table');
+            const wide = table?.parentElement;
+            if (!card || !table || !wide || wide.getClientRects().length === 0) {
+                return 'the size table is not visible';
+            }
+
+            // (a) The app clips sideways overflow, so the card's own width is what shows a problem.
+            for (const [name, element] of [['card', card], ['table container', wide]]) {
+                if (element.scrollWidth > element.clientWidth) {
+                    issues.push(name + ' scrolls sideways (' + element.scrollWidth + ' > ' + element.clientWidth + ')');
+                }
+            }
+
+            // (b) The visible buttons by position: rows by their top, each row from left to right.
+            const buttons = Array.from(wide.querySelectorAll('button')).filter((button) => button.getClientRects().length > 0);
+            const tops = [...new Set(buttons.map((button) => Math.round(button.getBoundingClientRect().top)))].sort((a, b) => a - b);
+            const rows = tops.map((top) => buttons
+                .filter((button) => Math.round(button.getBoundingClientRect().top) === top)
+                .sort((a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left)
+                .map((button) => button.innerText.trim())
+                .join(' | '));
+            if (rows.join(' / ') !== 'Start cutting | Mark ready | Ship / Move back | Move back | Move back') {
+                issues.push('button rows read: ' + rows.join(' / '));
+            }
+
+            // (c) Each button's right edge meets the content edge of its column's Total figure; (d) 32 px tall, narrower than the column.
+            const totals = Array.from(table.querySelectorAll('tbody tr:last-child td'));
+            const gridRows = Array.from(wide.lastElementChild.children);
+            gridRows.forEach((cell, index) => {
+                const button = cell.querySelector('button');
+                const total = totals[index % 5 - 1];
+                if (!button || !total) {
+                    return;
+                }
+                const box = button.getBoundingClientRect();
+                const column = total.getBoundingClientRect();
+                const edge = column.right - parseFloat(getComputedStyle(total).paddingRight);
+                const name = button.innerText.trim() + ' (column ' + (index % 5) + ')';
+                if (Math.abs(box.right - edge) > 1) {
+                    issues.push(name + ' right edge ' + box.right.toFixed(1) + ' vs figure edge ' + edge.toFixed(1));
+                }
+                if (Math.abs(box.height - 32) > 0.5) {
+                    issues.push(name + ' is ' + box.height + ' px tall');
+                }
+                if (box.width >= column.width) {
+                    issues.push(name + ' is ' + box.width.toFixed(1) + ' px wide, column ' + column.width.toFixed(1));
+                }
+            });
+
+            return issues.length === 0 ? 'ok' : issues.join('; ');
+        })()
+        JS, 'ok');
         $page->assertNoJavaScriptErrors();
     }, $page);
 
