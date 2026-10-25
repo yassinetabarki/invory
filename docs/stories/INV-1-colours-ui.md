@@ -13,7 +13,7 @@ tags:
 
 > [!abstract] Description
 > The workshop keeps one list of its colours in Settings › Catalogue › **Colours**, starting from 20 default colours, and each product
-> picks the colours it is made in from that list, so "Indigo" is always the same Indigo, never "indigo", "Indgo" or "Dark blue". A colour
+> picks the colours it is made in from that list (at least one), so "Indigo" is always the same Indigo, never "indigo", "Indgo" or "Dark blue". A colour
 > has a name, a short code (IND) and a swatch, and always shows as its swatch **and** its name: ■ Black ■ Indigo ■ Light wash.
 > New: the Settings › Colours page with its Add colour and Edit colour windows. Changed: Add product and Edit product get a Colours
 > field, and the product page gets a "Colours" line.
@@ -45,10 +45,15 @@ tags:
 ### Add product and Edit product · Colours field
 Board: INV-1 · Product form and page · Colours field and picker · desktop (Invory App UI canvas)
 - In the **Details** card, a full-width row after Category and Status, before Description.
-- Label **Colours (optional)**, with the hint under it: "The colours this product is made in, from your list in Settings › Colours."
+- Label **Colours**, with the hint under it: "The colours this product is made in, from your list in Settings › Colours."
 - The chosen colours as chips in a row that wraps, then an outline **Add colour** button with a plus sign at the end of the row.
 - Denim Jacket, Edit product: chips "Black", "Indigo", "Light wash", then **Add colour**.
-- A product can be saved with no colour.
+- Every product has at least one colour. **Save product** with no colour chosen saves nothing and shows under the Colours field:
+  "Choose at least one colour."
+- Every product already recorded when colours arrive gets the first colour of the workshop's list, in the order of Settings ›
+  Colours (White, in the 20 defaults).
+- A colour with units in stock can't be taken off a product: its chip's ✕ still works, but **Save product** saves nothing and shows
+  under the Colours field: "Indigo has 6 units in stock, so it can't be removed from Denim Jacket. Set its stock to 0 first."
 - The chips sit in a group that screen readers announce as "Colours". Each chip's ✕ takes that colour off the form; nothing is saved
   until **Save product**.
 - **Save product** → toast "Product updated." (Edit) or "Product created." (Add), and the product page opens.
@@ -67,8 +72,6 @@ Board: INV-1 · Product form and page · Colours field and picker · desktop (In
 Board: INV-1 · Product form and page · Colours field and picker · desktop (Invory App UI canvas)
 - In the header, a line under the badges row (PRD-JKT-001 · Apparel · Sizes S, M, L, XL · Active): grey "Colours", then the colour
   tags "■ Black ■ Indigo ■ Light wash", wrapping on a narrow screen. Screen readers hear "Colours: Black, Indigo, Light wash".
-- No colours: grey "Colours", then "None yet ·" and the link **Add colours**, which opens Edit product with the focus on the Colours
-  field.
 - Nothing else on the page changes: "Can produce now 112 units", "In stock" and "Unit cost TND 35.754" stay as they are.
 
 ### Settings › Colours
@@ -126,6 +129,9 @@ Board: INV-1 · Settings › Colours · add, edit, errors, delete · desktop (In
 
 ### Colours field (Add product and Edit product)
 - **Saving:** nothing extra loads (the colours come with the page); **Save product** keeps its label and shows a spinner.
+- **No colour chosen:** under the field, in red, with the focus on **Add colour**: "Choose at least one colour."
+- **A colour with stock taken off:** under the field, in red: "Indigo has 6 units in stock, so it can't be removed from Denim Jacket.
+  Set its stock to 0 first."
 
 ### Picker
 - **Default:** the 20 colours, with Black, Indigo and Light wash checked, and "3 chosen" · **Done**.
@@ -133,8 +139,7 @@ Board: INV-1 · Settings › Colours · add, edit, errors, delete · desktop (In
   option is never hidden under the bottom bar.
 
 ### Product page · Colours line
-- **Default:** "Colours ■ Black ■ Indigo ■ Light wash".
-- **Empty:** "Colours None yet · Add colours".
+- **Default:** "Colours ■ Black ■ Indigo ■ Light wash". There is no empty state: every product has at least one colour.
 
 ### Settings › Colours
 - **Default:** the 20 colours with their "Used by".
@@ -152,10 +157,11 @@ Shown under the field after **Save colour**, with the focus on the first one:
 - Swatch empty or not a colour code: "Enter a colour code like #3E4C7E."
 
 ## Wording
-- Product form: "Colours (optional)" · "The colours this product is made in, from your list in Settings › Colours." · "Add colour" ·
-  "Remove Indigo".
+- Product form: "Colours" · "The colours this product is made in, from your list in Settings › Colours." · "Add colour" · "Remove
+  Indigo" · "Choose at least one colour." · "Indigo has 6 units in stock, so it can't be removed from Denim Jacket. Set its stock to 0
+  first."
 - Picker: "Search colours" · "3 chosen" · "Done" · on a phone, the title "Choose colours" and "Close".
-- Product page: "Colours" · "None yet" · "Add colours".
+- Product page: "Colours".
 - Settings › Colours: "Colours" · "The colours your products come in. Each one shows as its swatch and its name. Rename any of them, or
   add your own." · "Add colour" · column names "Colour", "Code", "Used by" · "3 products", "1 product", "Not used" · "Edit Indigo".
 - Add colour and Edit colour windows: "Add colour" · "Edit Indigo" · "Code IND can't be changed." · "Name" · "Code" · "2 to 4 capital

@@ -26,8 +26,10 @@ size, restock of finished products, clients and a production progress page. **Ev
 `On hold`), and nothing is planned, in progress or waiting for acceptance. The next work, in your order (D-21): **INV-1** colours,
 INV-2 product sizes × colours with stock and a barcode per variant, INV-3 restock of finished products, INV-4 clients, INV-5 a
 production progress page. Each gets a UI card first and then a development card. **INV-1 "Colours as fixed values" is `UI
-approved`** (you validated its UI card on 2026-10-25); its development card comes when you ask for it. **In flight:** INV-2's UI
-card (product details: stock per size and colour, and a Barcode tab) is being designed.
+approved`** (you validated its UI card on 2026-10-25 and amended it the same day: colours are required); its development card
+comes when you ask for it. **INV-2 "Product sizes × colours, stock and barcodes" is `UI approved`** (you validated its UI card
+on 2026-10-25); its development card comes when you ask for it. **In flight:** INV-3's UI card (restock of finished products) is
+being designed.
 **Phase 5: Customer orders** (started 2026-10-15, D-12; on hold since 2026-10-24). **Done:** S-48 (accepted 2026-10-15), and **F-41, S-49
 and S-53** (accepted 2026-10-21 after your one click-through; built in one build and landed on `main` together, `e99615e` … `8ab9df8`,
 closing docs `f803cb1`), **S-50** (accepted 2026-10-22; `ba0a0cd`, `74f05a8`, `a23a5d7`, merged in `0270014`), **S-58**
@@ -58,13 +60,42 @@ Phases 6, 7 and 8 are on hold too (D-20).
 | D-6 | Delete the 5 merged branches and the stale worktree `.claude/worktrees/fix-hover-prefetch-bug`? | Yes (nothing unmerged) |
 | D-19 | The canvas note "sizenote" says zero sizes are left out of summaries, while "In stock" lists "M 0" greyed (designer's Q8). (a) You edit the note to "Zero sizes are left out of order summaries (order page, Orders list, history). The In stock figure lists every size, 0 greyed." · (b) The designer drafts it on the canvas for your review | (a), the designer's default; no screen changes either way |
 
+**Decided on 2026-10-25: INV-2 sizes × colours and barcodes, your answers on the UI card.** You then validated the UI card the same
+day, with the amendment of INV-1 below, so INV-2 is `UI approved`:
+1. **Every product has at least one colour** ("every product must have at least one"). This reverses INV-1's "optional"; see the
+   INV-1 amendment below.
+2. **Stock counted before colours:** "all product get the first color by default". Today's per-size units go into the product's
+   first colour, in the order of Settings › Colours (White, in the 20 defaults). There is no "No colour" stock.
+3. **A colour with stock can't be taken off a product** until its stock is 0: "Indigo has 6 units in stock, so it can't be removed
+   from Denim Jacket. Set its stock to 0 first." Its barcodes stay and come back with the colour.
+4. **Barcode numbers:** "the barcode is generate for each product based on the name+size+color so if have 3 jacket with same color and
+   size and name they will have the same barcode". The numbers are in-store EAN-13: each new name + colour + size takes the next number
+   of the workshop's own range. No GS1 prefix and no numbering choice in Settings.
+5. **"The same name"** ignores capitals and extra spaces ("denim jacket" = "Denim Jacket").
+6. **Renaming a product keeps its barcodes**, so a barcode shared with another product can then stand for two names. No confirm. A renamed product that later gets a new colour shares that colour's barcodes under its current name (your answer to the designer).
+7. **"Update stock" moves into the Sizes & colours card only.** This changes S-56's delivered AC-2 ("Update stock", a button at the
+   top right of the "In stock" figure), with your approval through this answer. The S-56 card stays as accepted; INV-2 carries the
+   change.
+8. **The header keeps INV-1's** "Sizes S, M, L, XL" badge and "Colours" line, not the board's "4 sizes · 3 colors".
+- Decided by the product-owner: the variant SKU "PRD-JKT-001-IND-S"; a row's "Print label" prints one label at once, "Print labels ·
+  Indigo" opens a count per size; labels 50 × 30 mm or A4 3 × 8 with the price shown by default; always a confirm before generating;
+  archived and draft products work like active ones; the boards' footnotes about sales, orders and scanning are dropped; colours in
+  the order of Settings › Colours in every example. With no numbering choice left, the settings page holds only label size and price,
+  so it is called **Settings › Labels**.
+
+**Amended on 2026-10-25: INV-1 colours are required** (approved by you through your INV-2 answer 1; the card stays `UI approved`):
+- The field reads "Colours", not "Colours (optional)"; saving with no colour shows "Choose at least one colour." and saves nothing.
+- The product page's "None yet · Add colours" line is gone.
+- Every product already recorded when colours arrive gets the first colour of the workshop's list (White).
+- A colour with units in stock can't be taken off a product (INV-2 answer 3), with the message above.
+
 **Decided on 2026-10-25: INV-1 colours, your answers on the UI card.** You then validated the UI card the same day, so INV-1 is
 `UI approved`. You also removed the Colours field's states from the board, and kept the saving spinner and the long scrolling picker:
 1. **Each workshop has its own colour list** in Settings › Colours, starting from the 20 default colours (White WHT … Forest green
    FGR), every workshop included. Colours can be added and edited (name, code, swatch); the code never changes.
 2. **Colours are never removed in INV-1**, in your words: "ignore this cases for now image that the color will never be removed".
    There is no archive, restore or delete for colours, and no message about it; the buttons just aren't there.
-3. **A product's colours are optional**: a product with none reads "Colours None yet · Add colours".
+3. ~~**A product's colours are optional**~~: replaced the same day by the INV-1 amendment above (colours are required).
 4. **The 20 default colours stay as listed** (names up to 32 characters, codes of 2 to 4 capital letters or digits).
 5. **The swatch's edge is the field-border grey** (3.2:1 on the card, light and dark), not your boards' fainter edge.
 6. **A product's colours show in the order of Settings › Colours**, the same on every product (Black, Indigo, Light wash).
@@ -526,10 +557,10 @@ The plan headers were corrected on 2026-10-14, and [plans/README.md](plans/READM
 
 ## 9. Next steps (recommended order)
 **From 2026-10-24 (D-20): the colour × size variant rework first; every open story is on hold.** Updated 2026-10-25.
-1. Now: INV-2's UI card (product details: stock per size and colour, and a Barcode tab) is being designed. The designer proposes it;
-   the product-owner then decides and writes the UI card for your validation.
-2. When you ask for it: the product-owner writes INV-1's development card from its approved UI card (done 2026-10-25). Then INV-3 to
-   INV-5 follow in the order of D-21.
+1. Now: INV-3's UI card (restock of finished products) is being designed. The designer proposes it; the product-owner then decides
+   and writes the UI card for your validation.
+2. When you ask for them: the product-owner writes the development cards of INV-1 and INV-2 from their approved UI cards (both
+   validated 2026-10-25). Then INV-4 and INV-5 follow in the order of D-21.
 3. Done 2026-10-24: the process documents describe the new way of working (UI card, then development card, INV IDs; `e2be378`).
 4. Product-owner: before any on-hold story resumes, check its card against the new product model (R-21).
 
