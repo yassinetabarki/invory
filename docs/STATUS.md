@@ -31,8 +31,9 @@ comes when you ask for it. **INV-2 "Product sizes × colours, stock and barcodes
 on 2026-10-25); its development card comes when you ask for it. **INV-3 "Restock finished products" is `UI
 approved`** (you validated its UI card on 2026-10-25; it amended INV-2's Sizes & colours card); its development card comes when you
 ask for it. **INV-4 "Clients as an entity" is `UI approved`** (you validated its UI card on 2026-10-30, after its revision
-and your six answers); its development card comes when you ask for it. **In flight:** INV-5's UI card (a production progress page)
-is being designed.
+and your six answers); its development card comes when you ask for it. **INV-5 "Progress" is `UI approved`** (you
+validated its UI card on 2026-10-31, with the QR work tickets). **All five UI cards are approved.** Nothing is in flight: orders per
+colour and size is still to be discussed, and the development cards come when you ask for them.
 **Phase 5: Customer orders** (started 2026-10-15, D-12; on hold since 2026-10-24). **Done:** S-48 (accepted 2026-10-15), and **F-41, S-49
 and S-53** (accepted 2026-10-21 after your one click-through; built in one build and landed on `main` together, `e99615e` … `8ab9df8`,
 closing docs `f803cb1`), **S-50** (accepted 2026-10-22; `ba0a0cd`, `74f05a8`, `a23a5d7`, merged in `0270014`), **S-58**
@@ -62,6 +63,36 @@ Phases 6, 7 and 8 are on hold too (D-20).
 | D-5 | Production database host (needs PostgreSQL 13+ and `pg_trgm`) | Before S-26; not urgent |
 | D-6 | Delete the 5 merged branches and the stale worktree `.claude/worktrees/fix-hover-prefetch-bug`? | Yes (nothing unmerged) |
 | D-19 | The canvas note "sizenote" says zero sizes are left out of summaries, while "In stock" lists "M 0" greyed (designer's Q8). (a) You edit the note to "Zero sizes are left out of order summaries (order page, Orders list, history). The In stock figure lists every size, 0 greyed." · (b) The designer drafts it on the canvas for your review | (a), the designer's default; no screen changes either way |
+
+**Decided on 2026-10-31: INV-5 work tickets, your answers on the revised UI card** (all five the recommended (a)). You then
+validated the UI card the same day, so INV-5 is `UI approved`:
+1. **Orders per colour and size** stays in INV-5's card, marked "to be discussed"; it is decided before INV-5's development card.
+2. **A QR code stands for a bundle:** the units of one colour and size that one Start cutting cut for one order line. A scan moves
+   the whole bundle one phase on; moving part of it stays in the move windows, which split its ticket.
+3. **Scanning stops at Ready to ship;** shipping stays the order page's Ship.
+4. **People scan both ways:** the Scan page in Invory (camera, scanner or typed number) and the phone's own camera opening the
+   ticket's link.
+5. **One ticket per colour and size for each cut.**
+- **Ticket size in Settings › Labels:** your validation of INV-5 includes the "Ticket size" choice beside INV-2's label size. INV-5
+  owns it (tickets only exist with INV-5), so INV-2's card stays as approved and INV-5's card carries it.
+- Decided by the product-owner: one confirm per scan, with a warning on a second scan within 2 minutes; tickets on an A4 sheet of 8
+  by default or 100 × 60 mm labels; the phase view's buttons unchanged, with a Tickets column; Scan in the sidebar after Progress.
+
+**Decided on 2026-10-31: INV-5 progress, your answers on the UI card** (before the QR work tickets were added):
+1. **Production phases:** each workshop keeps its own list in Settings › Production phases, 0 to 6 phases between In cutting and
+   Ready to ship, starting with Sewing and Finishing; To start, In cutting, Ready to ship and Shipped stay fixed; a phase that holds
+   units can't be moved or removed.
+2. **The shelf:** an order's units never go on the shelf; Ready to ship and Shipped never change "In stock". **Idea noted:**
+   production for the shelf (a batch with no client going through the phases and ending with "Put in stock"), as a later INV card.
+3. **Colour lock:** a colour can't be taken off a product while it is on an open order ("Light wash is on 1 open order, so it can't be
+   removed from Denim Jacket.").
+4. **Orders per colour and size** (order lines counted per colour, the colour × size grid in New order and Edit order): in your words,
+   "ignore this part we will discuss later". **To be discussed**; the card will mark it so.
+- **New request, the QR code**, in your words: "when product is in progress we will generate a QR code that when the cutter or any
+  other user will scan that code it mean we move the next phase until the finish for now we will not handle the part where we go back
+  when scanning the QR code". So: while units are in progress Invory makes a QR code; scanning it moves those units to the next phase,
+  phase after phase until the end; moving back by scanning is left out for now. The designer is adding it to the spec and boards
+  (making the code, the work ticket, a scan moving units on, the end state, the errors); the product-owner then revises the UI card.
 
 **Decided on 2026-10-30: INV-4 clients, your request and your answers on the UI card.** You then validated the UI card the same
 day, so INV-4 is `UI approved`. Your request: keep the design, add "the source from where this client has come (facebook, insta .... other social
@@ -601,12 +632,11 @@ The plan headers were corrected on 2026-10-14, and [plans/README.md](plans/READM
 
 ## 9. Next steps (recommended order)
 **From 2026-10-24 (D-20): the colour × size variant rework first; every open story is on hold.** Updated 2026-10-25.
-1. Now: INV-5's UI card (a production progress page) is being designed. The designer proposes it; the product-owner then decides
-   and writes the UI card for your validation.
-2. When you ask for them: the product-owner writes the development cards of INV-1, INV-2, INV-3 and INV-4 from their approved UI
-   cards (INV-1 to INV-3 validated 2026-10-25, INV-4 on 2026-10-30).
-3. Done 2026-10-24: the process documents describe the new way of working (UI card, then development card, INV IDs; `e2be378`).
-4. Product-owner: before any on-hold story resumes, check its card against the new product model (R-21).
+1. Done 2026-10-31: all five UI cards are approved (INV-1 to INV-3 on 2026-10-25, INV-4 on 2026-10-30, INV-5 on 2026-10-31).
+2. Human: discuss orders per colour and size (INV-5's "to be discussed" part); it is decided before INV-5's development card.
+3. When you ask for them: the product-owner writes the development cards, INV-1 first, from the approved UI cards.
+4. Done 2026-10-24: the process documents describe the new way of working (UI card, then development card, INV IDs; `e2be378`).
+5. Product-owner: before any on-hold story resumes, check its card against the new product model (R-21).
 
 **Steps before the pause (2026-10-24), kept for the record:**
 1. Done 2026-10-24: you accepted S-73. Its three commits (`51ba6ce`, `078bead`, `bf5db86`) are on its build branch

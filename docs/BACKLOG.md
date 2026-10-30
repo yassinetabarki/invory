@@ -34,7 +34,7 @@ main checkout when you ask for them.
 | INV-2 | Product sizes × colours: stock and barcode per variant | feature | `UI approved` |
 | INV-3 | Restock of finished products                           | feature | `UI approved` |
 | INV-4 | Clients                                                | feature | `UI approved` |
-| INV-5 | A production progress page                             | feature | `Idea`        |
+| INV-5 | A production progress page                             | feature | `UI approved` |
 
 - **INV-1 · Colours as fixed values** (Must; `UI approved`: you validated the UI card on 2026-10-25, then amended it the same day
   through your INV-2 answers): [stories/INV-1-colours-ui.md](stories/INV-1-colours-ui.md). Each workshop keeps its colours in Settings ›
@@ -59,7 +59,15 @@ main checkout when you ask for them.
   Walk-in / shop, Word of mouth, Other); a phone belongs to one client; clients are added, never edited or removed; New order has
   "Existing client · New client", with the new client's fields in the order form, saved with the order; the order page shows the
   client's source, city and phone; the Orders list gets a Client filter. Today's orders are test data and get no client.
-- **INV-5 · A production progress page** (`Idea`): the designer is designing its UI card now.
+- **INV-5 · Progress** (Must; `UI approved`: you validated the UI card on 2026-10-31, with the QR work tickets and your answers; its
+  development card comes when you ask for it, after orders per colour is decided): [stories/INV-5-progress-ui.md](stories/INV-5-progress-ui.md).
+  A Progress page in the sidebar: phase tiles, a table per product with a row per colour × size, and a view per phase, oldest first,
+  "since 26 Oct 2026 · 4 days", with the order page's own move buttons; the workshop's own phases between In cutting and Ready to ship
+  (Settings › Production phases, starting with Sewing and Finishing); a work ticket with a QR code per bundle cut, and a Scan page
+  where a scan moves the bundle one phase on, up to Ready to ship; "In production" on the Orders list. Units on an order never go on
+  the shelf. **To be discussed:** order lines counted per colour and size.
+- **Idea (your answer of 2026-10-31):** production for the shelf, a batch with no client going through the phases and ending with "Put
+  in stock". No ID yet.
 - On-hold items stay on hold (your answer, D-20): each one is checked against the variant model before it resumes.
 
 ---
