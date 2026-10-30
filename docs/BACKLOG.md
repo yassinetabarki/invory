@@ -33,7 +33,7 @@ main checkout when you ask for them.
 | INV-1 | Colours: a fixed list                                  | feature | `UI approved` |
 | INV-2 | Product sizes × colours: stock and barcode per variant | feature | `UI approved` |
 | INV-3 | Restock of finished products                           | feature | `UI approved` |
-| INV-4 | Clients                                                | feature | `Idea`        |
+| INV-4 | Clients                                                | feature | `UI approved` |
 | INV-5 | A production progress page                             | feature | `Idea`        |
 
 - **INV-1 · Colours as fixed values** (Must; `UI approved`: you validated the UI card on 2026-10-25, then amended it the same day
@@ -52,7 +52,14 @@ main checkout when you ask for them.
   in the sidebar and New restock (a colour × size grid per product, up to 50 products, date, reference, note, a field to scan or type
   a barcode); a restock adds to the shelf, never touches materials, and can be undone as a whole; Restock is the main button of the
   product page's Sizes & colours card (INV-2 amended the same day).
-- **INV-4 · Clients** (`Idea`): the designer is designing its UI card now.
+- **INV-4 · Clients as an entity** (Must; `UI approved`: you validated the UI card on 2026-10-30, after its revision and your six
+  answers; its development card comes when you ask for it): [stories/INV-4-clients-ui.md](stories/INV-4-clients-ui.md).
+  Mostly B2C buyers from social media: a Clients page in the sidebar with a Source filter, and a page per client with its orders; a
+  client has a name, a phone and a city (all required) and an optional source (Instagram, Facebook, TikTok, WhatsApp, Website,
+  Walk-in / shop, Word of mouth, Other); a phone belongs to one client; clients are added, never edited or removed; New order has
+  "Existing client · New client", with the new client's fields in the order form, saved with the order; the order page shows the
+  client's source, city and phone; the Orders list gets a Client filter. Today's orders are test data and get no client.
+- **INV-5 · A production progress page** (`Idea`): the designer is designing its UI card now.
 - On-hold items stay on hold (your answer, D-20): each one is checked against the variant model before it resumes.
 
 ---

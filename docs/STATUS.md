@@ -30,7 +30,9 @@ approved`** (you validated its UI card on 2026-10-25 and amended it the same day
 comes when you ask for it. **INV-2 "Product sizes × colours, stock and barcodes" is `UI approved`** (you validated its UI card
 on 2026-10-25); its development card comes when you ask for it. **INV-3 "Restock finished products" is `UI
 approved`** (you validated its UI card on 2026-10-25; it amended INV-2's Sizes & colours card); its development card comes when you
-ask for it. **In flight:** INV-4's UI card (clients) is being designed.
+ask for it. **INV-4 "Clients as an entity" is `UI approved`** (you validated its UI card on 2026-10-30, after its revision
+and your six answers); its development card comes when you ask for it. **In flight:** INV-5's UI card (a production progress page)
+is being designed.
 **Phase 5: Customer orders** (started 2026-10-15, D-12; on hold since 2026-10-24). **Done:** S-48 (accepted 2026-10-15), and **F-41, S-49
 and S-53** (accepted 2026-10-21 after your one click-through; built in one build and landed on `main` together, `e99615e` … `8ab9df8`,
 closing docs `f803cb1`), **S-50** (accepted 2026-10-22; `ba0a0cd`, `74f05a8`, `a23a5d7`, merged in `0270014`), **S-58**
@@ -60,6 +62,28 @@ Phases 6, 7 and 8 are on hold too (D-20).
 | D-5 | Production database host (needs PostgreSQL 13+ and `pg_trgm`) | Before S-26; not urgent |
 | D-6 | Delete the 5 merged branches and the stale worktree `.claude/worktrees/fix-hover-prefetch-bug`? | Yes (nothing unmerged) |
 | D-19 | The canvas note "sizenote" says zero sizes are left out of summaries, while "In stock" lists "M 0" greyed (designer's Q8). (a) You edit the note to "Zero sizes are left out of order summaries (order page, Orders list, history). The In stock figure lists every size, 0 greyed." · (b) The designer drafts it on the canvas for your review | (a), the designer's default; no screen changes either way |
+
+**Decided on 2026-10-30: INV-4 clients, your request and your answers on the UI card.** You then validated the UI card the same
+day, so INV-4 is `UI approved`. Your request: keep the design, add "the source from where this client has come (facebook, insta .... other social
+media or from web site)", and on a new order "fields to create the client also in case of new clients"; Invory is "mostly B TO C".
+1. **Required fields:** a client has a Name, a Phone and a City, all required ("Enter the client's city." when empty); the Source is
+   optional.
+2. **Duplicates:** a phone belongs to one client only ("22 345 678 is already the phone of Amira Ben Salah."); a name already used is
+   allowed, with a note that offers the existing client. Merging clients is out of scope.
+3. **Orders recorded before INV-4:** in your words, "all the record are dummy data we still are dev phases so we can delete". They are
+   not turned into clients. **For the tech-lead:** the existing order data is dummy and may be dropped, which is your call; the rule
+   of the project instructions never to reset or re-seed the dev database `laravel` still holds until you say otherwise, so the
+   tech-lead asks you how before anything is removed.
+4. **Editing a client:** "there is no edit for now". Clients are created only with Add client or as a New client in New order.
+5. **Removing a client:** "there is no delete of client for now"; no delete and no archive.
+6. **The source list:** fixed, the same for every workshop (Instagram, Facebook, TikTok, WhatsApp, Website, Walk-in / shop, Word of
+   mouth, Other); "Other" takes an optional text of up to 40 characters. No social-media name or handle on the client.
+- Decided by the product-owner from the designer's options: a Clients page and a client page; the "Existing client · New client"
+  switch on New order (on Existing client, or New client when the workshop has none), with the picker only in Edit order; the phone
+  format (8 Tunisian digits shown "22 345 678", or + and a country code); the city free text with suggestions; the source as a grey
+  label with an icon and the word, no brand logos or colours, picked with chips (a second tap un-chooses, since it is optional); the
+  "already a client" note as soon as the phone or name field is left; a Client filter on the Orders list that never changes the
+  totals; the client page's orders open on "All orders".
 
 **Decided on 2026-10-25: INV-3 restock finished products, your answers on the UI card** (all four the recommended (a)). You then
 validated the UI card the same day, so INV-3 is `UI approved`:
@@ -577,10 +601,10 @@ The plan headers were corrected on 2026-10-14, and [plans/README.md](plans/READM
 
 ## 9. Next steps (recommended order)
 **From 2026-10-24 (D-20): the colour × size variant rework first; every open story is on hold.** Updated 2026-10-25.
-1. Now: INV-4's UI card (clients) is being designed. The designer proposes it; the product-owner then decides and writes the UI
-   card for your validation.
-2. When you ask for them: the product-owner writes the development cards of INV-1, INV-2 and INV-3 from their approved UI cards (all
-   validated 2026-10-25). Then INV-5 follows in the order of D-21.
+1. Now: INV-5's UI card (a production progress page) is being designed. The designer proposes it; the product-owner then decides
+   and writes the UI card for your validation.
+2. When you ask for them: the product-owner writes the development cards of INV-1, INV-2, INV-3 and INV-4 from their approved UI
+   cards (INV-1 to INV-3 validated 2026-10-25, INV-4 on 2026-10-30).
 3. Done 2026-10-24: the process documents describe the new way of working (UI card, then development card, INV IDs; `e2be378`).
 4. Product-owner: before any on-hold story resumes, check its card against the new product model (R-21).
 
