@@ -66,7 +66,8 @@ Board: Product detail with sizes, colors and barcodes (Invory App UI canvas)
 - Heading **Sizes & colours** and the line "3 colours × 4 sizes = 12 variants. Each variant has its own stock and its own barcode."
   Other products: "1 colour × 4 sizes = 4 variants", "2 colours × One size = 2 variants".
 - On the heading's row: the outline button **Manage sizes & colours**, which opens Edit product with the focus on the Colours field
-  (sizes come with the category, just above it), and the main button **Update stock**.
+  (sizes come with the category, just above it), the outline button **Update stock**, and the main button **Restock** (plus sign),
+  which opens New restock with this product in it (INV-3).
 - Two tabs, **Stock by colour** and **Barcodes**. While any variant has no barcode, Barcodes carries the warning badge "4 missing".
   The page opens on Stock by colour; the open tab is kept in the page address, so a link can open Barcodes directly.
 
@@ -77,7 +78,8 @@ Board: INV-2 · Product page · Sizes & colours · states · desktop (Invory App
   a heavier line above it.
 - Every figure in the number font, right-aligned; a 0 in the grey text colour (the readable grey of S-71, not the board's paler
   grey).
-- Under the table: "Grey zeros are variants with nothing on the shelf."
+- Under the table: "Grey zeros are variants with nothing on the shelf." Then: "Last restock: 25 Oct 2026, 24 units · **See the
+  restocks of Denim Jacket**" (a link to Restocks with that product chosen); never restocked: "Not restocked yet.", with no link.
 - **"One size" product** (Leather Tote in Camel and Black): the table has the columns **Colour** and **In stock**, no size columns and
   no Total column; the Total row stays when there are two colours or more.
 
@@ -139,7 +141,8 @@ Board: INV-2 · Barcodes · generate, shared, print labels · desktop (Invory Ap
 ### Update stock window
 Board: Update stock dialog, per color (Invory App UI canvas)
 - Opens from **Update stock** in the Sizes & colours card.
-- Title **Update stock · Denim Jacket**, under it "Finished units on the shelf, counted per colour and size." and the ✕ "Close".
+- Title **Update stock · Denim Jacket**, under it "Finished units on the shelf, counted per colour and size. Saving sets these
+  counts; to add units that arrived, use Restock." and the ✕ "Close".
 - **Colour** pills: swatch, name, the colour's total after saving in grey ("Indigo 6"), and a small Denim dot when that colour has a
   changed size; the dot also says "changed" to screen readers ("Indigo, 10, changed"). The first colour (Black) is chosen when the
   window opens.
@@ -234,10 +237,10 @@ Board: INV-2 · Settings › Barcodes, Edit and Delete product · desktop (Invor
 ## Wording
 - In stock figure: "In stock" · "10 units" · "By size and colour" · "Couldn't load the stock." · "Try again".
 - Sizes & colours card: "Sizes & colours" · "3 colours × 4 sizes = 12 variants. Each variant has its own stock and its own barcode." ·
-  "1 colour × 4 sizes = 4 variants" · "2 colours × One size = 2 variants" · "Manage sizes & colours" · "Update stock" · "Stock by
-  colour" · "Barcodes" · "4 missing" · "Couldn't load the stock and barcodes."
+  "1 colour × 4 sizes = 4 variants" · "2 colours × One size = 2 variants" · "Manage sizes & colours" · "Update stock" · "Restock" ·
+  "Stock by colour" · "Barcodes" · "4 missing" · "Couldn't load the stock and barcodes."
 - Stock tab: "Units in stock per colour and size" · "Colour" · "Total" · "In stock" · "Grey zeros are variants with nothing on the
-  shelf."
+  shelf." · "Last restock: 25 Oct 2026, 24 units" · "See the restocks of Denim Jacket" · "Not restocked yet."
 - Barcodes tab: "Colour" · "· 4 missing" · "Generate missing barcodes (4)" · "Print labels · Indigo" · "Print labels" · "Barcodes for
   Indigo" · "Size" · "SKU" · "Barcode (EAN-13)" · "In stock" · "Print label" · "Print label for PRD-JKT-001-IND-S" · "Generate" ·
   "Generate barcode for PRD-JKT-001-LWH-S" · "No barcode yet" · "Shared with PRD-JKT-002" · "Shared with PRD-JKT-002, PRD-JKT-007 and 3
@@ -250,7 +253,8 @@ Board: INV-2 · Settings › Barcodes, Edit and Delete product · desktop (Invor
 - Print labels window: "Print labels · Denim Jacket · Indigo" · "Labels" · "XL · No barcode yet" · "Total 6 labels · Label 50 × 30 mm ·
   Price shown" · "Change in Settings › Labels" · "Cancel" · "Print 6 labels" · "Enter a whole number from 1 to 999." · "Choose at least
   one size." · "Your browser blocked the labels' tab. Allow pop-ups for Invory, then print again."
-- Update stock window: "Update stock · Denim Jacket" · "Finished units on the shelf, counted per colour and size." · "Close" ·
+- Update stock window: "Update stock · Denim Jacket" · "Finished units on the shelf, counted per colour and size. Saving sets these
+  counts; to add units that arrived, use Restock." · "Close" ·
   "Colour" · "changed" · "Units in stock per size · Indigo" · "Units in stock per colour" · "was 0" · "Total after saving, all colours"
   · "14 units" · "Doesn't change materials, "Can produce now" or sales." · "Cancel" · "Save" · "1 error" · "Check Black: 1 size can't
   be saved." · "The sizes or colours of Denim Jacket have changed. Enter the stock again." · "Couldn't save the stock. Try again."
@@ -265,7 +269,7 @@ Board: INV-2 · Settings › Barcodes, Edit and Delete product · desktop (Invor
 ## Phone layout
 Board: INV-2 · Product page, Update stock, labels · 375 (Invory App UI canvas)
 - **In stock figure:** under Can produce now (as today); the colour line wraps, two or three colours a row.
-- **Sizes & colours card:** the heading and its line, then **Update stock** (main) and **Manage sizes & colours**, full width, 44 px,
+- **Sizes & colours card:** the heading and its line, then **Restock** (main), **Update stock** and **Manage sizes & colours**, full width, 44 px,
   one under the other. The tabs fill the width, half each.
 - **Stock tab:** one card per colour in place of the table: the colour tag and its total ("■ Indigo · 6 units"), then the size chips
   [S 2] [M 0] [L 3] [XL 1], zeros kept and grey. Last, a **Total** card "10 units" with the size totals as chips. A shoe's 11 chips wrap.

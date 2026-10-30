@@ -32,7 +32,7 @@ main checkout when you ask for them.
 | ----- | ------------------------------------------------------ | ------- | ------------- |
 | INV-1 | Colours: a fixed list                                  | feature | `UI approved` |
 | INV-2 | Product sizes × colours: stock and barcode per variant | feature | `UI approved` |
-| INV-3 | Restock of finished products                           | feature | `Idea`        |
+| INV-3 | Restock of finished products                           | feature | `UI approved` |
 | INV-4 | Clients                                                | feature | `Idea`        |
 | INV-5 | A production progress page                             | feature | `Idea`        |
 
@@ -47,7 +47,12 @@ main checkout when you ask for them.
   on the product page (today's per-size units go into each product's first colour), "Update stock" in the new Sizes & colours card, a
   Barcodes tab with one in-store EAN-13 barcode per name + colour + size (shared by every product with the same name, kept through a
   rename; a colour added after a rename shares under the current name), labels to print, and Settings › Labels. Orders, sales and "Put in stock" per colour, scanning, and restock (INV-3) stay out.
-- **INV-3 · Restock of finished products** (`Idea`): the designer is designing its UI card now.
+- **INV-3 · Restock finished products** (Must; `UI approved`: you validated the UI card on 2026-10-25; its development card comes
+  when you ask for it): [stories/INV-3-restock-finished-products-ui.md](stories/INV-3-restock-finished-products-ui.md). A Restocks page
+  in the sidebar and New restock (a colour × size grid per product, up to 50 products, date, reference, note, a field to scan or type
+  a barcode); a restock adds to the shelf, never touches materials, and can be undone as a whole; Restock is the main button of the
+  product page's Sizes & colours card (INV-2 amended the same day).
+- **INV-4 · Clients** (`Idea`): the designer is designing its UI card now.
 - On-hold items stay on hold (your answer, D-20): each one is checked against the variant model before it resumes.
 
 ---

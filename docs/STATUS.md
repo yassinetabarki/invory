@@ -28,8 +28,9 @@ INV-2 product sizes × colours with stock and a barcode per variant, INV-3 resto
 production progress page. Each gets a UI card first and then a development card. **INV-1 "Colours as fixed values" is `UI
 approved`** (you validated its UI card on 2026-10-25 and amended it the same day: colours are required); its development card
 comes when you ask for it. **INV-2 "Product sizes × colours, stock and barcodes" is `UI approved`** (you validated its UI card
-on 2026-10-25); its development card comes when you ask for it. **In flight:** INV-3's UI card (restock of finished products) is
-being designed.
+on 2026-10-25); its development card comes when you ask for it. **INV-3 "Restock finished products" is `UI
+approved`** (you validated its UI card on 2026-10-25; it amended INV-2's Sizes & colours card); its development card comes when you
+ask for it. **In flight:** INV-4's UI card (clients) is being designed.
 **Phase 5: Customer orders** (started 2026-10-15, D-12; on hold since 2026-10-24). **Done:** S-48 (accepted 2026-10-15), and **F-41, S-49
 and S-53** (accepted 2026-10-21 after your one click-through; built in one build and landed on `main` together, `e99615e` … `8ab9df8`,
 closing docs `f803cb1`), **S-50** (accepted 2026-10-22; `ba0a0cd`, `74f05a8`, `a23a5d7`, merged in `0270014`), **S-58**
@@ -59,6 +60,25 @@ Phases 6, 7 and 8 are on hold too (D-20).
 | D-5 | Production database host (needs PostgreSQL 13+ and `pg_trgm`) | Before S-26; not urgent |
 | D-6 | Delete the 5 merged branches and the stale worktree `.claude/worktrees/fix-hover-prefetch-bug`? | Yes (nothing unmerged) |
 | D-19 | The canvas note "sizenote" says zero sizes are left out of summaries, while "In stock" lists "M 0" greyed (designer's Q8). (a) You edit the note to "Zero sizes are left out of order summaries (order page, Orders list, history). The In stock figure lists every size, 0 greyed." · (b) The designer drafts it on the canvas for your review | (a), the designer's default; no screen changes either way |
+
+**Decided on 2026-10-25: INV-3 restock finished products, your answers on the UI card** (all four the recommended (a)). You then
+validated the UI card the same day, so INV-3 is `UI approved`:
+1. **A wrong restock is undone as a whole**, at any time, as long as every colour and size it added still has at least that many
+   units on the shelf; it stays in the list, marked "Undone". Otherwise: "This restock can't be undone: Denim Jacket in Indigo, size
+   M, has 2 units on the shelf, fewer than the 8 it added. Set the right count with Update stock instead."
+2. **A restock never changes materials** (units made in the workshop already took theirs when they were cut, S-53).
+3. **Restock is the main button** of the Sizes & colours card, Update stock an outline button, with the line "Last restock: 25 Oct
+   2026, 24 units · See the restocks of Denim Jacket" ("Not restocked yet." when there is none).
+4. **The Update stock window's line** reads "Finished units on the shelf, counted per colour and size. Saving sets these counts; to
+   add units that arrived, use Restock."
+- Decided by the product-owner from the designer's options: a Restocks page in the sidebar plus Restock on the product page; a
+  colour × size grid with every colour visible; a "Scan or type a barcode" field for a barcode scanner (no phone camera); only
+  restocks are recorded (Update stock still writes no history, S-56); draft and archived products can be restocked; an Update stock
+  save still wins over a restock saved in between (the last save wins, S-56).
+
+**Amended on 2026-10-25: INV-2's Sizes & colours card** (approved by you through your INV-3 answers 3 and 4; the card stays `UI
+approved`): Restock is the main button and Update stock an outline button; the "Last restock" line sits under the stock table; the
+Update stock window's line is the new one above.
 
 **Decided on 2026-10-25: INV-2 sizes × colours and barcodes, your answers on the UI card.** You then validated the UI card the same
 day, with the amendment of INV-1 below, so INV-2 is `UI approved`:
@@ -557,10 +577,10 @@ The plan headers were corrected on 2026-10-14, and [plans/README.md](plans/READM
 
 ## 9. Next steps (recommended order)
 **From 2026-10-24 (D-20): the colour × size variant rework first; every open story is on hold.** Updated 2026-10-25.
-1. Now: INV-3's UI card (restock of finished products) is being designed. The designer proposes it; the product-owner then decides
-   and writes the UI card for your validation.
-2. When you ask for them: the product-owner writes the development cards of INV-1 and INV-2 from their approved UI cards (both
-   validated 2026-10-25). Then INV-4 and INV-5 follow in the order of D-21.
+1. Now: INV-4's UI card (clients) is being designed. The designer proposes it; the product-owner then decides and writes the UI
+   card for your validation.
+2. When you ask for them: the product-owner writes the development cards of INV-1, INV-2 and INV-3 from their approved UI cards (all
+   validated 2026-10-25). Then INV-5 follows in the order of D-21.
 3. Done 2026-10-24: the process documents describe the new way of working (UI card, then development card, INV IDs; `e2be378`).
 4. Product-owner: before any on-hold story resumes, check its card against the new product model (R-21).
 
