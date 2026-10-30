@@ -36,7 +36,7 @@ technical item gets only a development card. The five features, in this order (y
 
 | ID    | Feature                                                | Status        |
 | ----- | ------------------------------------------------------ | ------------- |
-| INV-1 | Colours: a fixed list                                  | `UI approved` |
+| INV-1 | Colours: a fixed list                                  | `Ready`       |
 | INV-2 | Product sizes × colours: stock and barcode per variant | `UI approved` |
 | INV-3 | Restock of finished products                           | `UI approved` |
 | INV-4 | Clients                                                | `UI approved` |
