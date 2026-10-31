@@ -47,7 +47,7 @@ This document tracks all story cards across active and past phases. Each story c
     
 - **Legacy Exemption:** Cards existing prior to **2026-10-14** retain their original layout (`story`, `UX`, `out of scope`, `questions`, `acceptance check`, `plan in docs/plans/`) and are not converted.
     
-- **On Hold:** Paused cards have the status `On hold`. Since **2026-10-24 (D-20)** every card that isn't `Done` is on hold while the product is reworked around colour × size variants. New work is INV-1 to INV-5 (colours, product sizes × colours with stock and barcode per variant, restock of finished products, clients, a production progress page; D-21); the next free ID is **INV-6**. On-hold cards are checked against the variant model before they resume.
+- **On Hold:** Paused cards have the status `On hold`. Since **2026-10-24 (D-20)** every card that isn't `Done` is on hold while the product is reworked around colour × size variants. New work is INV-1 to INV-5 (colours, product sizes × colours with stock and barcode per variant, restock of finished products, clients, a production progress page; D-21), then INV-6 (a tech item) and INV-7 (tap targets on the Settings pages); INV-1 is done; the next free ID is **INV-8**. On-hold cards are checked against the variant model before they resume.
     
 
 > [!NOTE] Special Note on S-29
@@ -60,7 +60,7 @@ This document tracks all story cards across active and past phases. Each story c
 | -------------------------------------------------------------------------------------------------- | --------- | -------------- | -------- | ------------------------------------------------------------------------------------------------------ |
 | **ID & Title**                                                                                     | **Phase** | **Priority**   | **Size** | **Status**                                                                                             |
 | **INV-1** — Colours as fixed values (UI card)                                                      | —         | Must           | —        | `UI approved` (validated 2026-10-25, amended the same day: colours required)                           |
-| **INV-1** — Colours as fixed values                                                                | —         | Must           | L        | `Planned` (card and Technical work approved 2026-10-30)                                                |
+| **INV-1** — Colours as fixed values                                                                | —         | Must           | L        | `Done` (accepted 2026-10-31; `a66f4bf`, `78a4eee`)                                                     |
 | **INV-2** — Product sizes × colours, stock and barcodes (UI card)                                  | —         | Must           | —        | `UI approved` (validated 2026-10-25, amended the same day by INV-3: Restock button)                    |
 | **INV-3** — Restock finished products (UI card)                                                    | —         | Must           | —        | `UI approved` (UI card validated 2026-10-25; development card when you ask for it)                     |
 | **INV-4** — Clients as an entity (UI card)                                                         | —         | Must           | —        | `UI approved` (UI card validated 2026-10-30; development card when you ask for it)                     |

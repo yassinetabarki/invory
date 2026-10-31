@@ -1,6 +1,6 @@
 # Invory — project status report
 
-> Owner: **product-owner** (updated at every phase boundary and after every accepted story) · Report date: **2026-10-24**
+> Owner: **product-owner** (updated at every phase boundary and after every accepted story) · Report date: **2026-10-31**
 > Sources: every plan in [docs/plans/](plans/README.md), the [backlog archive](archive/backlog-2026-10-14.md) and `git log` on `main`.
 > Gate results: run by the main session on 2026-10-14 for this first report. Later updates quote the tech-lead's latest delivery report
 > (the product-owner never runs gates).
@@ -25,15 +25,17 @@
 size, restock of finished products, clients and a production progress page. **Every open story of every phase is on hold** (cards
 `On hold`), and nothing is planned, in progress or waiting for acceptance. The next work, in your order (D-21): **INV-1** colours,
 INV-2 product sizes × colours with stock and a barcode per variant, INV-3 restock of finished products, INV-4 clients, INV-5 a
-production progress page. Each gets a UI card first and then a development card. **INV-1 "Colours as fixed values" is `UI
-approved`** (you validated its UI card on 2026-10-25 and amended it the same day: colours are required); its development card
-comes when you ask for it. **INV-2 "Product sizes × colours, stock and barcodes" is `UI approved`** (you validated its UI card
+production progress page. Each gets a UI card first and then a development card. **INV-1 "Colours as fixed values" is `Done`**
+(accepted 2026-10-31, after the designer's review, one fix round and your click-through; `a66f4bf` and `78a4eee` on `main`): each
+workshop has its own list of 20 colours in Settings › Colours, every product has at least one colour (White for products recorded
+before), chosen in Add / Edit product, and the product page shows its "Colours". **Next: INV-2's development card**, when you ask
+for it. **INV-2 "Product sizes × colours, stock and barcodes" is `UI approved`** (you validated its UI card
 on 2026-10-25); its development card comes when you ask for it. **INV-3 "Restock finished products" is `UI
 approved`** (you validated its UI card on 2026-10-25; it amended INV-2's Sizes & colours card); its development card comes when you
 ask for it. **INV-4 "Clients as an entity" is `UI approved`** (you validated its UI card on 2026-10-30, after its revision
 and your six answers); its development card comes when you ask for it. **INV-5 "Progress" is `UI approved`** (you
-validated its UI card on 2026-10-31, with the QR work tickets). **All five UI cards are approved.** Nothing is in flight: orders per
-colour and size is still to be discussed, and the development cards come when you ask for them.
+validated its UI card on 2026-10-30, with the QR work tickets). **All five UI cards are approved.** Nothing is in flight: orders per
+colour and size is still to be discussed, and the development cards of INV-2 to INV-5 come when you ask for them.
 **Phase 5: Customer orders** (started 2026-10-15, D-12; on hold since 2026-10-24). **Done:** S-48 (accepted 2026-10-15), and **F-41, S-49
 and S-53** (accepted 2026-10-21 after your one click-through; built in one build and landed on `main` together, `e99615e` … `8ab9df8`,
 closing docs `f803cb1`), **S-50** (accepted 2026-10-22; `ba0a0cd`, `74f05a8`, `a23a5d7`, merged in `0270014`), **S-58**
@@ -64,7 +66,27 @@ Phases 6, 7 and 8 are on hold too (D-20).
 | D-6 | Delete the 5 merged branches and the stale worktree `.claude/worktrees/fix-hover-prefetch-bug`? | Yes (nothing unmerged) |
 | D-19 | The canvas note "sizenote" says zero sizes are left out of summaries, while "In stock" lists "M 0" greyed (designer's Q8). (a) You edit the note to "Zero sizes are left out of order summaries (order page, Orders list, history). The In stock figure lists every size, 0 greyed." · (b) The designer drafts it on the canvas for your review | (a), the designer's default; no screen changes either way |
 
-**Decided on 2026-10-31: INV-5 work tickets, your answers on the revised UI card** (all five the recommended (a)). You then
+**Decided on 2026-10-31: INV-1 accepted, your answers during the build and the acceptance.** You accepted INV-1 after the
+designer's review and one fix round, and it is on `main` as `a66f4bf` (Settings › Colours, AC-1 to AC-5) and `78a4eee` (colours on
+products, AC-6, AC-7). Your answers:
+1. **Colours need no stock check yet:** the rule "a colour with units in stock can't be taken off a product" moved to INV-2's
+   development card, where stock per colour arrives.
+2. **The picker with no match** shows "No colour named "teal"." and "Missing one? Add it in Settings › Colours." as plain text.
+3. **Small letters are forgiven:** a code typed "stw" is saved as STW; a swatch typed "#b7c3cf" or "B7C3CF" (no "#") is saved as
+   "#B7C3CF"; a wrong position reads "Enter a whole number from 0 to 32,767, or leave it empty.".
+4. **One card, one build, size L** (7 steps), instead of a split.
+5. **On a phone the picker starts with the focus on the sheet**, so the keyboard stays closed until you tap "Search colours" (added
+   to AC-7); "Choose at least one colour." goes away as soon as one colour is chosen (added to AC-6).
+6. **Bigger tap targets on the Settings pages** are not part of INV-1: a separate app-wide Could, INV-7.
+7. **PostgreSQL parity runs before the commit:** 2 604 of 2 604 passed.
+- **After the designer's review, one fix round:** the colour window fits a phone screen with its buttons in view; the chip ✕ has a
+  full-strength focus ring; a 32-letter name breaks inside its box; the colour well is linked to its hint and error, and an empty
+  name previews as a swatch beside "Name".
+- **Left open, by design:** the swatch edge on a hovered picker row reads 2.77:1 light and 2.81:1 dark, where 3:1 is wanted; no row
+  tint fixes it, so it is the tech-lead's INV-6 (minor). Home/End keys in the picker and the focus after taking off a chip go to
+  the later UX polish bundle.
+
+**Decided on 2026-10-30: INV-5 work tickets, your answers on the revised UI card** (all five the recommended (a)). You then
 validated the UI card the same day, so INV-5 is `UI approved`:
 1. **Orders per colour and size** stays in INV-5's card, marked "to be discussed"; it is decided before INV-5's development card.
 2. **A QR code stands for a bundle:** the units of one colour and size that one Start cutting cut for one order line. A scan moves
@@ -78,7 +100,7 @@ validated the UI card the same day, so INV-5 is `UI approved`:
 - Decided by the product-owner: one confirm per scan, with a warning on a second scan within 2 minutes; tickets on an A4 sheet of 8
   by default or 100 × 60 mm labels; the phase view's buttons unchanged, with a Tickets column; Scan in the sidebar after Progress.
 
-**Decided on 2026-10-31: INV-5 progress, your answers on the UI card** (before the QR work tickets were added):
+**Decided on 2026-10-30: INV-5 progress, your answers on the UI card** (before the QR work tickets were added):
 1. **Production phases:** each workshop keeps its own list in Settings › Production phases, 0 to 6 phases between In cutting and
    Ready to ship, starting with Sewing and Finishing; To start, In cutting, Ready to ship and Shipped stay fixed; a phase that holds
    units can't be moved or removed.
@@ -436,13 +458,13 @@ the page frame (supersedes rendering plan Q3) · remove the local "frontend-desi
 accepted through the S-30 walkthrough. No email alerts for now (stock only falls when you edit it, Q8/Q9). A material with
 no "Reorder at" is never flagged as low. ·
 **Large demo catalogue** (you asked for it on 2026-10-14):
-- [S-40](stories/S-40-realistic-catalogue-100-products.md) is `Ready`: 100 products in all (the 7 demo products plus 93 new ones) and about 110 more materials, on a new, throwaway database only (never `laravel`).
+- [S-40](stories/old.stories/S-40-realistic-catalogue-100-products.md) is `Ready`: 100 products in all (the 7 demo products plus 93 new ones) and about 110 more materials, on a new, throwaway database only (never `laravel`).
 - S-40 is an optional step after the demo workshop. It adds no sales, gives the same data every run, and adds no brand or sub-category. It is a Phase 4 Could, planned after S-08.
-- Its photos are split into [S-41](stories/S-41-real-photos-for-the-catalogue.md) (`Ready`, approved 2026-10-14): real photos from Pexels only, with credits in a licence record and the setup guide, none on screens.
+- Its photos are split into [S-41](stories/old.stories/S-41-real-photos-for-the-catalogue.md) (`Ready`, approved 2026-10-14): real photos from Pexels only, with credits in a licence record and the setup guide, none on screens.
 - S-41 is a Phase 4 Could, right after S-40, and needs your free Pexels key first.
 
 **D-8 Overhead cost optional** (you asked for it on 2026-10-14):
-- [S-43](stories/S-43-overhead-cost-optional.md): card approved 2026-10-14 with every recommended answer. Delivered, accepted by you
+- [S-43](stories/old.stories/S-43-overhead-cost-optional.md): card approved 2026-10-14 with every recommended answer. Delivered, accepted by you
   and **Done** the same day (on `main`, see §4).
 - New business rule: overhead is optional. A blank overhead is saved as 0, and the unit-cost formula doesn't change. The tech-lead adds the
   rule to the costing rules before any code changes.
@@ -452,9 +474,9 @@ no "Reorder at" is never flagged as low. ·
 - You chose to start S-43 now, even though S-29 (in progress) and S-08 (in acceptance) already fill the two-story work-in-progress limit.
 
 **D-9 One workshop per account** (you asked for it on 2026-10-14: "each user must only see HIS products and materials"):
-- Cards approved: [S-44](stories/S-44-each-workshop-sees-only-its-own-data.md) (each workshop sees only its own materials, products and
-  sales, Must), [S-45](stories/S-45-each-workshop-has-its-own-units-and-categories.md) (its own units and categories, Must) and
-  [S-46](stories/S-46-name-your-workshop.md) (name your workshop, Should). All three are `Ready`.
+- Cards approved: [S-44](stories/old.stories/S-44-each-workshop-sees-only-its-own-data.md) (each workshop sees only its own materials, products and
+  sales, Must), [S-45](stories/old.stories/S-45-each-workshop-has-its-own-units-and-categories.md) (its own units and categories, Must) and
+  [S-46](stories/old.stories/S-46-name-your-workshop.md) (name your workshop, Should). All three are `Ready`.
 - The screen calls the business account a **workshop**. Every account belongs to one workshop, and the data belongs to the workshop, not
   the person, so several people can share a workshop later. Inviting people and roles are not scheduled.
 - Business rules R1–R6 approved. In short: everything belongs to one workshop; you see and change only yours; SKUs and names are unique
@@ -495,11 +517,12 @@ Q1 (prefetch removed), Q4 (pulse placeholders).
 | **Cutting and stock** | "Start cutting" shows each material needed, in stock and left after, then takes it out of stock; cutting more than the stock allows is refused with the most you can cut. "Move back to To start" returns exactly what was taken, the latest cut first. Each material's history shows "Cutting" and "Back from cutting", and "Can produce", the bottleneck and the restock warnings follow (S-53). One cut can take several sizes at once and takes the same materials per unit for every size; the history names the sizes ("14 × Denim Jacket (S 4 · M 10)") (S-61). Recording an order, "Mark ready", "Ship" and sales never change stock. |
 | **Dashboard** | Period selector, KPI cards, top 5 products by units or revenue, materials that need a restock, recent sales, and "can't produce" alerts. The page appears at once and its panels fill in. |
 | **Settings: Catalogue** | Manage units, material categories and product categories without a deploy: create, rename, archive, restore, delete when unused. Names are unique regardless of case. A material's unit is locked while a product uses it. |
+| **Colours** | Each workshop has its own list of colours in Settings › Colours, starting from 20 (White to Forest green), each with a name, a code and a swatch. Add a colour or rename and recolour one (the code never changes); colours are never removed. Every product has at least one colour, chosen in Add / Edit product from a searchable list (a full-screen sheet on a phone); products recorded before have White. The product page shows its "Colours" line. No figure changes. |
 | **Account** | Starter-kit authentication: register, login, email verification, password reset, two-factor, passkeys, profile, password, light/dark appearance. Every account belongs to one workshop and sees only that workshop's materials, products, sales and figures. Signing up creates a new, empty workshop, another workshop's address shows "404 Not Found", and "Delete account" keeps the workshop's data (S-44). Units and categories stay shared until S-45. |
 | **Speed** | Every page runs at most 10 database queries (guarded by tests). List filters reload only what changed. Heavy panels load after the page appears, behind loading placeholders. Inventory totals use a single exact SQL aggregate on PostgreSQL. The composition picker searches on the server. |
 
 **Under the hood:** pure costing domain with 100 % branch coverage, every application route behind a policy, 23 migrations, architecture tests,
-a PostgreSQL parity suite (last green: 2 555 of 2 555 on 2026-10-23, during S-56), and 17 ADRs (the latest, ADR-0017: finished stock per size).
+a PostgreSQL parity suite (last green: 2 604 of 2 604 on 2026-10-31, during INV-1), and 17 ADRs (the latest, ADR-0017: finished stock per size).
 
 ---
 
@@ -527,6 +550,7 @@ a PostgreSQL parity suite (last green: 2 555 of 2 555 on 2026-10-23, during S-56
 | **5 — Customer orders** | S-70 sizes look the same on every screen (from the design board; takes in S-69) | 2026-10-23 (card `4de57e8`, Technical work `1591dc4`; S-70-a `b200905`, S-70-b `ce9ca1d`, S-70-d `d6a6815`, S-70-c `99daefe`, S-70-e `b28eaad`, S-70-f `4d646e9`; on local `main`, not pushed) | ✅ Done, accepted 2026-10-23 after your click-through. Tech-lead APPROVED, every step in round 1; one fix round after the product-owner's and the designer's reviews (six layout items). Every gate green: 2 558 backend tests, PostgreSQL parity 2 558, 1 321 screen tests, 2 browser tests |
 | **5 — Customer orders** | S-71 the order page's stage table and its buttons look like the design (from the design board, your request) | 2026-10-24 (card `c3b0eb3`; S-71-a `722638c`, S-71-b `7e00fff`, S-71-c `da6ff31`; local `main` merged in `72afe7b`; on `main`) | ✅ Done, accepted 2026-10-24 after your click-through. Tech-lead APPROVED, every step in round 1; one fix round after the reviews (semibold size labels, space on the left of the Size column). Every gate green on the final tree after the fix round: 2 558 backend tests, 1 326 screen tests, 2 browser tests; no PostgreSQL parity needed (no database change) |
 | **5 — Customer orders** | S-73 the product page and form match the size board (from the design board, your request) | 2026-10-24 (card `eeba462`, Technical work `57063b0`; S-73-a `51ba6ce`, S-73-b `078bead`, S-73-c `bf5db86`; on local `main`, not pushed) | ✅ Done, accepted 2026-10-24 after the designer's review and your click-through, no fix round. Tech-lead APPROVED (S-73-b in round 2: a debug line removed from the browser test). Every gate green: 2 506 backend tests passed (52 PostgreSQL-only skipped), 1 334 screen tests, 2 browser tests; no PostgreSQL parity needed (screens only). Follow-up S-74 |
+| **Colour × size variants** | INV-1 colours as fixed values (D-20, D-21) | 2026-10-31 (card `8e44eeb`, Technical work `8fa6d27`; INV-1-a to d `a66f4bf` (Settings › Colours, AC-1 to AC-5); INV-1-e to g `78a4eee` (colours on products, AC-6, AC-7); on `main`) | ✅ Done, accepted 2026-10-31 after the designer's review, one fix round and your click-through. Tech-lead APPROVED, all 7 steps; the fix round: the colour window on a phone, the chip ✕ focus ring, long names, the colour well, the phone picker's focus, the error clearing. Every gate green (final tree): 2 548 backend tests passed (56 skipped), 1 351 screen tests, 3 browser tests, PostgreSQL parity 2 604 of 2 604. Follow-ups: INV-6 (picker row edge, minor), INV-7 (tap targets on Settings pages) |
 
 All phase branches (`phase/1-materials`, `phase/2-ui-first-preview`, `phase/3-performance-spa-data`, `fix/rl-02-product-show-loading`,
 `worktree-fix-hover-prefetch-bug`) are fully merged into `main`. They and the worktree under `.claude/worktrees/` can be deleted (human decision D-6).
@@ -632,11 +656,14 @@ The plan headers were corrected on 2026-10-14, and [plans/README.md](plans/READM
 
 ## 9. Next steps (recommended order)
 **From 2026-10-24 (D-20): the colour × size variant rework first; every open story is on hold.** Updated 2026-10-25.
-1. Done 2026-10-31: all five UI cards are approved (INV-1 to INV-3 on 2026-10-25, INV-4 on 2026-10-30, INV-5 on 2026-10-31).
-2. Human: discuss orders per colour and size (INV-5's "to be discussed" part); it is decided before INV-5's development card.
-3. When you ask for them: the product-owner writes the development cards, INV-1 first, from the approved UI cards.
-4. Done 2026-10-24: the process documents describe the new way of working (UI card, then development card, INV IDs; `e2be378`).
-5. Product-owner: before any on-hold story resumes, check its card against the new product model (R-21).
+1. Done 2026-10-30: all five UI cards are approved (INV-1 to INV-3 on 2026-10-25, INV-4 and INV-5 on 2026-10-30).
+2. Done 2026-10-31: INV-1 colours accepted and committed (`a66f4bf`, `78a4eee`).
+3. Human: discuss orders per colour and size (INV-5's "to be discussed" part); it is decided before INV-5's development card.
+4. When you ask for it: the product-owner writes **INV-2's development card** (stock per colour and size, barcodes), which carries
+   the "a colour with stock can't be taken off a product" rule from INV-1; INV-3 to INV-5 follow in order.
+5. Product-owner, at the next grooming: INV-7 (bigger tap targets on the Settings pages, a Could) gets its card when you ask.
+6. Done 2026-10-24: the process documents describe the new way of working (UI card, then development card, INV IDs; `e2be378`).
+7. Product-owner: before any on-hold story resumes, check its card against the new product model (R-21).
 
 **Steps before the pause (2026-10-24), kept for the record:**
 1. Done 2026-10-24: you accepted S-73. Its three commits (`51ba6ce`, `078bead`, `bf5db86`) are on its build branch
