@@ -111,7 +111,15 @@ composer test:pgsql     # PostgreSQL parity: the same Pest suite against Docker 
 `composer test:pgsql` clears the config cache and sets `DB_CONNECTION=pgsql` and `DB_DATABASE=testing` for the run; host, port and credentials
 come from `.env`. A guard in `tests/TestCase.php` aborts any PostgreSQL run on another database, so the dev database `laravel` can't be wiped.
 Never run two parity suites at once (they share `testing`). The `testing` database is created by `docker/pgsql/create-testing-database.sql`
-when the volume is first initialised.
+when the volume is first initialised. The suite takes about 9 minutes on PostgreSQL, so `test:pgsql` switches Composer's 300-second process
+limit off, as `test:browser` does (INV-10).
+
+**Which PHP runs the gates (INV-10).** Composer and its scripts (`@php`) run on the PHP that started Composer; check it with `composer --version`,
+whose second line must read `PHP version 8.3.x (C:\laragon\bin\php\php-8.3.33-Win32-vs16-x64\php.exe)`. In PowerShell and cmd that PHP comes
+first on PATH. In **Git Bash**, Laravel Herd's installer added `alias php="php.bat"` and `alias composer="composer.bat"` to `~/.bash_profile`,
+so a typed `php …` runs Herd's PHP 8.4, and a Composer started with it follows it. Run the gates from PowerShell, or in Git Bash bypass the alias
+with `command php` (for example `command php C:/composer/composer.phar test:pgsql`). That PHP 8.3 must load `sockets` (§2): without it Pest's
+browser plugin makes every test error, `test:pgsql` included.
 
 CI (GitHub Actions, `.github/workflows/tests.yml`) runs on every push to `main` and `phase/**` and on pull requests: the `ci` job (SQLite suite,
 lint, types, Vitest, build; PHP 8.3; it also runs the demo-data step twice on its fresh SQLite file and `invory:stock:verify`), the

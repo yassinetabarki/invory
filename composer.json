@@ -80,6 +80,7 @@
             "@php artisan test"
         ],
         "test:pgsql": [
+            "Composer\\Config::disableProcessTimeout",
             "@php artisan config:clear --ansi",
             "@putenv DB_CONNECTION=pgsql",
             "@putenv DB_DATABASE=testing",
