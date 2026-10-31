@@ -110,12 +110,18 @@ Board: INV-2 · Barcodes · generate, shared, print labels · desktop (Invory Ap
 ### Generate barcodes window
 Board: INV-2 · Barcodes · generate, shared, print labels · desktop (Invory App UI canvas)
 - It always asks first, because a number is used for good.
-- From **Generate missing barcodes (4)**: title **Generate 4 barcodes?**, text "Denim Jacket gets a barcode for Light wash S, M, L and
-  XL, from your in-store numbers. A barcode never changes, and its number is never given to anything else." Buttons **Not now** and
-  **Generate 4 barcodes**.
+- From **Generate missing barcodes (4)**, which asks for every variant of the product that has no barcode, whatever its colour: title
+  **Generate 4 barcodes?**, text "Denim Jacket gets a barcode for Light wash S, M, L and XL, from your in-store numbers. A barcode
+  never changes, and its number is never given to anything else." Buttons **Not now** and **Generate 4 barcodes**.
+- With barcodes missing in several colours the text lists each colour in turn, in colour order, and the title and button carry the
+  total: **Generate 6 barcodes?**, "Denim Jacket gets a barcode for Black M and L, and Light wash S, M, L and XL, from your in-store
+  numbers. …" and **Generate 6 barcodes**. A size that is only digits is written "Light wash sizes 36, 37 and 38" (one: "Light wash
+  size 36"). A "One size" product names its colours: "Leather Tote gets a barcode for Camel and Rust, from your in-store numbers. …".
+  When exactly one is missing, the window is the row's one.
 - From a row's **Generate**: title **Generate a barcode?**, text "Denim Jacket in Light wash, size S, gets a barcode from your
   in-store numbers. A barcode never changes, and its number is never given to anything else." Buttons **Not now** and **Generate
-  barcode**.
+  barcode**. A shoe reads "Denim Sneaker in Light wash, size 36, gets a barcode …"; a "One size" product reads "Leather Tote in
+  Camel gets a barcode …".
 - Each new name + colour + size takes the next number of the workshop's in-store range. Generating is all or nothing: either every
   barcode asked for is made, or none.
 - While generating, the confirm button shows a spinner and keeps its label; the window closes on success, and the focus goes to the
@@ -175,8 +181,20 @@ Board: INV-2 · Settings › Barcodes, Edit and Delete product · desktop (Invor
   names; the other product keeps it too, and labels already printed still scan. No window asks first.
 - A renamed product that later gets a new colour shares the barcodes of that new colour under its current name: the Denim Jacket
   renamed "Trucker Jacket" and given Navy shares Navy S with every other "Trucker Jacket".
+- **Only the colours the product has once the save is done follow the new name.** A colour taken off earlier (or in the same save)
+  keeps its barcodes under the old name only; added back, it shows "No barcode yet" under the new name.
+- **One rename is refused.** A colour and size can have only one barcode under a name, so two different numbers can't be joined. When
+  the new name already has its own barcode for a colour and size that the product keeps, and the old name has a different one, the
+  save is refused: nothing is saved, the form stays filled in, there is no toast, and the Name field reads, in red text under it,
+  "Trucker Jacket already has its own barcodes for Indigo S and L, so Denim Jacket can't take that name. Choose another name." The
+  focus goes to the Name field. The new name is shown as typed with the extra spaces taken out; one variant reads "…its own barcode
+  for Indigo S, so …". Variants are named by colour in colour order, each colour followed by its sizes ("Black M, and Indigo S and
+  L"); a shoe size reads "Indigo sizes 36 and 37"; a "One size" product names its colours ("Camel and Rust"); beyond three colours
+  the first three, then "and 2 more colours" ("and 1 more colour" when one is left). Only other capitals or spaces in the name, or a new name that has a barcode where the
+  old name has none, never refuse.
 - **Delete product** adds one sentence when the product has barcodes: "Its 12 barcodes are kept: they come back on any product named
-  Denim Jacket in the same colours and sizes." It is left out when the product has none.
+  Denim Jacket in the same colours and sizes." Exactly one barcode: "Its barcode is kept: it comes back on any product named Denim
+  Jacket in the same colour and size." A "One size" product drops "and sizes" / "and size". It is left out when the product has none.
 
 ## States
 
@@ -203,14 +221,27 @@ Board: INV-2 · Settings › Barcodes, Edit and Delete product · desktop (Invor
 - **Shared:** Indigo S: the barcode and "Shared with PRD-JKT-002".
 - **Generating:** the confirm button shows a spinner and keeps its label.
 - **Generate error:** the confirm window stays open: "Couldn't generate the barcodes. Try again."
-- **Success:** toast "4 barcodes generated for Light wash." (one: "Barcode generated for Light wash S."); the rows show their barcodes;
-  the badge and the button go.
-- **Success, some already shared** (someone generated one a moment ago): toast "4 barcodes ready for Light wash: 3 new, 1 already used
-  by PRD-JKT-002." No second barcode is ever made for the same name, colour and size.
+- **Success:** from **Generate missing barcodes**, toast "4 barcodes generated for Denim Jacket." (exactly one: "Barcode generated
+  for Black M."); from a row's **Generate**, "Barcode generated for Light wash S." (a shoe: "Barcode generated for Light wash size
+  36."; a "One size" product: "Barcode generated for Camel."; several colours at once on a "One size" product: "2 barcodes generated
+  for Leather Tote."). The rows show their barcodes; the badge and the button go.
+- **Success, some already shared** (someone generated some a moment ago): the toast names the products that hold them, by SKU, once
+  each, in SKU order: "6 barcodes ready for Denim Jacket: 5 new, 1 already used by PRD-JKT-002." Two or three products: "…4 new, 2
+  already used by PRD-JKT-002 and PRD-JKT-007."; more: "…already used by PRD-JKT-002, PRD-JKT-007 and 3 more.". All of them: "4
+  barcodes ready for Denim Jacket: all already used by PRD-JKT-002."; one asked from a row: "Barcode ready for Light wash S: already
+  used by PRD-JKT-002.". If no product shows the barcode any more (its product was deleted meanwhile), the toast leaves out "by …":
+  "6 barcodes ready for Denim Jacket: 5 new, 1 already used.", "4 barcodes ready for Denim Jacket: all already used.", "Barcode ready
+  for Light wash S: already used.". No second barcode is ever made for the same name, colour and size.
 - **Print can't be pressed:** **Print labels · Light wash** while Light wash has no barcode, with the reason "Generate the barcodes of
   Light wash first." in a tip that the keyboard reaches.
 - **Read-only:** none; archived and draft products work like active ones.
 - **Long content:** 12 colour pills wrap; a 32-character colour name wraps inside its pill; "Shared with … and 3 more".
+
+### Edit product
+- **Rename refused:** under the Name field, in red text: "Trucker Jacket already has its own barcodes for Indigo S and L, so Denim
+  Jacket can't take that name. Choose another name." Nothing is saved, no toast, the form stays as typed, the focus is on Name. It
+  clears when the name is edited. Also shown when someone made the clash while the form was open. On a phone the message sits under
+  the Name field like any other field message.
 
 ### Update stock window
 - **Default:** pills "Black 4", "Indigo 6", "Light wash 0"; choosing Indigo shows its fields 2 · 0 · 3 · 1; "Total after saving, all
@@ -251,9 +282,12 @@ Board: INV-2 · Settings › Barcodes, Edit and Delete product · desktop (Invor
   more" · "One barcode for each colour and size. Every product named Denim Jacket shares it, and a barcode never changes." · "Generate
   the barcodes of Light wash first."
 - Generate window: "Generate 4 barcodes?" · "Denim Jacket gets a barcode for Light wash S, M, L and XL, from your in-store numbers. A
-  barcode never changes, and its number is never given to anything else." · "Generate a barcode?" · "Denim Jacket in Light wash, size
-  S, gets a barcode from your in-store numbers. A barcode never changes, and its number is never given to anything else." · "Not now" ·
-  "Generate 4 barcodes" · "Generate barcode" · "Couldn't generate the barcodes. Try again."
+  barcode never changes, and its number is never given to anything else." · "Denim Jacket gets a barcode for Black M and L, and
+  Light wash S, M, L and XL, from your in-store numbers. …" · "Light wash sizes 36, 37 and 38" · "Leather Tote gets a barcode for
+  Camel and Rust, from your in-store numbers. …" · "Generate a barcode?" · "Denim Jacket in Light wash, size S, gets a barcode from
+  your in-store numbers. A barcode never changes, and its number is never given to anything else." · "Denim Sneaker in Light wash,
+  size 36, gets a barcode …" · "Leather Tote in Camel gets a barcode …" · "Not now" · "Generate 4 barcodes" · "Generate barcode" ·
+  "Couldn't generate the barcodes. Try again."
 - Print labels window: "Print labels · Denim Jacket · Indigo" · "Labels" · "XL · No barcode yet" · "Total 6 labels · Label 50 × 30 mm ·
   Price shown" · "Change in Settings › Labels" · "Cancel" · "Print 6 labels" · "Enter a whole number from 1 to 999." · "Choose at least
   one size." · "Your browser blocked the labels' tab. Allow pop-ups for Invory, then print again."
@@ -265,9 +299,14 @@ Board: INV-2 · Settings › Barcodes, Edit and Delete product · desktop (Invor
 - Settings › Labels: "Labels" · "How your barcode labels print." · "Label size" · "50 × 30 mm, one per label (label printer)" · "A4
   sheet, 24 labels (3 × 8)" · "Show the selling price on labels" · "Save label settings".
 - Edit and Delete product: "Indigo has 6 units in stock, so it can't be removed from Denim Jacket. Set its stock to 0 first." · "Its 12
-  barcodes are kept: they come back on any product named Denim Jacket in the same colours and sizes."
-- Toasts: "Stock updated." · "4 barcodes generated for Light wash." · "Barcode generated for Light wash S." · "4 barcodes ready for
-  Light wash: 3 new, 1 already used by PRD-JKT-002." · "Label settings saved."
+  barcodes are kept: they come back on any product named Denim Jacket in the same colours and sizes." · "Its barcode is kept: it
+  comes back on any product named Denim Jacket in the same colour and size." · "Trucker Jacket already has its own barcodes for
+  Indigo S and L, so Denim Jacket can't take that name. Choose another name." · "Trucker Jacket already has its own barcode for
+  Indigo S, so Denim Jacket can't take that name. Choose another name."
+- Toasts: "Stock updated." · "4 barcodes generated for Denim Jacket." · "Barcode generated for Black M." · "Barcode generated for Light wash S." ·
+  "Barcode generated for Light wash size 36." · "Barcode generated for Camel." · "2 barcodes generated for Leather Tote." · "6 barcodes
+  ready for Denim Jacket: 5 new, 1 already used by PRD-JKT-002." · "4 barcodes ready for Denim Jacket: all already used by PRD-JKT-002."
+  · "Barcode ready for Light wash S: already used by PRD-JKT-002." · "Label settings saved."
 - The spelling is "Colour" everywhere on screen (INV-1); the boards' "color" isn't used.
 
 ## Phone layout
