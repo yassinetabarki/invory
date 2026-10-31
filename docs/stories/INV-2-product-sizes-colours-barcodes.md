@@ -5,7 +5,7 @@ type: feature
 phase: Colour × size variants
 priority: Must
 size: L
-status: Planned
+status: Done
 created: 2026-10-31
 tags:
   - story
@@ -35,7 +35,7 @@ tags:
 > This cannot be undone.".
 
 ## Acceptance criteria
-- [ ] **AC-1 · Stock is counted per colour and size.** Every colour and size of a product has its own count of finished units on the
+- [x] **AC-1 · Stock is counted per colour and size.** Every colour and size of a product has its own count of finished units on the
   shelf, 0 to 1,000,000. When INV-2 arrives, the units a product had per size go into its first colour, in the order of Settings ›
   Colours: the Denim Jacket with S 3 · M 0 · L 5 · XL 2 and only White reads White S 3 · M 0 · L 5 · XL 2, and its other colours start
   at 0. There is no "No colour" stock. Nothing else changes: "Can produce now 112 units", "Unit cost TND 35.754", the materials and
@@ -47,8 +47,8 @@ tags:
   taken off at once, each gets its own sentence, one per line in the order of Settings › Colours (Black before Indigo). A count of
   1,000 or more is written with its thousands separator ("Indigo has 1,000,000 units in stock, so …"), and one unit reads "1 unit". These
   sentences stay until the next **Save product**, or until the colour a sentence names is added back (choosing another colour
-  doesn't clear them). A colour at 0 is removed as before; if Indigo is added again later, the product's Indigo count starts at 0.
-- [ ] **AC-2 · The In stock figure and the Sizes & colours card.** With Black 1 · 0 · 2 · 1, Indigo 2 · 0 · 3 · 1 and Light wash 0 ·
+  doesn't clear them). A colour at 0 is removed as before; if Indigo is added again later, the product's Indigo count starts at 0. ✅ 2026-10-31 · 46af1cc
+- [x] **AC-2 · The In stock figure and the Sizes & colours card.** With Black 1 · 0 · 2 · 1, Indigo 2 · 0 · 3 · 1 and Light wash 0 ·
   0 · 0 · 0 (S · M · L · XL):
   - **In stock** reads "10 units", then one line in the order of Settings › Colours, a colour tag and its count in bold: "■ Black **4**
     · ■ Indigo **6** · ■ Light wash 0" (a colour at 0 in the grey text colour, its "0" still shown); screen readers hear "In stock
@@ -72,8 +72,8 @@ tags:
   - **Phone, 375 px:** the figure sits under Can produce now and its colour line wraps; in the card the buttons **Manage sizes & colours**
     and **Update stock** are full width, 44 px, one under the other, in that order (the order the keyboard follows); in place of the table, one card per colour ("■ Indigo · 6
     units" with the chips [S 2] [M 0] [L 3] [XL 1], zeros kept and grey), then a **Total** card "10 units" with the size totals as
-    chips; nothing scrolls sideways at 320 px.
-- [ ] **AC-3 · Update stock, per colour.** **Update stock** in the card opens "Update stock · Denim Jacket" with the line "Finished
+    chips; nothing scrolls sideways at 320 px. ✅ 2026-10-31 · ab313eb
+- [x] **AC-3 · Update stock, per colour.** **Update stock** in the card opens "Update stock · Denim Jacket" with the line "Finished
   units on the shelf, counted per colour and size. Saving sets these counts; to add units that arrived, use Restock." and the ✕
   "Close".
   - **Colour** pills (swatch, name, and the colour's total after saving in grey: "Black 4", "Indigo 6", "Light wash 0"), the first
@@ -98,7 +98,7 @@ tags:
   - A "One size" product has no pills: one field per colour, labelled with the swatch and the name ("■ Camel", "■ Black"), in a
     fieldset "Units in stock per colour".
   - **Phone:** the window fills the screen; the pills wrap at the top, the size fields four to a row, the total band, then **Save**
-    and **Cancel** in a bar fixed at the bottom.
+    and **Cancel** in a bar fixed at the bottom. ✅ 2026-10-31 · 4088200
 
 ---
 
