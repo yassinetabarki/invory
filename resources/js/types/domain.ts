@@ -652,3 +652,20 @@ export type ReferenceFormData = {
     name: string;
     position: string;
 };
+
+// Colours (INV-1, ADR-0018): a list per workshop, never removed.
+/** One colour of the workshop's list (INV-1). */
+export type Colour = {
+    id: number;
+    code: string; // 2 to 4 of A-Z 0-9, unique in the workshop, never changes (INV-2 builds variant SKUs from it)
+    name: string; // at most 32 characters, unique in the workshop ignoring capitals
+    swatch: string; // '#RRGGBB', capitals
+};
+export type ColourRow = Colour & { position: number; usage_count: number }; // non-deleted products with the colour, any status
+export type ColoursSettingsProps = { colours: ColourRow[] }; // list order: position, then name, then id
+export type ColourFormData = {
+    code: string;
+    name: string;
+    swatch: string;
+    position: string;
+}; // code on create only; '' = last

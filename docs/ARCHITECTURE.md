@@ -172,6 +172,20 @@ new category `one_size`; rename, archive and restore never touch the link. A pro
 product on an order that isn't deleted can't move to a category with another list (`ProductSizeLock`, checked in `UpdateProductRequest`
 and again in `UpdateProduct` under the product's row lock). Sizes never reach `App\Domain\Costing`.
 
+### `colours` and `product_colours` (INV-1, [ADR-0018](adr/0018-colours-per-workshop.md))
+
+| Table             | Columns and rules                                                                                                                                                                                                                                        |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `colours`         | id, `workshop_id` FK `restrictOnDelete`, `code` string(4) (immutable, `^[A-Z0-9]{2,4}$`), `name` string(32), `swatch` string(7) (`#RRGGBB`), `position`, timestamps; unique (`workshop_id`, `code`) and (`workshop_id`, `lower(name)`); no `archived_at` |
+| `product_colours` | id, `workshop_id` FK, `product_id` FK `cascadeOnDelete` (hard delete only), `colour_id` FK `restrictOnDelete` (indexed); unique (`product_id`, `colour_id`)                                                                                              |
+
+Workshop data (`BelongsToWorkshop`, listed in the workshop arch test). PostgreSQL adds the CHECKs on code and swatch, `unique(workshop_id,
+id)` on `colours` and composite keys from `product_colours` to products and colours, so a product can't take another workshop's colour.
+The migration writes the 20 defaults into every workshop of the day and gives every product its workshop's first colour (White);
+`App\Actions\Colours\CreateDefaultColours` does it for each new workshop. A colour is never removed and its code never changes (the
+model refuses). A product's colours are read in list order (position, name, id); every product saved through its form has at least one.
+Colours never reach `App\Domain\Costing`.
+
 ### `products` (final items)
 | Column | Type | Rules |
 |---|---|---|

@@ -24,7 +24,8 @@ function workshopsMigration(): Migration
 /** The S-44-b migration points at `workshops` from five tables, so it is rolled back first and forward last (newest first, as `migrate:rollback` does). */
 function rollBackWorkshops(): void
 {
-    // Newer migrations that depend on `(workshop_id, id)` (orders) must be rolled back first.
+    // Newer migrations that depend on `(workshop_id, id)` (orders) must be rolled back first, and the colours point at `workshops`.
+    coloursMigration()->down();
     productSizeStocksMigration()->down();
     orderLineSizesMigration()->down();
     cutsMigration()->down();
@@ -43,6 +44,7 @@ function migrateWorkshops(): void
     cutsMigration()->up();
     orderLineSizesMigration()->up();
     productSizeStocksMigration()->up();
+    coloursMigration()->up();
 }
 
 it('puts every existing account in one workshop, and creates none for an empty database', function (int $accounts, int $workshops) {

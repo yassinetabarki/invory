@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Colour;
 use App\Models\Material;
 use App\Models\OrderLine;
 use App\Models\Product;
@@ -283,6 +284,27 @@ it('stays within the query budget when the deferred finished stock of the produc
 
     expect(count($shoe))->toBeLessThanOrEqual(QUERY_BUDGET, implode(PHP_EOL, $shoe))
         ->and(count($shoe))->toBe(count($jacket), implode(PHP_EOL, $shoe));
+});
+
+it('stays within the query budget on Settings > Colours, with 3 and with 40 colours', function () {
+    $uri = route('settings.colours.index');
+    actingAs($this->user);
+
+    // The demo workshop holds the 20 defaults: keep 3 of them, then add 37 so the list has 40.
+    Colour::query()->whereNotIn('id', Colour::query()->ordered()->limit(3)->pluck('id'))->delete();
+
+    // Warm up: the first request of a process may run one-off queries (schema introspection, the framework's own caches).
+    $this->get($uri)->assertOk();
+
+    $few = queryLog(fn () => $this->get($uri)->assertOk());
+
+    Colour::factory()->count(37)->create();
+
+    $many = queryLog(fn () => $this->get($uri)->assertOk());
+
+    expect(Colour::query()->count())->toBe(40)
+        ->and(count($few))->toBeLessThanOrEqual(QUERY_BUDGET, implode(PHP_EOL, $few))
+        ->and(count($many))->toBe(count($few), implode(PHP_EOL, $many));
 });
 
 it('has a reusable query budget expectation', function () {

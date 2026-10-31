@@ -604,6 +604,16 @@ function productSizeStocksMigration(): Migration
 }
 
 /**
+ * The colours migration object (INV-1-a): one table that points at the workshops, and writes the 20 defaults into each one that exists.
+ * A test that rolls the workshops table back must roll this one back first, and bring it back up after the workshops (the hand-kept
+ * list, F-60).
+ */
+function coloursMigration(): Migration
+{
+    return require database_path('migrations/2026_10_30_100000_create_colours_table.php');
+}
+
+/**
  * An order of the current workshop with its lines (S-48-b). `$lines` is a list of `[Product, quantity]` in the order they are entered
  * (the position follows the list); by default Boutique Lina's order of the card: Denim Jacket 50 then Denim Jeans 5-pocket 30 (needs the
  * demo products). The lines are created last-first, so their ids run against their positions: a read that sorted by id would show.

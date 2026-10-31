@@ -37,18 +37,21 @@ If a rule here is wrong or incomplete, stop and ask the tech-lead to update it (
 | Size list | The fixed sizes of a product category, in order, with the name the screens show: "S, M, L, XL" (Apparel), "36 to 46" (Footwear), "One size" (every other category). Installation-wide; no screen edits them (S-58, ADR-0015) | `SizeList` / `size_lists` |
 | Size | One size of a size list ("S", "36", "One size"). A product has every size of its category; later stories count orders, production and finished stock by size id | `Size` / `sizes` |
 | Finished stock | The finished units of a product on the shelf, counted per size of its list. Set by "Update stock" (a count, not a plus or minus; the last save wins); S-57 adds cancelled units. Never changes "Can produce now", the unit cost, the materials, sales, orders or the Inventory value (S-56, ADR-0017) | `ProductSizeStock` / `product_size_stocks`, `FinishedStock` |
-| Workshop | The business account. Every user belongs to one; every material, product, composition, stock movement, sale, order, order line, photo, unit and category belongs to one | `Workshop` / `workshops`, `workshop_id` |
+| Colour | One colour of the workshop's list: a name (at most 32 characters, unique in the workshop ignoring capitals), a code (2 to 4 capitals or digits, unique in the workshop, never changed; INV-2 builds variant SKUs from it), a swatch (`#RRGGBB`, capitals) and a position. Never removed. Every workshop starts with 20 defaults. A product has at least one colour, from its own workshop (INV-1, ADR-0018) | `Colour` / `colours`, `product_colours` |
+| Workshop | The business account. Every user belongs to one; every material, product, composition, stock movement, sale, order, order line, photo, unit, category and colour belongs to one | `Workshop` / `workshops`, `workshop_id` |
 
 ## Workshops (added 2026-10-14, D-9, ADR-0013)
 
 - **R1** Every account belongs to exactly one workshop. Every material, product, composition line, stock movement, sale, order, order line,
-  photo, unit and category belongs to exactly one workshop.
+  photo, unit, category and colour belongs to exactly one workshop.
 - **R2** You see and change only your workshop's records. Another workshop's record behaves as if it doesn't exist: **404, never 403**.
-- **R3** SKUs, and unit and category names, are unique per workshop (not per installation).
-- **R4** A composition uses only materials of its product's workshop; a sale only products of its workshop.
+- **R3** SKUs, unit and category names, and colour names (ignoring capitals) and colour codes are unique per workshop (not per
+  installation).
+- **R4** A composition uses only materials of its product's workshop; a sale only products of its workshop; a product only colours of
+  its workshop.
 - **R5** Every figure (unit cost, can produce, bottleneck, inventory value, sales totals, dashboard) is computed over one workshop's
   records. The costing formulas don't change.
-- **R6** Signing up creates a new, empty workshop with the new account as its only member.
+- **R6** Signing up creates a new workshop with the new account as its only member, empty except for its 20 default colours (INV-1).
 
 The formulas below always run over one workshop's records; they don't change.
 
@@ -298,6 +301,26 @@ update_stock(P, n_z)  : finished(P, z)' = n_z for every size z of sizes(P)     n
 Worked example: Denim Jacket S 3 · M 0 · L 5 · XL 2 → "In stock 10 units"; M set to 4 → 14 units, "Can produce now" still 112, unit cost
 still TND 35.754. Leather Tote ("One size") with 4 → "In stock 4 units".
 
+### Colours (added 2026-10-30, INV-1, ADR-0018)
+
+```
+colours(W)            = the colours of workshop W, in list order: position, then name, then id
+colours(P)            = the colours of product P, always in the list order of colours(P.workshop), whatever order they were picked in
+used_by(c)            = number of non-deleted products with colour c, any status
+```
+- **Every workshop has its own list**, starting with the 20 defaults in this order: White WHT #FFFFFF, Ecru ECR #EFE6D2, Beige BEI
+  #D8C3A0, Camel CAM #B98A57, Brown BRN #6B4A32, Grey GRY #8C8C8C, Charcoal CHA #3D3D42, Black BLK #1F1F23, Navy NAV #1F2A44, Indigo IND
+  #3E4C7E, Light wash LWH #9DB3D1, Lilac LIL #B3A2D3, Pink PNK #E8A9B8, Red RED #B8282E, Burgundy BUR #6E1F2E, Rust RST #B5552B, Mustard
+  MUS #D4A12A, Khaki KHA #A69F74, Olive OLV #5F6B3A, Forest green FGR #2F5A43. Workshops of before INV-1 got them from a migration, new
+  ones get them at sign-up. Renaming a colour in one workshop changes nothing in another; two workshops may each have IND.
+- **A colour is never removed** (no delete, archive or restore). Its name, swatch and position can change; its **code never does**.
+- **Every product has at least one colour** ("Choose at least one colour."), whatever its status. Products recorded before INV-1 got
+  their workshop's first colour (White). A colour with units in stock can't be taken off a product: that rule comes with stock per
+  colour (INV-2); INV-1 has no stock check.
+- **Colours change no figure:** unit cost, "Can produce now", the bottleneck, next limit, margin, finished stock, orders, sales and the
+  dashboard are as before.
+- The materials' "Colour" field stays free text ("Antique brass"); it is not a colour of this list.
+
 ## Precision and rounding (non-negotiable, see ADR-0002)
 
 1. **Never use floats** for money or quantities: no `float` casts, no `(float)`, no `+`/`*` on numeric strings in PHP, and no `Number(x) * y` in TypeScript.
@@ -352,6 +375,11 @@ still TND 35.754. Leather Tote ("One size") with 4 → "In stock 4 units".
 - SKUs are unique per workshop among non-deleted items; unit and category names per workshop, ignoring capitals (S-45). An id of another
   workshop is refused exactly like an id that doesn't exist.
 - Deleting an account deletes only the person; the workshop's records stay.
+- Colour (INV-1): `name` required, ≤ 32 characters, unique in the workshop ignoring capitals ("You already have a colour named
+  "Indigo"."); `code` (on create only) put in capitals, `^[A-Z0-9]{2,4}$` ("Enter 2 to 4 capital letters or digits, such as IND."),
+  unique in the workshop ("Code IND is already used by Indigo."); `swatch` put in capitals, a "#" added before 6 hex digits typed
+  without one, `^#[0-9A-F]{6}$` ("Enter a colour code like #3E4C7E."); `position` nullable, whole number 0 … 32 767 ("Enter a whole
+  number from 0 to 32,767, or leave it empty."; empty = last). Product: `colours` at least one id of the workshop's colours, distinct.
 
 ## Worked example — use as a golden test (backend unit test + frontend display test)
 
@@ -401,3 +429,5 @@ Variant checks:
 - Added 2026-10-23 (S-56, ADR-0017): `App\Models\ProductSizeStock`, `App\Services\Products\FinishedStock` (the only reader: every size,
   0 included, and the total), `FinishedStockResource`, `App\Actions\Products\UpdateFinishedStock` (the "Update stock" writer) and the
   stock reason of `ProductSizeLock::refusal()`.
+- Added 2026-10-30 (INV-1, ADR-0018): `AppModelsColour`, `Product::colours()`, `AppActionsColoursCreateDefaultColours` (the 20,
+  for new workshops), `CreateColour` / `UpdateColour`, `AppActionsProductsSyncProductColours`, `ColourResource`.

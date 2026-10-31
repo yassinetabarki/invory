@@ -3,6 +3,7 @@
 use App\Http\Controllers\Settings\ArchiveMaterialCategoryController;
 use App\Http\Controllers\Settings\ArchiveProductCategoryController;
 use App\Http\Controllers\Settings\ArchiveUnitController;
+use App\Http\Controllers\Settings\ColourController;
 use App\Http\Controllers\Settings\MaterialCategoryController;
 use App\Http\Controllers\Settings\ProductCategoryController;
 use App\Http\Controllers\Settings\ProfileController;
@@ -52,6 +53,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::patch("settings/{$uri}/{{$parameter}}/archive", $archive)->where($parameter, '[0-9]{1,18}')->name("{$name}.archive");
         Route::patch("settings/{$uri}/{{$parameter}}/restore", $restore)->where($parameter, '[0-9]{1,18}')->name("{$name}.restore");
     }
+
+    // The workshop's colours (INV-1, ADR-0018): list, add, edit. A colour is never deleted, archived or restored, so there is no more.
+    Route::get('settings/colours', [ColourController::class, 'index'])->name('settings.colours.index');
+    Route::post('settings/colours', [ColourController::class, 'store'])->name('settings.colours.store');
+    Route::put('settings/colours/{colour}', [ColourController::class, 'update'])->where('colour', '[0-9]{1,18}')->name('settings.colours.update');
 });
 
 Route::get('.well-known/passkey-endpoints', function () {
