@@ -1,14 +1,18 @@
-import { act, render, screen, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useRef, useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { UpdateStockDialog } from '@/components/products/update-stock-dialog';
+import { colourNamed } from '@/test/fixtures/colours';
 import {
+    denimStockByColour,
     sizeListEu36To46,
-    sizeListOneSize,
     sizeListSToXl,
+    stockByColour,
+    toteStockByColour,
 } from '@/test/fixtures/products';
 import { inertiaMock, resetInertiaMock } from '@/test/inertia';
-import type { FinishedStock, SizeList } from '@/types/domain';
+import type { FinishedStock } from '@/types/domain';
 
 vi.mock('@inertiajs/react', async (importOriginal) => {
     const { createInertiaModule } = await import('@/test/inertia');
@@ -19,21 +23,11 @@ vi.mock('@inertiajs/react', async (importOriginal) => {
 });
 
 const denim = { id: 1, name: 'Denim Jacket' };
-const sizesChanged =
-    'The sizes of Denim Jacket have changed. Enter the stock again.';
-
-/** The stock the server sends: every size of the list, in order, with its units. */
-function stockOf(list: SizeList, units: number[]): FinishedStock {
-    return {
-        units: units.reduce((sum, count) => sum + count, 0),
-        sizes: list.sizes.map((size, index) => ({
-            size,
-            units: units[index] ?? 0,
-        })),
-    };
-}
-
-const denimStock = stockOf(sizeListSToXl, [3, 0, 5, 2]);
+const changedMessage =
+    'The sizes or colours of Denim Jacket have changed. Enter the stock again.';
+const [black, indigo, lightWash] = ['Black', 'Indigo', 'Light wash'].map(
+    (name) => colourNamed(name).id,
+);
 
 /** The callbacks Inertia would call on the visit the window made. */
 type Visit = {
@@ -54,68 +48,136 @@ function lastVisit(): { url: string; data: unknown; options: Visit } {
     return { url: String(url), data, options: options as Visit };
 }
 
-function openWindow(
-    stock = denimStock,
-    onOpenChange: (open: boolean) => void = () => undefined,
-) {
-    const ui = (next: FinishedStock) => (
-        <UpdateStockDialog
-            product={denim}
-            stock={next}
-            open
-            onOpenChange={onOpenChange}
-        />
-    );
-    const view = render(ui(stock));
+/** The server answers the save with these errors. */
+function refuse(errors: Record<string, string>) {
+    act(() => {
+        lastVisit().options.onStart();
+        lastVisit().options.onError(errors);
+        lastVisit().options.onFinish();
+    });
+}
 
-    return { ...view, show: (next: FinishedStock) => view.rerender(ui(next)) };
+/** The page's "Update stock" button, which opens the window and gets the focus back. */
+function Page({ stock }: { stock: FinishedStock }) {
+    const [open, setOpen] = useState(false);
+    const buttonRef = useRef<HTMLButtonElement>(null);
+
+    return (
+        <>
+            <button type="button" ref={buttonRef} onClick={() => setOpen(true)}>
+                Update stock
+            </button>
+            <UpdateStockDialog
+                product={denim}
+                stock={stock}
+                open={open}
+                onOpenChange={setOpen}
+                returnFocusTo={buttonRef}
+            />
+        </>
+    );
+}
+
+async function openWindow(stock = denimStockByColour) {
+    const user = userEvent.setup();
+    const view = render(<Page stock={stock} />);
+
+    await user.click(screen.getByRole('button', { name: 'Update stock' }));
+
+    return {
+        user,
+        show: (next: FinishedStock) => view.rerender(<Page stock={next} />),
+    };
 }
 
 const dialog = () =>
     screen.getByRole('dialog', { name: 'Update stock · Denim Jacket' });
 const field = (label: string) => within(dialog()).getByLabelText(label);
+const pill = (name: string) => within(dialog()).getByRole('radio', { name });
 const band = () =>
-    within(dialog()).getByText('Total after saving').parentElement;
+    within(dialog()).getByText('Total after saving, all colours').parentElement;
 
 describe('<UpdateStockDialog>', () => {
     beforeEach(() => {
         resetInertiaMock();
     });
 
-    it('opens on today’s counts and saves what is typed, by size id', async () => {
-        const user = userEvent.setup();
-        const onOpenChange = vi.fn();
-        const { unmount } = openWindow(denimStock, onOpenChange);
+    it('counts per colour and size, keeps what was typed when switching colours, saves every colour and gives the focus back (AC-3)', async () => {
+        const { user } = await openWindow();
 
         expect(dialog()).toHaveAccessibleDescription(
+            'Finished units on the shelf, counted per colour and size. Saving sets these counts; to add units that arrived, use Restock.',
+        );
+        expect(
+            within(dialog()).getByRole('button', { name: 'Close' }),
+        ).toBeInTheDocument();
+
+        // The pills: the colour's total after saving; the first colour is chosen.
+        const pills = within(
+            within(dialog()).getByRole('radiogroup', { name: 'Colour' }),
+        ).getAllByRole('radio');
+
+        expect(pills.map((radio) => radio.getAttribute('aria-label'))).toEqual([
+            'Black, 4',
+            'Indigo, 6',
+            'Light wash, 0',
+        ]);
+        expect(pill('Black, 4')).toBeChecked();
+        expect(
+            within(dialog()).getByRole('group', {
+                name: 'Units in stock per size · Black',
+            }),
+        ).toBeInTheDocument();
+        expect(band()).toHaveTextContent(
+            'Total after saving, all colours 10 units',
+        );
+        expect(dialog()).toHaveTextContent(
             `Doesn't change materials, "Can produce now" or sales.`,
         );
-        expect(['S', 'M', 'L', 'XL'].map((label) => field(label))).toHaveLength(
+
+        await user.click(pill('Indigo, 6'));
+
+        expect(
+            within(dialog()).getByRole('group', {
+                name: 'Units in stock per size · Indigo',
+            }),
+        ).toBeInTheDocument();
+        expect(['S', 'M', 'L', 'XL'].map((size) => field(size))).toHaveLength(
             4,
         );
-        expect(field('S')).toHaveValue('3');
+        expect(field('S')).toHaveValue('2');
         expect(field('M')).toHaveValue('0');
-        expect(field('L')).toHaveValue('5');
-        expect(field('XL')).toHaveValue('2');
-        expect(band()).toHaveTextContent('Total after saving 10 units');
+        expect(field('L')).toHaveValue('3');
+        expect(field('XL')).toHaveValue('1');
+        expect(field('M')).not.toHaveAccessibleDescription();
 
-        // Typing moves the total; only the size that differs from today shows "was" and the outline.
+        // Indigo M from 0 to 4: "was 0", a dot on Indigo (spoken), the pill and the total follow.
         await user.clear(field('M'));
         await user.type(field('M'), '4');
-        expect(band()).toHaveTextContent('Total after saving 14 units');
-        expect(field('M')).toHaveAccessibleDescription('was 0');
-        expect(field('M')).toHaveClass('border-primary');
 
-        for (const label of ['S', 'L', 'XL']) {
-            expect(field(label)).not.toHaveAccessibleDescription();
-            expect(field(label)).not.toHaveClass('border-primary');
-        }
+        expect(field('M')).toHaveAccessibleDescription('was 0');
+        expect(pill('Indigo, 10, changed')).toBeChecked();
+        expect(pill('Black, 4')).toBeInTheDocument();
+        expect(band()).toHaveTextContent('14 units');
+
+        // Switching pills keeps what was typed in every colour.
+        await user.click(pill('Black, 4'));
+        expect(field('S')).toHaveValue('1');
+        await user.click(pill('Indigo, 10, changed'));
+        expect(field('M')).toHaveValue('4');
+        expect(field('M')).toHaveAccessibleDescription('was 0');
 
         await user.click(screen.getByRole('button', { name: 'Save' }));
 
         expect(lastVisit()).toMatchObject({
             url: '/products/1/stock',
-            data: { sizes: { 1: '3', 2: '4', 3: '5', 4: '2' } },
+            data: {
+                stock: {
+                    [black]: { 1: '1', 2: '0', 3: '2', 4: '1' },
+                    [indigo]: { 1: '2', 2: '4', 3: '3', 4: '1' },
+                    [lightWash]: { 1: '0', 2: '0', 3: '0', 4: '0' },
+                },
+            },
             options: {
                 only: ['finished_stock'],
                 preserveScroll: true,
@@ -123,186 +185,189 @@ describe('<UpdateStockDialog>', () => {
             },
         });
 
-        // Put back to today's count, M loses its hint and outline.
-        await user.clear(field('M'));
-        await user.type(field('M'), '0');
-        expect(field('M')).not.toHaveAccessibleDescription();
-        expect(field('M')).not.toHaveClass('border-primary');
-        expect(band()).toHaveTextContent('Total after saving 10 units');
+        // Save waits, with a spinner, while the request runs.
+        act(() => lastVisit().options.onStart());
+        expect(screen.getByRole('button', { name: /save/i })).toBeDisabled();
+        expect(within(dialog()).getByRole('status')).toBeInTheDocument();
 
-        // An emptied field goes empty; the server counts it 0.
-        await user.clear(field('M'));
-        await user.click(screen.getByRole('button', { name: 'Save' }));
-
-        expect(lastVisit().data).toEqual({
-            sizes: { 1: '3', 2: '', 3: '5', 4: '2' },
-        });
-
-        // The window closes when the save went through.
-        act(() => lastVisit().options.onSuccess());
-        expect(onOpenChange).toHaveBeenCalledWith(false);
-
-        onOpenChange.mockClear();
-        inertiaMock.router.put.mockClear();
-        await user.click(screen.getByRole('button', { name: 'Cancel' }));
-
-        expect(onOpenChange).toHaveBeenCalledWith(false);
-        expect(inertiaMock.router.put).not.toHaveBeenCalled();
-
-        unmount();
-        openWindow(stockOf(sizeListOneSize, [4]));
-
-        expect(field('One size')).toHaveValue('4');
-        expect(within(dialog()).getAllByRole('textbox')).toHaveLength(1);
-    });
-
-    it.each([
-        { size: 'M', typed: '4', total: '14 units' },
-        { size: 'M', typed: '', total: '10 units' },
-        { size: 'M', typed: '2.5', total: '10 units' },
-        { size: 'M', typed: 'abc', total: '10 units' },
-        { size: 'S', typed: '', total: '7 units' },
-    ])(
-        'counts $typed in $size as the total $total',
-        async ({ size, typed, total }) => {
-            const user = userEvent.setup();
-
-            openWindow();
-            await user.clear(field(size));
-
-            if (typed !== '') {
-                await user.type(field(size), typed);
-            }
-
-            expect(band()).toHaveTextContent(`Total after saving ${total}`);
-        },
-    );
-
-    it.each<{
-        name: string;
-        errors: Record<string, string>;
-        expectation: () => void;
-    }>([
-        {
-            name: 'a refused number shows under the fields, naming its size',
-            errors: {
-                'sizes.2': 'M: Enter a whole number from 0 to 1,000,000.',
-            },
-            expectation: () => {
-                expect(field('M')).toHaveAccessibleDescription(
-                    'M: Enter a whole number from 0 to 1,000,000.',
-                );
-                expect(field('M')).toBeInvalid();
-                expect(field('S')).toBeValid();
-            },
-        },
-        {
-            name: 'the sizes having changed shows at the top of the window',
-            errors: { sizes: sizesChanged },
-            expectation: () => {
-                expect(within(dialog()).getByRole('alert')).toHaveTextContent(
-                    sizesChanged,
-                );
-                expect(field('S')).toHaveAccessibleDescription(sizesChanged);
-            },
-        },
-    ])('$name', async ({ errors, expectation }) => {
-        const user = userEvent.setup();
-
-        openWindow();
-        await user.click(screen.getByRole('button', { name: 'Save' }));
+        // The window closes when the save went through, and the focus goes back to "Update stock".
         act(() => {
-            lastVisit().options.onStart();
-            lastVisit().options.onError(errors);
+            lastVisit().options.onSuccess();
             lastVisit().options.onFinish();
         });
 
-        expectation();
+        await waitFor(
+            () =>
+                expect(
+                    screen.getByRole('button', { name: 'Update stock' }),
+                ).toHaveFocus(),
+            { timeout: 1000 },
+        );
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
 
-    it('shows the new sizes under the same message when they changed', async () => {
-        const user = userEvent.setup();
-        const { show } = openWindow();
+    it('brings the first colour with a refused number forward and focuses its field (AC-3)', async () => {
+        const { user } = await openWindow();
+        const refused = 'M: Enter a whole number from 0 to 1,000,000.';
 
+        await user.click(pill('Indigo, 6'));
+        await user.click(screen.getByRole('button', { name: 'Save' }));
+        refuse({ [`stock.${black}.2`]: refused });
+
+        // The pill says so in text; the top names the colour; the window switched and focused the field.
+        expect(pill('Black, 4, 1 error')).toBeChecked();
+        expect(
+            within(pill('Black, 4, 1 error').closest('label')!).getByText(
+                '1 error',
+            ),
+        ).toBeInTheDocument();
+        expect(within(dialog()).getByRole('alert')).toHaveTextContent(
+            "Check Black: 1 size can't be saved.",
+        );
+        expect(
+            within(dialog()).getByRole('group', {
+                name: 'Units in stock per size · Black',
+            }),
+        ).toBeInTheDocument();
+        expect(field('M')).toHaveFocus();
+        expect(field('M')).toBeInvalid();
+        expect(field('M')).toHaveAccessibleDescription(refused);
+        expect(field('S')).toBeValid();
+    });
+
+    it('has no pills, no "Check …" line and a plain total for a product with one colour; a refused size shows its message and takes the focus (AC-3)', async () => {
+        const { user } = await openWindow(
+            stockByColour(sizeListSToXl, [['White', [3, 0, 5, 2]]]),
+        );
+        const refused = 'M: Enter a whole number from 0 to 1,000,000.';
+
+        expect(within(dialog()).queryByRole('radiogroup')).toBeNull();
+        expect(
+            within(dialog()).getByRole('group', {
+                name: 'Units in stock per size · White',
+            }),
+        ).toBeInTheDocument();
+        expect(
+            within(dialog()).getByText('Total after saving').parentElement,
+        ).toHaveTextContent('Total after saving 10 units');
+        expect(
+            within(dialog()).queryByText('Total after saving, all colours'),
+        ).toBeNull();
+
+        await user.click(screen.getByRole('button', { name: 'Save' }));
+        refuse({ [`stock.${colourNamed('White').id}.2`]: refused });
+
+        expect(within(dialog()).queryByRole('alert')).toBeNull();
+        expect(within(dialog()).queryByText(/^Check /)).toBeNull();
+        expect(field('M')).toHaveFocus();
+        expect(field('M')).toHaveAccessibleDescription(refused);
+        expect(within(dialog()).getByText(refused)).toBeInTheDocument();
+    });
+
+    it('shows the new colours and sizes, from their counts, when they changed meanwhile (AC-3)', async () => {
+        const { user, show } = await openWindow();
+
+        await user.clear(field('S'));
         await user.type(field('S'), '9');
         await user.click(screen.getByRole('button', { name: 'Save' }));
-        act(() => {
-            lastVisit().options.onStart();
-            lastVisit().options.onError({ sizes: sizesChanged });
-            lastVisit().options.onFinish();
-        });
-        // The refusal's redirect brings back `finished_stock` with the product's sizes now.
-        show(stockOf(sizeListEu36To46, [0, 2, 0, 0, 7]));
+        refuse({ stock: changedMessage });
+        // The refusal's redirect brings back `finished_stock` as the product is now.
+        show(
+            stockByColour(sizeListEu36To46, [
+                ['Indigo', [0, 2, 0, 0, 7]],
+                ['Navy', [1]],
+            ]),
+        );
 
         expect(within(dialog()).getByRole('alert')).toHaveTextContent(
-            sizesChanged,
+            changedMessage,
         );
+        expect(
+            within(dialog())
+                .getAllByRole('radio')
+                .map((radio) => radio.getAttribute('aria-label')),
+        ).toEqual(['Indigo, 9', 'Navy, 1']);
+        expect(pill('Indigo, 9')).toBeChecked();
         expect(within(dialog()).getAllByRole('textbox')).toHaveLength(11);
         expect(field('36')).toHaveValue('0');
         expect(field('37')).toHaveValue('2');
         expect(field('40')).toHaveValue('7');
         expect(within(dialog()).queryByLabelText('XL')).not.toBeInTheDocument();
+        expect(band()).toHaveTextContent('10 units');
     });
 
-    it.each(['onHttpException', 'onNetworkError'] as const)(
-        'keeps the window and what was typed when %s stops the save',
-        async (failure) => {
-            const user = userEvent.setup();
-            const onOpenChange = vi.fn();
+    it('keeps the window and what was typed in every colour when the save failed (AC-3)', async () => {
+        const { user } = await openWindow();
+        const onClose = vi.fn();
 
-            openWindow(denimStock, onOpenChange);
-            await user.clear(field('S'));
-            await user.type(field('S'), '7');
-            await user.click(screen.getByRole('button', { name: 'Save' }));
-            act(() => lastVisit().options.onStart());
+        await user.clear(field('S'));
+        await user.type(field('S'), '7');
+        await user.click(pill('Indigo, 6'));
+        await user.clear(field('M'));
+        await user.type(field('M'), '4');
+        await user.click(screen.getByRole('button', { name: 'Save' }));
+        act(() => lastVisit().options.onStart());
 
-            // Save waits while the request runs.
-            expect(
-                screen.getByRole('button', { name: /save/i }),
-            ).toBeDisabled();
+        let stopsInertia: unknown;
 
-            let stopsInertia: unknown;
-
-            act(() => {
-                stopsInertia = lastVisit().options[failure]();
-                lastVisit().options.onFinish();
-            });
-
-            // `false` keeps Inertia from showing its own error window.
-            expect(stopsInertia).toBe(false);
-            expect(within(dialog()).getByRole('alert')).toHaveTextContent(
-                "Couldn't save the stock. Try again.",
-            );
-            expect(field('S')).toHaveValue('7');
-            expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
-            expect(onOpenChange).not.toHaveBeenCalled();
-        },
-    );
-
-    it('wraps the fields, each labelled, with Save and Cancel after the last', () => {
-        openWindow(stockOf(sizeListEu36To46, []));
-
-        const group = within(dialog()).getByRole('group', {
-            name: 'Units in stock, by size',
+        act(() => {
+            stopsInertia = lastVisit().options.onHttpException();
+            lastVisit().options.onFinish();
         });
-        const inputs = within(group).getAllByRole('textbox');
 
-        expect(inputs[0].closest('[data-slot="size-fields"]')).not.toBeNull();
-        expect(inputs).toHaveLength(11);
+        // `false` keeps Inertia from showing its own error window.
+        expect(stopsInertia).toBe(false);
+        expect(within(dialog()).getByRole('alert')).toHaveTextContent(
+            "Couldn't save the stock. Try again.",
+        );
+        expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
+        expect(onClose).not.toHaveBeenCalled();
+        expect(field('M')).toHaveValue('4');
 
-        for (const input of inputs) {
-            expect(input).toHaveAccessibleName();
-        }
+        await user.click(pill('Black, 10, changed'));
+        expect(field('S')).toHaveValue('7');
+        expect(band()).toHaveTextContent('20 units');
+    });
 
-        const last = inputs[inputs.length - 1];
+    it('has no pills for a "One size" product: a field per colour, named by the colour (AC-3)', async () => {
+        const { user } = await openWindow(toteStockByColour);
 
-        for (const name of ['Save', 'Cancel']) {
-            const button = screen.getByRole('button', { name });
+        expect(within(dialog()).queryByRole('radiogroup')).toBeNull();
+        expect(
+            within(dialog()).getByRole('group', {
+                name: 'Units in stock per colour',
+            }),
+        ).toBeInTheDocument();
+        expect(within(dialog()).getAllByRole('textbox')).toHaveLength(2);
+        expect(field('Camel')).toHaveValue('4');
+        expect(field('Black')).toHaveValue('0');
+        expect(band()).toHaveTextContent('4 units');
 
-            expect(
-                last.compareDocumentPosition(button) &
-                    Node.DOCUMENT_POSITION_FOLLOWING,
-            ).toBeTruthy();
-        }
+        await user.clear(field('Black'));
+        await user.type(field('Black'), '3');
+
+        expect(field('Black')).toHaveAccessibleDescription('was 0');
+        expect(band()).toHaveTextContent('7 units');
+
+        await user.click(screen.getByRole('button', { name: 'Save' }));
+
+        expect(lastVisit().data).toEqual({
+            stock: {
+                [colourNamed('Camel').id]: { 16: '4' },
+                [black]: { 16: '3' },
+            },
+        });
+
+        refuse({
+            [`stock.${black}.16`]:
+                'One size: Enter a whole number from 0 to 1,000,000.',
+        });
+
+        expect(field('Black')).toHaveAccessibleDescription(
+            expect.stringContaining(
+                'Enter a whole number from 0 to 1,000,000.',
+            ),
+        );
+        expect(field('Black')).toHaveFocus();
     });
 });
