@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
+use App\Actions\Products\SyncProductColours;
 use App\Actions\Products\SyncProductComponents;
+use App\Models\Colour;
 use App\Models\Material;
 use App\Models\Product;
 use App\Models\ProductCategory;
@@ -158,7 +160,7 @@ class DemoProductsSeeder extends Seeder
         ],
     ];
 
-    public function run(SyncProductComponents $syncComponents): void
+    public function run(SyncProductComponents $syncComponents, SyncProductColours $syncColours): void
     {
         $workshopId = $this->demoWorkshopId();
         $existing = Product::query()->withTrashed()->where('workshop_id', $workshopId)->whereIn('sku', array_column(self::PRODUCTS, 'sku'))->pluck('sku')->all();
@@ -170,6 +172,8 @@ class DemoProductsSeeder extends Seeder
 
         $categories = ProductCategory::query()->pluck('id', 'code');
         $materials = Material::query()->without('category', 'unit')->where('workshop_id', $workshopId)->pluck('id', 'sku');
+        // INV-1: every new demo product gets the workshop's first colour (White). A workshop with no colour list gives it none.
+        $white = Colour::query()->where('workshop_id', $workshopId)->ordered()->value('id');
 
         foreach ($missing as $demo) {
             // A default category the user has since deleted (it was unused) can't be resolved: that product is skipped.
@@ -177,7 +181,7 @@ class DemoProductsSeeder extends Seeder
                 continue;
             }
 
-            DB::transaction(function () use ($demo, $categories, $materials, $syncComponents, $workshopId): void {
+            DB::transaction(function () use ($demo, $categories, $materials, $syncComponents, $syncColours, $white, $workshopId): void {
                 $product = new Product([
                     ...array_diff_key($demo, ['category' => true, 'lines' => true]),
                     'category_id' => $categories[$demo['category']],
@@ -200,6 +204,10 @@ class DemoProductsSeeder extends Seeder
                 }
 
                 $syncComponents->handle($product, $lines);
+
+                if ($white !== null) {
+                    $syncColours->handle($product, [$white]);
+                }
             });
         }
     }

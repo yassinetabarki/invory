@@ -2,6 +2,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { ProductForm } from '@/components/products/product-form';
+import { defaultColours } from '@/test/fixtures/colours';
 import {
     answerMaterialOptions,
     categorySizesFixture,
@@ -47,6 +48,7 @@ function setup({
             categories={productCategories}
             statuses={productStatuses}
             categorySizes={categorySizesFixture}
+            colours={defaultColours}
             action={{ url, method }}
             cancelHref={product ? `/products/${product.id}` : '/products'}
             submitLabel="Save product"

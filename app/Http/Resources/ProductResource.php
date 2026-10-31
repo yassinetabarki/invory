@@ -12,7 +12,7 @@ use LogicException;
 
 /**
  * `Product`: the detail of one product with its cost breakdown, margin, capacity and composition. The product must carry its
- * category (with its size list and the sizes, from `SizeLists`), its composition (with the materials) and the attribute the
+ * category (with its size list and the sizes, from `SizeLists`), its composition (with the materials), its colours and the attribute the
  * controller sets (`costing`).
  *
  * @mixin Product
@@ -42,6 +42,7 @@ final class ProductResource extends JsonResource
             'cost' => (new CostBreakdownResource($this->resource))->resolve($request),
             'margin' => $margin === null ? null : ['amount' => $margin->amount, 'percent' => $margin->percent],
             'capacity' => (new CapacityResource($this->resource))->resolve($request),
+            'colours' => ColourResource::collection($this->colours)->resolve($request),
             'components' => $this->components
                 ->values()
                 ->map(fn (ProductComponent $component, int $index): array => (new ProductComponentResource(

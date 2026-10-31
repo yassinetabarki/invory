@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests\Products;
 
 use App\Enums\ProductStatus;
+use App\Models\Colour;
 use App\Models\Material;
 use App\Models\Product;
 use App\Services\Reference\ReferenceCode;
@@ -29,6 +30,26 @@ class StoreProductRequest extends FormRequest
     public function rules(): array
     {
         return self::fieldRules(product: null);
+    }
+
+    /** @return array<string, string> */
+    public function messages(): array
+    {
+        return self::fieldMessages();
+    }
+
+    /**
+     * The messages shared with UpdateProductRequest. Only `colours` has its own wording; `colours.*` fails only on a tampered request.
+     *
+     * @return array<string, string>
+     */
+    public static function fieldMessages(): array
+    {
+        return [
+            'colours.required' => __('Choose at least one colour.'),
+            'colours.array' => __('Choose at least one colour.'),
+            'colours.min' => __('Choose at least one colour.'),
+        ];
     }
 
     /**
@@ -65,6 +86,9 @@ class StoreProductRequest extends FormRequest
             'selling_price' => ['nullable', 'decimal:0,4', 'min:0', 'max:99999999.9999'],
             'photo' => ['nullable', File::image()->types(['jpg', 'jpeg', 'png', 'webp'])->max(4096)],
             'remove_photo' => ['nullable', 'boolean'],
+            // INV-1: at least one colour of the workshop, whatever the status. A multipart body that carries none has no key at all.
+            'colours' => ['bail', 'required', 'array', 'min:1'],
+            'colours.*' => ['bail', 'integer', 'distinct', WorkshopRule::exists(Colour::class)],
             // The composition may be empty (a draft). It is `nullable` rather than `present` because a multipart body
             // (a photo is attached) cannot carry an empty array: the key is simply absent, and on update a missing or null list is an empty
             // composition (F-36: the composition is always replaced).

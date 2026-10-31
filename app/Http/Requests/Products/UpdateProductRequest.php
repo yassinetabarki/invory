@@ -44,6 +44,12 @@ class UpdateProductRequest extends FormRequest
         return StoreProductRequest::fieldRules($product instanceof Product ? $product : null);
     }
 
+    /** @return array<string, string> */
+    public function messages(): array
+    {
+        return StoreProductRequest::fieldMessages();
+    }
+
     /**
      * S-58 / AC-4: a product on an order keeps the sizes of its category. The error sits on `category`, next to any other field
      * errors; it is checked only when the category itself passed (`UpdateProduct` checks again under the row lock).

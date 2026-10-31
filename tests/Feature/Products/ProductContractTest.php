@@ -108,7 +108,7 @@ it('sends Product with its exact keys, order and types', function () {
 
         expect(keysOf($product))->toBe([
             'id', 'sku', 'name', 'category', 'category_label', 'size_list', 'status', 'status_label', 'description', 'photo_url',
-            'labor_cost', 'overhead_cost', 'selling_price', 'cost', 'margin', 'capacity', 'components', 'created_at', 'updated_at',
+            'labor_cost', 'overhead_cost', 'selling_price', 'cost', 'margin', 'capacity', 'colours', 'components', 'created_at', 'updated_at',
         ])
             ->and($product['id'])->toBeInt()
             ->and($product['labor_cost'])->toMatch(SCALE_4)
@@ -196,7 +196,7 @@ it('sends the props of the create and edit pages (S-25: statuses, plus the produ
     }
 
     expect(actingAs($this->user)->get(route('products.create'))->inertiaProps())->not->toHaveKey('product')
-        ->and(keysOf(actingAs($this->user)->get(route('products.edit', pid(1)))->inertiaProps('product')))->toHaveCount(19);
+        ->and(keysOf(actingAs($this->user)->get(route('products.edit', pid(1)))->inertiaProps('product')))->toHaveCount(20);
 });
 
 it('sends the product-shaped props of the dashboard, the sales form and the material page as before', function () {

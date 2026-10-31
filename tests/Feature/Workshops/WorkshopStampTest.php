@@ -48,8 +48,10 @@ it('stamps every owned record with the right workshop', function (Closure $scena
 
     'the create Actions take the workshop of the actor, whichever one is current' => [function (Workshop $mine, Workshop $other, User $actor): void {
         $material = CurrentWorkshop::run($other, fn (): Material => app(CreateMaterial::class)->handle(validMaterialPayload(), $actor));
+        // The actor's own White, looked up outside `CurrentWorkshop::run`: inside it the scope would only show the other workshop's colours.
+        $white = CurrentWorkshop::run($mine, fn (): int => demoColour('WHT')->id);
         $product = CurrentWorkshop::run($other, fn (): Product => app(CreateProduct::class)->handle(
-            productData(['components' => [['material_id' => $material->id, 'quantity' => '1.5', 'waste_percent' => '0']]]),
+            productData(['colours' => [$white], 'components' => [['material_id' => $material->id, 'quantity' => '1.5', 'waste_percent' => '0']]]),
             $actor,
         ));
 

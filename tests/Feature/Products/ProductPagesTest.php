@@ -267,7 +267,7 @@ describe('show', function () {
                 ->loadDeferredProps('default', fn (Assert $reloaded) => $reloaded
                     ->has('product', fn (Assert $product) => $product->hasAll([
                         'id', 'sku', 'name', 'category', 'category_label', 'size_list', 'status', 'status_label', 'description', 'photo_url',
-                        'labor_cost', 'overhead_cost', 'selling_price', 'cost', 'margin', 'capacity', 'components',
+                        'labor_cost', 'overhead_cost', 'selling_price', 'cost', 'margin', 'capacity', 'colours', 'components',
                         'created_at', 'updated_at',
                     ]))
                     ->has('product.cost', fn (Assert $cost) => $cost->hasAll(['material_cost', 'labor_cost', 'overhead_cost', 'unit_cost']))
@@ -512,8 +512,9 @@ describe('create and edit', function () {
                 ->has('statuses', 3));
     });
 
-    // 6 KB: `category_sizes` (S-58, about 1.2 KB, one size list per category) is part of the page since the sizes came to the product form.
-    it('sends a create page that does not grow with the catalogue (at most 6 KB)', function () {
+    // 7 KB: `category_sizes` (S-58, about 1.2 KB, one size list per category) is part of the page since the sizes came to the product form;
+    // INV-1 adds the workshop's colours (20 defaults, about 0.4 KB; a list the workshop grows, not the catalogue).
+    it('sends a create page that does not grow with the catalogue (at most 7 KB)', function () {
         $size = fn (): int => strlen(json_encode(actingAs($this->user)->get(route('products.create'))->assertOk()->inertiaPage(), JSON_THROW_ON_ERROR));
 
         $small = $size();
@@ -521,7 +522,7 @@ describe('create and edit', function () {
         $large = $size();
 
         expect($large)->toBe($small)
-            ->and($large)->toBeLessThanOrEqual(6 * 1024);
+            ->and($large)->toBeLessThanOrEqual(7 * 1024);
     });
 
     it('sends the statuses and the product, but no materials, on the edit page', function () {
@@ -572,7 +573,9 @@ it('reads the materials table once per page and answers within a bounded number 
     // S-58: the sizes cost three reads (categories, size_lists, sizes), which replace the old category read where there was one:
     // show 8 -> 10, create 0 -> 3, edit 5 -> 7.
     // S-56-a: the show page's stock group reads the product's stock rows (one query; the sizes come from the same three reads): show 10 -> 11.
-    $budget = ['index' => 6, 'show' => 11, 'create' => 3, 'edit' => 7];
+    // INV-1: the show page reads the product's colours (one query): show 11 -> 12. The create and edit pages stay as they were: the workshop's
+    // colours cost one read there, paid for by the product categories, which the size lists now take from the shared reference read.
+    $budget = ['index' => 6, 'show' => 12, 'create' => 3, 'edit' => 7];
     $materialReads = ['index' => 1, 'show' => 1, 'create' => 0, 'edit' => 1];
 
     $baseline = array_map($count, $urls);

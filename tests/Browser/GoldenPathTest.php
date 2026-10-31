@@ -185,6 +185,14 @@ it('a new user goes from sign-in to a sale on the dashboard', function () {
             $field("Waste percent for {$material}")->fill($waste);
         }
 
+        // INV-1: a product needs at least one colour; White is the first of the workshop's 20 defaults.
+        $colours = $browser->getByRole('group', ['name' => 'Colours', 'exact' => true]);
+        $colours->getByRole('button', ['name' => 'Add colour', 'exact' => true])->click();
+        $picker = $browser->getByRole('dialog', ['name' => 'Choose colours', 'exact' => true]);
+        $picker->getByRole('option', ['name' => 'White, WHT', 'exact' => true])->click();
+        $picker->getByRole('button', ['name' => 'Done', 'exact' => true])->click();
+        $colours->getByRole('button', ['name' => 'Remove White', 'exact' => true]);
+
         $browser->getByRole('button', ['name' => 'Save product'])->first()->click();
         $page->assertScript('/^\/products\/\d+$/.test(location.pathname)');
     }, $page);

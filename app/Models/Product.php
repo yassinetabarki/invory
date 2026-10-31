@@ -17,6 +17,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Storage;
@@ -98,6 +99,18 @@ class Product extends Model
     public function components(): HasMany
     {
         return $this->hasMany(ProductComponent::class)->orderBy('position')->orderBy('id');
+    }
+
+    /**
+     * The product's colours in list order (INV-1, ADR-0018). The link row carries the workshop.
+     *
+     * @return BelongsToMany<Colour, $this>
+     */
+    public function colours(): BelongsToMany
+    {
+        return $this->belongsToMany(Colour::class, 'product_colours')
+            ->withPivot('workshop_id')
+            ->orderBy('colours.position')->orderBy('colours.name')->orderBy('colours.id');
     }
 
     /**

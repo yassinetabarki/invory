@@ -2,6 +2,7 @@ import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vite-plus/test';
 import { ProductHeader } from '@/components/products/product-header';
 import { ProductPhoto } from '@/components/products/product-photo';
+import { colourNamed } from '@/test/fixtures/colours';
 import {
     canvasLowSneaker,
     choreJacket,
@@ -47,6 +48,28 @@ describe('<ProductHeader>', () => {
             expect(badge.previousElementSibling).toHaveTextContent(category);
         },
     );
+
+    it('lists the colours under the badges in the order the server sent, and speaks them as one sentence', () => {
+        render(
+            <ProductHeader
+                product={{
+                    ...denimJacket,
+                    colours: ['Black', 'Indigo', 'Light wash'].map(colourNamed),
+                }}
+            />,
+        );
+
+        const visible = screen.getByText('Colours').parentElement;
+
+        expect(visible).toHaveAttribute('aria-hidden', 'true');
+        expect(visible).toHaveTextContent('ColoursBlackIndigoLight wash');
+        expect(
+            visible?.querySelectorAll('[data-slot="colour-swatch"]'),
+        ).toHaveLength(3);
+        expect(
+            screen.getByText('Colours: Black, Indigo, Light wash'),
+        ).toBeInTheDocument();
+    });
 
     it('labels a draft in words', () => {
         render(<ProductHeader product={choreJacket} />);

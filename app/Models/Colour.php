@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use LogicException;
 
 /**
@@ -46,6 +47,16 @@ class Colour extends Model
     protected function casts(): array
     {
         return ['position' => 'integer'];
+    }
+
+    /**
+     * The non-deleted products that have this colour (the soft-delete scope leaves deleted ones out of the "Used by" count).
+     *
+     * @return BelongsToMany<Product, $this>
+     */
+    public function products(): BelongsToMany
+    {
+        return $this->belongsToMany(Product::class, 'product_colours');
     }
 
     /**

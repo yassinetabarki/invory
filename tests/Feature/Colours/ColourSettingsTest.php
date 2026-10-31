@@ -3,6 +3,7 @@
 use App\Http\Requests\Colours\StoreColourRequest;
 use App\Http\Requests\Colours\UpdateColourRequest;
 use App\Models\Colour;
+use App\Models\Product;
 use App\Models\User;
 use App\Models\Workshop;
 use App\Services\Workshops\CurrentWorkshop;
@@ -85,6 +86,19 @@ it('lists every colour of the workshop in one list, in list order, with the agre
         ->missing('colours.data')
         ->missing('links')
         ->missing('meta'));
+});
+
+it('counts the products that have each colour, whatever their status, leaving deleted ones out ("Used by")', function () {
+    $colour = fn (string $code): int => Colour::query()->where('workshop_id', $this->user->workshop_id)->where('code', $code)->value('id');
+    $give = fn (string $code, iterable $products) => collect($products)->each(fn (Product $product) => $product->colours()->attach($colour($code), ['workshop_id' => $product->workshop_id]));
+
+    $give('BLK', [Product::factory()->create(), Product::factory()->draft()->create(), Product::factory()->archived()->create(), Product::factory()->create()]);
+    $give('BLK', [tap(Product::factory()->create())->delete()]);
+    $give('IND', Product::factory()->count(3)->create());
+    $give('LWH', [Product::factory()->create()]);
+
+    actingAs($this->user)->get(route('settings.colours.index'))->assertInertia(fn (Assert $page) => $page
+        ->where('colours', fn ($colours) => collect($colours)->whereIn('code', ['BLK', 'IND', 'LWH', 'ECR'])->pluck('usage_count', 'code')->all() == ['BLK' => 4, 'IND' => 3, 'LWH' => 1, 'ECR' => 0]));
 });
 
 describe('Add colour', function () {

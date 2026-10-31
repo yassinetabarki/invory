@@ -210,6 +210,7 @@ it('stores a photo under an address its record does not give away (AC-3)', funct
     // A multipart body can't carry an empty composition: the key is left out.
     $this->post(route('products.store'), [
         'sku' => 'B-SHIRT-001', 'name' => 'Linen shirt', 'category' => 'apparel', 'status' => 'active', 'labor_cost' => '5', 'overhead_cost' => '0',
+        'colours' => [demoColour('WHT')->id], // Sami is signed in: his own workshop's White
         'photo' => realUpload('linen-shirt.png', $png, 'image/png'),
     ])->assertSessionHasNoErrors();
 

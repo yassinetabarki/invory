@@ -30,6 +30,11 @@ const OLD_UNITS = ['m', 'cm', 'yd', 'sqm', 'sqft', 'kg', 'g', 'l', 'ml', 'pc', '
 function referenceMigration(): Migration
 {
     // The S-60-a order line sizes migration points at the size lists, the sizes and order lines, so it goes before all of them.
+    // The INV-1-e product colours migration points at products (on PostgreSQL through `unique(workshop_id, id)`), so it is the very first to go.
+    if (Schema::hasTable('product_colours')) {
+        productColoursMigration()->down();
+    }
+
     if (Schema::hasTable('order_line_sizes')) {
         productSizeStocksMigration()->down();
         orderLineSizesMigration()->down();

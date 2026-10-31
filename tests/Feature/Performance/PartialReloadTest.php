@@ -144,9 +144,11 @@ describe('products create and edit', function () {
         );
 
         // The route-model binding of the product, its lines, ONE read of the materials (those of the lines) and their units
-        // (eager-loaded), and the three size-list reads (categories, size_lists, sizes; S-58) that replace the old `load('category')`.
+        // (eager-loaded), the three size-list reads (categories, size_lists, sizes; S-58) that replace the old `load('category')`, and the
+        // one read of the workshop's colours that also flags the product's own (INV-1: 7 -> 8; the picker list and the product's colours share it).
         expect(queriesMatching($queries, 'from "materials"'))->toHaveCount(1)
-            ->and($queries)->toHaveCount(7);
+            ->and(queriesMatching($queries, 'from "colours"'))->toHaveCount(1)
+            ->and($queries)->toHaveCount(8);
     });
 
     it('loads nothing on the edit page when only the status list is requested', function () {

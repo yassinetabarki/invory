@@ -229,6 +229,7 @@ export type Product = {
     margin: Margin | null; // null when selling_price is null
     capacity: Capacity;
     components: ProductComponentLine[]; // ordered by position
+    colours: Colour[]; // in list order; at least one for every product saved through the form
     created_at: string; // ISO-8601
     updated_at: string;
 };
@@ -278,6 +279,7 @@ export type ProductFormData = {
     selling_price: string; // '' = no selling price
     photo: File | null;
     remove_photo: boolean;
+    colours: number[]; // colour ids, at least one
     components: ProductComponentFormRow[];
 };
 
@@ -566,6 +568,7 @@ export type ProductsIndexProps = {
 export type ProductCreateProps = {
     statuses: Option<ProductStatus>[];
     category_sizes: Record<ProductCategory, SizeList>; // every category, archived ones included
+    colours: Colour[]; // the workshop's whole list, in list order
 };
 export type ProductEditProps = ProductCreateProps & { product: Product };
 export type ProductShowProps = {

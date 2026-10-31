@@ -18,6 +18,7 @@ final readonly class UpdateProduct
     public function __construct(
         private ResolveProductCategoryCode $resolveCategory,
         private SyncProductComponents $syncComponents,
+        private SyncProductColours $syncColours,
         private PhotoStorage $photos,
         private ProductSizeLock $sizeLock,
     ) {}
@@ -30,16 +31,21 @@ final readonly class UpdateProduct
      * A `photo` upload replaces the photo (it wins over `remove_photo`) and `remove_photo` clears it. The new file is stored
      * before the transaction and deleted again if it throws; the old file is deleted after it committed.
      *
-     * @param  array<string, mixed>  $data  validated input: the product fields (`category` as a code), its `components` and `photo` / `remove_photo`
+     * @param  array<string, mixed>  $data  validated input: the product fields (`category` as a code), its `components`, its `colours` (ids, left alone when absent) and `photo` / `remove_photo`
      */
     public function handle(Product $product, array $data, User $actor): Product
     {
         return $this->photos->persist('products', $data, $product->photo_path, fn (array $attributes, array $photo): Product => DB::transaction(function () use ($product, $attributes, $photo, $actor): Product {
             $this->guardSizes($product, $attributes['category'] ?? null);
 
-            $product->fill($this->resolveCategory->handle(Arr::except($attributes, ['components'])))->forceFill($photo);
+            $product->fill($this->resolveCategory->handle(Arr::except($attributes, ['components', 'colours'])))->forceFill($photo);
             $product->updated_by = $actor->id;
             $product->save();
+
+            // Only when the input carries colours: a caller that does not mean to change them (a seeder, an older test) keeps them.
+            if (array_key_exists('colours', $attributes)) {
+                $this->syncColours->handle($product, $attributes['colours']);
+            }
 
             $this->syncComponents->handle($product, $attributes['components'] ?? []);
 

@@ -8,6 +8,7 @@ import {
 } from '@/components/products/bom-rows';
 import type { BomRow } from '@/components/products/bom-rows';
 import { toSubmittedRow } from '@/components/products/bom-rows';
+import { ColoursField } from '@/components/products/colours-field';
 import { DecimalInput } from '@/components/products/decimal-input';
 import { trimDecimal } from '@/components/products/decimals';
 import { FormField } from '@/components/products/form-field';
@@ -29,6 +30,7 @@ import { useReference } from '@/hooks/use-reference';
 import { unitLabel } from '@/lib/reference';
 import { cn } from '@/lib/utils';
 import type {
+    Colour,
     Option,
     Product,
     ProductCategory,
@@ -51,6 +53,8 @@ type ProductFormProps = {
     statuses: Option<ProductStatus>[];
     /** The sizes every category gives its products (S-58), shown under "Category". */
     categorySizes: Record<ProductCategory, SizeList>;
+    /** The workshop's whole colour list, in list order (INV-1). */
+    colours: Colour[];
     /** Where to send the form (Wayfinder in the page). */
     action: { url: string; method: 'post' | 'put' };
     cancelHref: string;
@@ -70,6 +74,7 @@ function emptyState(): ProductFormState {
         selling_price: '',
         photo: null,
         remove_photo: false,
+        colours: [],
         components: [],
     };
 }
@@ -97,6 +102,7 @@ function toFormState(product: Product | undefined): ProductFormState {
                 : trimDecimal(product.selling_price),
         photo: null,
         remove_photo: false,
+        colours: product.colours.map((colour) => colour.id),
         components: product.components.map((line) => ({
             uid: createRowUid(),
             material_id: line.material.id,
@@ -105,6 +111,11 @@ function toFormState(product: Product | undefined): ProductFormState {
             notes: line.notes ?? '',
         })),
     };
+}
+
+/** The error keys of the colours: "colours", or "colours.N" for a wrong id. */
+function isColoursKey(name: string): name is 'colours' | `colours.${number}` {
+    return name === 'colours' || /^colours\.\d+$/.test(name);
 }
 
 /** A list with more sizes than this shows its name ("36 to 46") instead of one tag per size. */
@@ -245,6 +256,7 @@ export function ProductForm({
     categories,
     statuses,
     categorySizes,
+    colours,
     action,
     cancelHref,
     submitLabel,
@@ -283,14 +295,24 @@ export function ProductForm({
         .map(([name, message]) => `${name}:${message}`)
         .join('|');
 
-    // Move focus to the first invalid field once a submission has failed.
+    // "Choose at least one colour." arrives on `colours`; a wrong id on `colours.N`.
+    const coloursError =
+        errors.colours ??
+        Object.entries(errors).find(([name]) =>
+            name.startsWith('colours.'),
+        )?.[1];
+
+    // Move focus to the first invalid field once a submission has failed
+    // (for the colours, that is the Add colour button, marked `data-invalid`).
     useEffect(() => {
         if (processing || errorSignature === '') {
             return;
         }
 
         formRef.current
-            ?.querySelector<HTMLElement>('[aria-invalid="true"]')
+            ?.querySelector<HTMLElement>(
+                '[aria-invalid="true"], [data-invalid="true"]',
+            )
             ?.focus();
     }, [errorSignature, processing]);
 
@@ -499,6 +521,31 @@ export function ProductForm({
                                         </Select>
                                     )}
                                 </FormField>
+                                <ColoursField
+                                    id={id('colours')}
+                                    colours={colours}
+                                    value={form.data.colours}
+                                    error={coloursError}
+                                    className="col-span-full"
+                                    onChange={(ids) => {
+                                        form.setData('colours', ids);
+
+                                        // "Choose at least one colour." (and a wrong id) are
+                                        // answered as soon as there is a colour. Never call
+                                        // clearErrors() with no names: that clears every error.
+                                        const stale =
+                                            Object.keys(errors).filter(
+                                                isColoursKey,
+                                            );
+
+                                        if (
+                                            ids.length > 0 &&
+                                            stale.length > 0
+                                        ) {
+                                            form.clearErrors(...stale);
+                                        }
+                                    }}
+                                />
                                 <FormField
                                     id={id('description')}
                                     label="Description"

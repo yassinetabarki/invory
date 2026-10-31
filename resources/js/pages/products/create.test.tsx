@@ -2,6 +2,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import ProductsCreate from '@/pages/products/create';
+import { defaultColours } from '@/test/fixtures/colours';
 import {
     answerMaterialOptions,
     categorySizesFixture,
@@ -34,6 +35,7 @@ vi.mock('@inertiajs/react', async (importOriginal) => {
 const props: ProductCreateProps = {
     statuses: productStatuses,
     category_sizes: categorySizesFixture,
+    colours: defaultColours,
 };
 
 describe('products/create page', () => {
@@ -166,6 +168,51 @@ describe('products/create page', () => {
         expect(
             screen.getByText('The sku has already been taken.'),
         ).toBeInTheDocument();
+    });
+
+    it('opens with no colour and, once the server asks for one, shows it under the field with the focus on Add colour', () => {
+        const { rerender } = render(<ProductsCreate {...props} />);
+        const colours = within(screen.getByRole('group', { name: 'Colours' }));
+
+        expect(colours.queryByRole('button', { name: /^Remove / })).toBeNull();
+
+        setFormState({
+            errors: { colours: 'Choose at least one colour.' },
+        });
+        rerender(<ProductsCreate {...props} />);
+
+        expect(screen.getByText('Choose at least one colour.')).toBeVisible();
+        expect(
+            colours.getByRole('button', { name: 'Add colour' }),
+        ).toHaveFocus();
+        expect(
+            colours.getByRole('button', { name: 'Add colour' }),
+        ).toHaveAccessibleDescription(
+            expect.stringContaining('Choose at least one colour.'),
+        );
+    });
+
+    it('drops "Choose at least one colour." as soon as one colour is chosen, before any save', async () => {
+        const user = userEvent.setup();
+
+        setFormState({ errors: { colours: 'Choose at least one colour.' } });
+        render(<ProductsCreate {...props} />);
+
+        const add = screen.getByRole('button', { name: 'Add colour' });
+
+        expect(screen.getByText('Choose at least one colour.')).toBeVisible();
+        expect(add).toHaveAttribute('data-invalid', 'true');
+
+        await user.click(add);
+        await user.click(
+            within(
+                screen.getByRole('dialog', { name: 'Choose colours' }),
+            ).getByRole('option', { name: 'Indigo, IND' }),
+        );
+
+        expect(screen.queryByText('Choose at least one colour.')).toBeNull();
+        expect(add).not.toHaveAttribute('data-invalid');
+        expect(inertiaMock.submissions).toHaveLength(0);
     });
 
     it('defines the Products > Add product breadcrumbs', () => {

@@ -11,11 +11,13 @@ use App\Enums\ProductStatus;
 use App\Http\Requests\Products\IndexProductRequest;
 use App\Http\Requests\Products\StoreProductRequest;
 use App\Http\Requests\Products\UpdateProductRequest;
+use App\Http\Resources\ColourResource;
 use App\Http\Resources\FinishedStockResource;
 use App\Http\Resources\ProductListResource;
 use App\Http\Resources\ProductResource;
 use App\Http\Resources\SaleResource;
 use App\Http\Resources\SizeListResource;
+use App\Models\Colour;
 use App\Models\Product;
 use App\Models\SizeList;
 use App\Models\User;
@@ -25,6 +27,7 @@ use App\Services\Products\ProductIndexQuery;
 use App\Services\Products\SizeLists;
 use App\Services\Sales\SalesReport;
 use ArrayObject;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -69,6 +72,7 @@ final class ProductController extends Controller
         return Inertia::render('products/create', [
             'statuses' => ProductStatus::options(),
             'category_sizes' => fn (): ArrayObject => $this->categorySizes($sizes),
+            'colours' => fn (): array => $this->colourRows(Colour::query()->ordered()->get()),
         ]);
     }
 
@@ -89,7 +93,7 @@ final class ProductController extends Controller
             // RL-02: all three props are deferred in one group: the first response carries none of them (no costing work, so the
             // navigation is instant) and one follow-up request brings them all.
             'product' => Inertia::defer(function () use ($product, $costing, $sizes): ProductResource {
-                $product->load(['components.material' => fn ($materials) => $materials->without('category')]);
+                $product->load(['colours', 'components.material' => fn ($materials) => $materials->without('category')]);
 
                 return $this->resource($product, $costing, $sizes);
             }),
@@ -109,12 +113,23 @@ final class ProductController extends Controller
     {
         Gate::authorize('update', $product);
 
+        // INV-1: one read gives the workshop's list for the picker and, flagged, the product's own colours (the page stays within its
+        // query budget). Either prop may be asked for alone in a partial reload; whichever comes first reads, the other reuses it.
+        $list = null;
+        $colours = function () use ($product, &$list): Collection {
+            return $list ??= Colour::query()->ordered()
+                ->withExists(['products as on_product' => fn ($products) => $products->whereKey($product->getKey())])
+                ->get();
+        };
+
         return Inertia::render('products/edit', [
             'statuses' => ProductStatus::options(),
             'category_sizes' => fn (): ArrayObject => $this->categorySizes($sizes),
+            'colours' => fn (): array => $this->colourRows($colours()),
             // The picker searches the materials itself (`materials.options`, S-25): only the materials of the lines are loaded here.
-            'product' => function () use ($product, $costing, $sizes): ProductResource {
+            'product' => function () use ($product, $costing, $sizes, $colours): ProductResource {
                 $product->load(['components.material' => fn ($materials) => $materials->without('category')]);
+                $product->setRelation('colours', $colours()->filter(fn (Colour $colour): bool => (bool) $colour->getAttribute('on_product'))->values());
 
                 return $this->resource($product, $costing, $sizes);
             },
@@ -148,6 +163,17 @@ final class ProductController extends Controller
         $product->setAttribute('costing', $costing->cost($product));
 
         return new ProductResource($product);
+    }
+
+    /**
+     * `colours`: the workshop's whole list in list order, for the product form's picker (INV-1).
+     *
+     * @param  Collection<int, Colour>  $colours
+     * @return list<array<string, mixed>>
+     */
+    private function colourRows(Collection $colours): array
+    {
+        return array_values(ColourResource::collection($colours)->resolve());
     }
 
     /**

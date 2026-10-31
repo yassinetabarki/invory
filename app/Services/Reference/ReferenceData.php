@@ -29,6 +29,8 @@ final class ReferenceData
 
     private const MATERIAL_CATEGORIES_ATTRIBUTE = 'invory.material_categories';
 
+    private const PRODUCT_CATEGORIES_ATTRIBUTE = 'invory.product_categories';
+
     /**
      * @return array{
      *     units: list<UnitOptionRow>,
@@ -44,7 +46,7 @@ final class ReferenceData
         return [
             'units' => array_values($this->units()->map(self::unit(...))->all()),
             'material_categories' => array_values($this->materialCategories()->map(self::category(...))->all()),
-            'product_categories' => array_values(ProductCategory::query()->ordered()->get()->map(self::category(...))->all()),
+            'product_categories' => array_values($this->productCategories()->map(self::category(...))->all()),
             'product_statuses' => ProductStatus::options(),
             'sales_periods' => SalesPeriod::options(),
             'stock_statuses' => StockStatus::options(),
@@ -85,6 +87,24 @@ final class ReferenceData
 
         /** @var Collection<int, MaterialCategory> */
         return $attributes->get(self::MATERIAL_CATEGORIES_ATTRIBUTE);
+    }
+
+    /**
+     * Every product category by id, archived ones included, in display order. Read once per request, like {@see self::units()}: the
+     * shared `reference` prop and `SizeLists` (which adds the size lists to these same rows) share the one query.
+     *
+     * @return Collection<int, ProductCategory>
+     */
+    public function productCategories(): Collection
+    {
+        $attributes = request()->attributes;
+
+        if (! $attributes->has(self::PRODUCT_CATEGORIES_ATTRIBUTE)) {
+            $attributes->set(self::PRODUCT_CATEGORIES_ATTRIBUTE, ProductCategory::query()->ordered()->get()->keyBy('id'));
+        }
+
+        /** @var Collection<int, ProductCategory> */
+        return $attributes->get(self::PRODUCT_CATEGORIES_ATTRIBUTE);
     }
 
     /**

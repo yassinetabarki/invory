@@ -163,6 +163,8 @@ describe('products/show page', () => {
             expect(screen.getByText('PRD-JKT-001')).toBeInTheDocument();
             expect(screen.getByText('Apparel')).toBeInTheDocument();
             expect(screen.getByText('Active')).toBeInTheDocument();
+            expect(screen.getByText('Colours: White')).toBeInTheDocument();
+            expect(screen.getByText('White')).toBeInTheDocument();
         });
 
         it('does not prefetch the Record sale or Edit pages', () => {

@@ -2,6 +2,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import ProductsEdit from '@/pages/products/edit';
+import { colourNamed, defaultColours } from '@/test/fixtures/colours';
 import {
     answerMaterialOptions,
     categorySizesFixture,
@@ -36,6 +37,7 @@ function props(product: Product = denimJacket): ProductEditProps {
         product,
         statuses: productStatuses,
         category_sizes: categorySizesFixture,
+        colours: defaultColours,
     };
 }
 
@@ -143,6 +145,52 @@ describe('products/edit page', () => {
             action: '/products/1',
             method: 'put',
             data: { sku: 'PRD-JKT-001', selling_price: '95' },
+        });
+    });
+
+    it('changes the colours on the form only: nothing is sent before Save product, then the ids go in list order', async () => {
+        const user = userEvent.setup();
+
+        render(<ProductsEdit {...props()} />);
+
+        const colours = within(screen.getByRole('group', { name: 'Colours' }));
+
+        expect(colours.getByText('White')).toBeInTheDocument();
+        await user.click(colours.getByRole('button', { name: 'Add colour' }));
+
+        // Picked out of the list's order: Light wash, Black, Indigo.
+        const picker = within(
+            screen.getByRole('dialog', { name: 'Choose colours' }),
+        );
+
+        for (const name of ['Light wash', 'Black', 'Indigo']) {
+            const { code } = colourNamed(name);
+
+            await user.click(
+                picker.getByRole('option', { name: `${name}, ${code}` }),
+            );
+        }
+
+        await user.click(picker.getByRole('button', { name: 'Done' }));
+        await user.click(colours.getByRole('button', { name: 'Remove White' }));
+
+        expect(colours.queryByText('White')).toBeNull();
+        expect(
+            colours
+                .getAllByRole('button', { name: /^Remove / })
+                .map((button) => button.getAttribute('aria-label')),
+        ).toEqual(['Remove Black', 'Remove Indigo', 'Remove Light wash']);
+        expect(inertiaMock.submissions).toHaveLength(0);
+
+        await user.click(
+            screen.getAllByRole('button', { name: 'Save product' })[0],
+        );
+
+        expect(inertiaMock.submissions).toHaveLength(1);
+        expect(inertiaMock.submissions[0].data).toMatchObject({
+            colours: ['Black', 'Indigo', 'Light wash'].map(
+                (name) => colourNamed(name).id,
+            ),
         });
     });
 

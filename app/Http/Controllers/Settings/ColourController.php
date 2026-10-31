@@ -29,7 +29,7 @@ final class ColourController extends Controller
 
         return Inertia::render('settings/colours', [
             'colours' => fn (): array => Colour::query()
-                // INV-1-e: ->withCount('products') once `product_colours` exists, and `usage_count` becomes `$colour->products_count`.
+                ->withCount('products')
                 ->ordered()
                 ->get()
                 ->map(fn (Colour $colour): array => [
@@ -38,7 +38,7 @@ final class ColourController extends Controller
                     'name' => $colour->name,
                     'swatch' => $colour->swatch,
                     'position' => $colour->position,
-                    'usage_count' => 0,
+                    'usage_count' => $colour->products_count,
                 ])
                 ->all(),
         ]);

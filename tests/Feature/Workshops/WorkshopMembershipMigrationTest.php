@@ -25,6 +25,7 @@ function workshopsMigration(): Migration
 function rollBackWorkshops(): void
 {
     // Newer migrations that depend on `(workshop_id, id)` (orders) must be rolled back first, and the colours point at `workshops`.
+    productColoursMigration()->down();
     coloursMigration()->down();
     productSizeStocksMigration()->down();
     orderLineSizesMigration()->down();
@@ -45,6 +46,7 @@ function migrateWorkshops(): void
     orderLineSizesMigration()->up();
     productSizeStocksMigration()->up();
     coloursMigration()->up();
+    productColoursMigration()->up();
 }
 
 it('puts every existing account in one workshop, and creates none for an empty database', function (int $accounts, int $workshops) {

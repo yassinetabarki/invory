@@ -6,11 +6,12 @@ namespace App\Services\Products;
 
 use App\Models\ProductCategory;
 use App\Models\SizeList;
+use App\Services\Reference\ReferenceData;
 use Illuminate\Database\Eloquent\Collection;
 
 /**
  * The size lists of the product categories (S-58, ADR-0015), for the screens that show them. The categories come with their list
- * and its sizes, read once per request (kept on the request, like `ReferenceData`): three queries however many times a page asks,
+ * and its sizes, read once per request (kept on the request, like `ReferenceData`, whose category read it shares): two queries beyond that however many times a page asks,
  * which lets the product page and the product form share them.
  */
 final class SizeLists
@@ -85,7 +86,7 @@ final class SizeLists
         $attributes = request()->attributes;
 
         if (! $attributes->has(self::CATEGORIES_ATTRIBUTE)) {
-            $attributes->set(self::CATEGORIES_ATTRIBUTE, ProductCategory::query()->ordered()->with('sizeList.sizes')->get()->keyBy('id'));
+            $attributes->set(self::CATEGORIES_ATTRIBUTE, app(ReferenceData::class)->productCategories()->loadMissing('sizeList.sizes'));
         }
 
         /** @var Collection<int, ProductCategory> */

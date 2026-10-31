@@ -1,6 +1,7 @@
 <?php
 
 use App\Actions\Products\CreateProduct;
+use App\Models\Colour;
 use App\Models\Material;
 use App\Models\Order;
 use App\Models\OrderLine;
@@ -167,6 +168,12 @@ function prepareDemo(TestCase $test): User
     return User::factory()->create();
 }
 
+/** One of the 20 default colours of the current workshop, by code ('WHT' is White, the first). */
+function demoColour(string $code): Colour
+{
+    return Colour::query()->where('code', $code)->firstOrFail();
+}
+
 /** The seeded (or factory-made) material with this SKU. */
 function demoMaterial(string $sku): Material
 {
@@ -262,6 +269,7 @@ function validProductPayload(array $overrides = []): array
         'labor_cost' => '8.5',
         'overhead_cost' => '2',
         'selling_price' => '59.9',
+        'colours' => [demoColour('WHT')->id],
         'components' => [
             ['material_id' => demoMaterial('MAT-DEN-012')->id, 'quantity' => '1.6', 'waste_percent' => '8', 'notes' => 'Body'],
             ['material_id' => demoMaterial('MAT-THR-PES')->id, 'quantity' => '90', 'waste_percent' => '5', 'notes' => 'Seams'],
@@ -508,6 +516,7 @@ function productData(array $overrides = []): array
         'labor_cost' => '12.0000',
         'overhead_cost' => '3.5000',
         'selling_price' => null,
+        'colours' => [demoColour('WHT')->id],
         'components' => [],
         ...$overrides,
     ];
@@ -601,6 +610,16 @@ function orderLineSizesMigration(): Migration
 function productSizeStocksMigration(): Migration
 {
     return require database_path('migrations/2026_10_23_100000_create_product_size_stocks_table.php');
+}
+
+/**
+ * The product colours migration object (INV-1-e): one table that points at the products and the colours, and gives every product that
+ * exists the first colour of its workshop. A test that rolls the products, colours or workshops tables back must roll this one back
+ * first, and bring it back up last.
+ */
+function productColoursMigration(): Migration
+{
+    return require database_path('migrations/2026_10_30_200000_create_product_colours_table.php');
 }
 
 /**

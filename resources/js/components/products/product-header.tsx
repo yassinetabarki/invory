@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { ColourTag } from '@/components/shared/colour-tag';
 import { ProductStatusBadge } from '@/components/shared/product-status-badge';
 import { Badge } from '@/components/ui/badge';
 import type { Product } from '@/types/domain';
@@ -10,6 +11,7 @@ type ProductHeaderProps = {
         | 'sku'
         | 'category_label'
         | 'size_list'
+        | 'colours'
         | 'status'
         | 'status_label'
     >;
@@ -17,7 +19,7 @@ type ProductHeaderProps = {
     actions?: ReactNode;
 };
 
-/** Name as the page title, with SKU, category and status under it. */
+/** Name as the page title, with SKU, category and status under it, then the product's colours. */
 export function ProductHeader({ product, actions }: ProductHeaderProps) {
     return (
         <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -48,6 +50,28 @@ export function ProductHeader({ product, actions }: ProductHeaderProps) {
                         label={product.status_label}
                     />
                 </div>
+                {product.colours.length > 0 && (
+                    <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+                        {/* Screen readers hear one sentence; the swatches and tags are for the eyes. */}
+                        <span className="sr-only">
+                            Colours:{' '}
+                            {product.colours
+                                .map((colour) => colour.name)
+                                .join(', ')}
+                        </span>
+                        <span
+                            aria-hidden="true"
+                            className="flex flex-wrap items-center gap-x-4 gap-y-1"
+                        >
+                            <span className="text-muted-foreground">
+                                Colours
+                            </span>
+                            {product.colours.map((colour) => (
+                                <ColourTag key={colour.id} colour={colour} />
+                            ))}
+                        </span>
+                    </p>
+                )}
             </div>
             {actions && (
                 <div className="flex shrink-0 flex-wrap items-center gap-2">

@@ -41,6 +41,7 @@ function photoProductPayload(array $overrides = []): array
         'status' => 'active',
         'labor_cost' => '1',
         'overhead_cost' => '1',
+        'colours' => [demoColour('WHT')->id],
         ...$overrides,
     ];
 }
@@ -172,6 +173,7 @@ it('adds and removes materials.photo_path with its migration, keeping the rows a
     expect(Schema::hasColumn('materials', 'photo_path'))->toBeTrue();
 
     // Newer migrations that depend on `(workshop_id, id)` (orders) must be rolled back first.
+    productColoursMigration()->down();
     productSizeStocksMigration()->down();
     orderLineSizesMigration()->down();
     cutsMigration()->down();
@@ -191,6 +193,7 @@ it('adds and removes materials.photo_path with its migration, keeping the rows a
     cutsMigration()->up();
     orderLineSizesMigration()->up();
     productSizeStocksMigration()->up();
+    productColoursMigration()->up();
 
     expect(Schema::hasColumn('materials', 'photo_path'))->toBeTrue()
         ->and(DB::table('materials')->where('sku', 'KEEP-1')->value('photo_path'))->toBeNull()

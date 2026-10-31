@@ -9,6 +9,7 @@ export default function ProductsEdit({
     product,
     statuses,
     category_sizes,
+    colours,
 }: ProductEditProps) {
     const reference = useReference();
 
@@ -30,6 +31,7 @@ export default function ProductsEdit({
                     )}
                     statuses={statuses}
                     categorySizes={category_sizes}
+                    colours={colours}
                     action={{
                         url: ProductController.update.url(product.id),
                         method: 'put',

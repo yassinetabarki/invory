@@ -46,11 +46,14 @@ function coloursOfWorkshop(int $workshopId): array
 it('writes the 20 defaults into every workshop that exists, in order, and none into a database without a workshop', function (int $workshops) {
     $ids = Workshop::factory()->count($workshops)->create()->pluck('id')->all();
 
+    // On PostgreSQL `product_colours` points at `colours`, so it goes first and comes back last.
+    productColoursMigration()->down();
     coloursMigration()->down();
 
     expect(Schema::hasTable('colours'))->toBeFalse();
 
     coloursMigration()->up();
+    productColoursMigration()->up();
 
     expect(Colour::query()->count())->toBe(20 * $workshops);
 

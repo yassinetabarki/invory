@@ -74,7 +74,8 @@ tags:
   chips in a row that wraps (swatch, name and a ✕ named "Remove Indigo"), then an outline **Add colour** button with a plus sign;
   screen readers announce the chips' group as "Colours". Add product opens with no colour chosen; Edit Denim Jacket shows "White"
   after INV-1 arrives. Every product needs at least one colour, whatever its status: **Save product** with none saves nothing and shows
-  "Choose at least one colour." under the field, with the focus on **Add colour**. On Edit Denim Jacket, adding Black, Indigo and
+  "Choose at least one colour." under the field, with the focus on **Add colour**; the message goes away as soon as one colour is
+  chosen. On Edit Denim Jacket, adding Black, Indigo and
   Light wash and taking off White with its ✕, then **Save product** (spinner while saving) → toast "Product updated." and the product
   page; a ✕ only takes the colour off the form, nothing is saved before **Save product**. A new product → "Product created.". On a
   phone, one column: the chips wrap two or three to a row and are 44 px tall with a 44 px target for each ✕, **Add colour** sits on
@@ -87,7 +88,8 @@ tags:
   back on **Add colour**. Screen readers hear "Indigo, IND, selected". With 40 colours the list scrolls inside, about 8 rows high, the
   search field stays on top and the focused row is never hidden under the bottom bar. On a phone the list is a sheet over the whole
   screen titled "Choose colours" with ✕ "Close", 44 px rows and a bar fixed at the bottom with "3 chosen" and **Done**; the focus
-  stays inside the sheet, and closing it puts the focus back on **Add colour**. On the product page, a line under the badges row
+  stays inside the sheet, and closing it puts the focus back on **Add colour**. On a laptop, focus starts in Search colours. On a
+  phone, focus starts on the sheet, and the keyboard opens only when you tap Search colours. On the product page, a line under the badges row
   (PRD-JKT-001 · Apparel · Sizes S, M, L, XL · Active) reads grey "Colours", then "■ Black ■ Indigo ■ Light wash", always in the
   list's order whatever order they were picked in (Light wash, Black, Indigo picked → Black, Indigo, Light wash); screen readers hear
   "Colours: Black, Indigo, Light wash". It wraps on a narrow screen and nothing scrolls sideways at 375 or 320 px. Nothing else
@@ -97,7 +99,7 @@ tags:
 
 ## Technical work
 > [!warning] Complex · CRITICAL · backend + frontend · 7 commits
-> Tech-lead · 2026-10-30 · approved 2026-10-30
+> Tech-lead · 2026-10-30 · approved 2026-10-30 · delivered 2026-10-30
 > Why complex: two new tables and a data step on the live database (20 colours per workshop, White for every product), new rules
 > on names and codes, a new Settings page with its routes, and new data in the product's form and page.
 
@@ -445,3 +447,10 @@ Commits INV-1-e and INV-1-f are pushed together: in between, the server asks for
   back first, as S-56 did.
 - A native colour well gives `#rrggbb` in small letters, and people may type the code without "#" → the text field shows it with "#"
   and in capitals; the server does both again before validating.
+
+### Progress (build)
+- 2026-10-30 · build started. Wave 1 (backend INV-1-a, INV-1-b) dispatched. Docker down: parity not run yet.
+- 2026-10-30 · Wave 1 APPROVED in round 1 (INV-1-a, INV-1-b): composer test 2538 passed / 56 skipped, vp test 1334, check, types, build green; parity not run (Docker down). Tech-lead docs for INV-1-a written (skill, ADR-0018, ARCHITECTURE §4). Wave 2 (backend INV-1-e; frontend INV-1-c, INV-1-d and the type-compat lines of INV-1-e) dispatched.
+- 2026-10-30 · Wave 2: INV-1-c and INV-1-d APPROVED in round 1; INV-1-e was cut off mid-way (phpstan red, 195 Pest failures) and finished by a resume brief (Edit product back to 10 queries: one colours read, and the product categories read shared by ReferenceData and SizeLists).
+- 2026-10-30 · Wave 3: INV-1-f and INV-1-g delivered; fix round 1 made the S-08 browser golden path choose a colour. Final gates on the whole tree: composer test 2548 passed / 56 skipped, vp test 1346, check, types, build, browser 3/3 green. PostgreSQL parity NOT run (Docker down). Delivered.
+- 2026-10-31 · Acceptance fix round 1 (approved by the human): the colour window is capped at the screen height with its fields scrolling; the chip ✕ has the full focus ring; long names break anywhere; the colour well is described by the hint and error and has the focus ring; the Preview shows "Name" while the name is empty; the empty list is hidden when nothing matches; on a phone the picker opens with the focus on the sheet; "Choose at least one colour." goes away once a colour is chosen. The picker row contrast is not fixed (INV-6 in TECH-DEBT.md). With Docker up, parity found 19 test-side errors (older migration tests and one test giving a product another workshop's colour); fixed. All gates green, PostgreSQL parity 2604/2604.

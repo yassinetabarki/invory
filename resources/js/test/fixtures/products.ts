@@ -8,6 +8,7 @@
  */
 import { paginate } from '@/test/fixtures';
 import type {
+    Colour,
     MaterialOption,
     MaterialRef,
     Option,
@@ -367,6 +368,14 @@ export const categorySizesFixture: Record<ProductCategory, SizeList> = {
     other: sizeListOneSize,
 };
 
+/** The first colour of every workshop: the one products recorded before colours got (INV-1). */
+const white: Colour = {
+    id: 1,
+    code: 'WHT',
+    name: 'White',
+    swatch: '#FFFFFF',
+};
+
 // ---------------------------------------------------------------------------
 // Products (full)
 // ---------------------------------------------------------------------------
@@ -379,6 +388,7 @@ export const denimJacket: Product = {
     category: 'apparel',
     category_label: 'Apparel',
     size_list: sizeListSToXl,
+    colours: [white],
     status: 'active',
     status_label: 'Active',
     description:
@@ -442,6 +452,7 @@ export const canvasLowSneaker: Product = {
     category: 'footwear',
     category_label: 'Footwear',
     size_list: sizeListEu36To46,
+    colours: [white],
     status: 'active',
     status_label: 'Active',
     description: 'Vulcanised low-top sneaker in natural canvas.',
@@ -512,6 +523,7 @@ export const choreJacket: Product = {
     category: 'apparel',
     category_label: 'Apparel',
     size_list: sizeListSToXl,
+    colours: [white],
     status: 'draft',
     status_label: 'Draft',
     description: null,
