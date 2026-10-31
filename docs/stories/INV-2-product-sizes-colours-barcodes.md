@@ -44,7 +44,8 @@ tags:
   rule of today's sizes, counted over all colours). **A colour with stock can't be taken off a product:** on Edit product, taking
   Indigo (6 units in stock) off the Denim Jacket and clicking **Save product** saves nothing and shows under the Colours field
   "Indigo has 6 units in stock, so it can't be removed from Denim Jacket. Set its stock to 0 first."; if several such colours are
-  taken off at once, each gets its own sentence, one per line in the order of Settings › Colours (Black before Indigo). These
+  taken off at once, each gets its own sentence, one per line in the order of Settings › Colours (Black before Indigo). A count of
+  1,000 or more is written with its thousands separator ("Indigo has 1,000,000 units in stock, so …"), and one unit reads "1 unit". These
   sentences stay until the next **Save product**, or until the colour a sentence names is added back (choosing another colour
   doesn't clear them). A colour at 0 is removed as before; if Indigo is added again later, the product's Indigo count starts at 0.
 - [ ] **AC-2 · The In stock figure and the Sizes & colours card.** With Black 1 · 0 · 2 · 1, Indigo 2 · 0 · 3 · 1 and Light wash 0 ·
@@ -59,7 +60,7 @@ tags:
   - **Sizes & colours** is a full-width card under the three figures, with the heading and the line "3 colours × 4 sizes = 12
     variants. Each variant has its own stock." (other products: "1 colour × 4 sizes = 4 variants", "2 colours × One size = 2
     variants"). On the heading's row: the outline buttons **Manage sizes & colours**, which opens Edit product with the focus on the
-    Colours field, and **Update stock**. Under the heading the stock table. While loading: the frame and heading at once, a
+    Colours field, then **Update stock**, in this order on a laptop and on a phone (INV-3 adds **Restock**, the main button, last). Under the heading the stock table. While loading: the frame and heading at once, a
     placeholder of 3 rows; error: "Couldn't load the stock." with **Try again**.
   - **The stock table** is named "Units in stock per colour and size": **Colour** (swatch and name), one column per size in size
     order (S, M, L, XL; a shoe 36 … 46), **Total**; one row per colour in the order of Settings › Colours, and a last row **Total**
@@ -68,8 +69,8 @@ tags:
     shelf." (not shown when every cell is 0, where every cell is a grey 0). A "One size" product (Leather Tote in Camel and Black)
     has the columns **Colour** and **In stock**, no size columns and no Total column; the Total row stays with two colours or more.
     A shoe's 11 size columns scroll sideways inside the card on a laptop under 1100 px, never the page.
-  - **Phone, 375 px:** the figure sits under Can produce now and its colour line wraps; in the card the buttons **Update stock** and
-    **Manage sizes & colours** are full width, 44 px, one under the other; in place of the table, one card per colour ("■ Indigo · 6
+  - **Phone, 375 px:** the figure sits under Can produce now and its colour line wraps; in the card the buttons **Manage sizes & colours**
+    and **Update stock** are full width, 44 px, one under the other, in that order (the order the keyboard follows); in place of the table, one card per colour ("■ Indigo · 6
     units" with the chips [S 2] [M 0] [L 3] [XL 1], zeros kept and grey), then a **Total** card "10 units" with the size totals as
     chips; nothing scrolls sideways at 320 px.
 - [ ] **AC-3 · Update stock, per colour.** **Update stock** in the card opens "Update stock · Denim Jacket" with the line "Finished
@@ -77,18 +78,20 @@ tags:
   "Close".
   - **Colour** pills (swatch, name, and the colour's total after saving in grey: "Black 4", "Indigo 6", "Light wash 0"), the first
     colour chosen when the window opens. A colour with a changed size gets a small dot that screen readers hear as "changed"
-    ("Indigo, 10, changed").
+    ("Indigo, 10, changed"). **A product with only one colour has no pills**: its fields show at once under the fieldset
+    "Units in stock per size · White", which still names the colour.
   - The fieldset "Units in stock per size · Indigo" holds one field per size (today's size fields) with today's count, 2 · 0 · 3 · 1,
     and "was 0" under a changed size. Switching pills keeps what was typed in every colour.
   - A grey band "Total after saving, all colours" **10 units**, following what is typed in every colour; the note "Doesn't change
-    materials, "Can produce now" or sales.". Indigo M from 0 to 4 → "was 0" under M, a dot on Indigo, the pill "Indigo 10", the
+    materials, "Can produce now" or sales.". With one colour the band reads "Total after saving". Indigo M from 0 to 4 → "was 0" under M, a dot on Indigo, the pill "Indigo 10", the
     total "14 units".
   - Buttons **Cancel** and **Save**. **Save** shows a spinner, saves every colour at once (the last save wins), shows "Stock
     updated.", closes the window and puts the focus back on **Update stock**; the card and the In stock figure show the new counts.
     No history entry is written.
   - Errors: a wrong number shows under its size "M: Enter a whole number from 0 to 1,000,000."; when it is in another colour, that
     pill shows "1 error" in red text, the top of the window reads "Check Black: 1 size can't be saved.", and the window switches
-    to the first colour with an error and puts the focus on its field. If the product's sizes or colours changed meanwhile, the top
+    to the first colour with an error and puts the focus on its field. With one colour there is no pill and no "Check …" line: the
+    message under the size is the only one, and that field takes the focus. If the product's sizes or colours changed meanwhile, the top
     reads "The sizes or colours of Denim Jacket have changed. Enter the stock again.", the fields show the new colours and sizes
     with their counts, and nothing is saved. A failed save shows "Couldn't save the stock. Try again." and keeps what was typed in
     every colour.
@@ -101,7 +104,7 @@ tags:
 
 ## Technical work
 > [!warning] Complex · CRITICAL · backend + frontend · 4 commits
-> Tech-lead · 2026-10-31 · approved 2026-10-31
+> Tech-lead · 2026-10-31 · approved 2026-10-31 · delivered 2026-10-31
 > Why complex: the finished stock table changes shape and its data moves on the live database, a new rule guards a product's
 > colours, and the data the product page receives and the "Update stock" save both change.
 
@@ -282,7 +285,8 @@ pushed together: in between, the old window sends a per-size count the server no
 - `PUT products/{product}/stock` (`products.stock.update`): body `stock: Record<colourId, Record<sizeId, number | ''>>`, every colour
   and every size of the product; errors on `stock.{colourId}.{sizeId}` (the size's message) and on `stock` (sizes or colours changed);
   success → back, toast "Stock updated.".
-- `products.update`: the colour lock's messages on `colours` (one per colour taken off with stock, in list order).
+- `products.update`: the colour lock's messages on `colours.removed.{colourId}` (one per colour taken off with stock, in list order;
+  refined at dispatch, see Decisions).
 - `products.edit#colours`: the fragment that focuses the Colours field (frontend only).
 
 `resources/js/types/domain.ts`:
@@ -309,6 +313,19 @@ export type FinishedStockColour = {
 - **Totals come from the server** (per colour, per size, all): the screens add nothing up, except the window's "Total after saving"
   of the whole numbers being typed, as S-56 already does.
 - **"Manage sizes & colours" uses `#colours` on Edit product**, a frontend-only link, so no route changes.
+- **Each lock sentence has its own error key, `colours.removed.{colourId}`** (decided at dispatch, 2026-10-31). Inertia shares only the
+  first message of a key, so several sentences on `colours` would arrive as one; a key per colour also tells the form which sentence
+  to drop when that colour is added back. `colours.removed.…` can't clash with the index keys (`colours.0`) of the per-id rules.
+
+### Progress
+- 2026-10-31 · Wave 1 dispatched: backend INV-2-a then INV-2-b, frontend INV-2-c. Docker down at dispatch: parity not run yet.
+- 2026-10-31 · Wave 1 reviewed green; wave 2 (INV-2-d, plus the Colours field's one-sentence-per-line follow-up of INV-2-c) reviewed
+  green; browser golden path green. Remaining: the PostgreSQL parity suite (Docker down all day).
+- 2026-10-31 · Fix round after acceptance (the human's and the product-owner's answers): one colour in Update stock, the card's button
+  order, the skeleton order, the table's tab stop, the pill edge, Try again while reloading, thousands in the lock sentence. All gates
+  and the browser golden path green; parity still not run (Docker down).
+- 2026-10-31 · Parity: the first run found a test bug in the migration test (two keys to `products` on PostgreSQL); fixed, the
+  parity suite then passed in full (2619 tests) and `composer test` stayed green.
 
 ### Order
 Wave 1, in parallel: backend INV-2-a, then INV-2-b (one developer) · frontend INV-2-c (against the frozen contract; it compiles once

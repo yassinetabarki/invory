@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Models\ProductCategory;
 use App\Models\User;
 use App\Services\Photos\PhotoStorage;
+use App\Services\Products\ProductColourLock;
 use App\Services\Products\ProductSizeLock;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
@@ -21,6 +22,7 @@ final readonly class UpdateProduct
         private SyncProductColours $syncColours,
         private PhotoStorage $photos,
         private ProductSizeLock $sizeLock,
+        private ProductColourLock $colourLock,
     ) {}
 
     /**
@@ -36,7 +38,11 @@ final readonly class UpdateProduct
     public function handle(Product $product, array $data, User $actor): Product
     {
         return $this->photos->persist('products', $data, $product->photo_path, fn (array $attributes, array $photo): Product => DB::transaction(function () use ($product, $attributes, $photo, $actor): Product {
-            $this->guardSizes($product, $attributes['category'] ?? null);
+            // The product's row lock, once for both locks below and for the writes after them (ADR-0017 decision 4).
+            $locked = Product::query()->with('category')->lockForUpdate()->findOrFail($product->id);
+
+            $this->guardSizes($locked, $attributes['category'] ?? null);
+            $this->guardColours($locked, $attributes['colours'] ?? null);
 
             $product->fill($this->resolveCategory->handle(Arr::except($attributes, ['components', 'colours'])))->forceFill($photo);
             $product->updated_by = $actor->id;
@@ -54,20 +60,41 @@ final readonly class UpdateProduct
     }
 
     /**
-     * S-58 / AC-4, the second check: under the product's row lock, so the category it has now is the one compared. Throwing here
-     * rolls the transaction back and `PhotoStorage` deletes the file it stored for this save.
+     * S-58 / AC-4, the second check: under the product's row lock (`$locked`), so the category it has now is the one compared.
+     * Throwing here rolls the transaction back and `PhotoStorage` deletes the file it stored for this save.
      */
-    private function guardSizes(Product $product, mixed $categoryCode): void
+    private function guardSizes(Product $locked, mixed $categoryCode): void
     {
         if ($categoryCode === null) {
             return;
         }
 
-        $locked = Product::query()->with('category')->lockForUpdate()->findOrFail($product->id);
         $refusal = $this->sizeLock->refusal($locked, ProductCategory::query()->where('code', $categoryCode)->firstOrFail());
 
         if ($refusal !== null) {
             throw ValidationException::withMessages(['category' => $refusal]);
+        }
+    }
+
+    /**
+     * INV-2-b, the second check: under the same lock, before the colours are synced, so a stock update and a colour change never pass
+     * each other. One sentence per colour taken off that still has stock, on `colours.removed.{colourId}`, as the request puts them.
+     *
+     * @param  array<int|string, mixed>|null  $colourIds  the colours the product keeps; null when the input carries none (they are left alone)
+     */
+    private function guardColours(Product $locked, ?array $colourIds): void
+    {
+        if ($colourIds === null) {
+            return;
+        }
+
+        $refusals = $this->colourLock->refusals($locked, array_values(array_map(fn (mixed $id): int => (int) (is_scalar($id) ? $id : 0), $colourIds)));
+
+        if ($refusals !== []) {
+            throw ValidationException::withMessages(array_combine(
+                array_map(fn (int $colourId): string => "colours.removed.{$colourId}", array_keys($refusals)),
+                $refusals,
+            ));
         }
     }
 }

@@ -208,8 +208,18 @@ export type SizeList = {
 
 /** Finished units of a product on the shelf in one size (S-56). */
 export type FinishedStockSize = { size: Size; units: number };
-/** Every size of the product's list, in order, 0 included; `units` is their sum. */
-export type FinishedStock = { units: number; sizes: FinishedStockSize[] };
+/** One colour of a product with its finished units per size (INV-2). */
+export type FinishedStockColour = {
+    colour: Colour;
+    units: number; // the colour's total
+    sizes: FinishedStockSize[]; // every size of the list, in order, 0 included
+};
+/** Every size of the product's list, in order, 0 included; `units` is their sum. INV-2: `colours` is every colour of the product, in list order, 0 included; `units` and `sizes` are the totals over every colour. */
+export type FinishedStock = {
+    units: number;
+    sizes: FinishedStockSize[];
+    colours: FinishedStockColour[];
+};
 
 export type Product = {
     id: number;

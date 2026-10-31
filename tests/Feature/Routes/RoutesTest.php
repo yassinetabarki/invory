@@ -229,7 +229,7 @@ it('sends an invalid write back to where it came from, with its errors', functio
 })->with([
     'products.store' => ['post', 'products.store', null, ['sku', 'name', 'category', 'status', 'labor_cost']], // overhead_cost is optional (S-43)
     'products.update' => ['put', 'products.update', 'product', ['sku', 'name', 'category', 'status', 'labor_cost']], // overhead_cost is optional (S-43)
-    'products.stock.update' => ['put', 'products.stock.update', 'product', ['sizes']],
+    'products.stock.update' => ['put', 'products.stock.update', 'product', ['stock']],
     'sales.store' => ['post', 'sales.store', null, ['product_id', 'quantity', 'unit_price', 'sold_on']],
     'sales.update' => ['put', 'sales.update', 'sale', ['product_id', 'quantity', 'unit_price', 'sold_on']],
     'orders.store' => ['post', 'orders.store', null, ['client', 'ordered_on', 'lines']],

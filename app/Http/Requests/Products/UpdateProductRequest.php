@@ -6,6 +6,7 @@ namespace App\Http\Requests\Products;
 
 use App\Models\Product;
 use App\Models\ProductCategory;
+use App\Services\Products\ProductColourLock;
 use App\Services\Products\ProductSizeLock;
 use Illuminate\Auth\Access\Response;
 use Illuminate\Foundation\Http\FormRequest;
@@ -54,11 +55,15 @@ class UpdateProductRequest extends FormRequest
      * S-58 / AC-4: a product on an order keeps the sizes of its category. The error sits on `category`, next to any other field
      * errors; it is checked only when the category itself passed (`UpdateProduct` checks again under the row lock).
      *
+     * INV-2-b: a colour with units in stock stays on the product. Each colour taken off that still has stock gets its own sentence on
+     * `colours.removed.{colourId}` (Inertia shares only the first message of a key), in list order; it is checked only when the
+     * colours themselves passed (`UpdateProduct` checks again under the row lock).
+     *
      * @return list<callable(Validator): void>
      */
     public function after(): array
     {
-        return [function (Validator $validator): void {
+        return [$this->colourLock(...), function (Validator $validator): void {
             $product = $this->route('product');
             $code = $this->input('category');
 
@@ -73,5 +78,20 @@ class UpdateProductRequest extends FormRequest
                 $validator->errors()->add('category', $refusal);
             }
         }];
+    }
+
+    private function colourLock(Validator $validator): void
+    {
+        $product = $this->route('product');
+
+        if (! $product instanceof Product || ! $this->has('colours') || $validator->errors()->hasAny(['colours', 'colours.*'])) {
+            return;
+        }
+
+        $kept = array_values(array_map(fn (mixed $id): int => (int) (is_scalar($id) ? $id : 0), $this->array('colours')));
+
+        foreach (app(ProductColourLock::class)->refusals($product, $kept) as $colourId => $refusal) {
+            $validator->errors()->add("colours.removed.{$colourId}", $refusal);
+        }
     }
 }

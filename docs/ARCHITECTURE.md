@@ -98,6 +98,8 @@ code testable and ready to scale.
                            │ (one Start cutting)│          │ (per unit + taken)   │
                            └────────────────────┘          └──────────────────────┘
 ```
+Status (2026-10-31): INV-2 counts the finished units per colour and size: each `product_size_stocks` row names a colour too
+(ADR-0019); a colour with stock can't be taken off its product.
 Status (2026-10-23): S-56 keeps the finished units of a product on the shelf, per size, in `product_size_stocks` (ADR-0017); nothing
 but "Update stock" (and, from S-57, a cancelled order) changes them, and no figure reads them.
 Status (2026-10-22): S-60 and S-61 count every order line by size: one `order_line_sizes` row per size ordered, the line keeping the
@@ -268,20 +270,23 @@ units (re-checked under the order row lock). A line keeps its product when that 
 Only `MoveOrderLineUnits` changes the counts; only its `start_cutting` and `back_to_start` touch `materials` and `stock_movements`
 (ADR-0014). Orders never touch `sales`.
 
-### `product_size_stocks` (S-56, [ADR-0017](adr/0017-finished-stock-per-size.md))
+### `product_size_stocks` (S-56, [ADR-0017](adr/0017-finished-stock-per-size.md); per colour since INV-2, [ADR-0019](adr/0019-finished-stock-per-colour-and-size.md))
 
-| Column      | Type             | Rules                                                                                   |
-| ----------- | ---------------- | --------------------------------------------------------------------------------------- |
-| id          | bigint PK        |                                                                                         |
-| workshop_id | FK → workshops   | the product's workshop (composite FK to `products` on PostgreSQL)                       |
-| product_id  | FK → products    | `cascadeOnDelete` (fires only on a hard delete: products are soft-deleted)              |
-| size_id     | FK → sizes       | `restrictOnDelete`, indexed; a size of the product's category list                      |
-| units       | unsigned integer | finished units on the shelf in this size, at least 1 (CHECK `units >= 1` on PostgreSQL) |
-| timestamps  |                  |                                                                                         |
+| Column      | Type             | Rules                                                                                                                             |
+| ----------- | ---------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| id          | bigint PK        |                                                                                                                                   |
+| workshop_id | FK → workshops   | the product's workshop (composite FK to `products` on PostgreSQL)                                                                 |
+| product_id  | FK → products    | `cascadeOnDelete` (fires only on a hard delete: products are soft-deleted)                                                        |
+| colour_id   | FK → colours     | `restrictOnDelete`, indexed; a colour of the product (composite FK (`product_id`, `colour_id`) → `product_colours` on PostgreSQL) |
+| size_id     | FK → sizes       | `restrictOnDelete`, indexed; a size of the product's category list                                                                |
+| units       | unsigned integer | finished units on the shelf in this colour and size, at least 1 (CHECK `units >= 1` on PostgreSQL)                                |
+| timestamps  |                  |                                                                                                                                   |
 
-Constraints: `unique(product_id, size_id)`. A row exists only while its size holds at least one unit, so "nothing in stock" is no rows
-and the category lock is one `exists`. No upper bound in the database: 1,000,000 per size is the input rule of "Update stock".
-`App\Services\Products\FinishedStock` is the only reader (every size of the list, in order, 0 included, and the total); the product
+Constraints: `unique(product_id, colour_id, size_id)`. A row exists only while its variant (colour and size) holds at least one unit, so
+"nothing in stock" is no rows, and the category lock and the colour lock (`ProductColourLock`) are one read each. No upper bound in
+the database: 1,000,000 per variant is the input rule of "Update stock".
+`App\Services\Products\FinishedStock` is the only reader (every colour of the product × every size of the list, in order, 0 included,
+with the per-colour, per-size and grand totals); the product
 page gets it as `finished_stock`, a deferred prop in its own group `stock`, rescued. Whole units only: it never reaches
 `App\Domain\Costing`, the products list, sales or the dashboard. Every writer takes the product's row lock first.
 

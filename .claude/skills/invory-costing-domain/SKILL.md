@@ -36,8 +36,9 @@ If a rule here is wrong or incomplete, stop and ask the tech-lead to update it (
 | Order line size | One size of an order line: the units ordered in that size and its stage counts (In cutting, Ready to ship, Shipped; To start derived). Only sizes ordered have one. The line's quantity and stage counts are the sums of its sizes. A line recorded before sizes holds one "One size" row (S-60, S-61, ADR-0016) | `OrderLineSize` / `order_line_sizes`, `OrderLineSizeMode` |
 | Size list | The fixed sizes of a product category, in order, with the name the screens show: "S, M, L, XL" (Apparel), "36 to 46" (Footwear), "One size" (every other category). Installation-wide; no screen edits them (S-58, ADR-0015) | `SizeList` / `size_lists` |
 | Size | One size of a size list ("S", "36", "One size"). A product has every size of its category; later stories count orders, production and finished stock by size id | `Size` / `sizes` |
-| Finished stock | The finished units of a product on the shelf, counted per size of its list. Set by "Update stock" (a count, not a plus or minus; the last save wins); S-57 adds cancelled units. Never changes "Can produce now", the unit cost, the materials, sales, orders or the Inventory value (S-56, ADR-0017) | `ProductSizeStock` / `product_size_stocks`, `FinishedStock` |
+| Finished stock | The finished units of a product on the shelf, counted per colour and size (per size before INV-2). Set by "Update stock" (a count, not a plus or minus; the last save wins); S-57 adds cancelled units. Never changes "Can produce now", the unit cost, the materials, sales, orders or the Inventory value (S-56, ADR-0017) | `ProductSizeStock` / `product_size_stocks`, `FinishedStock` |
 | Colour | One colour of the workshop's list: a name (at most 32 characters, unique in the workshop ignoring capitals), a code (2 to 4 capitals or digits, unique in the workshop, never changed; INV-2 builds variant SKUs from it), a swatch (`#RRGGBB`, capitals) and a position. Never removed. Every workshop starts with 20 defaults. A product has at least one colour, from its own workshop (INV-1, ADR-0018) | `Colour` / `colours`, `product_colours` |
+| Variant | One colour of a product in one size ("the Denim Jacket in Indigo, size M"). Not stored on its own: a product, a colour and a size, with its own finished stock (INV-2, ADR-0019) | product id + colour id + size id |
 | Workshop | The business account. Every user belongs to one; every material, product, composition, stock movement, sale, order, order line, photo, unit, category and colour belongs to one | `Workshop` / `workshops`, `workshop_id` |
 
 ## Workshops (added 2026-10-14, D-9, ADR-0013)
@@ -301,6 +302,31 @@ update_stock(P, n_z)  : finished(P, z)' = n_z for every size z of sizes(P)     n
 Worked example: Denim Jacket S 3 · M 0 · L 5 · XL 2 → "In stock 10 units"; M set to 4 → 14 units, "Can produce now" still 112, unit cost
 still TND 35.754. Leather Tote ("One size") with 4 → "In stock 4 units".
 
+### Finished stock per colour (added 2026-10-31, INV-2, ADR-0019; amends "Finished stock")
+
+```
+finished(P, c, z)     = the units of product P on the shelf in colour c and size z      (whole units ≥ 0; a row only while ≥ 1)
+in_stock(P, c)        = Σ finished(P, c, z) over every size z of sizes(P)
+in_stock(P, z)        = Σ finished(P, c, z) over every colour c of colours(P)
+in_stock(P)           = Σ in_stock(P, c)                                                (shown with every colour and size, 0 included)
+update_stock(P, n_cz) : finished(P, c, z)' = n_cz for every colour c of colours(P) and size z of sizes(P), in one save
+variants(P)           = |colours(P)| × |sizes(P)|
+```
+- **Moved in at INV-2:** the units a product had per size went into its first colour (list order); its other colours start at 0. There
+  is no "No colour" stock.
+- **Update stock** saves every colour at once (the last save wins): "<size>: Enter a whole number from 0 to 1,000,000." under a size;
+  if the product's colours or sizes no longer match what was submitted, "The sizes or colours of <product> have changed. Enter the stock
+  again." and nothing is saved. No history entry.
+- **A colour with stock stays on its product:** taking it off on Edit product saves nothing and reads "<colour> has N units in stock, so
+  it can't be removed from <product>. Set its stock to 0 first." ("1 unit" for one), one sentence per such colour in list order. A
+  colour at 0 comes off as before; added back later, it starts at 0.
+- The category lock counts a unit in any colour; deleting a product deletes every colour's stock; every writer takes the product's row
+  lock first. **Changes no figure**, as before: costing, "Can produce now" (every colour uses the same composition), sales, orders and
+  the dashboard.
+
+Worked example: Black S 1 · M 0 · L 2 · XL 1, Indigo 2 · 0 · 3 · 1, Light wash 0 → Black 4, Indigo 6, Light wash 0, sizes 3 · 0 · 5 · 2,
+"In stock 10 units", 3 colours × 4 sizes = 12 variants. Indigo M from 0 to 4 → Indigo 10, 14 units; "Can produce now" still 112.
+
 ### Colours (added 2026-10-30, INV-1, ADR-0018)
 
 ```
@@ -315,8 +341,8 @@ used_by(c)            = number of non-deleted products with colour c, any status
   ones get them at sign-up. Renaming a colour in one workshop changes nothing in another; two workshops may each have IND.
 - **A colour is never removed** (no delete, archive or restore). Its name, swatch and position can change; its **code never does**.
 - **Every product has at least one colour** ("Choose at least one colour."), whatever its status. Products recorded before INV-1 got
-  their workshop's first colour (White). A colour with units in stock can't be taken off a product: that rule comes with stock per
-  colour (INV-2); INV-1 has no stock check.
+  their workshop's first colour (White). A colour with units in stock can't be taken off a product (INV-2, see
+  "Finished stock per colour").
 - **Colours change no figure:** unit cost, "Can produce now", the bottleneck, next limit, margin, finished stock, orders, sales and the
   dashboard are as before.
 - The materials' "Colour" field stays free text ("Antique brass"); it is not a colour of this list.
@@ -431,3 +457,5 @@ Variant checks:
   stock reason of `ProductSizeLock::refusal()`.
 - Added 2026-10-30 (INV-1, ADR-0018): `AppModelsColour`, `Product::colours()`, `AppActionsColoursCreateDefaultColours` (the 20,
   for new workshops), `CreateColour` / `UpdateColour`, `AppActionsProductsSyncProductColours`, `ColourResource`.
+- Added 2026-10-31 (INV-2, ADR-0019): `colour_id` on `ProductSizeStock`, `FinishedStock::of()` per colour (`FinishedStockLevel::$colours`),
+  `UpdateFinishedStock` (`stock[colourId][sizeId]`), `App\Services\Products\ProductColourLock` (the colour lock).

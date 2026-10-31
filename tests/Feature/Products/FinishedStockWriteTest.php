@@ -1,6 +1,7 @@
 <?php
 
 use App\Actions\Products\UpdateFinishedStock;
+use App\Models\Colour;
 use App\Models\Material;
 use App\Models\Product;
 use App\Models\ProductCategory;
@@ -16,112 +17,178 @@ use function Pest\Laravel\actingAs;
 
 /*
 |--------------------------------------------------------------------------
-| "Update stock": saving a count per size (S-56-c, AC-2, AC-3)
+| "Update stock": saving a count per colour and size (S-56-c, INV-2-a, AC-1, AC-3)
 |--------------------------------------------------------------------------
 |
-| `PUT products/{product}/stock` sets the finished units of the Denim Jacket (Apparel: S, M, L, XL) and writes nothing else. The demo
-| products are in the database; a factory product pins its category (F-68).
+| `PUT products/{product}/stock` sets the finished units of the Denim Jacket (Apparel: S, M, L, XL) in each of its colours, White and
+| Indigo here, and writes nothing else. The demo products are in the database; a factory product pins its category (F-68).
 */
 
 const STOCK_UPDATED_TOAST = ['type' => 'success', 'message' => 'Stock updated.'];
-const SIZES_CHANGED = 'The sizes of Denim Jacket have changed. Enter the stock again.';
+const STOCK_CHANGED = 'The sizes or colours of Denim Jacket have changed. Enter the stock again.';
 const WHOLE_NUMBER = 'Enter a whole number from 0 to 1,000,000.';
 
 beforeEach(function () {
     $this->user = prepareDemo($this);
     $this->jacket = demoProduct('PRD-JKT-001');
+    $this->jacket->colours()->attach(demoColour('IND')->id, ['workshop_id' => $this->jacket->workshop_id]);
 });
 
-/** The stock rows of a product as `['S' => 3, 'L' => 5]` (sizes without a row are left out). */
-function shelfOf(Product $product): array
+/**
+ * The body of the window: colour NAME → size label → what was typed, as `stock[colourId][sizeId]`.
+ *
+ * @param  array<string, array<string, int|string>>  $byColour
+ * @return array<int, array<int, int|string|null>>
+ */
+function stockBody(array $byColour, string $list = SizeList::S_TO_XL): array
 {
-    return ProductSizeStock::query()->where('product_id', $product->id)->with('size')->get()
-        ->mapWithKeys(fn (ProductSizeStock $row): array => [$row->size->label => $row->units])->all();
+    $body = [];
+
+    foreach ($byColour as $name => $bySize) {
+        $body[Colour::query()->where('name', $name)->value('id')] = sizeIds($bySize, $list);
+    }
+
+    return $body;
 }
 
-/** Puts finished units on the shelf, `['S' => 3]`, straight in the table. */
-function stockShelf(Product $product, array $byLabel, string $list = SizeList::S_TO_XL): void
+/** The stock rows of a product as `['White' => ['S' => 3, 'L' => 5]]` (sizes without a row are left out). */
+function shelfOf(Product $product): array
+{
+    $shelf = [];
+
+    foreach (ProductSizeStock::query()->where('product_id', $product->id)->with(['size', 'colour'])->orderBy('id')->get() as $row) {
+        $shelf[$row->colour->name][$row->size->label] = $row->units;
+    }
+
+    return $shelf;
+}
+
+/** Puts finished units on the shelf, `['S' => 3]`, straight in the table: in White unless a colour code is named. */
+function stockShelf(Product $product, array $byLabel, string $list = SizeList::S_TO_XL, string $colour = 'WHT'): void
 {
     foreach (sizeIds($byLabel, $list) as $sizeId => $units) {
-        ProductSizeStock::factory()->create(['product_id' => $product->id, 'size_id' => $sizeId, 'units' => $units]);
+        ProductSizeStock::factory()->create(['product_id' => $product->id, 'colour_id' => demoColour($colour)->id, 'size_id' => $sizeId, 'units' => $units]);
     }
 }
 
-it('sets the count of every size, and a size set to 0 has no row (AC-2)', function () {
+it('sets the count of every colour and size at once; empty counts as 0 and a size at 0 has no row (AC-3)', function () {
+    stockShelf($this->jacket, ['S' => 3, 'L' => 5, 'XL' => 2]);
+    $updatedAt = $this->jacket->fresh()->updated_at;
+
+    // Indigo M from 0 to 4: 14 units in all.
     actingAs($this->user)
-        ->put(route('products.stock.update', $this->jacket), ['sizes' => sizeIds(['S' => '3', 'M' => '4', 'L' => '5', 'XL' => '2'])])
+        ->put(route('products.stock.update', $this->jacket), ['stock' => stockBody([
+            'White' => ['S' => '3', 'M' => '0', 'L' => '5', 'XL' => '2'],
+            'Indigo' => ['S' => '0', 'M' => '4', 'L' => '0', 'XL' => '0'],
+        ])])
         ->assertRedirect(route('products.show', $this->jacket))
         ->assertSessionHasNoErrors()
         ->assertInertiaFlash('toast', STOCK_UPDATED_TOAST);
 
-    expect(shelfOf($this->jacket))->toBe(['S' => 3, 'M' => 4, 'L' => 5, 'XL' => 2])
+    expect(shelfOf($this->jacket))->toBe(['White' => ['S' => 3, 'L' => 5, 'XL' => 2], 'Indigo' => ['M' => 4]])
         ->and(app(FinishedStock::class)->of($this->jacket)->units)->toBe(14);
 
+    // An empty field is 0: White L and Indigo M go, the rest is as typed.
     actingAs($this->user)
-        ->put(route('products.stock.update', $this->jacket), ['sizes' => sizeIds(['S' => '3', 'M' => '0', 'L' => '5', 'XL' => '2'])])
-        ->assertRedirect(route('products.show', $this->jacket));
-
-    expect(shelfOf($this->jacket))->toBe(['S' => 3, 'L' => 5, 'XL' => 2]);
-});
-
-it('counts a size left empty as 0 (AC-2)', function () {
-    stockShelf($this->jacket, ['M' => 6]);
-
-    actingAs($this->user)
-        ->put(route('products.stock.update', $this->jacket), ['sizes' => sizeIds(['S' => '3', 'M' => '', 'L' => '5', 'XL' => '2'])])
+        ->put(route('products.stock.update', $this->jacket), ['stock' => stockBody([
+            'White' => ['S' => '3', 'M' => '', 'L' => '', 'XL' => '2'],
+            'Indigo' => ['S' => '1', 'M' => '', 'L' => '', 'XL' => ''],
+        ])])
         ->assertRedirect(route('products.show', $this->jacket))
         ->assertSessionHasNoErrors();
 
-    expect(shelfOf($this->jacket))->toBe(['S' => 3, 'L' => 5, 'XL' => 2])
-        ->and(app(FinishedStock::class)->of($this->jacket)->units)->toBe(10);
+    expect(shelfOf($this->jacket))->toBe(['White' => ['S' => 3, 'XL' => 2], 'Indigo' => ['S' => 1]])
+        ->and(app(FinishedStock::class)->of($this->jacket)->units)->toBe(6)
+        ->and($this->jacket->fresh()->updated_at->equalTo($updatedAt))->toBeTrue();
 });
 
-it('refuses a bad count or the wrong sizes with one message and saves nothing (AC-2)', function (string $case, string $key, string $message) {
+it('refuses a bad count with the message of its size on its own colour and size, and saves nothing (AC-3)', function (string $typed, string $sku, string $message) {
     stockShelf($this->jacket, ['S' => 3, 'L' => 5, 'XL' => 2]);
     $before = ProductSizeStock::query()->orderBy('id')->get()->toArray();
-    $sizes = sizeIds(['S' => '3', 'M' => '0', 'L' => '5', 'XL' => '2']);
-    $medium = array_key_first(sizeIds(['M' => '']));
-    $product = $this->jacket;
-
-    // The shoe row types a letter in size 36 of the sneaker, whose list is 36 to 46: `{M}` then stands for that size.
-    if ($case === 'shoe letters') {
-        $product = demoProduct('PRD-SNK-003');
-        $sizes = array_map(fn (): string => '1', sizeIds(array_fill_keys(range(36, 46), ''), SizeList::EU_36_TO_46));
-        $medium = array_key_first(sizeIds(['36' => ''], SizeList::EU_36_TO_46));
-        $sizes[$medium] = 'x';
-    }
-
-    $sizes = match ($case) {
-        'shoe size added' => $sizes + sizeIds(['36' => '1'], SizeList::EU_36_TO_46),
-        'XL missing' => array_diff_key($sizes, sizeIds(['XL' => ''])),
-        'shoe letters' => $sizes,
-        default => [$medium => $case] + $sizes,
-    };
+    $product = demoProduct($sku);
+    $isJacket = $product->is($this->jacket);
+    $list = $isJacket ? SizeList::S_TO_XL : SizeList::EU_36_TO_46;
+    $sizeId = array_key_first(sizeIds([$isJacket ? 'M' : '36' => ''], $list));
+    $body = $isJacket
+        ? stockBody(['White' => ['S' => '3', 'M' => '0', 'L' => '5', 'XL' => '2'], 'Indigo' => ['S' => '0', 'M' => '0', 'L' => '0', 'XL' => '0']])
+        : stockBody(['White' => array_fill_keys(range(36, 46), '1')], $list);
+    $colourId = array_key_last($body);
+    $body[$colourId][$sizeId] = $typed;
 
     actingAs($this->user)
         ->from(route('products.show', $product))
-        ->put(route('products.stock.update', $product), ['sizes' => $sizes])
+        ->put(route('products.stock.update', $product), ['stock' => $body])
         ->assertRedirect(route('products.show', $product))
         ->assertInertiaFlashMissing('toast');
 
-    $key = str_replace('{M}', (string) $medium, $key);
-
-    expect(session('errors')->keys())->toBe([$key])
-        ->and(session('errors')->get($key))->toBe([$message])
+    expect(session('errors')->keys())->toBe(["stock.{$colourId}.{$sizeId}"])
+        ->and(session('errors')->get("stock.{$colourId}.{$sizeId}"))->toBe([$message])
         ->and(ProductSizeStock::query()->orderBy('id')->get()->toArray())->toBe($before);
 })->with([
-    'negative' => ['-1', 'sizes.{M}', 'M: '.WHOLE_NUMBER],
-    'decimal' => ['2.5', 'sizes.{M}', 'M: '.WHOLE_NUMBER],
-    'letters' => ['abc', 'sizes.{M}', 'M: '.WHOLE_NUMBER],
-    'above a million' => ['1000001', 'sizes.{M}', 'M: '.WHOLE_NUMBER],
-    'a shoe size is named "Size 36"' => ['shoe letters', 'sizes.{M}', 'Size 36: '.WHOLE_NUMBER],
-    'a size of the shoe list added' => ['shoe size added', 'sizes', SIZES_CHANGED],
-    'a size missing' => ['XL missing', 'sizes', SIZES_CHANGED],
+    'negative' => ['-1', 'PRD-JKT-001', 'M: '.WHOLE_NUMBER],
+    'decimal' => ['2.5', 'PRD-JKT-001', 'M: '.WHOLE_NUMBER],
+    'letters' => ['x', 'PRD-JKT-001', 'M: '.WHOLE_NUMBER],
+    'above a million' => ['1000001', 'PRD-JKT-001', 'M: '.WHOLE_NUMBER],
+    'a shoe size is named "Size 36"' => ['x', 'PRD-SNK-003', 'Size 36: '.WHOLE_NUMBER],
 ]);
 
-it('deletes the finished stock of a product with the product, and nothing else (human decision 2026-10-23)', function () {
+it('refuses colours or sizes that are not exactly the product\'s with one message on stock, and saves nothing (AC-3)', function (string $case) {
+    stockShelf($this->jacket, ['S' => 3, 'L' => 5, 'XL' => 2]);
+    $before = ProductSizeStock::query()->orderBy('id')->get()->toArray();
+    $white = ['S' => '3', 'M' => '0', 'L' => '5', 'XL' => '2'];
+    $indigo = ['S' => '0', 'M' => '4', 'L' => '0', 'XL' => '0'];
+    $foreignIndigo = CurrentWorkshop::run(Workshop::factory()->create(), fn (): int => Colour::query()->where('code', 'IND')->value('id'));
+    $attachBlack = fn () => $this->jacket->colours()->attach(demoColour('BLK')->id, ['workshop_id' => $this->jacket->workshop_id]);
+
+    $body = match ($case) {
+        'a colour missing' => stockBody(['White' => $white]),
+        // The window was opened before Black was added to the product.
+        'a colour added to the product since' => tap(stockBody(['White' => $white, 'Indigo' => $indigo]), $attachBlack),
+        'a colour the product does not have' => stockBody(['White' => $white, 'Indigo' => $indigo, 'Black' => $indigo]),
+        'a colour of another workshop' => stockBody(['White' => $white]) + [$foreignIndigo => sizeIds($indigo)],
+        'a size missing' => stockBody(['White' => $white, 'Indigo' => ['S' => '0', 'M' => '4', 'L' => '0']]),
+        'a size of another list' => array_replace_recursive(stockBody(['White' => $white, 'Indigo' => $indigo]), [demoColour('IND')->id => sizeIds(['36' => '1'], SizeList::EU_36_TO_46)]),
+        'no stock at all' => [],
+    };
+
+    actingAs($this->user)
+        ->from(route('products.show', $this->jacket))
+        ->put(route('products.stock.update', $this->jacket), ['stock' => $body])
+        ->assertRedirect(route('products.show', $this->jacket))
+        ->assertInertiaFlashMissing('toast');
+
+    expect(session('errors')->keys())->toBe(['stock'])
+        ->and(session('errors')->get('stock'))->toBe([STOCK_CHANGED])
+        ->and(ProductSizeStock::query()->orderBy('id')->get()->toArray())->toBe($before);
+})->with(['a colour missing', 'a colour added to the product since', 'a colour the product does not have', 'a colour of another workshop', 'a size missing', 'a size of another list', 'no stock at all']);
+
+it('checks the colours and sizes again under the product\'s lock, and saves nothing (AC-3: they changed after the request)', function () {
+    stockShelf($this->jacket, ['S' => 3]);
+    $before = ProductSizeStock::query()->orderBy('id')->get()->toArray();
+    $stale = demoProduct('PRD-JKT-001');
+    $body = fn (): array => array_map(fn (array $sizes): array => array_map('intval', $sizes), stockBody([
+        'White' => ['S' => 9, 'M' => 1, 'L' => 1, 'XL' => 1],
+        'Indigo' => ['S' => 1, 'M' => 1, 'L' => 1, 'XL' => 1],
+    ]));
+    actingAs($this->user);
+
+    // A colour was taken off after the request was checked.
+    $this->jacket->colours()->detach(demoColour('IND')->id);
+
+    expect(fn () => app(UpdateFinishedStock::class)->handle($stale, $body()))->toThrow(ValidationException::class, STOCK_CHANGED);
+
+    // The category moved to another size list after the request was checked.
+    $this->jacket->colours()->attach(demoColour('IND')->id, ['workshop_id' => $this->jacket->workshop_id]);
+    $this->jacket->update(['category_id' => ProductCategory::query()->where('code', 'footwear')->value('id')]);
+
+    expect(fn () => app(UpdateFinishedStock::class)->handle($stale, $body()))->toThrow(ValidationException::class, STOCK_CHANGED)
+        ->and(ProductSizeStock::query()->orderBy('id')->get()->toArray())->toBe($before);
+});
+
+it('deletes the finished stock of every colour of a product with the product, and nothing else (human decision 2026-10-23)', function () {
     $tote = demoProduct('PRD-TOT-004');
     stockShelf($this->jacket, ['S' => 3, 'M' => 4, 'L' => 5, 'XL' => 2]);
+    stockShelf($this->jacket, ['S' => 1, 'XL' => 6], colour: 'IND');
     stockShelf($tote, ['One size' => 4], SizeList::ONE_SIZE);
     $others = fn (): array => [
         Material::query()->orderBy('id')->get()->toArray(),
@@ -129,6 +196,8 @@ it('deletes the finished stock of a product with the product, and nothing else (
         ProductSizeStock::query()->where('product_id', $tote->id)->get()->toArray(),
     ];
     $before = $others();
+
+    expect(ProductSizeStock::query()->where('product_id', $this->jacket->id)->count())->toBe(6);
 
     actingAs($this->user)->delete(route('products.destroy', $this->jacket))->assertRedirect(route('products.index'));
 
@@ -143,7 +212,7 @@ it('sends a guest to login and answers 404 for the product of another workshop o
         'deleted' => tap(demoProduct('PRD-TSH-002'))->delete(),
         default => $this->jacket,
     };
-    $payload = ['sizes' => sizeIds(['S' => '1', 'M' => '1', 'L' => '1', 'XL' => '1'])];
+    $payload = ['stock' => stockBody(['White' => ['S' => '1', 'M' => '1', 'L' => '1', 'XL' => '1'], 'Indigo' => ['S' => '1', 'M' => '1', 'L' => '1', 'XL' => '1']])];
 
     if ($who === 'guest') {
         $this->put(route('products.stock.update', $product), $payload)->assertRedirect(route('login'));
@@ -154,7 +223,7 @@ it('sends a guest to login and answers 404 for the product of another workshop o
     expect(ProductSizeStock::query()->count())->toBe(0);
 })->with(['guest', 'other workshop', 'deleted']);
 
-it('changes nothing but the count: capacity, cost, materials, history, dashboard, then a sale and an order (AC-3)', function () {
+it('changes nothing but the count: capacity, cost, materials, history, dashboard, then a sale and an order (AC-1)', function () {
     $jacketPage = fn () => loadedPageProps(actingAs($this->user)->get(route('products.show', $this->jacket)));
     $dashboard = fn () => loadedPageProp(actingAs($this->user)->get(route('dashboard')), 'stats');
     $materials = fn (): array => Material::query()->orderBy('id')->pluck('quantity_on_hand', 'id')->all();
@@ -163,7 +232,10 @@ it('changes nothing but the count: capacity, cost, materials, history, dashboard
     $updatedAt = $this->jacket->fresh()->updated_at;
 
     actingAs($this->user)
-        ->put(route('products.stock.update', $this->jacket), ['sizes' => sizeIds(['S' => '3', 'M' => '4', 'L' => '5', 'XL' => '2'])])
+        ->put(route('products.stock.update', $this->jacket), ['stock' => stockBody([
+            'White' => ['S' => '3', 'M' => '0', 'L' => '5', 'XL' => '2'],
+            'Indigo' => ['S' => '0', 'M' => '4', 'L' => '0', 'XL' => '0'],
+        ])])
         ->assertRedirect(route('products.show', $this->jacket));
 
     $page = $jacketPage();
@@ -179,16 +251,6 @@ it('changes nothing but the count: capacity, cost, materials, history, dashboard
     actingAs($this->user)->post(route('sales.store'), validSalePayload(['quantity' => '2']))->assertSessionHasNoErrors();
     actingAs($this->user)->post(route('orders.store'), validOrderPayload())->assertSessionHasNoErrors();
 
-    expect(app(FinishedStock::class)->of($this->jacket)->units)->toBe(14);
-});
-
-it('refuses, under the lock, sizes of another list than the product has now (AC-2: the category changed after the request)', function () {
-    $apparel = sizeIds(['S' => 1, 'M' => 1, 'L' => 1, 'XL' => 1]);
-    $stale = demoProduct('PRD-JKT-001');
-    $stale->loadMissing('category');
-    $this->jacket->update(['category_id' => ProductCategory::query()->where('code', 'footwear')->value('id')]);
-    actingAs($this->user);
-
-    expect(fn () => app(UpdateFinishedStock::class)->handle($stale, $apparel))->toThrow(ValidationException::class, SIZES_CHANGED);
-    expect(ProductSizeStock::query()->count())->toBe(0);
+    expect(app(FinishedStock::class)->of($this->jacket)->units)->toBe(14)
+        ->and(shelfOf($this->jacket))->toBe(['White' => ['S' => 3, 'L' => 5, 'XL' => 2], 'Indigo' => ['M' => 4]]);
 });

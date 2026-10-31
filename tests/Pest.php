@@ -6,6 +6,8 @@ use App\Models\Material;
 use App\Models\Order;
 use App\Models\OrderLine;
 use App\Models\Product;
+use App\Models\ProductCategory;
+use App\Models\ProductSizeStock;
 use App\Models\Sale;
 use App\Models\Size;
 use App\Models\SizeList;
@@ -630,6 +632,42 @@ function productColoursMigration(): Migration
 function coloursMigration(): Migration
 {
     return require database_path('migrations/2026_10_30_100000_create_colours_table.php');
+}
+
+/**
+ * The finished stock colour migration object (INV-2-a): `colour_id` on `product_size_stocks`, and on PostgreSQL a composite key to
+ * `product_colours`. It is newer than the finished stock migration and than the product colours one, so a test that rolls either of
+ * them back (or anything below: the order line sizes, the size lists, the colours, the workshop columns) must roll this one back first,
+ * and bring it back up last (the hand-kept list, F-60).
+ */
+function productSizeStockColoursMigration(): Migration
+{
+    return require database_path('migrations/2026_10_31_100000_add_colour_to_product_size_stocks.php');
+}
+
+/**
+ * Puts the finished stock of a product on the shelf, per colour (INV-2-a): `setFinishedStock($jacket, ['Black' => [1, 0, 2, 1], 'Indigo' => [2, 0, 3, 1]])`
+ * is each colour's NAME → units per size in the order of the product's size list. It replaces every row of the product, links each
+ * named colour to the product when it isn't (a colour at 0 is linked too, with no row), and leaves the product's other colours alone.
+ *
+ * @param  array<string, list<int>>  $byColour
+ */
+function setFinishedStock(Product $product, array $byColour): void
+{
+    $sizes = Size::query()->where('size_list_id', ProductCategory::query()->whereKey($product->category_id)->value('size_list_id'))->orderBy('position')->get();
+
+    ProductSizeStock::query()->where('product_id', $product->id)->delete();
+
+    foreach ($byColour as $name => $units) {
+        $colour = Colour::query()->where('name', $name)->firstOrFail();
+        $product->colours()->syncWithoutDetaching([$colour->id => ['workshop_id' => $product->workshop_id]]);
+
+        foreach ($units as $position => $count) {
+            if ($count > 0) {
+                ProductSizeStock::factory()->create(['product_id' => $product->id, 'colour_id' => $colour->id, 'size_id' => $sizes[$position]->id, 'units' => $count]);
+            }
+        }
+    }
 }
 
 /**

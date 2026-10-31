@@ -166,19 +166,27 @@ it('sends the other props of the show page as before', function () {
     }
 });
 
-it('sends FinishedStock with its exact keys, order and types (S-56)', function () {
+it('sends FinishedStock with its exact keys, order and types (S-56, INV-2)', function () {
     ProductSizeStock::factory()->create(['product_id' => pid(1), 'size_id' => Size::query()->where('label', 'M')->value('id'), 'units' => 4]);
 
     $stock = loadedPageProp(actingAs($this->user)->get(route('products.show', pid(1))), 'finished_stock');
 
-    expect(keysOf($stock))->toBe(['units', 'sizes'])
+    expect(keysOf($stock))->toBe(['units', 'sizes', 'colours'])
         ->and($stock['units'])->toBe(4)
         ->and($stock['sizes'])->toHaveCount(4)
         ->and(keysOf($stock['sizes'][1]))->toBe(['size', 'units'])
         ->and(keysOf($stock['sizes'][1]['size']))->toBe(['id', 'label'])
         ->and($stock['sizes'][1]['size']['id'])->toBeInt()
         ->and($stock['sizes'][1]['size']['label'])->toBe('M')
-        ->and($stock['sizes'][1]['units'])->toBe(4);
+        ->and($stock['sizes'][1]['units'])->toBe(4)
+        // INV-2: one entry per colour of the product (the jacket has White only), each with the same sizes for that colour.
+        ->and($stock['colours'])->toHaveCount(1)
+        ->and(keysOf($stock['colours'][0]))->toBe(['colour', 'units', 'sizes'])
+        ->and(keysOf($stock['colours'][0]['colour']))->toBe(['id', 'code', 'name', 'swatch'])
+        ->and($stock['colours'][0]['colour']['id'])->toBeInt()
+        ->and($stock['colours'][0]['units'])->toBe(4)
+        ->and(keysOf($stock['colours'][0]['sizes'][1]))->toBe(['size', 'units'])
+        ->and($stock['colours'][0]['sizes'][1]['units'])->toBe(4);
 });
 
 it('sends the props of the create and edit pages (S-25: statuses, plus the product on edit, and no materials list)', function () {

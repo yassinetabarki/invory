@@ -263,17 +263,22 @@ it('stays within the query budget when the deferred props of the product page lo
         ->and(count($many))->toBe(count($few), implode(PHP_EOL, $many));
 });
 
-it('stays within the query budget when the deferred finished stock of the product page loads, however many sizes the product has', function () {
+it('stays within the query budget when the deferred finished stock of the product page loads, however many colours and sizes the product has', function () {
     actingAs($this->user);
     $stockQueries = function (int $productId): array {
         $firstVisit = $this->get(route('products.show', $productId))->assertOk();
 
-        return partialReloadQueries($firstVisit, ['finished_stock'], fn (Assert $partial) => $partial->has('finished_stock.sizes'));
+        return partialReloadQueries($firstVisit, ['finished_stock'], fn (Assert $partial) => $partial->has('finished_stock.sizes')->has('finished_stock.colours'));
     };
-    // Stock in every size of the shoe, and in one of the jacket: the rows read are one query either way.
-    foreach (range(36, 46) as $label) {
-        ProductSizeStock::factory()->create(['product_id' => pid(3), 'size_id' => Size::query()->where('label', (string) $label)->value('id'), 'units' => 2]);
-    }
+    // Stock in every size of the shoe in each of the workshop's 20 colours (more than 12 colours x 11 sizes), and in one size of one
+    // colour of the jacket: the colours and the rows read are one query each either way.
+    $shoe = Product::query()->findOrFail(pid(3));
+    $colourIds = Colour::query()->pluck('id');
+    $shoe->colours()->syncWithPivotValues($colourIds->all(), ['workshop_id' => $shoe->workshop_id]);
+    $sizeIds = Size::query()->whereIn('label', array_map('strval', range(36, 46)))->pluck('id');
+    ProductSizeStock::query()->insert($colourIds->flatMap(fn (int $colourId) => $sizeIds->map(fn (int $sizeId): array => [
+        'workshop_id' => $shoe->workshop_id, 'product_id' => $shoe->id, 'colour_id' => $colourId, 'size_id' => $sizeId, 'units' => 2, 'created_at' => now(), 'updated_at' => now(),
+    ]))->all());
     ProductSizeStock::factory()->create(['product_id' => pid(1), 'units' => 2]);
 
     // Warm up: the first request of a process may run one-off queries (schema introspection, the framework's own caches).

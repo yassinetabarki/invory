@@ -197,3 +197,16 @@ it('checks the stock again in UpdateProduct when it was written after the reques
     expect($save)->toThrow(fn (ValidationException $e) => expect($e->errors())->toBe(['category' => [SIZE_LOCK_STOCK_JACKET]]));
     expect(sizeLockState($jacket->id))->toBe($before);
 });
+
+it('counts a unit in any colour of the product for the category lock (INV-2, AC-1)', function () {
+    $id = pid(1);
+    // Six units in Indigo only: White, the jacket's other colour, has none.
+    setFinishedStock(Product::query()->findOrFail($id), ['Indigo' => [0, 6, 0, 0]]);
+    $before = sizeLockState($id);
+
+    updateForSizeLock($this, $id, ['category' => 'footwear', 'colours' => [demoColour('WHT')->id, demoColour('IND')->id]])
+        ->assertRedirect(route('products.edit', $id))
+        ->assertSessionHasErrors(['category' => SIZE_LOCK_STOCK_JACKET]);
+
+    expect(sizeLockState($id))->toBe($before);
+});

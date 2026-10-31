@@ -67,7 +67,8 @@ Board: Product detail with sizes, colors and barcodes (Invory App UI canvas)
   Other products: "1 colour × 4 sizes = 4 variants", "2 colours × One size = 2 variants".
 - On the heading's row: the outline button **Manage sizes & colours**, which opens Edit product with the focus on the Colours field
   (sizes come with the category, just above it), the outline button **Update stock**, and the main button **Restock** (plus sign),
-  which opens New restock with this product in it (INV-3).
+  which opens New restock with this product in it (INV-3). The three buttons keep this order, left to right on a laptop and top to
+  bottom on a phone, so the keyboard follows what you see.
 - Two tabs, **Stock by colour** and **Barcodes**. While any variant has no barcode, Barcodes carries the warning badge "4 missing".
   The page opens on Stock by colour; the open tab is kept in the page address, so a link can open Barcodes directly.
 
@@ -145,10 +146,11 @@ Board: Update stock dialog, per color (Invory App UI canvas)
   counts; to add units that arrived, use Restock." and the ✕ "Close".
 - **Colour** pills: swatch, name, the colour's total after saving in grey ("Indigo 6"), and a small Denim dot when that colour has a
   changed size; the dot also says "changed" to screen readers ("Indigo, 10, changed"). The first colour (Black) is chosen when the
-  window opens.
+  window opens. **A product with only one colour has no pills**: its size fields show at once, and the fieldset (for example **Units
+  in stock per size · White**) still names the colour.
 - Fieldset **Units in stock per size · Indigo**: one field per size (the size fields of S-70), today's count in each, "was 0" under a
   changed size. Switching pills keeps what was typed in every colour.
-- Grey band: "Total after saving, all colours" **14 units**, following what is typed in every colour.
+- Grey band: "Total after saving, all colours" **14 units**, following what is typed in every colour. With one colour the band reads "Total after saving".
 - Note: "Doesn't change materials, "Can produce now" or sales."
 - Buttons **Cancel** and **Save**. **Save** saves every colour at once → toast "Stock updated.", the window closes, the focus goes back
   to **Update stock**, and the card and the In stock figure show the new counts.
@@ -166,7 +168,8 @@ Board: INV-2 · Settings › Barcodes, Edit and Delete product · desktop (Invor
 ### Edit product and Delete product
 Board: INV-2 · Settings › Barcodes, Edit and Delete product · desktop (Invory App UI canvas)
 - **A colour with stock can't be taken off a product** (INV-1's Colours field): "Indigo has 6 units in stock, so it can't be removed
-  from Denim Jacket. Set its stock to 0 first." and nothing is saved. A colour at 0 is removed as before; its barcodes stay and come
+  from Denim Jacket. Set its stock to 0 first." and nothing is saved. A count of 1,000 or more has its thousands separator
+  ("Indigo has 1,000,000 units in stock, so …"); one unit reads "1 unit". A colour at 0 is removed as before; its barcodes stay and come
   back if the colour is added again.
 - **Renaming a product keeps its barcodes.** If a barcode was shared with another product of the old name, it now stands for both
   names; the other product keeps it too, and labels already printed still scan. No window asks first.
@@ -215,7 +218,8 @@ Board: INV-2 · Settings › Barcodes, Edit and Delete product · desktop (Invor
 - **Changed:** Indigo M from 0 to 4: "was 0" under M, a dot on Indigo, the pill "Indigo 10", the total "14 units".
 - **Field error:** under the size, as today: "M: Enter a whole number from 0 to 1,000,000.". When the error is in another colour, that
   pill shows "1 error" in red text, the top of the window reads "Check Black: 1 size can't be saved.", and the window switches to the
-  first colour with an error and puts the focus on its field.
+  first colour with an error and puts the focus on its field. With one colour there is no pill and no "Check …" line: the message
+  under the size is the only one, and that field takes the focus.
 - **Changed meanwhile:** at the top of the window: "The sizes or colours of Denim Jacket have changed. Enter the stock again." and the
   fields show the new colours and sizes with their counts. Nothing is saved.
 - **Save failed:** "Couldn't save the stock. Try again." (today's); what was typed stays, in every colour.
@@ -256,7 +260,7 @@ Board: INV-2 · Settings › Barcodes, Edit and Delete product · desktop (Invor
 - Update stock window: "Update stock · Denim Jacket" · "Finished units on the shelf, counted per colour and size. Saving sets these
   counts; to add units that arrived, use Restock." · "Close" ·
   "Colour" · "changed" · "Units in stock per size · Indigo" · "Units in stock per colour" · "was 0" · "Total after saving, all colours"
-  · "14 units" · "Doesn't change materials, "Can produce now" or sales." · "Cancel" · "Save" · "1 error" · "Check Black: 1 size can't
+  · "Total after saving" (one colour) · "14 units" · "Doesn't change materials, "Can produce now" or sales." · "Cancel" · "Save" · "1 error" · "Check Black: 1 size can't
   be saved." · "The sizes or colours of Denim Jacket have changed. Enter the stock again." · "Couldn't save the stock. Try again."
 - Settings › Labels: "Labels" · "How your barcode labels print." · "Label size" · "50 × 30 mm, one per label (label printer)" · "A4
   sheet, 24 labels (3 × 8)" · "Show the selling price on labels" · "Save label settings".
@@ -269,8 +273,8 @@ Board: INV-2 · Settings › Barcodes, Edit and Delete product · desktop (Invor
 ## Phone layout
 Board: INV-2 · Product page, Update stock, labels · 375 (Invory App UI canvas)
 - **In stock figure:** under Can produce now (as today); the colour line wraps, two or three colours a row.
-- **Sizes & colours card:** the heading and its line, then **Restock** (main), **Update stock** and **Manage sizes & colours**, full width, 44 px,
-  one under the other. The tabs fill the width, half each.
+- **Sizes & colours card:** the heading and its line, then **Manage sizes & colours**, **Update stock** and **Restock** (main, last), full width,
+  44 px, one under the other. The tabs fill the width, half each.
 - **Stock tab:** one card per colour in place of the table: the colour tag and its total ("■ Indigo · 6 units"), then the size chips
   [S 2] [M 0] [L 3] [XL 1], zeros kept and grey. Last, a **Total** card "10 units" with the size totals as chips. A shoe's 11 chips wrap.
 - **Barcodes tab:** the pills wrap, 44 px tall; **Generate missing barcodes (4)** and **Print labels · Indigo** full width under them;

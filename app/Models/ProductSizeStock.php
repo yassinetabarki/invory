@@ -13,18 +13,20 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * The finished units of a product on the shelf in one size (S-56, ADR-0017). Unique per product and size, and a row exists only
- * while that size holds at least 1 unit: a product with nothing in stock has no rows.
+ * The finished units of a product on the shelf in one colour and one size (S-56, ADR-0017; per colour since INV-2, ADR-0019). One row
+ * per product, colour and size, and a row exists only while that variant holds at least 1 unit: a product with nothing in stock has no
+ * rows. The colour is always one of the product's colours (PostgreSQL enforces it with a composite key).
  *
  * @property int $id
  * @property int $workshop_id The workshop of the product. Never mass-assignable: it comes from the product.
  * @property int $product_id
+ * @property int $colour_id
  * @property int $size_id
  * @property int $units Whole units, at least 1.
  * @property CarbonInterface $created_at
  * @property CarbonInterface $updated_at
  */
-#[Fillable(['size_id', 'units'])]
+#[Fillable(['colour_id', 'size_id', 'units'])]
 class ProductSizeStock extends Model
 {
     /** @use HasFactory<ProductSizeStockFactory> */
@@ -40,6 +42,12 @@ class ProductSizeStock extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class)->withTrashed();
+    }
+
+    /** @return BelongsTo<Colour, $this> */
+    public function colour(): BelongsTo
+    {
+        return $this->belongsTo(Colour::class);
     }
 
     /** @return BelongsTo<Size, $this> */

@@ -35,6 +35,7 @@ it('creates both tables with their columns, indexes and foreign keys, and drops 
         ->and($foreignKeys('order_lines', 'products')['on_delete'])->toBe('restrict');
 
     // Newest first: the cuts point at lines and stock movements, the stage counts are columns of `order_lines`.
+    productSizeStockColoursMigration()->down();
     productSizeStocksMigration()->down();
     orderLineSizesMigration()->down();
     cutsMigration()->down();
@@ -49,6 +50,7 @@ it('creates both tables with their columns, indexes and foreign keys, and drops 
     cutsMigration()->up();
     orderLineSizesMigration()->up();
     productSizeStocksMigration()->up();
+    productSizeStockColoursMigration()->up();
 
     $line = OrderLine::factory()->create();
 
