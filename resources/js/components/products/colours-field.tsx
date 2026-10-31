@@ -14,8 +14,8 @@ type ColoursFieldProps = {
     /** Ids of the product's colours. */
     value: number[];
     onChange: (ids: number[]) => void;
-    /** Server validation error ("Choose at least one colour."). */
-    error?: string;
+    /** Server validation error ("Choose at least one colour."), or several sentences (one line each, all read with the button). */
+    error?: string | string[];
     className?: string;
 };
 
@@ -36,7 +36,10 @@ export function ColoursField({
     const [open, setOpen] = useState(false);
     const addRef = useRef<HTMLButtonElement>(null);
     const hintId = `${id}-hint`;
-    const errorId = `${id}-error`;
+    const sentences = [error]
+        .flat()
+        .filter((sentence): sentence is string => Boolean(sentence));
+    const errorIds = sentences.map((_, index) => `${id}-error-${index}`);
 
     const chosen = colours.filter((colour) => value.includes(colour.id));
 
@@ -117,10 +120,11 @@ export function ColoursField({
                             type="button"
                             variant="outline"
                             // Where the focus goes when there is no colour (read by the form).
-                            data-invalid={error ? 'true' : undefined}
-                            aria-describedby={[hintId, error ? errorId : null]
-                                .filter(Boolean)
-                                .join(' ')}
+                            data-invalid={
+                                sentences.length > 0 ? 'true' : undefined
+                            }
+                            aria-invalid={sentences.length > 0 || undefined}
+                            aria-describedby={[hintId, ...errorIds].join(' ')}
                             className="h-11 w-full data-[invalid=true]:border-destructive md:h-9 md:w-auto"
                         >
                             <Plus aria-hidden="true" />
@@ -130,11 +134,15 @@ export function ColoursField({
                 />
             </div>
 
-            {error && (
-                <p id={errorId} className="text-sm text-destructive-foreground">
-                    {error}
+            {sentences.map((sentence, index) => (
+                <p
+                    key={errorIds[index]}
+                    id={errorIds[index]}
+                    className="text-sm text-destructive-foreground"
+                >
+                    {sentence}
                 </p>
-            )}
+            ))}
         </div>
     );
 }

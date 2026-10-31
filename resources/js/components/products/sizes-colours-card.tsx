@@ -1,0 +1,347 @@
+import { Link } from '@inertiajs/react';
+import { useEffect, useId, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
+import {
+    SIZES_COLOURS_ID,
+    StockLoadError,
+} from '@/components/products/finished-stock-figure';
+import { unitsWord } from '@/components/products/product-hero';
+import { UpdateStockDialog } from '@/components/products/update-stock-dialog';
+import { ColourTag } from '@/components/shared/colour-tag';
+import { SizeChips } from '@/components/shared/size-chips';
+import { Button } from '@/components/ui/button';
+import { useAppSettings } from '@/hooks/use-app-settings';
+import { formatCount } from '@/lib/format';
+import { cn } from '@/lib/utils';
+import type { FinishedStock, Product } from '@/types/domain';
+
+const TABLE_NAME = 'Units in stock per colour and size';
+const BUTTON = 'h-11 w-full md:h-9 md:w-auto';
+
+function plural(count: number, one: string, many: string): string {
+    return `${count} ${count === 1 ? one : many}`;
+}
+
+/** The frame of the card: the heading and, on its row, the actions. */
+function CardFrame({
+    line,
+    actions,
+    children,
+}: {
+    /** The variants line under the heading. */
+    line?: string;
+    actions?: ReactNode;
+    children: ReactNode;
+}) {
+    const headingId = useId();
+
+    return (
+        <section
+            id={SIZES_COLOURS_ID}
+            tabIndex={-1}
+            aria-labelledby={headingId}
+            className="flex min-w-0 scroll-mt-4 flex-col gap-4 rounded-xl border bg-card p-5 text-card-foreground outline-none"
+        >
+            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                <div className="min-w-0 space-y-0.5">
+                    <h2 id={headingId} className="text-base font-bold">
+                        Sizes &amp; colours
+                    </h2>
+                    {line && (
+                        <p className="text-sm text-muted-foreground">{line}</p>
+                    )}
+                </div>
+                {actions}
+            </div>
+            {children}
+        </section>
+    );
+}
+
+/** A figure of the table or of a phone chip row: the number font, a 0 in the readable grey. */
+function Figure({ units }: { units: number }) {
+    const { locale } = useAppSettings();
+
+    return (
+        <span
+            className={cn(
+                'font-mono tabular-nums',
+                units === 0 && 'text-muted-foreground',
+            )}
+        >
+            {formatCount(units, locale)}
+        </span>
+    );
+}
+
+const CELL = 'px-3 py-2 text-right';
+
+/**
+ * "Sizes & colours" on the product page (INV-2): how many colours and sizes make
+ * how many variants, the buttons **Manage sizes & colours** (Edit product, with
+ * the focus on the Colours field) and **Update stock**, and the stock of every
+ * variant: a table on a laptop (a shoe's 11 columns scroll inside the card), one
+ * card per colour and a Total card on a phone. A "One size" product has one
+ * "In stock" column. Every figure comes from the server.
+ */
+export function SizesColoursCard({
+    product,
+    stock,
+    manageHref,
+}: {
+    product: Pick<Product, 'id' | 'name' | 'size_list'>;
+    stock: FinishedStock;
+    /** Edit product with `#colours`. */
+    manageHref: string;
+}) {
+    const { locale } = useAppSettings();
+    const [updating, setUpdating] = useState(false);
+    const updateButtonRef = useRef<HTMLButtonElement>(null);
+    const regionRef = useRef<HTMLDivElement>(null);
+    const [overflows, setOverflows] = useState(false);
+
+    // The table's box is a tab stop only when it really scrolls (a shoe's 11 sizes
+    // on a narrow laptop), so keyboard users can scroll it; otherwise it is not.
+    useEffect(() => {
+        const region = regionRef.current;
+
+        if (!region) {
+            return;
+        }
+
+        const measure = () =>
+            setOverflows(region.scrollWidth > region.clientWidth);
+
+        measure();
+
+        // jsdom has no ResizeObserver: the measure on mount is all there is.
+        if (typeof ResizeObserver === 'undefined') {
+            return;
+        }
+
+        const observer = new ResizeObserver(measure);
+
+        observer.observe(region);
+
+        if (region.firstElementChild) {
+            observer.observe(region.firstElementChild);
+        }
+
+        return () => observer.disconnect();
+    }, []);
+
+    const { colours } = stock;
+    const sizeCount = product.size_list.sizes.length;
+    const oneSize = sizeCount === 1;
+    const variants = colours.length * sizeCount;
+    const line = `${plural(colours.length, 'colour', 'colours')} × ${
+        oneSize ? product.size_list.name : `${sizeCount} sizes`
+    } = ${plural(variants, 'variant', 'variants')}. Each variant has its own stock.`;
+    const showTotals = colours.length > 1;
+    // Every cell is a grey 0 when nothing is on the shelf: nothing to explain then.
+    const showNote = stock.units > 0;
+
+    return (
+        <CardFrame
+            line={line}
+            actions={
+                <div className="flex flex-col gap-2 md:shrink-0 md:flex-row">
+                    <Button asChild variant="outline" className={BUTTON}>
+                        <Link href={manageHref}>
+                            Manage sizes &amp; colours
+                        </Link>
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        className={BUTTON}
+                        ref={updateButtonRef}
+                        onClick={() => setUpdating(true)}
+                    >
+                        Update stock
+                    </Button>
+                </div>
+            }
+        >
+            {/* Laptop: the table, scrolling inside the card when it is wider. */}
+            <div
+                role="region"
+                aria-label={`${TABLE_NAME}, scrollable`}
+                ref={regionRef}
+                tabIndex={overflows ? 0 : undefined}
+                className="hidden overflow-x-auto rounded-md outline-none focus-visible:ring-[3px] focus-visible:ring-ring md:block"
+            >
+                <table className="w-full min-w-max border-collapse text-sm">
+                    <caption className="sr-only">{TABLE_NAME}</caption>
+                    <thead>
+                        <tr className="border-b text-muted-foreground">
+                            <th
+                                scope="col"
+                                className="px-3 py-2 text-left font-medium"
+                            >
+                                Colour
+                            </th>
+                            {oneSize ? (
+                                <th
+                                    scope="col"
+                                    className={cn(CELL, 'font-medium')}
+                                >
+                                    In stock
+                                </th>
+                            ) : (
+                                <>
+                                    {stock.sizes.map(({ size }) => (
+                                        <th
+                                            key={size.id}
+                                            scope="col"
+                                            className={cn(CELL, 'font-medium')}
+                                        >
+                                            {size.label}
+                                        </th>
+                                    ))}
+                                    <th
+                                        scope="col"
+                                        className={cn(CELL, 'font-medium')}
+                                    >
+                                        Total
+                                    </th>
+                                </>
+                            )}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {colours.map(({ colour, units, sizes }) => (
+                            <tr key={colour.id} className="border-b">
+                                <th
+                                    scope="row"
+                                    className="max-w-64 px-3 py-2 text-left font-medium"
+                                >
+                                    <ColourTag colour={colour} />
+                                </th>
+                                {oneSize ? (
+                                    <td className={CELL}>
+                                        <Figure units={units} />
+                                    </td>
+                                ) : (
+                                    <>
+                                        {sizes.map(({ size, units: n }) => (
+                                            <td key={size.id} className={CELL}>
+                                                <Figure units={n} />
+                                            </td>
+                                        ))}
+                                        <td
+                                            className={cn(
+                                                CELL,
+                                                'font-semibold',
+                                            )}
+                                        >
+                                            <Figure units={units} />
+                                        </td>
+                                    </>
+                                )}
+                            </tr>
+                        ))}
+                    </tbody>
+                    {showTotals && (
+                        <tfoot>
+                            <tr className="border-t-2 border-foreground/40 font-semibold">
+                                <th scope="row" className="px-3 py-2 text-left">
+                                    Total
+                                </th>
+                                {oneSize ? (
+                                    <td className={CELL}>
+                                        <Figure units={stock.units} />
+                                    </td>
+                                ) : (
+                                    <>
+                                        {stock.sizes.map(({ size, units }) => (
+                                            <td key={size.id} className={CELL}>
+                                                <Figure units={units} />
+                                            </td>
+                                        ))}
+                                        <td className={CELL}>
+                                            <Figure units={stock.units} />
+                                        </td>
+                                    </>
+                                )}
+                            </tr>
+                        </tfoot>
+                    )}
+                </table>
+            </div>
+
+            {/* Phone: one card per colour in place of the table, then a Total card. */}
+            <ul
+                aria-label={TABLE_NAME}
+                className="flex flex-col gap-3 md:hidden"
+            >
+                {colours.map(({ colour, units, sizes }) => (
+                    <li
+                        key={colour.id}
+                        className="flex flex-col gap-2 rounded-lg border p-3"
+                    >
+                        <p className="flex flex-wrap items-center gap-x-2 text-sm font-medium">
+                            <ColourTag colour={colour} />{' '}
+                            <span aria-hidden="true">·</span>{' '}
+                            <span>
+                                {formatCount(units, locale)} {unitsWord(units)}
+                            </span>
+                        </p>
+                        {!oneSize && (
+                            <SizeChips
+                                sizes={sizes.map(({ size, units: n }) => ({
+                                    label: size.label,
+                                    units: n,
+                                }))}
+                                keepZeros
+                                spokenPrefix={`${colour.name}, per size: `}
+                            />
+                        )}
+                    </li>
+                ))}
+                {showTotals && (
+                    <li className="flex flex-col gap-2 rounded-lg border bg-muted/40 p-3">
+                        <p className="text-sm font-semibold">Total</p>
+                        <p className="text-sm font-medium">
+                            {formatCount(stock.units, locale)}{' '}
+                            {unitsWord(stock.units)}
+                        </p>
+                        {!oneSize && (
+                            <SizeChips
+                                sizes={stock.sizes.map(({ size, units }) => ({
+                                    label: size.label,
+                                    units,
+                                }))}
+                                keepZeros
+                                spokenPrefix="Total per size: "
+                            />
+                        )}
+                    </li>
+                )}
+            </ul>
+
+            {showNote && (
+                <p className="text-xs text-muted-foreground">
+                    Grey zeros are variants with nothing on the shelf.
+                </p>
+            )}
+
+            <UpdateStockDialog
+                product={product}
+                stock={stock}
+                open={updating}
+                onOpenChange={setUpdating}
+                returnFocusTo={updateButtonRef}
+            />
+        </CardFrame>
+    );
+}
+
+/** The card when the stock couldn't be read: the frame and heading stay. */
+export function SizesColoursCardError({ reloading }: { reloading: boolean }) {
+    return (
+        <CardFrame>
+            <StockLoadError reloading={reloading} />
+        </CardFrame>
+    );
+}

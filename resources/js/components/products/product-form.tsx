@@ -118,6 +118,13 @@ function isColoursKey(name: string): name is 'colours' | `colours.${number}` {
     return name === 'colours' || /^colours\.\d+$/.test(name);
 }
 
+/** "colours.removed.7": a colour taken off that still has stock (INV-2); the id of that colour. */
+function removedColourId(name: string): number | null {
+    const match = /^colours\.removed\.(\d+)$/.exec(name);
+
+    return match ? Number(match[1]) : null;
+}
+
 /** A list with more sizes than this shows its name ("36 to 46") instead of one tag per size. */
 const MAX_SIZE_TAGS = 6;
 
@@ -295,12 +302,36 @@ export function ProductForm({
         .map(([name, message]) => `${name}:${message}`)
         .join('|');
 
+    // The colours taken off that still have stock: one sentence each, in the
+    // order of the colours list (never the order the keys arrived in).
+    const removedErrors = colours.flatMap((colour) => {
+        const message = (errors as Record<string, string | undefined>)[
+            `colours.removed.${colour.id}`
+        ];
+
+        return message ? [message] : [];
+    });
     // "Choose at least one colour." arrives on `colours`; a wrong id on `colours.N`.
-    const coloursError =
+    // One sentence each, the lock sentences after it.
+    const coloursError = [
         errors.colours ??
-        Object.entries(errors).find(([name]) =>
-            name.startsWith('colours.'),
-        )?.[1];
+            Object.entries(errors).find(([name]) =>
+                /^colours\.\d+$/.test(name),
+            )?.[1],
+        ...removedErrors,
+    ].filter((sentence): sentence is string => Boolean(sentence));
+
+    // "Manage sizes & colours" opens this page at #colours: the focus goes to
+    // the Colours field (its Add colour button) once, when the form appears.
+    useEffect(() => {
+        if (window.location.hash === '#colours') {
+            formRef.current
+                ?.querySelector<HTMLElement>(
+                    `[aria-describedby~="${uid}-colours-hint"]`,
+                )
+                ?.focus();
+        }
+    }, [uid]);
 
     // Move focus to the first invalid field once a submission has failed
     // (for the colours, that is the Add colour button, marked `data-invalid`).
@@ -318,6 +349,8 @@ export function ProductForm({
 
     function handleSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
+        // Every sentence of the last attempt goes; the server says again what still holds.
+        form.clearErrors();
 
         const update = action.method === 'put';
         // A file needs multipart, which PHP only reads on POST.
@@ -534,15 +567,26 @@ export function ProductForm({
                                         // answered as soon as there is a colour. Never call
                                         // clearErrors() with no names: that clears every error.
                                         const stale =
-                                            Object.keys(errors).filter(
-                                                isColoursKey,
-                                            );
+                                            ids.length > 0
+                                                ? Object.keys(errors).filter(
+                                                      isColoursKey,
+                                                  )
+                                                : [];
+                                        // A lock sentence goes only when its own colour is back.
+                                        const back = Object.keys(errors).filter(
+                                            (name) => {
+                                                const id =
+                                                    removedColourId(name);
 
-                                        if (
-                                            ids.length > 0 &&
-                                            stale.length > 0
-                                        ) {
-                                            form.clearErrors(...stale);
+                                                return (
+                                                    id !== null &&
+                                                    ids.includes(id)
+                                                );
+                                            },
+                                        ) as (keyof typeof errors)[];
+
+                                        if (stale.length + back.length > 0) {
+                                            form.clearErrors(...stale, ...back);
                                         }
                                     }}
                                 />

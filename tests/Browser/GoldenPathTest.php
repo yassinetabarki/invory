@@ -49,8 +49,8 @@ function goldenNoPlaceholders(PendingAwaitablePage $page): void
 
 /**
  * S-73-b: measures the three figure cards of the product page ("Production capacity", "Finished stock", "Unit cost"):
- * the size of their words, where "Update stock" sits, and (mode `wide`) one row of equal cards of at least 200 px or
- * (mode `narrow`) a stack in order without a sideways scroll. The layout needs a moment after a resize, so it re-reads
+ * the size of their words, and (mode `wide`) one row of equal cards of at least 200 px or (mode `narrow`) a stack in
+ * order without a sideways scroll. ("Update stock" is no longer on the figure: it is in the Sizes & colours card, INV-2.) The layout needs a moment after a resize, so it re-reads
  * for up to two seconds. Returns "ok", or the problems found.
  */
 function goldenHeroCards(string $mode): string
@@ -89,16 +89,6 @@ function goldenHeroCards(string $mode): string
                 if (size(label) !== '15px') issues.push(name + ': the label is ' + size(label));
                 if (figure && figure.scrollWidth > figure.clientWidth + 1) issues.push(name + ': the figure overflows its card');
             });
-
-            const stock = sections[1];
-            const button = Array.from(stock.querySelectorAll('button')).find((el) => el.textContent.trim() === 'Update stock');
-            const label = Array.from(stock.querySelectorAll('span')).find((el) => el.textContent.trim() === 'In stock');
-            const figure = stock.children[1].getBoundingClientRect();
-            const b = button.getBoundingClientRect();
-            const l = label.getBoundingClientRect();
-            if (!(b.top < l.bottom && b.bottom > l.top)) issues.push('"Update stock" is not on the "In stock" row');
-            if (b.bottom > figure.top + 1 && b.top < figure.bottom - 1 && b.right > figure.left && b.left < figure.right) issues.push('"Update stock" covers the units');
-            if (b.right > rects[1].right) issues.push('"Update stock" is outside its card');
 
             return { issues, widths };
         };
@@ -261,24 +251,20 @@ it('a new user goes from sign-in to a sale on the dashboard', function () {
         goldenNoPlaceholders($page);
     }, $page);
 
-    // S-56: the jacket starts with nothing on the shelf; "Update stock" sets a count per size.
+    // S-56: the jacket starts with nothing on the shelf; "Update stock" (in the Sizes & colours card since INV-2) sets the counts.
     GoldenPathStep::run('product: update stock', function () use ($page, $browser) {
-        // The figure reads label, button, total: "Update stock" sits on the label's row.
-        goldenShows($page, 'section[aria-label="Finished stock"]', 'In stock Update stock 0 units');
-        // At the top right of the card, on the same row as "In stock".
+        // The figure reads label, total (no colour line at 0 units), then its link to the card.
+        goldenShows($page, 'section[aria-label="Finished stock"]', 'In stock 0 units By size and colour');
+        // "Update stock" is not on the figure; it is on the heading's row of the Sizes & colours card.
         $page->assertScript(<<<'JS'
         (() => {
-            const card = document.querySelector('section[aria-label="Finished stock"]');
-            const button = Array.from(card.querySelectorAll('button')).find((el) => el.textContent.trim() === 'Update stock');
-            const label = Array.from(card.querySelectorAll('span')).find((el) => el.textContent.trim() === 'In stock');
-            const c = card.getBoundingClientRect();
-            const b = button.getBoundingClientRect();
-            const l = label.getBoundingClientRect();
-            const sameRow = b.top < l.bottom && b.bottom > l.top;
-            const atRight = c.right - b.right <= 32;
-            return sameRow && atRight ? 'top right' : JSON.stringify({ sameRow, gapToRightEdge: c.right - b.right });
+            const figure = document.querySelector('section[aria-label="Finished stock"]');
+            const card = document.querySelector('section#sizes-colours');
+            const inFigure = Array.from(figure.querySelectorAll('button')).some((el) => el.textContent.trim() === 'Update stock');
+            const inCard = Array.from(card?.querySelectorAll('button') ?? []).some((el) => el.textContent.trim() === 'Update stock');
+            return !inFigure && inCard ? 'in the card' : JSON.stringify({ inFigure, inCard });
         })()
-        JS, 'top right');
+        JS, 'in the card');
         // Saving reloads only `finished_stock`: the page must never fall back to its placeholders.
         $page->assertScript(<<<'JS'
         (() => {
@@ -301,14 +287,8 @@ it('a new user goes from sign-in to a sale on the dashboard', function () {
 
         $window->getByRole('button', ['name' => 'Save', 'exact' => true])->click();
         $page->assertSee('Stock updated.');
-        goldenShows($page, 'section[aria-label="Finished stock"]', 'In stock Update stock 14 units');
-        // Screen readers hear the sizes as one line (the chips are hidden from them).
-        $page->assertScript(<<<'JS'
-        (() => {
-            const text = (document.querySelector('section[aria-label="Finished stock"]')?.innerText ?? '').replace(/\s+/g, ' ');
-            return text.includes('In stock per size: S 3, M 4, L 5, XL 2') ? 'spoken' : text;
-        })()
-        JS, 'spoken');
+        // Screen readers hear the colours as one line (the visual colour line is hidden from them); the window's first colour is White.
+        goldenShows($page, 'section[aria-label="Finished stock"]', 'In stock 14 units In stock per colour: White 14');
         $page->assertDontSee('Update stock · Denim Jacket');
         $page->assertScript('window.__placeholderSeen', false);
         // Nothing else moved: capacity is still 112.

@@ -43,6 +43,7 @@ function props(product: Product = denimJacket): ProductEditProps {
 
 describe('products/edit page', () => {
     beforeEach(() => {
+        window.history.replaceState(null, '', '/');
         resetInertiaMock();
         respondToHttp(({ params }) => answerMaterialOptions(params));
         setPageProps(
@@ -192,6 +193,84 @@ describe('products/edit page', () => {
                 (name) => colourNamed(name).id,
             ),
         });
+    });
+
+    it('puts the focus on the Colours field when the address ends in #colours', () => {
+        window.history.replaceState(null, '', '/products/1/edit#colours');
+
+        render(<ProductsEdit {...props()} />);
+
+        const colours = within(screen.getByRole('group', { name: 'Colours' }));
+
+        expect(
+            colours.getByRole('button', { name: 'Add colour' }),
+        ).toHaveFocus();
+    });
+
+    it("shows a sentence per colour that still has stock, in the colours' order, until its colour is chosen again or Save product is clicked", async () => {
+        const user = userEvent.setup();
+        const black = colourNamed('Black');
+        const indigo = colourNamed('Indigo');
+        const blackSentence = `Black has 4 units in stock, so it can't be removed from Denim Jacket. Set its stock to 0 first.`;
+        const indigoSentence = `Indigo has 6 units in stock, so it can't be removed from Denim Jacket. Set its stock to 0 first.`;
+
+        // The server's keys arrive Indigo first; the form still lists Black first.
+        setFormState({
+            errors: {
+                [`colours.removed.${indigo.id}`]: indigoSentence,
+                [`colours.removed.${black.id}`]: blackSentence,
+            },
+        });
+        render(<ProductsEdit {...props()} />);
+
+        const colours = within(screen.getByRole('group', { name: 'Colours' }));
+        const add = colours.getByRole('button', { name: 'Add colour' });
+        // One paragraph per sentence, in the colours' order.
+        const sentences = () =>
+            screen
+                .queryAllByText(/has \d+ units in stock/)
+                .map((sentence) => sentence.textContent);
+
+        expect(sentences()).toEqual([blackSentence, indigoSentence]);
+        expect(add).toHaveFocus();
+        expect(add).toBeInvalid();
+        expect(add).toHaveAccessibleDescription(
+            expect.stringContaining(blackSentence),
+        );
+        expect(add).toHaveAccessibleDescription(
+            expect.stringContaining(indigoSentence),
+        );
+
+        async function choose(name: string) {
+            await user.click(add);
+
+            const picker = within(
+                screen.getByRole('dialog', { name: 'Choose colours' }),
+            );
+
+            await user.click(
+                picker.getByRole('option', {
+                    name: `${name}, ${colourNamed(name).code}`,
+                }),
+            );
+            await user.click(picker.getByRole('button', { name: 'Done' }));
+        }
+
+        // Another colour doesn't clear them.
+        await choose('Light wash');
+        expect(sentences()).toEqual([blackSentence, indigoSentence]);
+
+        // Indigo is back: only its sentence goes.
+        await choose('Indigo');
+        expect(sentences()).toEqual([blackSentence]);
+
+        // Save product clears what is left (the server says again what still holds).
+        await user.click(
+            screen.getAllByRole('button', { name: 'Save product' })[0],
+        );
+        expect(sentences()).toEqual([]);
+        expect(add).not.toBeInvalid();
+        expect(inertiaMock.submissions).toHaveLength(1);
     });
 
     it('starts a different product from its own values (the form is keyed by id)', () => {

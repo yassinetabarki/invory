@@ -15,6 +15,10 @@ import { ProductHeader } from '@/components/products/product-header';
 import { HERO_ROW, ProductHero } from '@/components/products/product-hero';
 import { ProductPhoto } from '@/components/products/product-photo';
 import { RecentSalesCard } from '@/components/products/recent-sales-card';
+import {
+    SizesColoursCard,
+    SizesColoursCardError,
+} from '@/components/products/sizes-colours-card';
 import { ConfirmDeleteDialog } from '@/components/shared/confirm-delete-dialog';
 import { SkeletonCard, SkeletonStat } from '@/components/shared/skeletons';
 import { Button } from '@/components/ui/button';
@@ -138,7 +142,6 @@ function ProductDetails({
                                     {/* Built eagerly: never read before it lands. */}
                                     {finishedStock && (
                                         <FinishedStockFigure
-                                            product={product}
                                             stock={finishedStock}
                                         />
                                     )}
@@ -161,6 +164,30 @@ function ProductDetails({
                         />
                     </div>
                 </div>
+
+                {/* The same deferred prop as the figure: one reload brings both back. */}
+                <Deferred
+                    data="finished_stock"
+                    fallback={
+                        <SkeletonCard
+                            title="Sizes & colours"
+                            label="sizes and colours"
+                            rows={3}
+                            thumb={false}
+                        />
+                    }
+                    rescue={({ reloading }) => (
+                        <SizesColoursCardError reloading={reloading} />
+                    )}
+                >
+                    {finishedStock && (
+                        <SizesColoursCard
+                            product={product}
+                            stock={finishedStock}
+                            manageHref={`${editHref}#colours`}
+                        />
+                    )}
+                </Deferred>
 
                 <CompositionCard
                     lines={product.components}
@@ -220,6 +247,12 @@ function ProductPageSkeleton() {
                 title="Cost breakdown"
                 label="cost breakdown"
                 rows={4}
+                thumb={false}
+            />
+            <SkeletonCard
+                title="Sizes & colours"
+                label="sizes and colours"
+                rows={3}
                 thumb={false}
             />
             <SkeletonCard

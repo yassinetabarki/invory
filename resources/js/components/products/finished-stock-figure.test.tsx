@@ -1,14 +1,16 @@
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
-import { FinishedStockFigure } from '@/components/products/finished-stock-figure';
 import {
-    sizeListEu36To46,
-    sizeListOneSize,
+    FinishedStockFigure,
+    StockLoadError,
+} from '@/components/products/finished-stock-figure';
+import {
+    denimStockByColour,
     sizeListSToXl,
+    stockByColour,
 } from '@/test/fixtures/products';
 import { inertiaMock, resetInertiaMock } from '@/test/inertia';
-import type { FinishedStock, SizeList } from '@/types/domain';
 
 vi.mock('@inertiajs/react', async (importOriginal) => {
     const { createInertiaModule } = await import('@/test/inertia');
@@ -18,189 +20,108 @@ vi.mock('@inertiajs/react', async (importOriginal) => {
     );
 });
 
-/** The stock the server sends: every size of the list, in order, with its units. */
-function stockOf(list: SizeList, units: number[]): FinishedStock {
-    return {
-        units: units.reduce((sum, count) => sum + count, 0),
-        sizes: list.sizes.map((size, index) => ({
-            size,
-            units: units[index] ?? 0,
-        })),
-    };
-}
-
 describe('<FinishedStockFigure>', () => {
     beforeEach(() => {
         resetInertiaMock();
     });
 
-    it.each([
-        {
-            name: 'a chip per size, zeros greyed and spoken as one line',
-            stock: stockOf(sizeListSToXl, [3, 0, 5, 2]),
-            total: '10 units',
-            chips: [
-                ['S', '3'],
-                ['M', '0'],
-                ['L', '5'],
-                ['XL', '2'],
-            ],
-            spoken: 'In stock per size: S 3, M 0, L 5, XL 2',
-        },
-        {
-            name: 'nothing in stock, without chips or spoken line',
-            stock: stockOf(sizeListSToXl, []),
-            total: '0 units',
-            chips: [],
-            spoken: null,
-        },
-        {
-            name: 'one unit, in the singular',
-            stock: stockOf(sizeListSToXl, [0, 1, 0, 0]),
-            total: '1 unit',
-            chips: [
-                ['S', '0'],
-                ['M', '1'],
-                ['L', '0'],
-                ['XL', '0'],
-            ],
-            spoken: 'In stock per size: S 0, M 1, L 0, XL 0',
-        },
-        {
-            name: 'a "One size" product, the total only',
-            stock: stockOf(sizeListOneSize, [4]),
-            total: '4 units',
-            chips: [],
-            spoken: null,
-        },
-        {
-            name: "a shoe's 11 sizes, a bare label in the chip, the colon only when spoken",
-            stock: stockOf(sizeListEu36To46, [0, 2]),
-            total: '2 units',
-            chips: [
-                ['36', '0'],
-                ['37', '2'],
-                ['38', '0'],
-                ['39', '0'],
-                ['40', '0'],
-                ['41', '0'],
-                ['42', '0'],
-                ['43', '0'],
-                ['44', '0'],
-                ['45', '0'],
-                ['46', '0'],
-            ],
-            spoken: 'In stock per size: 36: 0, 37: 2, 38: 0, 39: 0, 40: 0, 41: 0, 42: 0, 43: 0, 44: 0, 45: 0, 46: 0',
-        },
-    ])('shows $name', ({ stock, total, chips, spoken }) => {
-        render(
-            <FinishedStockFigure
-                product={{ id: 1, name: 'Denim Jacket' }}
-                stock={stock}
-            />,
-        );
+    it('shows the total, then every colour in list order with its count in bold, a 0 in grey, and the link to the card', () => {
+        render(<FinishedStockFigure stock={denimStockByColour} />);
 
         const figure = screen.getByRole('region', { name: 'Finished stock' });
         const big = within(figure).getByText(/units?$/).parentElement;
 
         // A real space between the count and its word.
-        expect(big?.textContent).toBe(total);
+        expect(big?.textContent).toBe('10 units');
 
-        // "Update stock" is at the top right, on the label's row, before the total.
-        const button = within(figure).getByRole('button', {
-            name: 'Update stock',
-        });
-        const label = within(figure).getByText('In stock');
-
-        expect(label.parentElement).toContainElement(button);
-        expect(label.parentElement).toHaveClass('justify-between');
+        // Screen readers hear one sentence; the visual line is hidden from them.
         expect(
-            button.compareDocumentPosition(big as Node) &
-                Node.DOCUMENT_POSITION_FOLLOWING,
-        ).toBeTruthy();
+            within(figure).getByText(/^In stock per colour:/),
+        ).toHaveTextContent(
+            'In stock per colour: Black 4, Indigo 6, Light wash 0',
+        );
+        expect(within(figure).getByText(/^In stock per colour:/)).toHaveClass(
+            'sr-only',
+        );
 
-        const spokenLine = within(figure).queryByText(/^In stock per size:/);
+        const line = figure.querySelector('p[aria-hidden="true"]');
+        const counts = Array.from(line?.querySelectorAll('b') ?? []);
 
-        if (spoken === null) {
-            expect(spokenLine).toBeNull();
-            expect(
-                figure.querySelectorAll('[aria-hidden="true"]'),
-            ).toHaveLength(0);
-
-            return;
-        }
-
-        expect(spokenLine).toHaveTextContent(spoken);
-        expect(spokenLine).toHaveClass('sr-only');
-
-        // The chips are hidden from screen readers (the spoken line says it all) and wrap.
-        const row = figure.querySelector('[aria-hidden="true"]');
-
-        expect(row).toHaveClass('flex-wrap');
+        expect(line).toHaveTextContent('Black 4 · Indigo 6 · Light wash 0');
+        expect(counts.map((count) => count.textContent)).toEqual([
+            '4',
+            '6',
+            '0',
+        ]);
+        // A colour at 0 is in the grey text colour, its "0" still shown; the others are bold.
         expect(
-            Array.from(row?.children ?? []).map((chip) => [
-                chip.children[0].textContent,
-                chip.children[1].textContent,
-            ]),
-        ).toEqual(chips);
-        // Only a size at 0 is greyed.
+            counts.map((count) => count.className.includes('font-semibold')),
+        ).toEqual([true, true, false]);
         expect(
-            Array.from(row?.children ?? [])
-                .filter((chip) => chip.hasAttribute('data-zero'))
-                .map((chip) => chip.children[1].textContent),
-        ).toEqual(chips.filter(([, count]) => count === '0').map(([, c]) => c));
+            counts.map((count) =>
+                count.parentElement?.classList.contains(
+                    'text-muted-foreground',
+                ),
+            ),
+        ).toEqual([false, false, true]);
+        expect(
+            Array.from(
+                line?.querySelectorAll<HTMLElement>(
+                    '[data-slot="colour-swatch"]',
+                ) ?? [],
+            ).map((swatch) => swatch.style.backgroundColor),
+        ).toEqual([
+            'rgb(31, 31, 35)',
+            'rgb(62, 76, 126)',
+            'rgb(157, 179, 209)',
+        ]);
+
+        expect(
+            within(figure).getByRole('link', { name: 'By size and colour' }),
+        ).toHaveAttribute('href', '#sizes-colours');
+        // Stock is changed in the Sizes & colours card now.
+        expect(
+            screen.queryByRole('button', { name: 'Update stock' }),
+        ).toBeNull();
     });
 
-    it.each([
-        {
-            way: 'Cancel',
-            close: (user: ReturnType<typeof userEvent.setup>) =>
-                user.click(screen.getByRole('button', { name: 'Cancel' })),
-        },
-        {
-            way: 'Escape',
-            close: (user: ReturnType<typeof userEvent.setup>) =>
-                user.keyboard('{Escape}'),
-        },
-        {
-            way: 'Save',
-            close: async (user: ReturnType<typeof userEvent.setup>) => {
-                await user.click(screen.getByRole('button', { name: 'Save' }));
-                const [, , options] =
-                    inertiaMock.router.put.mock.calls.at(-1) ?? [];
+    it('shows "0 units" with no colour line, and keeps the link', () => {
+        render(
+            <FinishedStockFigure
+                stock={stockByColour(sizeListSToXl, [
+                    ['Black', []],
+                    ['Indigo', []],
+                ])}
+            />,
+        );
 
-                act(() => (options as { onSuccess: () => void }).onSuccess());
-            },
-        },
-    ])(
-        'puts focus back on "Update stock" when the window closes by $way',
-        async ({ close }) => {
-            const user = userEvent.setup();
+        const figure = screen.getByRole('region', { name: 'Finished stock' });
 
-            render(
-                <FinishedStockFigure
-                    product={{ id: 1, name: 'Denim Jacket' }}
-                    stock={stockOf(sizeListSToXl, [3, 0, 5, 2])}
-                />,
-            );
+        expect(
+            within(figure).getByText(/units?$/).parentElement,
+        ).toHaveTextContent('0 units');
+        expect(within(figure).queryByText(/^In stock per colour:/)).toBeNull();
+        expect(figure.querySelectorAll('[aria-hidden="true"]')).toHaveLength(0);
+        expect(
+            within(figure).getByRole('link', { name: 'By size and colour' }),
+        ).toBeInTheDocument();
+    });
 
-            const button = screen.getByRole('button', { name: 'Update stock' });
+    it('keeps the focus on Try again while the stock reloads, and a second click does not reload again', async () => {
+        const user = userEvent.setup();
+        const { rerender } = render(<StockLoadError reloading={false} />);
+        const retry = screen.getByRole('button', { name: 'Try again' });
 
-            await user.click(button);
-            expect(screen.getByRole('dialog')).toBeInTheDocument();
+        await user.click(retry);
+        expect(inertiaMock.router.reload).toHaveBeenCalledTimes(1);
 
-            await close(user);
+        rerender(<StockLoadError reloading />);
 
-            await waitFor(
-                () =>
-                    expect(
-                        screen.queryByRole('dialog'),
-                    ).not.toBeInTheDocument(),
-                { timeout: 1000 },
-            );
-            await waitFor(() => expect(button).toHaveFocus(), {
-                timeout: 1000,
-            });
-        },
-    );
+        expect(retry).toHaveAttribute('aria-disabled', 'true');
+        expect(retry).not.toBeDisabled();
+        expect(retry).toHaveFocus();
+
+        await user.click(retry);
+        expect(inertiaMock.router.reload).toHaveBeenCalledTimes(1);
+    });
 });

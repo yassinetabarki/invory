@@ -7,8 +7,10 @@
  * Material ids follow the seeded order: rivet 1 … label 12.
  */
 import { paginate } from '@/test/fixtures';
+import { colourNamed } from '@/test/fixtures/colours';
 import type {
     Colour,
+    FinishedStock,
     MaterialOption,
     MaterialRef,
     Option,
@@ -443,6 +445,53 @@ export const denimJacket: Product = {
     created_at: '2026-09-01T09:00:00Z',
     updated_at: '2026-10-01T09:00:00Z',
 };
+
+// ---------------------------------------------------------------------------
+// Finished stock per colour and size (INV-2)
+// ---------------------------------------------------------------------------
+
+/**
+ * The stock the server sends: one row per colour (by name, in list order) with
+ * its units per size; the totals per size and in all are what the server adds.
+ */
+export function stockByColour(
+    list: SizeList,
+    rows: [colour: string, units: number[]][],
+): FinishedStock {
+    const colours = rows.map(([name, units]) => ({
+        colour: colourNamed(name),
+        units: units.reduce((sum, count) => sum + count, 0),
+        sizes: list.sizes.map((size, index) => ({
+            size,
+            units: units[index] ?? 0,
+        })),
+    }));
+
+    return {
+        units: colours.reduce((sum, { units }) => sum + units, 0),
+        sizes: list.sizes.map((size, index) => ({
+            size,
+            units: colours.reduce(
+                (sum, { sizes }) => sum + (sizes[index]?.units ?? 0),
+                0,
+            ),
+        })),
+        colours,
+    };
+}
+
+/** The worked example: Black 1 · 0 · 2 · 1, Indigo 2 · 0 · 3 · 1, Light wash 0 (S · M · L · XL) → 10 units. */
+export const denimStockByColour = stockByColour(sizeListSToXl, [
+    ['Black', [1, 0, 2, 1]],
+    ['Indigo', [2, 0, 3, 1]],
+    ['Light wash', [0, 0, 0, 0]],
+]);
+
+/** The Leather Tote ("One size"): Camel 4, Black 0. */
+export const toteStockByColour = stockByColour(sizeListOneSize, [
+    ['Camel', [4]],
+    ['Black', [0]],
+]);
 
 /** Out of stock: the cupsole is at 0, so nothing can be produced. */
 export const canvasLowSneaker: Product = {
