@@ -290,6 +290,26 @@ with the per-colour, per-size and grand totals); the product
 page gets it as `finished_stock`, a deferred prop in its own group `stock`, rescued. Whole units only: it never reaches
 `App\Domain\Costing`, the products list, sales or the dashboard. Every writer takes the product's row lock first.
 
+### `barcodes` and `barcode_names` (INV-8, [ADR-0020](adr/0020-barcodes-follow-the-name.md))
+
+| Table / column                   | Type                       | Rules                                                                                     |
+| -------------------------------- | -------------------------- | ----------------------------------------------------------------------------------------- |
+| `barcodes`                       | id, timestamps             | one row per number; nothing in the app deletes one                                        |
+| `barcodes.workshop_id`           | FK → workshops             | `restrictOnDelete`; `unique(workshop_id, number)`                                         |
+| `barcodes.number`                | string(13)                 | an EAN-13 in-store number ("2" + 11-digit serial + check digit), never changed            |
+| `barcodes.colour_id`, `size_id`  | FK → colours, sizes        | `restrictOnDelete`; the one colour and size the number stands for                         |
+| `barcodes.created_by`            | FK → users nullable        | `nullOnDelete`                                                                            |
+| `barcode_names`                  | id, timestamps             | what a number stands for: one row per name; a rename adds a row, the old one stays        |
+| `barcode_names.barcode_id`       | FK → barcodes              | `restrictOnDelete`; PostgreSQL: composite FK (`barcode_id`, `colour_id`, `size_id`)       |
+| `barcode_names.name_key`         | string(150)                | `NameKey::of()` of a product name; `unique(workshop_id, name_key, colour_id, size_id)`    |
+| `products.name_key`              | string(150), NOT NULL      | set by a mutator whenever `name` is set; `index(workshop_id, name_key)`                   |
+| `workshops.last_barcode_serial`  | unsigned bigint, default 0 | the last in-store serial given; read and saved under the workshop's row lock (Generate)   |
+
+A product owns no barcode: `ProductBarcodes::of()` looks up its `name_key`, colours and size list in `barcode_names`, so a deleted
+product's barcodes, and those of a colour taken off, come back on any product of that name with that colour and size. Every barcode
+writer (`GenerateBarcodes`, the rename in `UpdateProduct`) takes the product's row lock, then the workshop's. The product page gets
+them as `barcodes`, deferred in the group `stock` with `finished_stock`, rescued.
+
 ### `order_line_sizes` (S-60, [ADR-0016](adr/0016-order-lines-count-by-size.md))
 
 | Column                             | Type                        | Rules                                                                          |
@@ -369,7 +389,8 @@ All formulas, rounding rules, edge cases and a worked example live in the skill
 - A **material used in any non-deleted product's BOM cannot be deleted**: `DeleteMaterial` throws
   `MaterialInUseException`, and the controller turns it into a flash error listing the products.
 - Deleting a product soft-deletes it. Its BOM lines stay, for history and restore. Its order lines stay too and show its name without a link.
-  Its finished stock (`product_size_stocks`) is deleted with it, under the product's row lock (S-56, ADR-0017).
+  Its finished stock (`product_size_stocks`) is deleted with it, under the product's row lock (S-56, ADR-0017). Its barcodes stay under its
+  name (INV-8, ADR-0020).
 - Deleting an order soft-deletes it (`DeleteOrder`); its lines and cuts stay with it. It is **refused** while any unit is in cutting or
   ready to ship (checked under the order row lock), so no material taken out of stock is lost by deleting (S-49, ADR-0014).
 
@@ -433,6 +454,7 @@ tests/
 | PUT | /products/{product} | products.update | @update | redirect → show |
 | DELETE | /products/{product} | products.destroy | @destroy | redirect → index |
 | PUT | /products/{product}/stock | products.stock.update | ProductStockController@update | redirect → show ("Stock updated."); S-56: `sizes` by size id, every size of the list; the window reloads only `finished_stock` |
+| POST | /products/{product}/barcodes | products.barcodes.store | ProductBarcodeController@store | redirect → show `?tab=barcodes` with the server's toast; INV-8: `variants` [{colour_id, size_id}], all or nothing; the window reloads only `barcodes` |
 | POST | /materials/{material}/restocks | materials.restocks.store | MaterialRestockController@store | redirect back |
 | GET | /sales | sales.index | SaleController@index | `sales/index` (log, totals, record / edit panel) |
 | POST | /sales | sales.store | @store | redirect back |

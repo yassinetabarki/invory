@@ -39,6 +39,9 @@ If a rule here is wrong or incomplete, stop and ask the tech-lead to update it (
 | Finished stock | The finished units of a product on the shelf, counted per colour and size (per size before INV-2). Set by "Update stock" (a count, not a plus or minus; the last save wins); S-57 adds cancelled units. Never changes "Can produce now", the unit cost, the materials, sales, orders or the Inventory value (S-56, ADR-0017) | `ProductSizeStock` / `product_size_stocks`, `FinishedStock` |
 | Colour | One colour of the workshop's list: a name (at most 32 characters, unique in the workshop ignoring capitals), a code (2 to 4 capitals or digits, unique in the workshop, never changed; INV-2 builds variant SKUs from it), a swatch (`#RRGGBB`, capitals) and a position. Never removed. Every workshop starts with 20 defaults. A product has at least one colour, from its own workshop (INV-1, ADR-0018) | `Colour` / `colours`, `product_colours` |
 | Variant | One colour of a product in one size ("the Denim Jacket in Indigo, size M"). Not stored on its own: a product, a colour and a size, with its own finished stock (INV-2, ADR-0019) | product id + colour id + size id |
+| Barcode | An EAN-13 number of the workshop, made by Invory, for one colour and one size; it stands for one or more product names and never changes (INV-8, ADR-0020) | `Barcode` / `barcodes`, `BarcodeName` / `barcode_names` |
+| Name key | A product name in plain form (trimmed, single spaces, small letters) that decides "the same name" for barcodes | `name_key`, `NameKey` |
+| Variant SKU | Product SKU + colour code + size ("PRD-JKT-001-IND-S"; "PRD-TOT-001-CAM" for "One size"); built on every read | `VariantSku` |
 | Workshop | The business account. Every user belongs to one; every material, product, composition, stock movement, sale, order, order line, photo, unit, category and colour belongs to one | `Workshop` / `workshops`, `workshop_id` |
 
 ## Workshops (added 2026-10-14, D-9, ADR-0013)
@@ -347,6 +350,56 @@ used_by(c)            = number of non-deleted products with colour c, any status
   dashboard are as before.
 - The materials' "Colour" field stays free text ("Antique brass"); it is not a colour of this list.
 
+### Barcodes (added 2026-10-31, INV-8, ADR-0020)
+
+```
+name_key(n)           = n trimmed, every run of spaces as one space, in small letters (mb_strtolower); accents kept
+                        ("denim jacket" = "  Denim   Jacket " = "DENIM JACKET"; "Écru" ≠ "Ecru"; "Denim Jackets" ≠ "Denim Jacket")
+tidy(n)               = n trimmed, every run of spaces as one space, capitals kept            (the new name in the AC-5 sentence)
+barcode(W, k, c, z)   = the one number of workshop W that stands for name key k, colour c and size z, or none
+barcode(P, c, z)      = barcode(P.workshop, name_key(P.name), c, z)       for every colour c of colours(P) and size z of sizes(P)
+missing(P, c)         = number of sizes z of sizes(P) with no barcode(P, c, z);   missing(P) = Σ missing(P, c)
+with_barcode(P)       = variants(P) − missing(P)
+shared_with(P, c, z)  = the other non-deleted products Q of the workshop, any status, with barcode(Q, c', z') = barcode(P, c, z)
+                        for a colour c' of Q and a size z' of Q's list; by SKU, then id
+variant_sku(P, c, z)  = P.sku + "-" + c.code + "-" + z.label       ("PRD-JKT-001-IND-S", "PRD-SNK-003-BLK-38")
+                      = P.sku + "-" + c.code                        for a "One size" product ("PRD-TOT-001-CAM"); never stored
+in_store(n)           = "2" + n on 11 digits + check digit          serial n from 1 to 99,999,999,999
+                        (1 → 2000000000015, 2 → 2000000000022, 3 → 2000000000039, 4 → 2000000000046, 5 → 2000000000053)
+check_digit(d1…d12)   = (10 − (Σ d_i × (1 if i odd else 3)) mod 10) mod 10                 (4006381333931 is valid)
+```
+- **A barcode is a number plus the names it stands for.** Each number is given once per workshop, for one colour and one size, and
+  never changes. One name, colour and size has at most one number. Two workshops can each have 2000000000015.
+- **Generate** (all or nothing, archived and draft products too): for the variants asked, in colour order then size order, a variant
+  whose name, colour and size already has a number is "already used"; each other takes the next serial of the workshop's counter
+  (`workshops.last_barcode_serial`, the last serial given). A failure saves nothing and the counter stays.
+- **Toasts** (by how many were asked, not by the button): several: "4 barcodes generated for Denim Jacket."; some already made: "6
+  barcodes ready for Denim Jacket: 5 new, 1 already used by PRD-JKT-002."; all: "4 barcodes ready for Denim Jacket: all already used
+  by PRD-JKT-002."; one asked: "Barcode generated for Light wash S." / "Barcode ready for Light wash S: already used by PRD-JKT-002.".
+  The holders are the non-deleted products showing those numbers, each once, by SKU; none left → "by …" is dropped ("…1 already
+  used.", "…all already used.", "…: already used.").
+- **A rename keeps the barcodes**: for every colour and size the product has after the save, a barcode of the old name that the new
+  name lacks gets the new name too; the old name keeps it. A colour taken off before or in the same save is not carried. Capitals or
+  spaces only: nothing written. **Delete product** and taking a colour off keep the barcodes under the name; they come back on any
+  product of that name with that colour and size.
+- **A rename is refused** when, for a colour and size the product has after the save, the old and the new name each have a number and
+  the numbers differ: "Trucker Jacket already has its own barcodes for Indigo S and L, so Denim Jacket can't take that name. Choose
+  another name." (one: "…its own barcode for Indigo S, so …"), on `name`, nothing saved. Same number under both, or a number under
+  only one of them: no clash.
+- **Variant lists** (one rule, server-side, `VariantNames`): grouped by colour in colour order, each colour followed by its sizes in
+  size order, joined with ", " and " and " ("Black M and L, and Light wash S, M, L and XL"; two colours: "Black M and L, and Light
+  wash S"; one: "Light wash S, M, L and XL"). Digit-only sizes: "Light wash sizes 36, 37 and 38", one "Light wash size 36". "One size":
+  the colours only ("Camel and Rust"). With the limit (AC-5 only): beyond three colours the first three, then ", and 2 more colours"
+  ("and 1 more colour"). One variant: "Light wash S", "Light wash size 36", "Camel".
+- **SKU lists**: one to three SKUs in full ("PRD-JKT-002", "PRD-JKT-002 and PRD-JKT-007", "PRD-JKT-002, PRD-JKT-007 and PRD-JKT-009");
+  four or more: the first two and "and N more" ("PRD-JKT-002, PRD-JKT-007 and 3 more").
+- **Changes no figure**: costing, "Can produce now", finished stock, orders, sales and the dashboard are as before.
+
+Worked example: Denim Jacket (Black, Indigo, Light wash × S, M, L, XL) with Black and Indigo made and Light wash not → missing 4 (Light
+wash 4), with a barcode 8, missing names "Light wash S, M, L and XL"; the first four numbers of a new workshop
+are 2000000000015, 2000000000022, 2000000000039 and 2000000000046. Renamed "Trucker Jacket" while another Trucker Jacket has its own Indigo S and L → refused with the
+sentence above; a Trucker Jacket with Light wash S only → renames fine and then shows that barcode.
+
 ## Precision and rounding (non-negotiable, see ADR-0002)
 
 1. **Never use floats** for money or quantities: no `float` casts, no `(float)`, no `+`/`*` on numeric strings in PHP, and no `Number(x) * y` in TypeScript.
@@ -459,3 +512,6 @@ Variant checks:
   for new workshops), `CreateColour` / `UpdateColour`, `AppActionsProductsSyncProductColours`, `ColourResource`.
 - Added 2026-10-31 (INV-2, ADR-0019): `colour_id` on `ProductSizeStock`, `FinishedStock::of()` per colour (`FinishedStockLevel::$colours`),
   `UpdateFinishedStock` (`stock[colourId][sizeId]`), `App\Services\Products\ProductColourLock` (the colour lock).
+- Added 2026-10-31 (INV-8, ADR-0020): `App\Domain\Barcodes\{Ean13,NameKey,VariantSku,VariantNames}`, `App\Models\{Barcode,BarcodeName}`,
+  `App\Services\Products\ProductBarcodes`, `App\Actions\Barcodes\{GenerateBarcodes,AddNameToBarcodes}`, `App\Services\Barcodes\RenameClash`,
+  `ProductBarcodesResource`; frontend `lib/ean13.ts` and `components/shared/barcode.tsx` (the picture only).

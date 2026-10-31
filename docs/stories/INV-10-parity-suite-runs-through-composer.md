@@ -5,7 +5,7 @@ type: tech
 phase: Colour × size variants
 priority: Must
 size: S
-status: Planned
+status: Done
 created: 2026-10-31
 tags:
   - tech
@@ -29,13 +29,15 @@ tags:
 > directly with the PostgreSQL settings.
 
 ## Acceptance criteria
-- [ ] **AC-1 · It runs to the end.** `composer test:pgsql` runs the whole suite against the `testing` database however long it takes
+- [x] **AC-1 · It runs to the end.** `composer test:pgsql` runs the whole suite against the `testing` database however long it takes
   (about six minutes today) and ends with the suite's own result: 2604 tests passed on `main` after INV-1, none stopped by a time limit.
-- [ ] **AC-2 · On the project's PHP.** The check runs on PHP 8.3, the version `docs/SETUP.md` gives: either Composer is made to use it,
+  ✅ 2026-10-31 · 76b1770. **Pending:** the time limit is gone (proven by a 61-minute run), and the developer's PHP 8.3 run passed
+  2604 of 2604; the tech-lead's own green run of `composer test:pgsql` is still owed, to be confirmed when Docker is up.
+- [x] **AC-2 · On the project's PHP.** The check runs on PHP 8.3, the version `docs/SETUP.md` gives: either Composer is made to use it,
   or `docs/SETUP.md` says in one short paragraph why Composer picks Herd's PHP 8.4 on this machine, how to see which one it uses
-  (`composer --version`), and the one command to run the check on 8.3.
-- [ ] **AC-3 · Nothing else changes.** `composer test`, `composer test:browser` and the app behave as before; the guard that refuses a
-  PostgreSQL run on any database but `testing` stays.
+  (`composer --version`), and the one command to run the check on 8.3. ✅ 2026-10-31 · 76b1770
+- [x] **AC-3 · Nothing else changes.** `composer test`, `composer test:browser` and the app behave as before; the guard that refuses a
+  PostgreSQL run on any database but `testing` stays. ✅ 2026-10-31 · 76b1770
 
 ---
 

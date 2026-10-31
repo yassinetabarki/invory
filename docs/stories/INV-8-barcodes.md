@@ -490,3 +490,6 @@ exists, for Wayfinder), then INV-8-h. Docker must be up for the parity runs.
   its own numbers in that range → noted in ADR-0020; nothing to do while barcodes stay in the workshop.
 - The browser golden path walks the Sizes & colours card → Stock stays the first tab, so it should pass unchanged; the browser suite
   runs at the end.
+
+### Progress
+- 2026-10-31 · build started. Docs of INV-8-a written (ADR-0020, ARCHITECTURE.md, the Barcodes section of the business rules). Wave 1 dispatched: backend INV-8-a + INV-8-b, frontend INV-8-e.

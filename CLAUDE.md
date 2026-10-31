@@ -30,7 +30,7 @@ worktree and never offer a worktree session. Tasks are done **one at a time, in 
 starts only when the current one is approved or done.
 
 **Everything new is `INV-1`, `INV-2`, …** (files `docs/stories/INV-<n>-<slug>.md`): features and technical items alike; a technical
-item gets an INV card with no UI card. Old `S-xx` / `F-xx` cards keep their names, IDs are never reused, and the next free INV number
+item gets an INV card with no UI card.
 sits at the top of `docs/BACKLOG.md`.
 
 **Each feature gets two cards, in this order** (Obsidian style, read by the human in Obsidian; questions travel in hand-offs, never inside a card):
@@ -95,6 +95,13 @@ human ⇄ main session ──► ui-ux-designer  0a. DESIGN: design spec + board
 
 Don't do the developers', the tech-lead's or the product-owner's work yourself, even if it looks quick. If an agent is blocked
 (environment, permissions), tell the human. Process documents (CLAUDE.md, `.claude/**`) change only when the human asks.
+
+## Working rules
+1. Use `/clear` between unrelated tasks (the human runs it).
+2. Run `/mcp` at the start of each session (the human runs it).
+3. Make no changes until about 95% confident in what to build. Ask follow-up questions until then.
+4. Keep token use low: short replies, read only the lines needed, dispatch subagents only for broad work.
+5. No new cards until INV-10 is complete. The roadmap shows INV-1 to INV-10 only.
 
 ## Non-negotiables
 - Money and quantities are **decimal strings + `Brick\Math\BigDecimal`**. Never floats, in PHP or TS. The UI formats numbers and never computes them.
