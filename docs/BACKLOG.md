@@ -1,506 +1,162 @@
-# Invory — product backlog
+# Invory — Product Backlog
 
-> Owner: **product-owner** (order, wording, acceptance criteria) · Technical detail: **tech-lead** ([TECH-DEBT.md](TECH-DEBT.md), [plans/](plans/README.md))
-> Phases and goals: [ROADMAP.md](ROADMAP.md) · Progress: [STATUS.md](STATUS.md) · Done work and full history: [archive/backlog-2026-10-14.md](archive/backlog-2026-10-14.md)
-> Last cleaned: 2026-10-31 (**INV-2's Technical work approved, so INV-2 is `Planned`; INV-10 "Fix `composer test:pgsql`" (tech, S) added ahead of INV-2's build; next free ID INV-11.** Earlier the same day, **INV-2's card split in three at your yes: INV-2 stock, INV-8 barcodes, INV-9 labels, all `Ready`; order INV-2, INV-8, INV-9, INV-3, INV-4, INV-5, INV-7; next free ID INV-10.** Earlier the same day, **INV-1 "Colours as fixed values" done:** you accepted it after the designer's review, one fix round and your click-through; it is on `main` as `a66f4bf` (AC-1 to AC-5) and `78a4eee` (AC-6, AC-7; card `8e44eeb`, Technical work `8fa6d27`), so it left this file; INV-6 (the tech-lead's picker-row item) and INV-7 (a Could: bigger tap targets on the Settings pages) added, next free ID INV-8; the links to cards moved into `stories/old.stories/` fixed; INV-5's UI card date corrected to 2026-10-30, as in git; INV-2 is next). Before that, 2026-10-30 (INV-1's development card written and approved by you the same day, with your three answers, then its Technical work approved, so INV-1 is `Planned`, size L, one build; its stock rule moved to INV-2's development card; you asked to start INV-1 first). Before that, 2026-10-24 (**D-20: every open item is on hold.** You paused the card flow to rework the product around colour × size variants; every card that isn't `Done` now reads `On hold`, and new work is numbered INV-1, INV-2 …, a UI card first and then a development card. Earlier the same day, S-73 "The product page and form match the size board" done: you accepted it without a fix round after the designer's review and your click-through; it is on local `main` as `51ba6ce`, `078bead` and `bf5db86` (not pushed), so it left this file; AC-1 now says the unit cost's "TND" is drawn at the size of "units" (your yes); S-74 "Long figures and small leftovers on the product page" added as a Should after S-57, from the designer's review (your answer). Earlier the same day, S-71 "The order page's stage table and its buttons look like the design" done: you accepted it after one fix round (size labels semibold, the board's weight, and the sizes and "Total" as far from the frame's left edge as the figures from its right) and your click-through; it is on `main` as `722638c`, `7e00fff` and `da6ff31` (card `c3b0eb3`), so it left this file; S-68 gained the faded look of disabled buttons elsewhere in the app, and S-72 the box figures in the number font with grey zeros. Earlier the same day, S-73 "The product page and form match the size board" added as a Should, after S-71 and before S-57, from your request to bring the product page and form in line with the design board "Sizes · products" and the designer's review, and approved the same day, so it is `Ready`: three figures in one row at the board's size, "Sold · last 30 days" as a line under "Recent sales", and the form's size tags as on the board; it was first drafted as S-71 and renumbered, as S-71 and S-72 went to the order-page cards. Earlier the same day, S-71 "The order page's stage table and its buttons look like the design" added as a Should, next in line before S-57, from your look at an order page and the designer's comparison with the board "Order detail per size"; you approved its card the same day, so it is `Ready`, and as a one-off its card travels on the build branch instead of being committed on `main` first. S-72 "The order page shows the whole order at a glance, like the design" added as a `Draft` Could after S-68, with the rest of that comparison. Before that, 2026-10-23: S-70 "Sizes look the same on every screen" done: you accepted it after one fix round and your click-through, and it was committed on `main` in six commits, `b200905` to `4d646e9`, so it left this file; S-68 gained the windows' small close ✕ and the product picker that cuts off a name on a phone. Earlier the same day, S-70 was added as a Should, next in line, and approved the same day, so it is `Ready`, from your request "start S-58 UI" and your answers to the designer; it takes in S-69 ("At least 10" under a started size), so S-69 left this file, and the size fields leave S-68). Earlier the same day, S-56 done: you accepted it and had it committed on `main` as `83062eb`, after a fix round that made it match the design board (size chips, "Update stock" at the top right, "Total after saving" and the "was" hints), so it left this file; S-68 widened at your answer during S-56's first acceptance round: the 44 px rule also covers "Update stock" and the "Try again" buttons on the product page and the materials screens). Earlier the same day, S-60 and S-61 done: you accepted them after your click-through, including the 11 shoe sizes two per row on a phone, so they left this file; S-68 "Easier to tap and clearer buttons on the order screens" added as a Could from the design review, and S-69 "Edit order shows how many units of each size have started" as an `Idea` Could. Before that, 2026-10-22 (D-17: you approved the four size cards, so S-60, S-61, S-56 and S-57 are `Ready`; S-60 and S-61 go to the tech-lead for planning first. S-56 and S-57 gained a phone-width criterion, plus where "Update stock" sits and the "Cancelled" icon, and you approved that wording). Earlier the same day, S-58 done: you accepted it after your click-through, kept the sizes between the category and the status, and wanted no follow-up story for the lock message, so it left this file. Earlier the same day, S-65 "Close a fully shipped order" added as a Should after S-57, from your design, with your eight answers written into its card, then approved, so it is `Ready`; S-66 "Each shipment is remembered" and S-67 "Materials used by an order" added after it as `Idea` Shoulds in Phase 5, their cards to come later. Before that, S-50 done: you accepted it, so it left this file. Before that, 2026-10-21 (F-41, S-49 and S-53 done: you accepted them after your click-through, so they left this file; S-58 card and then its Technical work approved, so it is `Planned`: its sizes lock while the product is on any order that isn't deleted, and Settings shows no sizes). Before that, 2026-10-18 (D-15 and D-16 products by size: S-58, S-60 and S-61 added as Musts, S-56 and S-57 written per size, all five cards `Draft`; S-52 and S-54 become Won't (this time); S-62 added as a Could; S-63 and S-64 to Phase 8). Before that, 2026-10-16 (D-11 decided with your final answers: S-49 and S-53 revised, then their revised Technical work approved, so F-41, S-49 and S-53 are `Planned` and S-50 is `Ready`; S-56 and S-57 added; on 2026-10-15 S-48 done and accepted, so it left this file; before that, D-12: Phase 5 starts now, the rest of Phase 4 is on hold; D-13: S-08 and S-29 done). **Open work only**, top = next.
-> Done items leave this file; they are recorded in STATUS.md and the archive.
+> [!info] Quick Links & Ownership
+> **Owner:** `product-owner` (order, wording, acceptance criteria) · **Technical Detail:** `tech-lead` ([TECH-DEBT.md](TECH-DEBT.md), [plans/](plans/README.md))
+> **Phases & Goals:** [ROADMAP.md](ROADMAP.md) · **Progress:** [STATUS.md](STATUS.md)
 
-## How to read an item
-- **Status:** `Idea` → `Draft` (product-owner writing the card) → `Ready` (you approved the card) → `Planned` (you approved the tech-lead's plan)
-  → `In progress` → `In review` (tech-lead gates) → `Acceptance` (product-owner check + your click-through) → `Done` (committed).
-  A paused item reads "`On hold` since <date> (was `<status>`)"; its card's status is `On hold`.
-- **Priority** (MoSCoW, per phase): Must · Should · Could · Won't (this time). **Size:** S (≤ 1 day of agent work) · M · L (split it).
-- **Card:** the full story card (story, acceptance criteria with examples, what you will see, out of scope, questions) lives in
-  `docs/stories/<id>-<slug>.md` once the product-owner writes it. Items below show the short version.
-- **IDs:** from 2026-10-24 (D-20, D-21) everything new is numbered **INV-n**, technical items too (a technical item gets an INV
-  number and no UI card). INV-1 to INV-5 are the five variant-rework items (INV-1 is done); INV-6 is the tech-lead's picker-row item and
-  INV-7 the Settings pages' tap targets; INV-8 and INV-9 are the barcodes and the labels cut out of INV-2's card on 2026-10-31; INV-10 is the tech-lead's fix of `composer test:pgsql`. Next free: **INV-11**. Old `S-` and `F-` items keep
-  their IDs, which are never reused; the last story ID given was S-74. Before that, `S-` stories were numbered by the product-owner and `F-` technical items by the tech-lead (S-47 was dropped on 2026-10-14; S-59 was never used, folded into S-58 on 2026-10-18; S-69 was merged into S-70 on 2026-10-23; S-73 was first drafted as S-71 on 2026-10-24 and renumbered before it reached this file). The tech-lead's register keeps its open F-xx items under their IDs; new technical
-  items are INV-n (see [TECH-DEBT.md](TECH-DEBT.md)).
+> [!history] Last Cleaned: 2026-10-31
+> - **INV-2 Done** (accepted 2026-10-31; `46af1cc`, `ab313eb`, `4088200`), so it left the open list. The PostgreSQL parity suite was green before the commits (2619 tests). INV-8 is next.
+> - **INV-10 done** (`76b1770`; its card `1f854bf`), so it left the open list.
+> - **INV-2 Split:** INV-2's card was split into three: **INV-2** (stock, done), **INV-8** (barcodes), and **INV-9** (labels).
+> - **Current Order** (INV-2 done): `INV-8` → `INV-9` → `INV-3` → `INV-4` → `INV-5` → `INV-7`. Next free ID stays **INV-11**: the tab-order fix landed in INV-2, so no INV-11 was needed.
+> - **INV-1 Done:** "Colours as fixed values" accepted & merged (`a66f4bf`, `78a4eee`), so it left this backlog.
+> - **Added:** `INV-6` (picker-row item) and `INV-7` (Could: bigger tap targets on Settings).
+> - **Archive:** Done items leave this file and are recorded in `STATUS.md` and the archive.
 
 ---
 
-## NOW — Colour × size variants (D-20, D-21); every other open item on hold since 2026-10-24
-You paused the card flow on 2026-10-24 to rework the product around **colour × size variants**. Every S- item below is on hold, and every
-card that isn't `Done` reads `On hold`; nothing is planned, in progress or waiting for acceptance. Nothing is dropped: when work resumes,
-each item is checked against the new product model before its card goes back to its old status.
+## 📖 How to Read an Item
 
-**INV-1 colours is done** (accepted 2026-10-31; see STATUS). **Next: INV-2 to INV-5, in this order** (your answer, 2026-10-24,
-D-21). Each feature gets a UI card first (`INV-n-<slug>-ui.md`), then a development card (`INV-n-<slug>.md`). **INV-2's card was
-split in three on 2026-10-31 (your answer): INV-2 stock, INV-8 barcodes, INV-9 labels**, which share INV-2's UI card and are
-accepted one by one. The development cards of INV-3 to INV-5 come from a session on the main checkout when you ask for them.
+### Status Lifecycle
+`Idea` ➔ `Draft` *(writing card)* ➔ `Ready` *(approved card)* ➔ `Planned` *(approved tech plan)* ➔ `In progress` ➔ `In review` *(tech-lead gates)* ➔ `Acceptance` *(PO check + click-through)* ➔ `Done` *(committed)*
 
-| ID     | What it brings                                      | Type    | Status        |
-| ------ | --------------------------------------------------- | ------- | ------------- |
-| INV-10 | Fix `composer test:pgsql` (timeout and PHP version) | tech    | `Draft`       |
-| INV-2  | Product sizes × colours: stock per colour and size  | feature | `Planned`     |
-| INV-8  | Barcodes for every colour and size                  | feature | `Ready`       |
-| INV-9  | Print barcode labels                                | feature | `Ready`       |
-| INV-3  | Restock of finished products                        | feature | `UI approved` |
-| INV-4  | Clients                                             | feature | `UI approved` |
-| INV-5  | A production progress page                          | feature | `UI approved` |
-| INV-7  | Bigger tap targets on the Settings pages (Could)    | feature | `Idea`        |
+> [!note] On Hold Items
+> A paused item reads: ``On hold` since <date> (was `<status>`)`. Its card's status is set to `On hold`.
 
-INV-6 (the tech-lead's picker-row item) is not in this order: it joins a phase's tech allowance when the tech-lead proposes it.
-
-- **INV-10 · Fix `composer test:pgsql`** (tech, size S, first in line, before INV-2's build; you approved the item on 2026-10-31; its
-  card is the tech-lead's and is being written, so `Draft`). The PostgreSQL parity command times out at Composer's 300 seconds and
-  picks the wrong PHP version (8.4 from another tool), so the tech-lead had to run it by hand for INV-1. Nothing a user sees changes.
-- **INV-2 · Product sizes × colours: stock per colour and size** (Must · L; `Planned`: you approved the card on 2026-10-31 with
-  your three answers, a sentence added to AC-1 for several colours with stock taken off at once, and then its Technical work;
-  `UI approved`: you validated the UI card on 2026-10-25, with your 8 answers): card
-  [stories/INV-2-product-sizes-colours-barcodes.md](stories/INV-2-product-sizes-colours-barcodes.md), UI card
-  [stories/INV-2-product-sizes-colours-barcodes-ui.md](stories/INV-2-product-sizes-colours-barcodes-ui.md) (shared with INV-8 and
-  INV-9). Stock per colour and size: today's per-size units go into each product's first colour, the In stock figure shows a line
-  per colour, the Sizes & colours card holds the stock table (no tabs yet) with "Update stock" and "Manage sizes & colours", and
-  Update stock works per colour. **Carried over from INV-1 (your answer of 2026-10-30):** a colour with units in stock can't be taken
-  off a product ("Indigo has 6 units in stock, so it can't be removed from Denim Jacket. Set its stock to 0 first."). Barcodes,
-  labels, Restock (INV-3), orders, sales and scanning stay out. Your answers of 2026-10-31: the card is split in three (this one,
-  INV-8, INV-9, each accepted on its own); INV-3 adds the Restock button and the "Last restock" line; the variant SKU is the product
-  SKU + colour code + size label ("PRD-JKT-001-IND-S", "One size" drops the size, a shoe "PRD-SNK-003-BLK-38") and in-store numbers
-  run per workshop from 2000000000015. Next in line: INV-10, then the build.
-- **INV-8 · Barcodes for every colour and size** (Must · L; `Ready`, approved with INV-2 on 2026-10-31): card
-  [stories/INV-8-barcodes.md](stories/INV-8-barcodes.md), same UI card. The Sizes & colours card gets the tabs "Stock by colour" and
-  "Barcodes" (with the "4 missing" badge); the Barcodes tab shows one EAN-13 barcode per name + colour + size, shared by every
-  product with the same name and kept through a rename or a delete; "Generate" always asks first and is all or nothing. After INV-2.
-- **INV-9 · Print barcode labels** (Must · M; `Ready`, approved with INV-2 on 2026-10-31): card
-  [stories/INV-9-labels.md](stories/INV-9-labels.md), same UI card. "Print label" and "Print labels · Indigo" on the Barcodes tab, a
-  label of 50 × 30 mm or an A4 sheet of 24, and the page Settings › Labels. After INV-8.
-- **INV-3 · Restock finished products** (Must; `UI approved`: you validated the UI card on 2026-10-25; its development card comes
-  when you ask for it): [stories/INV-3-restock-finished-products-ui.md](stories/INV-3-restock-finished-products-ui.md). A Restocks page
-  in the sidebar and New restock (a colour × size grid per product, up to 50 products, date, reference, note, a field to scan or type
-  a barcode); a restock adds to the shelf, never touches materials, and can be undone as a whole; Restock is the main button of the
-  product page's Sizes & colours card (INV-2 amended the same day).
-- **INV-4 · Clients as an entity** (Must; `UI approved`: you validated the UI card on 2026-10-30, after its revision and your six
-  answers; its development card comes when you ask for it): [stories/INV-4-clients-ui.md](stories/INV-4-clients-ui.md).
-  Mostly B2C buyers from social media: a Clients page in the sidebar with a Source filter, and a page per client with its orders; a
-  client has a name, a phone and a city (all required) and an optional source (Instagram, Facebook, TikTok, WhatsApp, Website,
-  Walk-in / shop, Word of mouth, Other); a phone belongs to one client; clients are added, never edited or removed; New order has
-  "Existing client · New client", with the new client's fields in the order form, saved with the order; the order page shows the
-  client's source, city and phone; the Orders list gets a Client filter. Today's orders are test data and get no client.
-- **INV-5 · Progress** (Must; `UI approved`: you validated the UI card on 2026-10-30, with the QR work tickets and your answers; its
-  development card comes when you ask for it, after orders per colour is decided): [stories/INV-5-progress-ui.md](stories/INV-5-progress-ui.md).
-  A Progress page in the sidebar: phase tiles, a table per product with a row per colour × size, and a view per phase, oldest first,
-  "since 26 Oct 2026 · 4 days", with the order page's own move buttons; the workshop's own phases between In cutting and Ready to ship
-  (Settings › Production phases, starting with Sewing and Finishing); a work ticket with a QR code per bundle cut, and a Scan page
-  where a scan moves the bundle one phase on, up to Ready to ship; "In production" on the Orders list. Units on an order never go on
-  the shelf. **To be discussed:** order lines counted per colour and size.
-- **Idea (your answer of 2026-10-30):** production for the shelf, a batch with no client going through the phases and ending with "Put
-  in stock". No ID yet.
-- **INV-6 · The picker row's swatch edge** (tech item, minor; added 2026-10-31 by the tech-lead from INV-1's UX review; the tech-lead's
-  card when it is picked up; listed in [TECH-DEBT.md](TECH-DEBT.md)). On the colour picker's hovered or active row the swatch edge
-  reaches only 2.77:1 in light mode and 2.81:1 in dark mode, where 3:1 is wanted. No row tint fixes it on every surface, so the fix is a
-  darker swatch edge or a dedicated highlight colour. Nothing is lost meanwhile: the name always sits beside the swatch. It joins
-  a phase's tech allowance when the tech-lead proposes it.
-- **INV-7 · Bigger tap targets on the Settings pages** (feature, Could, size S–M, `Idea`; goes after INV-5 as its own small item,
-  your answer of 2026-10-31; added the same day at INV-1's acceptance: "a separate app-wide Could"). On a phone the Settings pages' buttons and fields are 32 to 36 px tall (Add colour 36
-  px, Edit 32 px, fields 36 px; Units and the categories are the same), and at tablet width (768 to 1023 px) the colour picker's rows
-  are 36 px and the chips and their ✕ 32 px. They should reach 44 px, like the product form's colours. Card to come, from a session
-  on the main checkout. Related to S-68 (on hold, the same rule for the order screens): they may be one story when both resume.
-- On-hold items stay on hold (your answer, D-20): each one is checked against the variant model before it resumes.
+### Key Metadata
+- **Priority (MoSCoW):** `Must` · `Should` · `Could` · `Won't` *(this time)*
+- **Size:** `S` ($\le 1$ day agent work) · `M` · `L` *(needs split)*
+- **Card:** Full story cards (story, AC with examples, visual scope, out of scope, questions) live in `docs/stories/<id>-<slug>.md`. This backlog displays the short version.
+- **IDs & History:**
+  - Everything new since **2026-10-24 (D-20, D-21)** is numbered **INV-n** (including technical items without UI cards). Next free ID: **INV-11**.
+  - `INV-1` to `INV-5`: Variant rework items (`INV-1` is done).
+  - `INV-6`: Picker-row swatch edge item.
+  - `INV-7`: Settings tap targets.
+  - `INV-2`: Stock per colour and size (done, `46af1cc`, `ab313eb`, `4088200`).
+  - `INV-8` & `INV-9`: Barcodes and labels (split from INV-2 on 2026-10-31).
+  - `INV-10`: PostgreSQL test fix (done, `76b1770`).
+  - Old `S-` and `F-` IDs are retained and never reused (last story ID: `S-74`).
+  - Technical items register: See [TECH-DEBT.md](TECH-DEBT.md).
 
 ---
 
-## ON HOLD — Phase 5: Customer orders (started 2026-10-15, D-12; on hold since 2026-10-24, D-20)
-You started it on 2026-10-15: "we will start focusing more on the orders … we will start with S-48". The rest of Phase 4 is on hold
-(see below), and S-08 and S-29 were closed as they stood (D-13). You answered the scope questions the same day (D-10 in
-[STATUS.md](STATUS.md#2-decisions-needed-from-you)):
-- an order holds **several products**, each with its own quantity and its own four stages;
-- **"Start cutting" takes the materials out of stock**, which replaces Q9;
-- shipping doesn't record a sale (S-54 may add it later);
-- the stages are To start, In cutting, Ready to ship and Shipped;
-- the client is typed on each order, and the delivery date goes in the note;
-- only active products can go on an order, and an order never sets stock aside (S-48, approved 2026-10-15).
+## ⚡ Active Focus — Colour × Size Variants (D-20, D-21)
 
-Order of work: **F-41, S-49 and S-53 are done** (you accepted them on 2026-10-21 after your one click-through; built in one build
-and landed on `main` together, as D-11 asked), **S-50 is done** (you accepted it on 2026-10-22), and **S-58 is done** (you accepted
-it on 2026-10-22: every product has the sizes of its category), and **S-60 and S-61 are done** (you accepted them on 2026-10-23
-after your one click-through: orders count each size, and every move goes size by size), and **S-56 is done** (you accepted it on
-2026-10-23: each product shows its finished units per size), and **S-70 is done** (you accepted it on 2026-10-23: sizes look the
-same on every screen), and **S-71 is done** (you accepted it on 2026-10-24: the order page's table and buttons look like the design
-board), and **S-73 is done** (you accepted it on 2026-10-24: the product page and form match the size board). Since 2026-10-24
-everything left is on hold (D-20). The order before the pause was the Should S-57 "Cancel an order" (card approved 2026-10-22,
-D-17), then S-74 (long figures and small leftovers on the product page; card to come), then S-65 (close a fully shipped order),
-S-66, S-67 and S-51 (D-18).
+> [!warning] Card Flow Paused (2026-10-24)
+> Every `S-` item below is **On hold**. Nothing is dropped: when work resumes, each item will be checked against the new variant model before returning to its prior status.
 
-**Products by size (D-15 and D-16, your answers of 2026-10-18):** S-58 came first on its own (done), then S-60 and S-61 in one build
-(one click-through), then S-56 and S-57, both written per size. Every size of a product uses the same composition, so unit cost, "Can
-produce" and the bottleneck don't change; a bigger size using more fabric (S-63) and a shoe size using its own sole (S-64) come later.
-The product's category decides its sizes, from a short list set up with Invory: Apparel S, M, L, XL; Footwear 36 to 46 (all 11 sizes);
-every other category "One size". A product gets every size of its category, and there is no Settings page for sizes for now. One selling
-price and one SKU for all sizes ("PRD-JKT-001 · M"). Finished stock comes from "Update stock" and from cancelled orders; sales don't take
-units out of it. S-52 and S-54 become Won't (this time) to make room. S-58 is done (accepted 2026-10-22), S-60 and S-61 are done
-(accepted 2026-10-23), S-56 is done (accepted 2026-10-23), S-70 brought every size screen to one look (accepted 2026-10-23);
-S-57 is on hold since 2026-10-24 (D-20; its card was approved on 2026-10-22, D-17).
+### Execution Plan & Order
+1. **INV-1** (Colours) — `#done` *(Accepted 2026-10-31)*
+2. **INV-2** (Stock per colour and size) — `#done` *(Accepted 2026-10-31)*
+3. **Next Sequence:** `INV-8` ➔ `INV-9` ➔ `INV-3` ➔ `INV-4` ➔ `INV-5`
+4. **Card Structure:** Each feature receives a UI card first (`INV-n-<slug>-ui.md`), followed by a development card (`INV-n-<slug>.md`).
+5. **Shared UI Cards:** `INV-2`, `INV-8`, and `INV-9` share the same UI card but are accepted individually.
+6. **Phase 7 Tech Allowance:** `F-43` · `F-46` · `F-52` · `F-53`
 
-**Done in Phase 5 so far** (records in [STATUS.md §4](STATUS.md#4-delivery-history)):
-- **S-48** (accepted 2026-10-15; `e3b7ae7`, `5af8ed1`): record, find, edit and delete an order of one or more products.
-- **S-49** (accepted 2026-10-21): each order's own page, with To start, In cutting, Ready to ship and Shipped per product line, the moves
-  between them, and an order that can't be deleted while units are in cutting or ready to ship.
-- **S-53** (accepted 2026-10-21): "Start cutting" takes the materials out of stock, "Move back to To start" returns them, and each
-  material's history shows "Cutting" and "Back from cutting".
-- **F-41** (accepted 2026-10-21): the costing works out each material's total need per unit, which S-53 uses.
-- **S-50** (accepted 2026-10-22; `ba0a0cd`, `74f05a8`, `a23a5d7`, merged in `0270014`): the Orders list shows each order's four stages
-  and its status, opens on "Open orders", and shows the totals of all open orders at the top.
-- **S-58** (accepted 2026-10-22; `2f02d87`, `9eeee19`, `f1074b6`, `ce9a36f`, `eb5ff13`, docs `69b064b`; on `main`): each product has
-  the sizes of its category (Apparel "S, M, L, XL", Footwear "36 to 46", anything else "One size"), shown on the product page and in
-  the form, and a product on an order can't move to a category with other sizes.
-- **S-60 and S-61** (accepted 2026-10-23 after your one click-through; one commit `1db11bb`, on `main`): "New order" and "Edit order"
-  ask a quantity per size ("Quantity per size", "Total 50 units"); the order page shows a table per size through To start, In cutting,
-  Ready to ship and Shipped; every move window asks a number per size, and one cut takes the materials of every size together. Shoe
-  sizes read "36: 4 · 37: 8" (your choice). One fix round after the design review (the move window fits a phone screen, no message
-  is lost, the limit per size comes from the server). Lines recorded before sizes stay "One size".
-- **S-56** (accepted 2026-10-23; one commit `83062eb`, on `main`): next to "Can produce now", each product page shows "In stock 10
-  units" with a chip per size ("S 3", "M 0" greyed, "L 5", "XL 2"), and "Update stock" sets the count of each size, with "Total after
-  saving" as you type and "was 0" under a size you changed. Nothing else changes: "Can produce now", the unit cost, the materials,
-  sales, orders and the Inventory value. A product with units in stock keeps the sizes of its category, and deleting a product
-  deletes its stock. One fix round to match the design board.
-- **S-70** (accepted 2026-10-23; six commits `b200905`, `ce9ca1d`, `d6a6815`, `99daefe`, `b28eaad`, `4d646e9`, on `main`; card
-  [stories/old.stories/S-70-sizes-look-the-same-on-every-screen.md](stories/old.stories/S-70-sizes-look-the-same-on-every-screen.md)): sizes look the same on
-  every screen. The order page and "In stock" show the same size chips ([S | 10], a shoe [36 | 4]), the product page has an outlined
-  "Sizes S, M, L, XL" badge and "same for every size" under the unit cost, and the form shows tags [S] [M] [L] [XL] under Category.
-  Size fields are small, centred and 44 px high, four to a row on a phone. A size's message goes under the row and names the size ("M:
-  Enter a whole number from 0 to 1,000,000."), and a started size shows "At least 10" with a lock in "Edit order". One fix round to
-  match the design board (label spacing, window titles clear of the ✕, a smaller bold SKU, the badge's weight).
-- **S-71** (accepted 2026-10-24; `722638c`, `7e00fff`, `da6ff31`, card `c3b0eb3`; on `main`;
-  card [stories/old.stories/S-71-order-page-table-and-buttons-match-the-design.md](stories/old.stories/S-71-order-page-table-and-buttons-match-the-design.md)):
-  the order page looks like the board "Order detail per size". Under each line's Total, "Start cutting", "Mark ready" and "Ship" sit
-  on one row and the three "Move back"s on the row below, each as wide as its word and lined up with its figures; one-size lines do
-  the same across their boxes. The table has a frame, a grey header band, figures in the number font, every 0 grey and a shaded Total
-  row. A button that can't be clicked looks grey, not pale blue. One fix round (size labels semibold, space on the left of the Size
-  column).
-- **S-73** (accepted 2026-10-24; `51ba6ce`, `078bead`, `bf5db86`; on local `main`, not pushed; card
-  [stories/old.stories/S-73-product-page-and-form-match-the-size-board.md](stories/old.stories/S-73-product-page-and-form-match-the-size-board.md)): the
-  product page looks like the board "Sizes · products". "Can produce now", "In stock" and "Unit cost" sit in one row of three equal
-  cards with 36 px figures; they wrap rather than shrink under 200 px and stack on a phone. The unit cost's "TND" is drawn at the size
-  of "units", and the photo is a little narrower on wide screens (your choices). "Sold · last 30 days" is now the line under "Recent
-  sales" ("38 units sold in the last 30 days · TND 3,382.000"). The form's size tags [S] [M] [L] [XL] are bolder, with a clearer
-  border. No fix round.
+### Open Backlog Table
 
-### S-57 · Cancel an order · Should · M · feature · `On hold` since 2026-10-24 (was `Ready`; card written 2026-10-18, per size, D-15, D-16; phone-width criterion added and approved 2026-10-22, D-17)
-Card: [stories/old.stories/S-57-cancel-an-order.md](stories/old.stories/S-57-cancel-an-order.md). Depends on S-56 (done). Separate from "Delete", which stays for orders
-entered by mistake (S-49).
-**You get:** "Cancel order" on an order's page; the order reads "Cancelled", and it can't be undone. Units to start are dropped, units
-ready to ship go into stock in their sizes, shipped units stay shipped, and units in cutting stay until "Cutting finished · Put in stock",
-per size. Cancelled orders leave "Open orders" and the totals.
-**Why:** in your words: "if and order is cancelled and we already start cutting we will continue producing the product and then put them
-in the stock user need confirm that cutting is finished and the product is ready to put in stock".
-**Done when:** cancelling Boutique Lina's order at Denim Jacket 20 · 20 · 10 · 0 drops the 20 to start, shows "In stock 10 units" (M 5 ·
-XL 5) and keeps 20 in cutting; putting all 20 in stock then shows "In stock 30 units".
+| ID | What it brings | Type | Status | Priority / Size |
+| :--- | :--- | :--- | :--- | :--- |
+| **INV-8** | Barcodes for every colour and size | Feature | `Ready` | Must / L |
+| **INV-9** | Print barcode labels | Feature | `Ready` | Must / M |
+| **INV-3** | Restock of finished products | Feature | `UI approved` | Must |
+| **INV-4** | Clients as an entity | Feature | `UI approved` | Must |
+| **INV-5** | Production progress page | Feature | `UI approved` | Must |
+| **INV-7** | Bigger tap targets on Settings pages | Feature | `Idea` | Could / S–M |
 
-### S-74 · Long figures and small leftovers on the product page · Should · S · feature · `On hold` since 2026-10-24 (was `Idea`; added 2026-10-24, your answer at S-73's acceptance, from the designer's review)
-After S-57. Card to come, from a session on the main checkout. Changes the look only; no figure or rule changes.
-**You get:** a figure too long for its card is shown smaller and stays inside its card; the "In stock" loading placeholder looks like
-the other two; on a phone, the 30-day sales line never starts a line with "·". The designer's three criteria, to be written into the card:
-- A figure that doesn't fit its card is shown at the smaller size and never covers the card beside it (e.g. "Can produce now
-  123,456,789 units", "Unit cost TND 12,345.678" at 200 px).
-- While "In stock" loads, its placeholder label matches the other two cards.
-- On a phone, the 30-day line never starts a line with "·".
-
-**For the tech-lead when sizing:** the loading placeholder is shared with the dashboard, whose look stays as it is.
-**Why:** since S-73's row of three, "Can produce now" from about 100,000,000 units spills onto "In stock" at 1280 px, and a unit cost
-from TND 10,000 touches its card's edge. Your own figures fit; very large stocks of thread or labels can reach those numbers.
-
-### S-65 · Close a fully shipped order · Should · M · feature · `On hold` since 2026-10-24 (was `Ready`; card approved 2026-10-22; written that day from your design "Orders · shipped and closed", with your answers)
-Card: [stories/old.stories/S-65-close-a-fully-shipped-order.md](stories/old.stories/S-65-close-a-fully-shipped-order.md). After S-61 (its tables are per size)
-and S-57 (its Status filter lists "Cancelled").
-**You get:** when the last unit ships, the order reads "All shipped · ready to close" on a page that shows everything (ordered and
-shipped per size, the order's details and who recorded it). The only button left is "Move back" on shipped units, to fix a wrong
-shipment, which makes the order "In progress" again. "Confirm finished · Close order" closes it at once as Shipped, for good ("Boutique
-Lina closed as Shipped.", with "View order"); it then reads "Shipped · closed 30 Oct 2026 by Admin" and nothing can change it. Neither a
-ready-to-close nor a closed order can be deleted or cancelled. The Status filter gains "Ready to close"; "Shipped" now means closed.
-**Why:** a finished order today can still be edited or deleted at any time, and nothing records that you checked it was finished.
-**Done when:** Boutique Lina's 80 units have all shipped, the order waits as "Ready to close" and counts in "Open orders 2" until you
-confirm, then "Open orders 1", and nothing on its page can change it. Orders that shipped in full before this change become "ready to
-close" too.
-
-### S-66 · Each shipment is remembered · Should · M · feature · `On hold` since 2026-10-24 (was `Idea`; added 2026-10-22, your answer to S-65 question 5)
-Right after S-65; per size (after S-61).
-**You get:** each "Ship" (and each "Mark ready") is remembered with its date, sizes, units and who did it. The order's page shows a
-"Shipments" table (date, product, sizes, units, by), the day each size shipped in the size tables, "3 shipments" and "15 days from
-order to last shipment", and a timeline: order recorded, cutting started, first ready, first shipment, last shipment, then your
-confirmation. For Boutique Lina: 24 Oct (Denim Jacket S 10 · M 10), 28 Oct (Denim Jacket M 10 · L 15 · XL 5; Denim Jeans 5-pocket S 5 ·
-M 10), 30 Oct (Denim Jeans 5-pocket L 10 · XL 5). Orders shipped before it read "Shipped before shipments were recorded".
-**Why:** today Invory keeps only how many units have shipped, not when or by whom, so a closed order can't show its deliveries.
-Overlaps S-52 (a history of every move, Won't this time); the card says how a "Move back" on shipped units shows in the list.
-
-### S-67 · Materials used by an order · Should · S · feature · `On hold` since 2026-10-24 (was `Idea`; added 2026-10-22, your answer to S-65 question 6)
-After S-65.
-**You get:** the order's page shows "Materials used": for each material, what its cuts took out of stock minus what came back, waste
-included. For 50 Denim Jackets: Denim 12oz Indigo 99 m, Metal shank button 17mm 400 pc, Polyester thread 6,300 m and Woven brand label
-50 pc.
-**Why:** when an order is finished, you see what it really used, from the cuts Invory already remembers.
-
-### S-51 · Units on order and in cutting show on the product page and the dashboard · Should · S · feature · `On hold` since 2026-10-24 (was `Idea`; per size when its card is written)
-**You get:** Denim Jacket's page shows how many units are still to start on open orders, in cutting and ready to ship, next to "Can produce
-now 82"; the dashboard gets an "In cutting" figure.
-**Why:** "Can produce" doesn't set stock aside for orders not yet cut (S-48, S-53 AC-7), so you need the demand next to it to see a
-shortage coming.
-
-### S-62 · Open orders by size: what's being made in each size · Could · S · feature · `On hold` since 2026-10-24 (was `Idea`; added 2026-10-18, D-15)
-After S-61.
-**You get:** for one product, the units of every open order per size: still to start, in cutting and ready to ship ("Denim Jacket · M:
-to start 15, in cutting 10, ready 5").
-**Why:** at the cutting table you plan by size across all orders, not one order at a time.
-
-### S-68 · Easier to tap and clearer buttons on the order screens, the product page and the materials screens · Could · S · feature · `On hold` since 2026-10-24 (was `Idea`; added 2026-10-23, from the design review of S-60 and S-61; widened the same day at your answer during S-56's acceptance, and again at S-70's and S-71's acceptance)
-Card to come, from a session on the main checkout. If the card grows past S, split it: order screens first, then the rest.
-**You get:** on the order page, the order form and the move window, every field and button is at least 44 px tall, so a thumb hits it
-on a phone (today the buttons under the Total row are 32 px and the remove button 36 px; the size fields are already 44 px since
-S-70). The same goes for the small buttons elsewhere: "Update stock" and the "Try again" buttons on the product page, and the "Try
-again" buttons on the materials screens (32 px today). The close ✕ of every window ("Start cutting", "Update stock" and the others) is
-also at least 44 px to tap; today it is a 16 px target. The remove button lines up with the product picker on lines with sizes. On a
-phone, the product picker in "New order" and "Edit order" shows the whole product name ("Canvas Low Sneaker · PRD-SNK-003"); at 375 px it now cuts off
-to "Canvas Low Sneaker · PRD-SNK-00". The three "Move back" buttons say where they go ("Move back to To start", "Move back to In
-cutting", "Move back to Ready to ship"), so a screen reader tells them apart. A button that can't be clicked looks the same everywhere: grey
-fill, grey word, thin border, as the order page's move buttons do since S-71; today the other disabled buttons of the app are
-faded to half their colour (your answer at S-71's acceptance, 2026-10-24).
-**For the tech-lead when sizing:** the close ✕ comes with the generated window component, which the team doesn't edit by hand, so it
-needs a decision on how to change it (both found at S-70's acceptance, 2026-10-23; the picker was cut off before S-70).
-**Why:** Invory is used on a phone at the cutting table; small targets and three buttons with the same name slow you down. One story
-keeps one look across the app.
-
-### S-72 · The order page shows the whole order at a glance, like the design · Could · S · feature · `On hold` since 2026-10-24 (was `Draft`; added 2026-10-24, the rest of the same comparison as S-71)
-After S-68. Card (first draft, refined again when its turn comes): [stories/old.stories/S-72-order-page-whole-order-at-a-glance.md](stories/old.stories/S-72-order-page-whole-order-at-a-glance.md).
-**You get:** the order's five figures under the header ("Ordered 80 units", "To start 66 units"…), a progress bar under each line
-with a legend that now holds "0 of 50 shipped", the product's photo and a grey SKU on each line, and on a phone each size as a
-two-by-two grid. The figures in the boxes ("To start 8 units", and the Total's boxes on a phone) in the number font, with every 0
-grey, as in the table (your answer at S-71's acceptance). Your answers of 2026-10-24: no "⋯" menu on the lines and no blue tint on "In cutting" figures.
-**For the tech-lead when sizing:** the photo needs the product's photo on each order line (a value the page doesn't get today); the
-five figures need no new value.
-**Why:** the order's state at a glance, without adding up the lines.
-
-### S-52 · Each order keeps a history of its moves · Won't (this time) · S · feature · `On hold` since 2026-10-24 (was `Idea`; was Could; D-15, 2026-10-18, to make room for sizes)
-**You get:** the order page lists every move, newest first, with who did it: "15 Oct 2026 · 30 units of Denim Jacket moved to In cutting ·
-by Sami".
-**Why:** when two people update the same order, you can see what happened. (Each material's history already shows cutting, S-53.)
-
-### S-54 · "Ship" can also record the sale · Won't (this time) · S · feature · `On hold` since 2026-10-24 (was `Idea`; your answer of 2026-10-15: "not now"; was Could, D-15, 2026-10-18)
-**You get:** "Ship" offers "Also record a sale", pre-filled with the product, the units shipped, the selling price and today's date.
-**Why:** today you would type the same sale again on the Sales page.
-
-**Phase 5 tech allowance (~15 %):** **F-41 only** (your choice, 2026-10-15), **done** (accepted 2026-10-21, `e99615e`; card
-[stories/F-41-summed-requirement-per-material.md](stories/F-41-summed-requirement-per-material.md)): the costing works out, for each
-product, the total amount of each material one unit needs, which S-53 takes out of stock. Open technical items from the orders builds
-(F-60 to F-63, F-65 and F-66 from S-58, F-67 and F-68 from S-60 and S-61, F-69 to F-71 from S-56, in [TECH-DEBT.md](TECH-DEBT.md); F-64 was closed by S-60)
-can join the allowance if the tech-lead proposes them. Phase 4's allowance (F-22,
-F-12, F-45) stays with Phase 4.
+> [!note] Technical Note on INV-6
+> **INV-6** (picker-row swatch edge) joins a phase's tech allowance when proposed by the tech lead. It does not block the feature sequence above.
 
 ---
 
-## ON HOLD — rest of Phase 4: MVP release readiness (postponed 2026-10-15, D-12; every item on hold since 2026-10-24, D-20)
-You postponed it on 2026-10-15: "phase 4 will [be postponed] now for [a] late[r] time". Every card stays approved. S-08 and S-29 were
-closed as they stood the same day (D-13) and left this list; their unfinished checks are known gaps for go-live (see Phase 7 below and
-[STATUS.md §6](STATUS.md#6-what-is-missing-or-incomplete)). Two things still hold while Phase 4 waits:
-- **No second real workshop signs up until S-45 is done** (D-9): units and categories are still shared by every workshop.
-- **Phase 4 closes before the production server goes live** (Phase 7): the MVP sign-off (S-30) and S-45 are release Musts.
+### Item Details
 
-### S-45 · Each workshop has its own units and categories · Must · S · feature · `On hold` since 2026-10-24 (was `Ready`, on hold since 2026-10-15)
-Card: [stories/old.stories/S-45-each-workshop-has-its-own-units-and-categories.md](stories/old.stories/S-45-each-workshop-has-its-own-units-and-categories.md).
-Depends on S-44 (done). No Technical work yet. When it resumes, its criteria gain one line from S-58: a new workshop's Apparel has sizes S, M, L, XL, its Footwear 36 to 46 and every other category "One size", and existing categories keep their sizes (F-65).
-**You get:** each workshop starts with the standard 13 units, 12 material categories and 6 product categories, and adds, renames or
-archives them without touching any other workshop. Two workshops may use the same name.
-**Why:** with shared lists, one workshop renaming "Fabric" would change another workshop's screens.
+#### `INV-8` · Barcodes for every colour and size
+- **Type:** Feature | **Priority:** Must | **Size:** L | **Status:** `Ready`
+- **Cards:** [Development Card](stories/INV-8-barcodes.md) · [UI Card](stories/INV-2-product-sizes-colours-barcodes-ui.md) *(shared)*
+- **Details:** 
+  - Adds "Stock by colour" and "Barcodes" (with "4 missing" badge) tabs to Sizes & colours card.
+  - Shows one EAN-13 barcode per name + colour + size.
+  - "Generate" always prompts first and is all-or-nothing. Runs after `INV-2` (done).
+  - **Rules (2026-10-31):** Variant SKU format = `PRODUCT_SKU-COLOUR_CODE-SIZE_LABEL` (e.g., `PRD-JKT-001-IND-S`). In-store numbers run per workshop from `2000000000015`.
 
-### S-30 · MVP acceptance walkthrough · Must · S · acceptance · `On hold` since 2026-10-24 (was `Ready`, on hold since 2026-10-15)
-Card: [stories/old.stories/S-30-mvp-acceptance-walkthrough.md](stories/old.stories/S-30-mvp-acceptance-walkthrough.md) (the card is the click-through script).
-**You get:** a step-by-step script (about 35 minutes) over every MVP screen on your own data, with the worked example typed under `WT-`
-SKUs and removed at the end.
-**Why:** no screen has ever been signed off. Phase 2's click-through has been pending since 2026-10-08.
+#### `INV-9` · Print barcode labels
+- **Type:** Feature | **Priority:** Must | **Size:** M | **Status:** `Ready`
+- **Cards:** [Development Card](stories/INV-9-labels.md) · [UI Card](stories/INV-2-product-sizes-colours-barcodes-ui.md) *(shared)*
+- **Details:** 
+  - Adds "Print label" & "Print labels · Indigo" to Barcodes tab.
+  - Supports $50 \times 30\text{ mm}$ labels or A4 sheets of 24.
+  - Adds `Settings › Labels`. Runs after `INV-8`.
 
-### S-46 · Name your workshop · Should · S · feature · `On hold` since 2026-10-24 (was `Ready`, on hold since 2026-10-15)
-Card: [stories/old.stories/S-46-name-your-workshop.md](stories/old.stories/S-46-name-your-workshop.md). Depends on S-44; after S-45.
-**You get:** a "Workshop name" field when you sign up, the name under yours in the sidebar's account menu, and a Settings → "Workshop" page
-to rename it ("Workshop updated.").
+#### `INV-3` · Restock finished products
+- **Type:** Feature | **Priority:** Must | **Status:** `UI approved`
+- **Cards:** [UI Card](stories/INV-3-restock-finished-products-ui.md)
+- **Details:** 
+  - Adds Restocks page in sidebar + New restock modal (colour × size grid up to 50 products, scanning support).
+  - Restock adds to shelf and never touches materials; can be undone as a whole.
+  - Restock serves as the main action on the product page's Sizes & colours card.
 
-### S-31 · A section that fails to load offers "Try again" · Should · S · feature · `On hold` since 2026-10-24 (was `Ready`, on hold since 2026-10-14)
-Card: [stories/old.stories/S-31-deferred-section-try-again.md](stories/old.stories/S-31-deferred-section-try-again.md).
-**You get:** if a part of a page that loads after the frame fails, you see a message such as "Couldn't load the key figures." with a
-**Try again** button, instead of loading placeholders that never go away.
+#### `INV-4` · Clients as an entity
+- **Type:** Feature | **Priority:** Must | **Status:** `UI approved`
+- **Cards:** [UI Card](stories/INV-4-clients-ui.md)
+- **Details:** 
+  - B2C buyer focus: Clients page in sidebar with Source filter, plus individual client profiles.
+  - Fields: Name, Phone (unique), City (all required), and Source (optional: Instagram, Facebook, TikTok, WhatsApp, Website, Walk-in, Word of mouth, Other).
+  - Integrated into New Order flow ("Existing client · New client").
 
-### S-32 · A duplicate SKU saved at the same moment shows a clear message · Should · S · bug · `On hold` since 2026-10-24 (was `Ready`, on hold since 2026-10-14)
-Card: [stories/old.stories/S-32-duplicate-sku-clear-message.md](stories/old.stories/S-32-duplicate-sku-clear-message.md).
-**You get:** if two people save the same SKU at the same moment, the second one sees "This SKU is already used by another material." (or
-"…another product.") on the SKU field, not a server error page. Since S-44, "the same SKU" means the same SKU inside one workshop.
+#### `INV-5` · Production progress page
+- **Type:** Feature | **Priority:** Must | **Status:** `UI approved`
+- **Cards:** [UI Card](stories/INV-5-progress-ui.md)
+- **Details:** 
+  - Progress page in sidebar: Phase tiles, per-product colour × size table, phase-by-phase view (oldest first).
+  - Configurable phases (`Settings › Production phases`).
+  - QR work tickets per bundle cut; Scan page moves bundles forward.
+  - *Open discussion:* Counting order lines per colour and size.
 
-### S-42 · Screen readers hear "112 units", not "112units" · Could · S · bug (accessibility) · `On hold` since 2026-10-24 (was `Ready`, on hold since 2026-10-15, postponed and kept for later)
-Card: [stories/old.stories/S-42-screen-readers-hear-units.md](stories/old.stories/S-42-screen-readers-hear-units.md). After S-32.
-**You get:** on the product page, "Can produce now 112 units" and "Sold · last 30 days 38 units" are read aloud with a space between the
-number and its unit. Since S-73 (done 2026-10-24) the sales figure is the line under "Recent sales", so S-42's second criterion needs
-rewording (your yes) when it resumes.
+#### `INV-6` · Picker row swatch edge
+- **Type:** Tech | **Status:** `Idea`
+- **Details:** Fixes contrast ratio on hovered/active rows in light/dark mode (currently ~2.8:1, target 3:1). Join phase tech allowance when proposed by tech-lead.
 
-### S-40 · A realistic catalogue of 100 products on a fresh install · Could · M · enabler · `On hold` since 2026-10-24 (was `Ready`, on hold since 2026-10-15, postponed and kept for later)
-Card: [stories/old.stories/S-40-realistic-catalogue-100-products.md](stories/old.stories/S-40-realistic-catalogue-100-products.md). Depends on S-08.
-**You get:** an optional setup step on a new, empty database only (never `laravel`) that adds 93 believable products and about 110
-materials, covering low stock, out of stock, can't produce, drafts and negative margins. No sales; the same data every run.
+#### `INV-7` · Bigger tap targets on Settings pages
+- **Type:** Feature | **Priority:** Could | **Size:** S–M | **Status:** `Idea`
+- **Details:** Increases button/field heights on phone/tablet from 32-36 px to 44 px. Related to `S-68` (order screen tap targets). Runs after `INV-5`.
 
-### S-41 · A real photo on every item of the demo catalogue · Could · M · enabler · `On hold` since 2026-10-24 (was `Ready`, on hold since 2026-10-15, postponed and kept for later)
-Card: [stories/old.stories/S-41-real-photos-for-the-catalogue.md](stories/old.stories/S-41-real-photos-for-the-catalogue.md). Depends on S-40 and on **your
-Pexels key** in your local settings (never committed).
-**You get:** about 220 real Pexels photos, one per catalogue item, 80 KB or less each, with a licence record and "Photos provided by
-Pexels" in the setup guide.
-
----
-
-## ON HOLD — Phase 6: Fast at real catalogue sizes (was Phase 5 until 2026-10-15; on hold since 2026-10-24, D-20)
-
-### S-27 · Measure speed on a realistic dataset · Must · S · `On hold` since 2026-10-24 (was `Idea`)
-**You get:** a report of how fast every page is with 2 000 materials, 500 products, 50 000 sales and 20 000 stock movements, against
-agreed targets (development-only data, never on your database).
-**Why:** today's pages are fast on small data. The dashboard and the "can't produce" filter cost every product, which may not scale.
-**Note (2026-10-14):** once S-44 lands, the figures are per workshop, so the dataset should sit in one workshop, with a few other workshops
-beside it.
-
-### S-23 · Pre-computed product figures · Must (if S-27 shows the need) · M · `On hold` since 2026-10-24 (was `Idea`)
-**You get:** the products list, its "can't produce" filter and the dashboard stay fast at any catalogue size, because each product's
-cost and capacity are kept up to date when something changes instead of being recalculated on every page view.
-**Done when:** the figures always equal the live calculation (golden example) after every kind of change, and S-27's budgets pass.
-
-### S-33 · Material history loads on demand · Should · S · `On hold` since 2026-10-24 (was `Idea`; was RL-03 + part of S-24)
-**You get:** a material's page shows its stock figures and "what you can make with it" at once; the history fills in just after, with
-"Load more" for older entries.
-
-### S-35 · The product edit page opens instantly · Should · S · `On hold` since 2026-10-24 (was `Idea`; was F-50)
-**You get:** clicking "Edit" on a product shows the form frame at once and fills it in, like the product page already does.
-
-### S-34 · The products list shows it is loading · Could · S · `On hold` since 2026-10-24 (was `Idea`; was RL-05)
-**You get:** while a filter or page change is loading, the list shows a loading state instead of looking frozen.
-
-### S-36 · Deleting a sale or archiving a catalogue item feels instant · Could · S · `On hold` since 2026-10-24 (was `Idea`; was part of S-24)
-**You get:** the row disappears at once, and comes back with an error message if the server refuses.
-
-**Phase 6 tech allowance:** F-26 · F-38 · F-42 · F-49 (F-41 moved to Phase 5 on 2026-10-15).
+> [!abstract] Unscheduled Idea
+> **Production for the shelf:** A batch with no attached client moving through production phases, ending with "Put in stock". *(No ID assigned yet).*
 
 ---
 
-## ON HOLD — Phase 7: Production go-live (was Phase 6 until 2026-10-15; on hold since 2026-10-24, D-20)
+## 🏛️ Decisions That Shape the Backlog
 
-### S-26 · Production server · Must · M · `On hold` since 2026-10-24 (was `Idea`)
-**You get:** Invory running on a production server: fast page loads, compressed and cached static files, a health check, and a decided
-home for sessions and cache. Backups and the database host are part of the card.
-**Needs from you first:** decision D-5 (database host with PostgreSQL 13+, where the app can install `pg_trgm`, or a one-time
-`CREATE EXTENSION pg_trgm;` by an administrator). Confirm the provisional decisions Q4 and Q6. Confirm again that sign-up stays open to
-anyone before the server is public (D-9, 2026-10-14). The rest of Phase 4 (at least S-45 and S-30) is done first (D-12).
-**Known gaps to close before go-live** (left open when S-08 and S-29 were closed as they stood, D-13, 2026-10-15):
-- nobody has seen the `golden-path` check green on GitHub (S-08 AC-5);
-- the fresh-install demo click-through wasn't walked; an automated test covers its figures (S-08 AC-6);
-- nobody has seen a password-reset email arrive in the test mailbox (S-29);
-- the page-speed target, pages under 0.15 s (S-18), was never measured, and may not hold on the built-in server `php artisan serve` (S-29).
+> [!summary] Core Operational Rules
+> - **D-20 (2026-10-24):** Card flow paused. Open items placed on hold for variant rework (`INV-n` sequence).
+> - **D-21 (2026-10-24):** Execution order set: `INV-1` ➔ `INV-2` ➔ `INV-3` ➔ `INV-4` ➔ `INV-5`. Technical items get `INV-n` numbers without UI cards.
+> - **D-9 (2026-10-14):** One workshop per account. Catalog permissions scoped to workshop members.
+> - **D-10 (2026-10-15):** "Start cutting" deducts raw materials from stock.
+> - **D-12 (2026-10-15):** Phase 5 active. Remaining Phase 4 items postponed.
+> - **D-15 / D-16 (2026-10-18):** Products by size. Count units per size when ordered, in production, and on shelf. Category dictates sizes (Apparel: S-XL; Footwear: 36-46; Other: One size). Single price and SKU across sizes.
 
-**Phase 7 tech allowance:** F-43 · F-46 · F-52 · F-53.
+<details>
+<summary><b>📜 Click to view full historical architectural decisions (Q1–Q8, D-1 to D-17, S-60 to S-73)</b></summary>
 
----
+- **Q1:** Native serving.
+- **Q2:** Units editable; conversions handled later.
+- **Q3 / D-9:** Workshop catalog editable by workshop members.
+- **Q4:** Bigint keys (provisional).
+- **Q6:** Currency/locale set in configuration.
+- **Q7:** Units locked while in active use.
+- **Q8:** Sales are stock-neutral; hard delete.
+- **D-1:** GitHub repository with CI running on every push.
+- **D-3:** Phase 4 scope approved.
+- **D-8:** Overhead cost optional (blank = 0).
+- **D-11 (2026-10-16):** Cutting rules. Refuses cutting beyond available stock. "Move back" restores exact deducted materials.
+- **D-13:** `S-08` and `S-29` closed on `main`.
+- **D-17 (2026-10-22):** Size cards approved (`S-60`, `S-61`, `S-56`, `S-57`).
+- **S-56 (2026-10-23):** Finished stock rules. "Update stock" sets counts per size; chip UI layout; last save wins.
+- **S-60 / S-61:** Size formatting in text ("36: 4 · 37: 8" vs "S 10 · M 20").
+- **S-65 (2026-10-22):** Closing orders. Fully shipped orders transition to "Ready to close". Closing is final and permanent.
+- **S-70:** Consistent size UI layout (44 px fields, 7-digit limits, explicit size tags).
+- **S-71 / S-73:** Order and Product pages matched to design boards.
 
-## ON HOLD — Phase 8: Planning features (was Phase 7 until 2026-10-15; candidates; on hold since 2026-10-24, D-20)
-
-| ID   | You get                                                                                                         | Priority (proposed) |
-| ---- | --------------------------------------------------------------------------------------------------------------- | ------------------- |
-| S-10 | **Production planner:** "Plan N units" shows, per material, what's needed, what's in stock and the shortage     | Should              |
-| S-63 | **A bigger size uses more fabric:** a quantity per size on a composition line; cost and "Can produce" per size  | Could               |
-| S-64 | **A shoe size uses its own sole:** a material per size on a composition line (38 → "Rubber cupsole 38")         | Could               |
-| S-09 | **Live cost preview:** the cost updates while you edit a product's composition                                  | Could               |
-| S-11 | **CSV import/export** of materials                                                                              | Could               |
-| S-37 | **Custom date range** ("from – to") for the sales log and the dashboard (was F-11)                              | Could               |
-| S-38 | **UX polish bundle** (F-14, F-16, F-17, F-18, F-21)                                                             | Could               |
-| S-55 | **Find a product by typing** in the order and sale pickers, instead of scrolling a long list                    | Could               |
-| S-39 | **"Manage units" link** in the material form (F-31 q3; you said "not now" on 2026-10-09)                        | Won't (this time)   |
-
-- S-38 bundles: sale panel layout at 1024 px (F-14), a clearer "Filter by product" label for screen readers (F-16), unit price shown the
-  same way everywhere (F-17), the darker button hover from the mockup (F-18), a clearer sentence when two materials tie as the limit (F-21).
-- S-55 (feature, `Idea`, size S–M, added 2026-10-15 during S-48's planning, raised again at its delivery): the product pickers on "New
-  order" and "Record a sale" let you type part of a product's name to find it, so a large catalogue doesn't mean scrolling a long list.
-  Today both pickers are plain lists, sorted by name.
-- S-63 and S-64 (feature, `Idea`, size M each, added 2026-10-18, D-15): S-63 lets a size use more or less of a material (S 1.70 · M 1.80 ·
-  L 1.90 · XL 2.00 m of denim); S-64 lets a size use its own material, such as a shoe sole. Both change the costing rules, so the
-  tech-lead writes the rule and a decision record first. You said shoes aren't made in volume ("leave it for later"), so S-64 isn't right
-  after the size stories.
-
-## VISION — not scheduled
-Suppliers and purchase orders · unit conversions in compositions · a SKU and a price per size, and a page to edit the size lists · sub-assemblies · **several people in one workshop**
-(inviting people, removing them, roles and permissions, and history that still says who did it after that person's account is deleted,
-e.g. "by a former member", where today the "by <name>" line just disappears; S-44 already keeps the data with the workshop) · cost history snapshots ·
-setting stock aside for orders not yet cut · a client list · REST API / mobile. See [ROADMAP.md](ROADMAP.md). (Production that takes
-materials out of stock moved to Phase 5 as S-53, D-10.)
-
----
-
-## Decisions that shape the backlog (still valid)
-**D-20 the card flow is paused** (2026-10-24): every open item is on hold while the product is reworked around colour × size variants
-(fixed colours, stock and a barcode per variant, restock of finished products, clients, a production progress page); new work is
-numbered INV-1, INV-2 …, a UI card first and then a development card; old S- and F- IDs are never reused; on-hold cards are checked
-against the variant model before they resume · **D-21 the INV order** (2026-10-24): INV-1 colours, INV-2 product sizes × colours with
-stock and a barcode per variant, INV-3 restock of finished products, INV-4 clients, INV-5 a production progress page; everything new is
-INV-n, technical items too (an INV number and no UI card) ·
-Q1 native serving · Q2 units editable, conversions later · Q3 any member of a workshop edits that workshop's catalogue (was "any signed-in
-user", changed by D-9) · Q4 bigint keys (provisional) ·
-Q6 currency/locale in config (provisional) · Q7 unit locked while used · Q8 sales stock-neutral, hard delete · ~~Q9 no production runs~~ replaced by D-10 (2026-10-15): "Start cutting" on an order takes its materials out of stock ·
-F-20 restock updates unit cost by default · F-37 deleted demo products stay deleted · F-39 no thumbnails · F-40 no correction reason ·
-dev DB demo seed skipped (2026-10-14) · D-1 repository on GitHub, CI on every push (2026-10-14) · D-3 Phase 4 scope approved with its four cards (2026-10-14) · D-8 overhead cost optional, blank = 0 (S-43, done 2026-10-14);
-S-31 and S-32 on hold (2026-10-14) · low stock: no new story, no email alerts, no flag without "Reorder at" (2026-10-14) · large demo catalogue: new throwaway database only,
-add-on after the demo workshop, no sales, same every run, no brand or sub-category, real Pexels photos with credits off-screen (S-40 Q1–Q7,
-S-41 Q1–Q4, 2026-10-14) · **D-9 one workshop per account** (2026-10-14; S-44, S-45, S-46): the screen says "Workshop"; business rules
-R1–R6 approved; every existing account joins one workshop holding today's data; sign-up stays open (confirm again before S-26); each
-workshop has its own units and categories; another workshop's address shows the plain "404 Not Found"; deleting an account deletes only the
-person and the workshop's data stays (so S-47 was dropped; its ID is not reused); photos need only an unguessable address; S-44 started
-over the two-story limit · **D-10 customer orders** (2026-10-15; S-48 to S-54): several products per order, each
-with its own stages (To start, In cutting, Ready to ship, Shipped); "Start cutting" takes the materials out of stock (replaces Q9);
-shipping doesn't record a sale (S-54 later); client typed on each order; delivery date in the note · **D-12 Phase 5 starts now**
-(2026-10-15): the rest of Phase 4 (S-45, S-30, S-46, S-31, S-32) is on hold for later; S-40, S-41 and S-42 are postponed and kept for
-later; S-48 approved: only active products on an order, and an order never sets stock aside (part of D-11);
-S-48 done 2026-10-15: a deleted order is hidden, with no way back on screen; a product no longer active stays on the orders that have it ·
-**D-13 S-08 and S-29 closed as they stood** (2026-10-15): Done on the commits on `main`; their open checks are known gaps for go-live ·
-**D-11 how cutting changes stock** (your final answers, 2026-10-16; they replace the "every recommended answer" version committed earlier
-that day; S-49 and S-53 built on them and done 2026-10-21, S-50 done 2026-10-22): cutting more than stock allows is refused, with the most you can
-cut and what to do; "Move back to To start" returns exactly what was taken, the latest cut first, also for a deleted product; "Delete" is
-refused while units are in cutting or ready to ship, and a cancelled order uses "Cancel order" (S-57), whose cut units go into the
-product's own stock (S-56); history entries read "Cutting" and "Back from cutting", dated the day you click "Move units"; no new
-low-stock alerts; archived or draft products move as usual, a deleted product can't start cutting; S-49 and S-53 ship together (one
-build, one click-through); S-56 and S-57 are Phase 5 Shoulds after S-50 · **D-15 and D-16 products by size** (2026-10-18; S-58,
-S-60, S-61, S-56, S-57): count units per size when ordered, in production and on the shelf; every size uses the same composition
-(more fabric for bigger sizes later, S-63); shoes' own soles later, as shoes aren't made in volume (S-64); the product's category decides
-its sizes, from a short list set up with Invory (Apparel S, M, L, XL; Footwear 36 to 46, all 11; any other category "One size"), with no
-Settings page for now; a product gets every size of its category; existing products follow their category at once and order lines
-recorded before sizes stay "One size"; one line per product on an order with a quantity per size, stages tracked per size, and each move
-window asks a number per size; one selling price and one SKU for all sizes; finished stock comes from "Update stock" and cancelled orders,
-and sales and new orders never touch it (a sale has no size); cancelling an order can't be undone, and cancelled orders leave "Open
-orders" and the totals; S-58 is built first on its own (done 2026-10-22), then S-60 and S-61 in one build (done 2026-10-23); S-52 and S-54 become Won't (this time); the smaller choices take the
-defaults written in the five cards, which stay `Draft` until you approve them. · **S-60 and S-61 sizes in text** (your answer during
-their acceptance, 2026-10-22/23): a size named by digits reads "36: 4 · 37: 8" in lists and "size 36" in messages; letter sizes stay "S 10 · M 20". · **S-65 closing an order** (your answers of 2026-10-22, all
-recommended): an order shipped in full stays in "Open orders" and its count until you close it ("Ready to close"); closing is final,
-at once, with no reopen; before closing only "Move back" on shipped units stays, after closing nothing; neither a ready-to-close nor a
-closed order can be deleted or cancelled; orders already shipped in full become "ready to close"; "Not yet" goes back to the Orders
-list; shipments and the timeline are S-66, materials used S-67. · **D-17 the size cards approved** (2026-10-22): S-60 and S-61
-`Ready` as written; S-56 and S-57 `Ready` with a phone-width criterion each, "Update stock" as a button on the "In stock" figure,
-and "Cancelled" with a crossed-out circle icon. · **S-56 finished stock** (your answers of 2026-10-23, at planning and acceptance):
-"Update stock" sets the count of each size, and an empty size counts as 0; once S-57 adds cancelled units, the last "Update stock" save
-wins; a product with units in stock keeps the sizes of its category, and when it is also on an order the S-58 message shows; deleting
-a product deletes its stock; a one-size product's field reads "One size", a shoe shows all 11 sizes with zeros, and the product page's
-figures sit two by two from tablet width. At acceptance the design board won over the first build: a chip per size (a 0 greyed, its
-"0" still shown), "Update stock" at the top right, the note "Doesn't change materials, "Can produce now" or sales." in place of the
-window's description, "Total after saving" as you type (a non-whole value counts 0 there, the error still shows on Save) and "was N"
-under a changed size (also when a 0 is emptied); no chips at "In stock 0 units"; shoe chips read "36: 2". Left as they are, your
-choice: focus doesn't jump to the first refused size (F-69), and "Cancel" stays clickable while saving. The 44 px rule for "Update
-stock" and the "Try again" buttons goes into S-68 (your answer (a), confirmed 2026-10-23). · **S-70 sizes look the same** (your
-answers to the designer, 2026-10-23): every gap B1–B9 in one story; a size's message goes under the row of fields and names the size
-("M: …", "Size 36: …"), which rewords the delivered S-60 AC-2 (your yes); a shoe size shows its bare label in every chip ([36 | 4]),
-screen readers still hear "36: 4", the colon rule stays for running text; the form shows tags up to 6 sizes, the list's name in bold
-otherwise; size fields in the board's look, 7 digits whole, four to a row on a phone, 44 px high (size fields only); "At least 10" with
-a lock under a started size; "same for every size" under the unit cost of a product with several sizes. At acceptance (your answers,
-2026-10-23): one fix round brought the build to the board (each size label sits with its own field, 8 px between fields from tablet
-width, window titles wrap before the ✕, the SKU in a line heading bold and one size smaller than the product name, the sizes badge as
-heavy as the other badges); the "At least 10" hint stays grey, not the board's blue (the board gets a note); two limits are kept as
-built: on a phone "At least 1,000" and larger may wrap inside a size field, and from tablet width a size field is 80 px wide with
-8 px inside, just enough for 7 digits. · **S-73 the product page matches the size board** (your answers, 2026-10-24, all
-recommended): "Can produce now", "In stock" and "Unit cost" in one row of three, figures at the board's size (36 px, labels 15 px);
-"Sold · last 30 days" becomes the line under "Recent sales"; the bottleneck keeps "units" (no plural product name); field heights,
-15 px labels and 44 px buttons stay out of it (one story for every form later, beside S-68); S-73 goes after S-71 and before S-57.
-For room at 1280 px, the photo is 256 px wide on wide screens and the unit cost's "TND" is drawn at the size of "units" (your choice
-at planning). At acceptance (2026-10-24): AC-1 reworded to say so (your yes); the size tags' border is lighter than the row lines in
-dark mode, which reads as "stronger" (no card change); long figures, the loading label and the phone's "·" go to S-74, a Should after
-S-57. · **S-71 the order page matches its board** (your answers, 2026-10-24): two rows
-of buttons under the Total, forward moves on top and the three "Move back"s below, "Move back" stays in the table (no "⋯" menu);
-every 0 grey in the readable secondary grey; buttons stay 32 px (44 px is S-68). At acceptance: size labels semibold, the board's
-weight; the sizes and "Total" as far from the frame's left edge as the figures from its right; each "Move back" announced with its
-stage ("Move back, In cutting"); Tab goes box by box on one-size lines; 8 px between rows of boxes. The faded disabled buttons
-elsewhere go to S-68, the box figures to S-72.
-Pending: [STATUS.md §2](STATUS.md#2-decisions-needed-from-you).
+*Pending Decisions:* See [STATUS.md §2](STATUS.md#2-decisions-needed-from-you).
+</details>
