@@ -7,11 +7,15 @@ import {
     canvasLowSneaker,
     choreJacket,
     denimJacket,
+    denimBarcodes,
     denimJacketBelowCost,
     denimRecentSales,
     denimSalesLast30Days,
     denimStockByColour,
     jacketWithoutComposition,
+    sizeListOneSize,
+    toteBarcodes,
+    toteStockByColour,
 } from '@/test/fixtures/products';
 import {
     inertiaMock,
@@ -38,6 +42,7 @@ function props(
         sales_last_30_days: denimSalesLast30Days,
         recent_sales: denimRecentSales,
         finished_stock: denimStockByColour,
+        barcodes: denimBarcodes,
         ...overrides,
     };
 }
@@ -438,9 +443,10 @@ describe('products/show page', () => {
 
             expect(alerts).toHaveLength(2);
 
-            for (const alert of alerts) {
-                expect(alert).toHaveTextContent("Couldn't load the stock.");
-            }
+            expect(alerts.map((alert) => alert.textContent)).toEqual([
+                "Couldn't load the stock.Try again",
+                "Couldn't load the stock and barcodes.Try again",
+            ]);
 
             expect(
                 within(
@@ -457,7 +463,7 @@ describe('products/show page', () => {
             );
 
             expect(inertiaMock.router.reload).toHaveBeenCalledExactlyOnceWith({
-                only: ['finished_stock'],
+                only: ['finished_stock', 'barcodes'],
             });
         });
     });
@@ -552,6 +558,81 @@ describe('products/show page', () => {
             expect(within(dialog).getByText(/SKU PRD-JKT-001/)).toBeVisible();
             expect(inertiaMock.router.delete).not.toHaveBeenCalled();
         });
+
+        const tote: Product = {
+            ...denimJacket,
+            id: 2,
+            name: 'Leather Tote',
+            sku: 'PRD-TOT-001',
+            size_list: sizeListOneSize,
+        };
+        it.each([
+            {
+                name: '12 barcodes',
+                showProps: props(denimJacket, {
+                    barcodes: { ...denimBarcodes, with_barcode: 12 },
+                }),
+                sentence:
+                    'Its 12 barcodes are kept: they come back on any product named Denim Jacket in the same colours and sizes.',
+            },
+            {
+                name: 'exactly one barcode',
+                showProps: props(denimJacket, {
+                    barcodes: { ...denimBarcodes, with_barcode: 1 },
+                }),
+                sentence:
+                    'Its barcode is kept: it comes back on any product named Denim Jacket in the same colour and size.',
+            },
+            {
+                name: 'a "One size" product with several',
+                showProps: props(tote, {
+                    finished_stock: toteStockByColour,
+                    barcodes: { ...toteBarcodes, with_barcode: 2 },
+                }),
+                sentence:
+                    'Its 2 barcodes are kept: they come back on any product named Leather Tote in the same colours.',
+            },
+            {
+                name: 'a "One size" product with one',
+                showProps: props(tote, {
+                    finished_stock: toteStockByColour,
+                    barcodes: toteBarcodes,
+                }),
+                sentence:
+                    'Its barcode is kept: it comes back on any product named Leather Tote in the same colour.',
+            },
+            {
+                name: 'no barcode (the window as today)',
+                showProps: props(denimJacket, {
+                    barcodes: { ...denimBarcodes, with_barcode: 0 },
+                }),
+                sentence: null,
+            },
+        ])(
+            'adds the kept-barcodes sentence to "Delete product?" for $name',
+            async ({ showProps, sentence }) => {
+                const user = userEvent.setup();
+
+                renderShow(showProps);
+                await user.click(
+                    screen.getByRole('button', { name: 'Delete' }),
+                );
+
+                // The kept-barcodes sentence is its own paragraph after today's text.
+                const paragraphs = Array.from(
+                    screen
+                        .getByRole('alertdialog', { name: 'Delete product?' })
+                        .querySelectorAll('p'),
+                ).map((paragraph) => paragraph.textContent);
+                const name = showProps.product?.name ?? '';
+                const sku = showProps.product?.sku ?? '';
+                const base = `${name} (SKU ${sku}) and its composition will be removed. This cannot be undone.`;
+
+                expect(paragraphs).toEqual(
+                    sentence === null ? [base] : [base, sentence],
+                );
+            },
+        );
 
         it('closes with Cancel or Escape and deletes nothing', async () => {
             const user = userEvent.setup();

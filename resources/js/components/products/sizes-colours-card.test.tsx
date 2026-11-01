@@ -1,17 +1,24 @@
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
-import { SizesColoursCard } from '@/components/products/sizes-colours-card';
+import { FinishedStockFigure } from '@/components/products/finished-stock-figure';
 import {
+    SizesColoursCard,
+    SizesColoursCardError,
+    SizesColoursCardLoading,
+} from '@/components/products/sizes-colours-card';
+import {
+    denimBarcodes,
     denimStockByColour,
     sizeListEu36To46,
     sizeListOneSize,
     sizeListSToXl,
     stockByColour,
+    toteBarcodes,
     toteStockByColour,
 } from '@/test/fixtures/products';
-import { inertiaMock, resetInertiaMock } from '@/test/inertia';
-import type { FinishedStock, SizeList } from '@/types/domain';
+import { inertiaMock, resetInertiaMock, setPageProps } from '@/test/inertia';
+import type { FinishedStock, ProductBarcodes, SizeList } from '@/types/domain';
 
 vi.mock('@inertiajs/react', async (importOriginal) => {
     const { createInertiaModule } = await import('@/test/inertia');
@@ -27,11 +34,13 @@ function renderCard(
     stock: FinishedStock = denimStockByColour,
     list: SizeList = sizeListSToXl,
     name = 'Denim Jacket',
+    barcodes: ProductBarcodes = denimBarcodes,
 ) {
     return render(
         <SizesColoursCard
-            product={{ id: 1, name, size_list: list }}
+            product={{ id: 1, name, sku: 'PRD-JKT-001', size_list: list }}
             stock={stock}
+            barcodes={barcodes}
             manageHref="/products/1/edit#colours"
         />,
     );
@@ -52,6 +61,131 @@ function greyOf(row: HTMLElement): boolean[] {
 describe('<SizesColoursCard>', () => {
     beforeEach(() => {
         resetInertiaMock();
+    });
+
+    it('opens on Stock by colour, keeps the open tab in the address without asking the server, and badges the missing barcodes', async () => {
+        const user = userEvent.setup();
+
+        // A client-side visit moves the address, like Inertia does.
+        inertiaMock.router.replace.mockImplementation(({ url }) =>
+            setPageProps({}, { url }),
+        );
+        setPageProps({}, { url: '/products/1' });
+
+        const first = renderCard();
+        const tab = (name: RegExp) => screen.getByRole('tab', { name });
+
+        expect(tab(/^Stock by colour$/)).toHaveAttribute(
+            'aria-selected',
+            'true',
+        );
+        expect(
+            screen.getByRole('table', { name: TABLE_NAME }),
+        ).toBeInTheDocument();
+        // The badge belongs to the Barcodes tab and reads the server's count.
+        expect(tab(/^Barcodes/)).toHaveAccessibleName('Barcodes 4 missing');
+
+        await user.click(tab(/^Barcodes/));
+
+        expect(inertiaMock.router.replace).toHaveBeenLastCalledWith({
+            url: '/products/1?tab=barcodes',
+            preserveState: true,
+            preserveScroll: true,
+        });
+        expect(tab(/^Barcodes/)).toHaveAttribute('aria-selected', 'true');
+        expect(
+            screen.getByRole('group', { name: 'Colour' }),
+        ).toBeInTheDocument();
+        expect(screen.queryByRole('table', { name: TABLE_NAME })).toBeNull();
+
+        await user.click(tab(/^Stock by colour$/));
+
+        expect(inertiaMock.router.replace).toHaveBeenLastCalledWith({
+            url: '/products/1',
+            preserveState: true,
+            preserveScroll: true,
+        });
+        expect(inertiaMock.router.get).not.toHaveBeenCalled();
+        expect(inertiaMock.router.visit).not.toHaveBeenCalled();
+        first.unmount();
+
+        // A link with ?tab=barcodes opens Barcodes; no badge when nothing is missing.
+        setPageProps({}, { url: '/products/1?tab=barcodes' });
+        const second = renderCard(
+            denimStockByColour,
+            sizeListSToXl,
+            'Denim Jacket',
+            {
+                ...denimBarcodes,
+                missing: 0,
+                missing_names: null,
+            },
+        );
+
+        expect(tab(/^Barcodes/)).toHaveAttribute('aria-selected', 'true');
+        expect(tab(/^Barcodes/)).toHaveAccessibleName('Barcodes');
+        second.unmount();
+
+        // "By size and colour" under the In stock figure brings the card back to Stock.
+        render(
+            <>
+                <FinishedStockFigure stock={denimStockByColour} />
+                <SizesColoursCard
+                    product={{
+                        id: 1,
+                        name: 'Denim Jacket',
+                        sku: 'PRD-JKT-001',
+                        size_list: sizeListSToXl,
+                    }}
+                    stock={denimStockByColour}
+                    barcodes={denimBarcodes}
+                    manageHref="/products/1/edit#colours"
+                />
+            </>,
+        );
+        await user.click(
+            screen.getByRole('link', { name: 'By size and colour' }),
+        );
+
+        expect(tab(/^Stock by colour$/)).toHaveAttribute(
+            'aria-selected',
+            'true',
+        );
+        expect(inertiaMock.router.replace).toHaveBeenLastCalledWith({
+            url: '/products/1',
+            preserveState: true,
+            preserveScroll: true,
+        });
+    });
+
+    it('shows the frame, heading and tabs with 3 placeholder rows while loading, and one sentence with Try again, which reloads both props, on error', async () => {
+        const user = userEvent.setup();
+        const loading = render(<SizesColoursCardLoading />);
+
+        expect(
+            screen.getByRole('heading', { name: 'Sizes & colours' }),
+        ).toBeInTheDocument();
+        expect(
+            screen.getAllByRole('tab').map((tab) => tab.textContent),
+        ).toEqual(['Stock by colour', 'Barcodes']);
+        expect(screen.getByRole('status')).toHaveTextContent(
+            'Loading sizes and colours…',
+        );
+        expect(
+            loading.container.querySelectorAll('[data-slot="skeleton-row"]'),
+        ).toHaveLength(3);
+        loading.unmount();
+
+        render(<SizesColoursCardError reloading={false} />);
+
+        expect(screen.getByRole('alert')).toHaveTextContent(
+            "Couldn't load the stock and barcodes.",
+        );
+        await user.click(screen.getByRole('button', { name: 'Try again' }));
+
+        expect(inertiaMock.router.reload).toHaveBeenCalledExactlyOnceWith({
+            only: ['finished_stock', 'barcodes'],
+        });
     });
 
     it('shows the stock table of the worked example: a row per colour, the size columns, Total, and a heavier Total row', () => {
@@ -110,22 +244,22 @@ describe('<SizesColoursCard>', () => {
             name: 'several colours and sizes',
             stock: denimStockByColour,
             list: sizeListSToXl,
-            line: '3 colours × 4 sizes = 12 variants. Each variant has its own stock.',
+            line: '3 colours × 4 sizes = 12 variants. Each variant has its own stock and its own barcode.',
         },
         {
             name: 'one colour',
             stock: stockByColour(sizeListSToXl, [['White', [3, 0, 5, 2]]]),
             list: sizeListSToXl,
-            line: '1 colour × 4 sizes = 4 variants. Each variant has its own stock.',
+            line: '1 colour × 4 sizes = 4 variants. Each variant has its own stock and its own barcode.',
         },
         {
             name: 'a "One size" product',
             stock: toteStockByColour,
             list: sizeListOneSize,
-            line: '2 colours × One size = 2 variants. Each variant has its own stock.',
+            line: '2 colours × One size = 2 variants. Each variant has its own stock and its own barcode.',
         },
     ])('words the variants line for $name', ({ stock, list, line }) => {
-        renderCard(stock, list);
+        renderCard(stock, list, 'Denim Jacket', toteBarcodes);
 
         expect(
             within(
@@ -182,6 +316,46 @@ describe('<SizesColoursCard>', () => {
             renderCard();
 
             expect(region()).toHaveAttribute('tabindex', '0');
+        } finally {
+            scrollWidth.mockRestore();
+        }
+    });
+
+    it("keeps the table's scroll box a tab stop after opening on Barcodes and switching tabs back and forth", async () => {
+        const user = userEvent.setup();
+
+        inertiaMock.router.replace.mockImplementation(({ url }) =>
+            setPageProps({}, { url }),
+        );
+        setPageProps({}, { url: '/products/1?tab=barcodes' });
+
+        // A shoe's 11 columns are wider than the box (jsdom measures nothing, so mock it).
+        const scrollWidth = vi
+            .spyOn(Element.prototype, 'scrollWidth', 'get')
+            .mockReturnValue(900);
+
+        try {
+            renderCard();
+
+            const region = () =>
+                screen.queryByRole('region', {
+                    name: `${TABLE_NAME}, scrollable`,
+                });
+
+            // The box is not on the page yet: it lives in the Stock tab.
+            expect(region()).toBeNull();
+
+            for (const _ of [1, 2]) {
+                await user.click(
+                    screen.getByRole('tab', { name: /^Stock by colour$/ }),
+                );
+                expect(region()).toHaveAttribute('tabindex', '0');
+
+                await user.click(
+                    screen.getByRole('tab', { name: /^Barcodes/ }),
+                );
+                expect(region()).toBeNull();
+            }
         } finally {
             scrollWidth.mockRestore();
         }

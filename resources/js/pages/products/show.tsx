@@ -18,12 +18,20 @@ import { RecentSalesCard } from '@/components/products/recent-sales-card';
 import {
     SizesColoursCard,
     SizesColoursCardError,
+    SizesColoursCardLoading,
 } from '@/components/products/sizes-colours-card';
 import { ConfirmDeleteDialog } from '@/components/shared/confirm-delete-dialog';
 import { SkeletonCard, SkeletonStat } from '@/components/shared/skeletons';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { MaterialRef, Product, ProductShowProps } from '@/types/domain';
+import { useAppSettings } from '@/hooks/use-app-settings';
+import { formatCount } from '@/lib/format';
+import type {
+    MaterialRef,
+    Product,
+    ProductBarcodes,
+    ProductShowProps,
+} from '@/types/domain';
 
 const materialHref = (material: MaterialRef) =>
     MaterialController.show.url(material.id);
@@ -34,7 +42,30 @@ type ProductDetailsProps = {
     recentSales: NonNullable<ProductShowProps['recent_sales']>;
     /** The "In stock" figure's data; absent until it lands, and while it is rescued. */
     finishedStock: ProductShowProps['finished_stock'];
+    /** The Barcodes tab's data and the Delete sentence; absent until it lands, and while it is rescued. */
+    barcodes: ProductShowProps['barcodes'];
 };
+
+/**
+ * "Its 12 barcodes are kept: they come back on any product named Denim Jacket
+ * in the same colours and sizes." (one barcode: "Its barcode is kept: it comes
+ * back …in the same colour and size."; a "One size" product names the colours only).
+ */
+function barcodesKept(
+    name: string,
+    barcodes: ProductBarcodes,
+    oneSize: boolean,
+    locale: string,
+): string {
+    const one = barcodes.with_barcode === 1;
+    const where = `${one ? 'colour' : 'colours'}${
+        oneSize ? '' : ` and ${one ? 'size' : 'sizes'}`
+    }`;
+
+    return one
+        ? `Its barcode is kept: it comes back on any product named ${name} in the same ${where}.`
+        : `Its ${formatCount(barcodes.with_barcode, locale)} barcodes are kept: they come back on any product named ${name} in the same ${where}.`;
+}
 
 /** The whole page body; rendered only once the deferred props have landed. */
 function ProductDetails({
@@ -42,7 +73,9 @@ function ProductDetails({
     sales,
     recentSales,
     finishedStock,
+    barcodes,
 }: ProductDetailsProps) {
+    const { locale } = useAppSettings();
     const [confirming, setConfirming] = useState(false);
     const [processing, setProcessing] = useState(false);
     const deleteButtonRef = useRef<HTMLButtonElement>(null);
@@ -165,25 +198,19 @@ function ProductDetails({
                     </div>
                 </div>
 
-                {/* The same deferred prop as the figure: one reload brings both back. */}
+                {/* Waits for the figure's prop and the barcodes: one reload brings all back. */}
                 <Deferred
-                    data="finished_stock"
-                    fallback={
-                        <SkeletonCard
-                            title="Sizes & colours"
-                            label="sizes and colours"
-                            rows={3}
-                            thumb={false}
-                        />
-                    }
+                    data={['finished_stock', 'barcodes']}
+                    fallback={<SizesColoursCardLoading />}
                     rescue={({ reloading }) => (
                         <SizesColoursCardError reloading={reloading} />
                     )}
                 >
-                    {finishedStock && (
+                    {finishedStock && barcodes && (
                         <SizesColoursCard
                             product={product}
                             stock={finishedStock}
+                            barcodes={barcodes}
                             manageHref={`${editHref}#colours`}
                         />
                     )}
@@ -216,10 +243,23 @@ function ProductDetails({
                 }}
                 title="Delete product?"
                 description={
-                    <p>
-                        <strong>{product.name}</strong> (SKU {product.sku}) and
-                        its composition will be removed. This cannot be undone.
-                    </p>
+                    <div className="space-y-2">
+                        <p>
+                            <strong>{product.name}</strong> (SKU {product.sku})
+                            and its composition will be removed. This cannot be
+                            undone.
+                        </p>
+                        {barcodes && barcodes.with_barcode > 0 && (
+                            <p>
+                                {barcodesKept(
+                                    product.name,
+                                    barcodes,
+                                    product.size_list.sizes.length === 1,
+                                    locale,
+                                )}
+                            </p>
+                        )}
+                    </div>
                 }
                 confirmLabel="Delete product"
                 processing={processing}
@@ -276,6 +316,7 @@ export default function ProductsShow({
     sales_last_30_days: sales,
     recent_sales: recentSales,
     finished_stock: finishedStock,
+    barcodes,
 }: ProductShowProps) {
     return (
         <>
@@ -293,6 +334,7 @@ export default function ProductsShow({
                         sales={sales}
                         recentSales={recentSales ?? []}
                         finishedStock={finishedStock}
+                        barcodes={barcodes}
                     />
                 )}
             </Deferred>

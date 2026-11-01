@@ -1,5 +1,6 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { toast } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import ProductsEdit from '@/pages/products/edit';
 import { colourNamed, defaultColours } from '@/test/fixtures/colours';
@@ -23,6 +24,8 @@ import {
     setPageProps,
 } from '@/test/inertia';
 import type { Product, ProductEditProps } from '@/types/domain';
+
+vi.mock('sonner', () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 
 vi.mock('@inertiajs/react', async (importOriginal) => {
     const { createInertiaModule } = await import('@/test/inertia');
@@ -296,6 +299,30 @@ describe('products/edit page', () => {
                 'The waste must be below 100.',
             ),
         ).toBeInTheDocument();
+    });
+
+    it("shows the server's rename refusal in red under Name, keeps the form filled in, shows no toast and focuses Name", () => {
+        const sentence =
+            "Trucker Jacket already has its own barcodes for Indigo S and L, so Denim Jacket can't take that name. Choose another name.";
+
+        setFormState({ errors: { name: sentence } });
+        render(<ProductsEdit {...props()} />);
+
+        const name = screen.getByLabelText(/^Name/);
+
+        expect(name).toBeInvalid();
+        expect(name).toHaveAccessibleDescription(
+            expect.stringContaining(sentence),
+        );
+        expect(screen.getByText(sentence)).toHaveClass(
+            'text-destructive-foreground',
+        );
+        expect(name).toHaveFocus();
+        // Nothing the user typed is lost.
+        expect(name).toHaveValue('Denim Jacket');
+        expect(screen.getByLabelText(/^Selling price/)).toHaveValue('89');
+        expect(toast.error).not.toHaveBeenCalled();
+        expect(toast.success).not.toHaveBeenCalled();
     });
 
     it('defines the Products > product > Edit breadcrumbs', () => {

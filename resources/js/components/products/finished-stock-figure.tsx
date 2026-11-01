@@ -1,4 +1,4 @@
-import { router } from '@inertiajs/react';
+import { router, usePage } from '@inertiajs/react';
 import { Fragment } from 'react';
 import {
     BIG,
@@ -16,6 +16,50 @@ import type { FinishedStock } from '@/types/domain';
 /** The id of the Sizes & colours card, which the figure's link moves to. */
 export const SIZES_COLOURS_ID = 'sizes-colours';
 
+export type SizesColoursTab = 'stock' | 'barcodes';
+
+/** Everything the card and the figure's Try again bring back: both come together. */
+export const STOCK_PROPS = ['finished_stock', 'barcodes'];
+
+/**
+ * The open tab of the Sizes & colours card, read from the page address
+ * (`?tab=barcodes`; Stock has no parameter), and the way to change it: a
+ * client-side visit that replaces the address, never asks the server and keeps
+ * the state and the scroll position.
+ */
+export function useSizesColoursTab(): [
+    SizesColoursTab,
+    (tab: SizesColoursTab) => void,
+] {
+    const { url } = usePage();
+    const tab: SizesColoursTab =
+        new URL(url, 'http://localhost').searchParams.get('tab') === 'barcodes'
+            ? 'barcodes'
+            : 'stock';
+
+    function open(next: SizesColoursTab) {
+        if (next === tab) {
+            return;
+        }
+
+        const address = new URL(url, 'http://localhost');
+
+        if (next === 'barcodes') {
+            address.searchParams.set('tab', 'barcodes');
+        } else {
+            address.searchParams.delete('tab');
+        }
+
+        router.replace({
+            url: address.pathname + address.search + address.hash,
+            preserveState: true,
+            preserveScroll: true,
+        });
+    }
+
+    return [tab, open];
+}
+
 /**
  * "In stock": the finished units on the shelf, "10 units", and under it one
  * line with every colour of the product in the order of Settings › Colours: a
@@ -23,11 +67,12 @@ export const SIZES_COLOURS_ID = 'sizes-colours';
  * wash 0"), a colour at 0 in the grey text colour with its "0" still shown.
  * The line wraps; screen readers hear one sentence instead ("In stock per
  * colour: Black 4, Indigo 6, Light wash 0"). At 0 units there is no colour
- * line. The link "By size and colour" moves to the Sizes & colours card, where
- * "Update stock" lives. Every figure comes from the server.
+ * line. The link "By size and colour" moves to the Sizes & colours card, on its
+ * Stock tab, where "Update stock" lives. Every figure comes from the server.
  */
 export function FinishedStockFigure({ stock }: { stock: FinishedStock }) {
     const { locale } = useAppSettings();
+    const [, openTab] = useSizesColoursTab();
     const count = (units: number) => formatCount(units, locale);
     const showColours = stock.units > 0 && stock.colours.length > 0;
 
@@ -82,6 +127,8 @@ export function FinishedStockFigure({ stock }: { stock: FinishedStock }) {
             )}
             <a
                 href={`#${SIZES_COLOURS_ID}`}
+                // The address moves to the card; the card opens on its Stock tab.
+                onClick={() => openTab('stock')}
                 className="inline-flex min-h-11 items-center self-start text-sm font-semibold text-primary underline-offset-4 hover:underline md:min-h-8"
             >
                 By size and colour
@@ -91,14 +138,20 @@ export function FinishedStockFigure({ stock }: { stock: FinishedStock }) {
 }
 
 /**
- * "Couldn't load the stock." with Try again. It reloads the one deferred prop
- * the In stock figure and the Sizes & colours card share, so both come back
- * together.
+ * "Couldn't load the stock." (or the card's own sentence) with Try again. It
+ * reloads the two deferred props the In stock figure and the Sizes & colours
+ * card share, so both come back together.
  */
-export function StockLoadError({ reloading }: { reloading: boolean }) {
+export function StockLoadError({
+    reloading,
+    message = "Couldn't load the stock.",
+}: {
+    reloading: boolean;
+    message?: string;
+}) {
     return (
         <div role="alert" className="flex flex-col items-start gap-2 text-sm">
-            <p>Couldn&apos;t load the stock.</p>
+            <p>{message}</p>
             <Button
                 type="button"
                 variant="outline"
@@ -108,7 +161,7 @@ export function StockLoadError({ reloading }: { reloading: boolean }) {
                 aria-disabled={reloading ? 'true' : undefined}
                 onClick={() => {
                     if (!reloading) {
-                        router.reload({ only: ['finished_stock'] });
+                        router.reload({ only: STOCK_PROPS });
                     }
                 }}
             >
