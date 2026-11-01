@@ -4,9 +4,13 @@ declare(strict_types=1);
 
 namespace App\Actions\Products;
 
+use App\Actions\Barcodes\AddNameToBarcodes;
+use App\Domain\Barcodes\NameKey;
 use App\Models\Product;
 use App\Models\ProductCategory;
 use App\Models\User;
+use App\Models\Workshop;
+use App\Services\Barcodes\RenameClash;
 use App\Services\Photos\PhotoStorage;
 use App\Services\Products\ProductColourLock;
 use App\Services\Products\ProductSizeLock;
@@ -23,6 +27,8 @@ final readonly class UpdateProduct
         private PhotoStorage $photos,
         private ProductSizeLock $sizeLock,
         private ProductColourLock $colourLock,
+        private RenameClash $renameClash,
+        private AddNameToBarcodes $addName,
     ) {}
 
     /**
@@ -43,6 +49,7 @@ final readonly class UpdateProduct
 
             $this->guardSizes($locked, $attributes['category'] ?? null);
             $this->guardColours($locked, $attributes['colours'] ?? null);
+            $this->guardName($locked, $attributes);
 
             $product->fill($this->resolveCategory->handle(Arr::except($attributes, ['components', 'colours'])))->forceFill($photo);
             $product->updated_by = $actor->id;
@@ -52,6 +59,9 @@ final readonly class UpdateProduct
             if (array_key_exists('colours', $attributes)) {
                 $this->syncColours->handle($product, $attributes['colours']);
             }
+
+            // INV-8-d: a rename keeps the barcodes of the old name for the colours and sizes the product has now (nothing for the same key).
+            $this->addName->handle($product, $locked->name_key);
 
             $this->syncComponents->handle($product, $attributes['components'] ?? []);
 
@@ -73,6 +83,36 @@ final readonly class UpdateProduct
 
         if ($refusal !== null) {
             throw ValidationException::withMessages(['category' => $refusal]);
+        }
+    }
+
+    /**
+     * INV-8-d / AC-5, the second check: when the name's key changes, the workshop's row lock (the order every barcode writer uses:
+     * product, then workshop), then the clash of numbers is looked for again with the colours and category this save leaves the product
+     * with, so a barcode made while the form was open is caught. Same key (capitals or spaces only): no lock, nothing to check.
+     *
+     * @param  array<string, mixed>  $attributes
+     */
+    private function guardName(Product $locked, array $attributes): void
+    {
+        $name = $attributes['name'] ?? null;
+
+        if (! is_string($name) || NameKey::of($name) === $locked->name_key) {
+            return;
+        }
+
+        Workshop::query()->lockForUpdate()->findOrFail($locked->workshop_id);
+
+        $colourIds = array_key_exists('colours', $attributes) && is_array($attributes['colours'])
+            ? array_values(array_map(fn (mixed $id): int => (int) (is_scalar($id) ? $id : 0), $attributes['colours']))
+            : array_values($locked->colours()->pluck('colours.id')->map(fn (mixed $id): int => (int) $id)->all());
+        $code = $attributes['category'] ?? null;
+        $category = is_string($code) ? ProductCategory::query()->where('code', $code)->firstOrFail() : $locked->category;
+
+        $refusal = $this->renameClash->refusal($locked, $name, $colourIds, $category);
+
+        if ($refusal !== null) {
+            throw ValidationException::withMessages(['name' => $refusal]);
         }
     }
 

@@ -6,6 +6,7 @@ namespace App\Http\Requests\Products;
 
 use App\Models\Product;
 use App\Models\ProductCategory;
+use App\Services\Barcodes\RenameClash;
 use App\Services\Products\ProductColourLock;
 use App\Services\Products\ProductSizeLock;
 use Illuminate\Auth\Access\Response;
@@ -59,11 +60,15 @@ class UpdateProductRequest extends FormRequest
      * `colours.removed.{colourId}` (Inertia shares only the first message of a key), in list order; it is checked only when the
      * colours themselves passed (`UpdateProduct` checks again under the row lock).
      *
+     * INV-8-d / AC-5: a rename that would make two different barcode numbers meet is refused on `name`, with one sentence; checked only
+     * when the name itself passed, with the colours and category the save leaves the product with (`UpdateProduct` checks again under
+     * the row locks).
+     *
      * @return list<callable(Validator): void>
      */
     public function after(): array
     {
-        return [$this->colourLock(...), function (Validator $validator): void {
+        return [$this->colourLock(...), $this->renameClash(...), function (Validator $validator): void {
             $product = $this->route('product');
             $code = $this->input('category');
 
@@ -78,6 +83,27 @@ class UpdateProductRequest extends FormRequest
                 $validator->errors()->add('category', $refusal);
             }
         }];
+    }
+
+    private function renameClash(Validator $validator): void
+    {
+        $product = $this->route('product');
+        $name = $this->input('name');
+
+        if (! $product instanceof Product || ! is_string($name) || $validator->errors()->hasAny(['name', 'category', 'colours', 'colours.*'])) {
+            return;
+        }
+
+        $colourIds = $this->has('colours')
+            ? array_values(array_map(fn (mixed $id): int => (int) (is_scalar($id) ? $id : 0), $this->array('colours')))
+            : array_values($product->colours()->pluck('colours.id')->map(fn (mixed $id): int => (int) $id)->all());
+        $category = ProductCategory::query()->where('code', $this->input('category'))->first() ?? $product->category;
+
+        $refusal = app(RenameClash::class)->refusal($product, $name, $colourIds, $category);
+
+        if ($refusal !== null) {
+            $validator->errors()->add('name', $refusal);
+        }
     }
 
     private function colourLock(Validator $validator): void
