@@ -221,6 +221,25 @@ export type FinishedStock = {
     colours: FinishedStockColour[];
 };
 
+/** One variant (a colour in a size) of a product and its barcode (INV-8). */
+export type VariantBarcode = {
+    size: Size;
+    sku: string; // "PRD-JKT-001-IND-S"; "PRD-TOT-001-CAM" for a "One size" product
+    barcode: string | null; // the 13 digits; null = "No barcode yet"
+    shared_with: Pick<ProductRef, 'id' | 'sku'>[]; // other non-deleted products showing it, by SKU; [] without a barcode
+};
+export type ColourBarcodes = {
+    colour: Colour;
+    missing: number;
+    variants: VariantBarcode[];
+}; // every size, in order
+export type ProductBarcodes = {
+    missing: number; // the product's total: "4 missing", "Generate missing barcodes (4)"
+    missing_names: string | null; // the list only: "Black M and L, and Light wash S, M, L and XL"; null when nothing is missing
+    with_barcode: number; // "Its 12 barcodes are kept…"
+    colours: ColourBarcodes[]; // every colour of the product, in list order
+};
+
 export type Product = {
     id: number;
     sku: string;
@@ -586,6 +605,7 @@ export type ProductShowProps = {
     sales_last_30_days?: { units_sold: number; revenue: Decimal }; // deferred prop
     recent_sales?: Sale[]; // deferred prop: newest 5
     finished_stock?: FinishedStock | null; // deferred prop (group 'stock'); null and listed in rescuedProps when it couldn't load
+    barcodes?: ProductBarcodes | null; // deferred prop (group 'stock'); null and listed in rescuedProps when it couldn't load
 };
 export type SalesIndexProps = {
     sales: Paginated<Sale>; // sold_on desc, then id desc

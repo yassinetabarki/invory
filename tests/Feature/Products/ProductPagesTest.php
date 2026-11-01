@@ -575,7 +575,8 @@ it('reads the materials table once per page and answers within a bounded number 
     // S-56-a: the show page's stock group reads the product's stock rows (one query; the sizes come from the same three reads): show 10 -> 11.
     // INV-1: the show page reads the product's colours (one query): show 11 -> 12. The create and edit pages stay as they were: the workshop's
     // colours cost one read there, paid for by the product categories, which the size lists now take from the shared reference read.
-    $budget = ['index' => 6, 'show' => 12, 'create' => 3, 'edit' => 7];
+    // INV-8-b: the barcodes read the product's colours with the numbers of its name, one query: show 12 -> 13.
+    $budget = ['index' => 6, 'show' => 13, 'create' => 3, 'edit' => 7];
     $materialReads = ['index' => 1, 'show' => 1, 'create' => 0, 'edit' => 1];
 
     $baseline = array_map($count, $urls);

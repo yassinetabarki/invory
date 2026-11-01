@@ -1,5 +1,8 @@
 <?php
 
+use App\Models\Barcode;
+use App\Models\BarcodeName;
+use App\Models\Product;
 use App\Models\ProductSizeStock;
 use App\Models\Size;
 
@@ -187,6 +190,38 @@ it('sends FinishedStock with its exact keys, order and types (S-56, INV-2)', fun
         ->and($stock['colours'][0]['units'])->toBe(4)
         ->and(keysOf($stock['colours'][0]['sizes'][1]))->toBe(['size', 'units'])
         ->and($stock['colours'][0]['sizes'][1]['units'])->toBe(4);
+});
+
+it('sends ProductBarcodes with its exact keys, order and types (INV-8)', function () {
+    // The jacket (White only) has a barcode for White S, shared with a second Denim Jacket; its other sizes have none.
+    $white = demoColour('WHT');
+    $barcode = Barcode::factory()->create(['number' => '2000000000015', 'colour_id' => $white->id, 'size_id' => Size::query()->where('label', 'S')->value('id')]);
+    BarcodeName::factory()->create(['barcode_id' => $barcode->id, 'name_key' => 'denim jacket']);
+    $twin = Product::factory()->create(['sku' => 'PRD-JKT-009', 'name' => 'Denim Jacket', 'category' => 'apparel']);
+    $twin->colours()->attach($white->id, ['workshop_id' => $twin->workshop_id]);
+
+    $barcodes = loadedPageProp(actingAs($this->user)->get(route('products.show', pid(1))), 'barcodes');
+
+    expect(keysOf($barcodes))->toBe(['missing', 'missing_names', 'with_barcode', 'colours'])
+        ->and($barcodes['missing'])->toBe(3)
+        ->and($barcodes['missing_names'])->toBe('White M, L and XL')
+        ->and($barcodes['with_barcode'])->toBe(1)
+        ->and($barcodes['colours'])->toHaveCount(1)
+        ->and(keysOf($barcodes['colours'][0]))->toBe(['colour', 'missing', 'variants'])
+        ->and(keysOf($barcodes['colours'][0]['colour']))->toBe(['id', 'code', 'name', 'swatch'])
+        ->and($barcodes['colours'][0]['missing'])->toBe(3)
+        ->and($barcodes['colours'][0]['variants'])->toHaveCount(4)
+        ->and(keysOf($barcodes['colours'][0]['variants'][0]))->toBe(['size', 'sku', 'barcode', 'shared_with'])
+        ->and(keysOf($barcodes['colours'][0]['variants'][0]['size']))->toBe(['id', 'label'])
+        ->and($barcodes['colours'][0]['variants'][0]['size']['id'])->toBeInt()
+        ->and($barcodes['colours'][0]['variants'][0]['sku'])->toBe('PRD-JKT-001-WHT-S')
+        ->and($barcodes['colours'][0]['variants'][0]['barcode'])->toBe('2000000000015')
+        ->and(keysOf($barcodes['colours'][0]['variants'][0]['shared_with'][0]))->toBe(['id', 'sku'])
+        ->and($barcodes['colours'][0]['variants'][0]['shared_with'][0]['id'])->toBe($twin->id)
+        ->and($barcodes['colours'][0]['variants'][0]['shared_with'][0]['sku'])->toBe('PRD-JKT-009')
+        // A variant without a barcode: null, and shared with nobody.
+        ->and($barcodes['colours'][0]['variants'][1]['barcode'])->toBeNull()
+        ->and($barcodes['colours'][0]['variants'][1]['shared_with'])->toBe([]);
 });
 
 it('sends the props of the create and edit pages (S-25: statuses, plus the product on edit, and no materials list)', function () {

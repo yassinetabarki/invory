@@ -13,6 +13,7 @@ use App\Http\Requests\Products\StoreProductRequest;
 use App\Http\Requests\Products\UpdateProductRequest;
 use App\Http\Resources\ColourResource;
 use App\Http\Resources\FinishedStockResource;
+use App\Http\Resources\ProductBarcodesResource;
 use App\Http\Resources\ProductListResource;
 use App\Http\Resources\ProductResource;
 use App\Http\Resources\SaleResource;
@@ -23,6 +24,7 @@ use App\Models\SizeList;
 use App\Models\User;
 use App\Services\Costing\ProductCostingService;
 use App\Services\Products\FinishedStock;
+use App\Services\Products\ProductBarcodes;
 use App\Services\Products\ProductIndexQuery;
 use App\Services\Products\SizeLists;
 use App\Services\Sales\SalesReport;
@@ -103,6 +105,12 @@ final class ProductController extends Controller
             // still shows (the failure is reported and the prop is listed in `rescuedProps`).
             'finished_stock' => Inertia::defer(
                 fn (): array => (new FinishedStockResource(app(FinishedStock::class)->of($product)))->resolve(),
+                'stock',
+                rescue: true,
+            ),
+            // INV-8: the barcodes share the group, so one request brings the stock and the barcodes and one "Try again" reloads both.
+            'barcodes' => Inertia::defer(
+                fn (): array => (new ProductBarcodesResource(app(ProductBarcodes::class)->of($product)))->resolve(),
                 'stock',
                 rescue: true,
             ),

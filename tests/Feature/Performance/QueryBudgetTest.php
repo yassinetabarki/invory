@@ -1,9 +1,13 @@
 <?php
 
+use App\Domain\Barcodes\Ean13;
+use App\Models\Barcode;
+use App\Models\BarcodeName;
 use App\Models\Colour;
 use App\Models\Material;
 use App\Models\OrderLine;
 use App\Models\Product;
+use App\Models\ProductCategory;
 use App\Models\ProductSizeStock;
 use App\Models\Sale;
 use App\Models\Size;
@@ -280,6 +284,52 @@ it('stays within the query budget when the deferred finished stock of the produc
         'workshop_id' => $shoe->workshop_id, 'product_id' => $shoe->id, 'colour_id' => $colourId, 'size_id' => $sizeId, 'units' => 2, 'created_at' => now(), 'updated_at' => now(),
     ]))->all());
     ProductSizeStock::factory()->create(['product_id' => pid(1), 'units' => 2]);
+
+    // Warm up: the first request of a process may run one-off queries (schema introspection, the framework's own caches).
+    $stockQueries(pid(1));
+
+    $jacket = $stockQueries(pid(1));
+    $shoe = $stockQueries(pid(3));
+
+    expect(count($shoe))->toBeLessThanOrEqual(QUERY_BUDGET, implode(PHP_EOL, $shoe))
+        ->and(count($shoe))->toBe(count($jacket), implode(PHP_EOL, $shoe));
+});
+
+it('stays within the query budget when the stock group of the product page loads with the barcodes, however many colours, sizes and sharing products there are', function () {
+    actingAs($this->user);
+    $stockQueries = function (int $productId): array {
+        $firstVisit = $this->get(route('products.show', $productId))->assertOk();
+
+        return partialReloadQueries($firstVisit, ['finished_stock', 'barcodes'], fn (Assert $partial) => $partial->has('finished_stock.colours')->has('barcodes.colours'));
+    };
+    // Gives a product these colours, a barcode for every colour and size under its name, and `$sharing` other products of the same name
+    // that have the same colours: the numbers and the sharing products are one query each however many there are.
+    $arrange = function (Product $product, int $colours, int $sharing): void {
+        $colourIds = Colour::query()->ordered()->limit($colours)->pluck('id')->all();
+        $product->colours()->syncWithPivotValues($colourIds, ['workshop_id' => $product->workshop_id]);
+        $sizeIds = Size::query()->whereIn('size_list_id', ProductCategory::query()->whereKey($product->category_id)->select('size_list_id'))->orderBy('position')->pluck('id')->all();
+        $rows = [];
+
+        foreach ($colourIds as $colourId) {
+            foreach ($sizeIds as $sizeId) {
+                $rows[] = ['workshop_id' => $product->workshop_id, 'number' => Ean13::inStore(count($rows) + 1 + 1000 * $product->id), 'colour_id' => $colourId, 'size_id' => $sizeId, 'created_at' => now(), 'updated_at' => now()];
+            }
+        }
+
+        Barcode::query()->insert($rows);
+        $ids = Barcode::query()->whereIn('number', array_column($rows, 'number'))->pluck('id', 'number');
+        BarcodeName::query()->insert(array_map(fn (array $row): array => [
+            'workshop_id' => $row['workshop_id'], 'barcode_id' => $ids[$row['number']], 'name_key' => $product->name_key,
+            'colour_id' => $row['colour_id'], 'size_id' => $row['size_id'], 'created_at' => now(), 'updated_at' => now(),
+        ], $rows));
+
+        foreach (Product::factory()->count($sharing)->create(['name' => $product->name, 'category_id' => $product->category_id]) as $twin) {
+            $twin->colours()->syncWithPivotValues($colourIds, ['workshop_id' => $twin->workshop_id]);
+        }
+    };
+    // The shoe has 12 colours x 11 sizes and 6 products that share them; the jacket 2 colours x 4 sizes and 1.
+    $arrange(Product::query()->findOrFail(pid(3)), 12, 6);
+    $arrange(Product::query()->findOrFail(pid(1)), 2, 1);
 
     // Warm up: the first request of a process may run one-off queries (schema introspection, the framework's own caches).
     $stockQueries(pid(1));
