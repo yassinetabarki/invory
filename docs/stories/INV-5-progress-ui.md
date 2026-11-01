@@ -1,6 +1,6 @@
 ---
 id: INV-5
-title: Progress
+title: Progress, production for the shelf
 type: ui
 priority: Must
 status: Approved
@@ -9,394 +9,324 @@ tags:
   - ui-card
 ---
 
-# INV-5 · Progress — UI card
+# INV-5 · Progress, production for the shelf — UI card
 
 > [!abstract] Description
-> A **Progress** page shows every unit of the open orders, phase by phase, in its colour and size: how many units are in each phase,
-> where each product stands, and what is in one phase, of which order and client, and since when. Units can be moved on from there.
-> Between In cutting and Ready to ship, each workshop keeps its own **production phases** (Sewing and Finishing to start with), so a
-> jacket being sewn no longer reads "In cutting" for a week. Each bundle cut gets a **work ticket** with a QR code: scanning it moves
-> the bundle to its next phase, up to Ready to ship.
-> New: the Progress page (in the sidebar) with its phase tiles, a table per product and a view per phase; the work tickets and their
-> printing; the **Scan** page (in the sidebar); the page Settings › Production phases. Changed: the order page (a column per phase,
-> the new move buttons, the line's tickets), the move windows (Start cutting ends on printing the tickets), the Orders list (a column
-> "In production") and Settings › Labels (a ticket size).
-> **To be discussed:** order lines counted per colour and size (see "Orders per colour and size"). Until it is decided, every colour
-> shown on Progress, the tickets and the order screens is drawn as it would be with colour.
-> Left out on purpose: moving back by scan, shipping by scan, production for the shelf (a batch with no client ending with "Put in
-> stock"), shipping from the shelf, moving several rows across orders at once, a board with a column per phase, and dragging. Progress
-> and scans never change "In stock": an order's units stay the order's.
+> **This card replaces the version validated on 2026-10-30**, where Progress moved the units of open orders and the tickets named a
+> client. On 2026-11-01 you decided that a finished product is not tied to an order: the workshop makes products **for the shelf**,
+> and an order is served from the finished stock. So Progress now follows **batches**: units of one product in one colour and one
+> size, made together. The owner starts a batch (the materials leave stock), moves it through the phases, and **puts it in stock**,
+> which adds the units to the finished stock. Each batch has a **work ticket** with a QR code and its own number (**B-0147**);
+> scanning the ticket moves the batch to its next phase.
+> New: the Progress page (in the sidebar) with its phase tiles, a table per product and a view per phase; **Start batch**; **Put in
+> stock**; **Undo batch**; the work tickets and their printing; the **Scan** page (in the sidebar); the page Settings › Production
+> phases. Changed: Settings › Labels (a ticket size).
+> Cutting, phases, batches and tickets are on Progress only; the order page has none of them (INV-14).
+> Left out on purpose: any link between a batch and an order or a client, setting shelf stock aside, a count of what open orders wait
+> for, starting a batch from an order or from the product page, undoing a batch after cutting, a board with a column per phase,
+> dragging, and moving several batches at once.
 
 > [!info] How it looks today
-> There is no production page. To know how many Indigo M jackets are being sewn, the owner opens Boutique Lina, then Amira Ben Salah,
-> then Yassine Trabelsi, and adds up in her head. Nothing says what has waited longest.
-> The order page shows each line's table: one row per size ordered, the columns To start · In cutting · Ready to ship · Shipped, a Total
-> row, and under it Start cutting, Mark ready, Ship and the three Move back. Each opens a window "How many units of each size?" with
-> "Up to 10" under each size; Start cutting and Move back to To start show the materials table. Sewing, finishing or a quality check
-> don't exist.
-> Order lines count by size only: "50 × Denim Jacket (S 10 · M 20 · L 15 · XL 5)"; an order line has no colour. The Orders list shows
-> per order To start · In cutting · Ready to ship · Shipped and the open-order totals at the top. Invory remembers the day of each cut,
-> but not the day units were marked ready or shipped.
+> There is no production page. The owner cuts from an order: the order page shows each line's table (To start · In cutting · Ready to
+> ship · Shipped) with **Start cutting**, **Mark ready**, **Ship** and the Move back buttons. To know how many Indigo M jackets are being
+> made she opens every order and adds up in her head. Sewing, finishing or a quality check don't exist, and a pile of finished
+> jackets only reaches the shelf when someone types a count in **Update stock** (or, with INV-3, makes a restock).
+> Cutting takes the materials out of stock (S-53): 30 jackets take 59.4 m Denim 12oz Indigo, 240 pc Metal shank button 17mm, 3,780 m
+> Polyester thread and 30 pc Woven brand label.
 
 ## Pages
 
-Today is 30 Oct 2026. Every example uses three open orders, with the phases **Sewing** and **Finishing**:
+Today is 30 Oct 2026. Every example uses these batches, with the phases **Sewing** and **Finishing**:
 
-| Order                     | Line                                                   | Units |
-| ------------------------- | ------------------------------------------------------ | ----- |
-| Boutique Lina · 15 Oct    | Denim Jacket · Indigo S 10 · M 20 · L 15 · XL 5        | 50    |
-| Boutique Lina · 15 Oct    | Denim Jeans 5-pocket · Indigo S 5 · M 10 · L 10 · XL 5 | 30    |
-| Amira Ben Salah · 28 Oct  | Denim Jacket · Black M 1                               | 1     |
-| Amira Ben Salah · 28 Oct  | Denim Jeans 5-pocket · Indigo M 1                      | 1     |
-| Yassine Trabelsi · 27 Oct | Denim Jacket · Light wash L 2 · XL 1                   | 3     |
+| Batch  | Product · colour · size          | Units | Phase      | Since       |
+| ------ | -------------------------------- | ----- | ---------- | ----------- |
+| B-0146 | Denim Jeans 5-pocket · Indigo S  | 5     | Sewing     | 26 Oct 2026 |
+| B-0147 | Denim Jacket · Indigo S          | 4     | Sewing     | 27 Oct 2026 |
+| B-0149 | Denim Jacket · Indigo M          | 6     | Sewing     | 28 Oct 2026 |
+| B-0148 | Denim Jacket · Indigo M          | 4     | Finishing  | 29 Oct 2026 |
+| B-0150 | Denim Jacket · Indigo M          | 4     | In cutting | 25 Oct 2026 |
+| B-0151 | Denim Jacket · Light wash · L    | 2     | In cutting | 29 Oct 2026 |
+| B-0152 | Denim Jacket · Light wash · XL   | 1     | In cutting | 29 Oct 2026 |
 
-Where the units are:
+- That is 26 units: In cutting 7 · Sewing 15 · Finishing 4. The Denim Jacket has 21 units in 6 batches.
+- The shelf (finished stock, S · M · L · XL): Denim Jacket Indigo 2 · 0 · 3 · 1, Light wash 0 · 0 · 0 · 0; Denim Jeans 5-pocket Indigo 0 · 5 · 2 · 0.
+  The Denim Jacket's "Can produce now" is 112 (bottleneck Metal shank button 17mm).
 
-| Product · colour · size          | To start | In cutting | Sewing | Finishing | Ready to ship | Shipped | Total |
-| -------------------------------- | -------- | ---------- | ------ | --------- | ------------- | ------- | ----- |
-| Denim Jacket · Black M           | 1        | 0          | 0      | 0         | 0             | 0       | 1     |
-| Denim Jacket · Indigo S          | 0        | 0          | 4      | 0         | 6             | 0       | 10    |
-| Denim Jacket · Indigo M          | 6        | 4          | 6      | 4         | 0             | 0       | 20    |
-| Denim Jacket · Indigo L          | 15       | 0          | 0      | 0         | 0             | 0       | 15    |
-| Denim Jacket · Indigo XL         | 0        | 0          | 0      | 0         | 0             | 5       | 5     |
-| Denim Jacket · Light wash L      | 0        | 2          | 0      | 0         | 0             | 0       | 2     |
-| Denim Jacket · Light wash XL     | 0        | 1          | 0      | 0         | 0             | 0       | 1     |
-| **Denim Jacket**                 | 22       | 7          | 10     | 4         | 6             | 5       | 54    |
-| Denim Jeans 5-pocket · Indigo S  | 0        | 0          | 5      | 0         | 0             | 0       | 5     |
-| Denim Jeans 5-pocket · Indigo M  | 11       | 0          | 0      | 0         | 0             | 0       | 11    |
-| Denim Jeans 5-pocket · Indigo L  | 10       | 0          | 0      | 0         | 0             | 0       | 10    |
-| Denim Jeans 5-pocket · Indigo XL | 5        | 0          | 0      | 0         | 0             | 0       | 5     |
-| **Denim Jeans 5-pocket**         | 26       | 0          | 5      | 0         | 0             | 0       | 31    |
-| **All open orders**              | 48       | 7          | 15     | 4         | 6             | 5       | 85    |
+### How batches work
+- A **batch** is units of one product in one colour and one size. **Start batch** typed for a grid of colours and sizes makes **one
+  batch per colour and size**, each with its number (**B-0153**, **B-0154** …), numbered per workshop.
+- **The path:** **In cutting** (always first) → the workshop's own phases (here **Sewing** → **Finishing**, 0 to 6) → **Put in stock**.
+  Put in stock is the end, not a phase with a tile: it adds the units to the finished stock and the batch leaves Progress.
+- **Start batch** takes the materials out of stock, with S-53's rules (below), and puts the batch In cutting.
+- A batch moves **one phase at a time**, forward by the button that names where it goes (**Move to Sewing**, **Move to Finishing**,
+  **Put in stock**), back by **Move back to …**. Moving part of a batch **splits** it: the units moved become a batch of their own,
+  with a new number and ticket; the units that stay keep the number.
+- **Undo batch** is possible **only while the batch is In cutting**: it takes the batch off Progress and gives back what was cut, from
+  the amounts remembered at the cut. A batch in a later phase moves back to In cutting first (a sewn jacket does not give its fabric back).
+- Only Start batch and Undo batch touch materials. Moves between phases never do.
+- **Put in stock** adds the units to the finished stock of their colour and size and writes a **restock** (INV-3): Reference = the batch
+  number ("B-0148"), Note = "From production". It appears in Restocks and can be undone there like any restock; undoing the restock
+  takes the units off the shelf but does not bring the batch back, and its materials stay used.
+- **Nothing is reserved and nothing is linked to orders.** A batch belongs to no order. Progress shows **On the shelf now** beside
+  each colour and size as a guide for what to make, and never mentions an order or a client. The words "Not started" and "Delivered"
+  never appear on it.
+- Every move is remembered with its day, so a row says since when its batch is in its phase.
+- **Edit product:** a colour with units in production can't be taken off its product: "Light wash has 3 units in production, so it
+  can't be removed from Denim Jacket." A product with units in production can't move to a category with other sizes: "Denim Jacket has
+  units in production, so its category can't change to one with other sizes." with S-58's ending ("Keep a category with sizes S, M, L,
+  XL.").
 
-- Since when: Jeans Indigo S in Sewing since 26 Oct; Jacket Indigo S in Sewing since 27 Oct; Jacket Indigo M in Sewing since 28 Oct;
-  Jacket Indigo M in cutting since 25 Oct; Light wash L and XL in cutting since 29 Oct; Indigo M in Finishing since 29 Oct; Indigo S
-  ready to ship since 29 Oct; Indigo XL shipped 28 Oct.
-- Every Indigo unit except Amira's jeans is Boutique Lina's; Black M is Amira's; Light wash is Yassine's.
-
-### How the phases work
-- The path: **To start** → **In cutting** → the workshop's own phases (here **Sewing** → **Finishing**) → **Ready to ship** →
-  **Shipped**. To start, In cutting, Ready to ship and Shipped are always there; the workshop keeps 0 to 6 phases of its own between
-  In cutting and Ready to ship, starting with Sewing and Finishing.
-- Units move one phase at a time, forward or back, per colour and size. The forward button names where the units go: under To start
-  **Start cutting** (takes the materials out of stock, as today); under In cutting **Move to Sewing**; under Sewing **Move to
-  Finishing**; under the last own phase **Mark ready**; under Ready to ship **Ship**. With no phase of its own, In cutting has **Mark
-  ready**, as today.
-- **Move back** goes one phase back. Only Move back to To start returns materials, as today. Mark ready, Ship, the moves between own
-  phases and their Move back never touch stock.
-- Whichever page a move starts from (Progress or the order page), it is the same move, with the same window, limits, materials, toast
-  and history.
-- Every move is remembered with its day, so a row says since when its units are in their phase. Units already in a phase before INV-5
-  read "before 30 Oct 2026".
-- An order's units stay the order's: Ready to ship and Shipped never change "In stock". Progress never changes stock.
-- A colour that is on an open order can't be taken off its product (Edit product, INV-1's Colours field): "Light wash is on 1 open
-  order, so it can't be removed from Denim Jacket."
-- Orders recorded before order lines had colours are test data and are dropped.
+### S-53's materials rules (unchanged, now for a batch)
+- Starting a batch of N units needs the product's materials for N units from stock. If stock is short the batch is refused with the
+  message: "Not enough stock to cut 20 units. You can cut at most 12 now: Metal shank button 17mm runs short. Restock it first, or cut
+  12 or fewer." When nothing can be cut: "You can't cut any now: restock Metal shank button 17mm first." Every short material shows its
+  "Short by".
+- The amounts are remembered per batch at the cut. Undo returns them exactly, nothing for a material deleted or whose unit changed
+  since. A product with no composition can be started: nothing is taken and nothing comes back.
+- Example: 16 units take 31.68 m Denim 12oz Indigo, 128 pc Metal shank button 17mm, 2,016 m Polyester thread and 16 pc Woven brand
+  label; "Can produce now" goes from 112 to 96 (900 − 128 = 772 buttons, ⌊772 / 8⌋ = 96).
 
 ### Sidebar
-- Two new entries after Orders: **Progress** with a factory icon, and **Scan** with a QR icon: Dashboard, Materials, Products,
-  Restocks, Orders, **Progress**, **Scan**, Clients, Sales. Breadcrumbs: "Progress", "Progress › Sewing", "Scan".
+- Two entries after Orders: **Progress** (factory icon) and **Scan** (QR icon): Dashboard, Materials, Products, Restocks, Orders,
+  **Progress**, **Scan**, Clients, Sales. Breadcrumbs: "Progress", "Progress › Sewing", "Scan".
 
 ### Progress page · all phases
-Board: INV-5 · Progress · all phases by product, filters, empty, no match, error · desktop (Invory App UI canvas)
-1. Header **Progress**, description "Every unit of your open orders, phase by phase, in its colour and size." No main button (Progress
-   records nothing new); the outline link **Production phases**, with a gear icon, opens Settings › Production phases, and the
-   outline button **Scan a ticket** opens the Scan page.
-2. **Phase tiles**, one row, a group named "Phases": **All phases** · **To start** · **In cutting** · **Sewing** · **Finishing** ·
-   **Ready to ship** · **Shipped**. Each tile: the phase name (14 px, grey) and its count in the number font (24 px) with "units" ("15
-   units"). The chosen tile has a 2 px Denim border, the light Denim tint and a bold count, and is announced "current page". A tile at 0
-   shows "0 units" in grey and still opens its view. The tiles wrap to two rows under 1100 px.
-3. Filters: **Product** (with its own search, "All products"), **Colour** (swatch and name, "All colours"), **Client** (with its own
-   search, the phone in grey, "All clients"), **Order** (with its own search, "Boutique Lina · 15 Oct 2026", "All open orders"). All are
-   kept in the page address, they combine, and **Clear filters** shows once any is set.
-4. With a filter set, under the filters: "Showing Indigo · 81 of 85 units" and **Clear filters**. The tiles and the tables follow the
-   filters.
-5. One card per product with units on open orders, by name A → Z, 10 products a page:
-   - Header: the product name (bold, a link to its page), its SKU in the number font, "54 units on 3 open orders". On the right the
-     link **Open orders of Denim Jacket** (the Orders list showing that product).
-   - Table "Denim Jacket by phase": first column **Colour · size**; then **To start**, **In cutting**, **Sewing**, **Finishing**,
-     **Ready to ship**, **Shipped**, **Total**. Rows grouped by colour in the order of Settings › Colours: a colour row (the colour tag
-     and its subtotal in bold, on a light grey band), then its sizes in size order, indented, the size label in semibold. Only colours
-     and sizes with units on open orders have rows. A **Total** row last, with a heavier line above it. Every figure in the number
-     font, right-aligned; zeros in the readable grey (S-71). The figures aren't links.
-   - A "One size" product: the colour rows only, no size rows.
-6. Every figure, subtotal and total comes from the server; the page adds nothing up.
+Board: INV-5 rev. 3 · Progress for the shelf · all phases by product with the shelf, filters, empty, loading, error · desktop (Invory App UI canvas)
+1. Header **Progress**, description "The batches you are making for your shelf, phase by phase, in their colour and size." Buttons:
+   **Production phases** (outline, gear icon), **Scan a ticket** (outline) and **Start batch** (main, plus icon).
+2. **Phase tiles**, a group named "Phases": **All phases** 26 · **In cutting** 7 · **Sewing** 15 · **Finishing** 4 (the workshop's own
+   phases; they wrap to two rows when there are more). Each tile: the name and the count in the number font with "units". The chosen
+   tile has a 2 px Denim border, the light tint, a bold count and is announced "current page". A tile at 0 still opens its view. The
+   tiles follow the filters.
+3. Filters: **Product** (searchable, "All products") and **Colour** (swatch and name, "All colours"). Kept in the page address. With a
+   filter: "Showing Indigo · 23 of 26 units" and **Clear filters**. There is no Client and no Order filter.
+4. One card per product that has units in production, A → Z, 10 a page:
+   - header: the name (a link), the SKU (number font), "21 units in 6 batches", and the outline button **Start batch** (named "Start a
+     batch of Denim Jacket", product chosen);
+   - the table "Denim Jacket by phase": **Colour · size**, one column per phase (In cutting · Sewing · Finishing), **In production**
+     (the row total), a gap, and **On the shelf now**. Colours in the order of Settings › Colours: a colour row on a light band with its
+     subtotals (no shelf figure), its sizes indented, a **Total** row with a heavier line. Only colours and sizes in production have
+     rows. Zeros in the readable grey; a shelf figure of 0 is the amber word **Out**. A "One size" product: colour rows only.
+   - Example, Indigo M: In cutting 4 · Sewing 6 · Finishing 4 · In production 14 · On the shelf now **Out**; Indigo S: Sewing 4 · In
+     production 4 · On the shelf now 2.
+5. Every figure comes from the server; the page adds nothing up. The figures aren't links.
 
 ### Progress page · one phase
-Board: INV-5 · Progress · one phase (Sewing), move window, refusals · desktop (Invory App UI canvas)
-1. Breadcrumb "Progress › Sewing". The tiles stay on top, with **Sewing** chosen; the filters stay.
-2. Heading **Sewing**, and the line "15 units · 2 products · 1 open order · oldest since 26 Oct 2026". Under it, in grey: "From In
-   cutting. Next: Finishing."
-3. Table "In Sewing", one row per order line × colour × size in the phase, oldest first: **Since** ("26 Oct 2026", under it "4 days" in
-   grey; also "1 day", "today") · **Product** (the name, a link; the SKU in grey) · **Colour · size** (the colour tag and "S") ·
-   **Units** (number font, bold) · **Tickets** ("T-0142"; two or more: "T-0142, T-0150"; in To start "—") · **Order** ("Boutique
-   Lina", a link to the order; under it "ordered 15 Oct 2026") · the row's buttons: **Move to Finishing** (outline, 44 px tall, named
-   "Move Denim Jacket Indigo M of Boutique Lina to Finishing") and a "⋯" menu named "More moves for Denim Jacket Indigo S, Boutique Lina"
-   with **Move back to In cutting** and **Print tickets of this row**.
-4. 25 rows a page.
-5. The To start view: the button is **Start cutting**, and "Since" reads the order date ("ordered 15 Oct 2026", "15 days"). The Ready
-   to ship view: **Ship**. The Shipped view: no forward button; the menu has **Move back to Ready to ship**; "Since" is the day shipped.
-6. A deleted product's row: "Denim Jacket (deleted)", with no link; **Start cutting** can't be pressed, with the reason "Denim Jacket
-   was deleted, so it can't be cut." in a tip the keyboard reaches; the other moves work.
+Board: INV-5 rev. 3 · Progress for the shelf · one phase, Start batch, Put in stock, Undo batch, states · desktop (Invory App UI canvas)
+1. Breadcrumb "Progress › Sewing"; the tiles stay with **Sewing** chosen; the filters stay.
+2. Heading **Sewing** and "15 units · 3 batches · 2 products · oldest since 26 Oct 2026"; in grey: "From In cutting. Next: Finishing."
+3. Table "In Sewing", one row per batch, oldest first, 25 a page: **Since** ("26 Oct 2026", under it "4 days"; "1 day"; "today") · **Batch**
+   (B-0146, number font) · **Product** (name, a link; the SKU in grey) · **Colour · size** · **Units** (bold) · the forward button
+   **Move to Finishing** (outline, 44 px, named "Move batch B-0146 Denim Jeans 5-pocket Indigo S to Finishing") and a "⋯" menu named
+   "More moves for batch B-0146" with **Move back to In cutting** and **Print ticket B-0146**.
+4. **In cutting:** the forward button is **Move to Sewing**; the menu has **Undo batch** and **Print ticket**; "Since" is the day the batch
+   started. With no phase of the workshop's own, In cutting's button is **Put in stock**.
+5. **The last phase** (Finishing): the button is **Put in stock** (main); the menu has **Move back to Sewing** and **Print ticket**.
+6. A deleted product's row reads "Denim Jacket (deleted)", with no link; **Put in stock** can't be pressed, with the reason "Denim Jacket
+   was deleted, so it can't be put in stock. Move the batch back to In cutting and undo it to return its materials." in a tip the
+   keyboard reaches.
 
-### The move window, opened from Progress
-Board: INV-5 · Progress · one phase (Sewing), move window, refusals · desktop (Invory App UI canvas)
-- Today's move window, for the order line of the row, with a colour × size grid: title "Move to Finishing · Denim Jacket", under it
-  "Boutique Lina · ordered 15 Oct 2026 · in Sewing: Indigo S 4 · M 6". The group "How many units of each colour and size?": one row per
-  colour that has units in Sewing, a field per size that has units there, "Up to 6" under each. The field of the row clicked (Indigo M)
-  has the focus; it starts empty.
-- Start cutting and Move back to To start keep the materials table, its short-stock check and its messages, for the total typed.
-- **Move units** → toast "6 units of Denim Jacket for Boutique Lina moved to Finishing." (Start cutting: "10 units of Denim Jacket for
-  Boutique Lina moved to In cutting. Materials taken out of stock."). The window closes, the focus goes to the next row's button (or to
-  the heading when the phase is empty), and the tiles and the row refresh.
-- Example: Move to Finishing on Indigo M with 6 → the tiles read Sewing 9 · Finishing 10, the row leaves Sewing, and Boutique Lina's
-  order page shows Indigo M: Sewing 0 · Finishing 10. Start cutting on Denim Jacket Indigo L with 10 takes Denim 12oz Indigo 19.8 m,
-  Metal shank button 17mm 80 pc, Polyester thread 1,260 m and Woven brand label 10 pc, with the same refusal as on the order page.
-- **Start cutting ends on a print step:** after **Move units**, the window shows "16 units of Denim Jacket moved to In cutting.
-  Materials taken out of stock." and "2 tickets to print: T-0152 Indigo M · 6 units, T-0153 Indigo L · 10 units", with **Print 2
-  tickets** (main) and **Done**. Print opens the tickets in a new tab with the browser's print window, as the labels do (INV-2).
-- **Tickets follow the move windows**, so the paper and the screen never disagree: moving on takes units from the oldest tickets in
-  the phase first; moving back takes the newest first. A whole ticket keeps its number and moves with its units. Moving part of a
-  ticket splits it: the units moved get a new ticket, and the toast offers to print it: "4 units of Denim Jacket for Boutique Lina
-  moved to Finishing. Ticket T-0142 was split: the units moved are on T-0157." with **Print ticket T-0157**. The units that stay keep
-  T-0142, which now reads 2 units.
-- Units moved back to To start leave their ticket; a ticket left with no unit is no longer used. When those units are cut again they
-  get a new ticket.
+### Start batch (window)
+Board: INV-5 rev. 3 · Progress for the shelf · one phase, Start batch, Put in stock, Undo batch, states · desktop (Invory App UI canvas)
+- Opened by **Start batch** on Progress or on a product's card (product chosen). Not from an order and not from the product page.
+- Title **Start batch**, "Make products for your shelf. Materials are taken out of stock now." **Product** (searchable; shows "Can
+  produce now 112"). The group "How many units of each colour and size?": a row per colour (Settings › Colours order), a field per
+  size, with the shelf under each ("Shelf 2" or the amber "Shelf Out"). Under the grid: "Total 16 units · 2 batches (Indigo M 6,
+  Indigo L 10)".
+- The table "Materials for 16 units": **Material · Taken · In stock · After** (31.68 m Denim 12oz Indigo, 128 pc Metal shank button
+  17mm, 2,016 m Polyester thread, 16 pc Woven brand label), with S-53's "Short by" column when stock is short.
+- Buttons **Cancel** and **Start batch** (a spinner while saving). The refusal is S-53's (above).
+- It then shows "2 batches started" · "16 units of Denim Jacket started. Materials taken out of stock." · "2 tickets to print: B-0153 ·
+  Indigo M · 6 units, B-0154 · Indigo L · 10 units" · **Print 2 tickets** (main) · **Done**. Print opens the tickets in a new tab with
+  the browser's print window, as the labels do (INV-2).
+- Example: "Can produce now" goes from 112 to 96; the shelf is unchanged.
+
+### Moves, Put in stock and Undo batch (windows)
+Board: INV-5 rev. 3 · Progress for the shelf · one phase, Start batch, Put in stock, Undo batch, states · desktop (Invory App UI canvas)
+- **Move to Finishing · Denim Jacket:** the grey line "B-0149 · Indigo M · in Sewing: 6 units"; one field "How many units?" ("Up to 6"),
+  empty, focused. Moving 4 of the 6 splits the batch: the 4 units become **B-0155** with a new ticket, B-0149 keeps 2 and its number.
+  Toast: "4 units of Denim Jacket · Indigo M moved to Finishing. Batch B-0149 was split: the units moved are on B-0155." with **Print
+  ticket B-0155**. A whole batch keeps its number: "6 units of Denim Jacket · Indigo M moved to Finishing." The same window serves
+  **Move back to …**.
+- **Put in stock · Denim Jacket:** "B-0148 · Indigo M · in Finishing: 4 units"; "How many units?" ("Up to 4"); the note "Adds to your
+  finished stock: Indigo M goes from 0 to 4. Recorded as a restock "From production"."; **Cancel** and **Put in stock**. Part of a batch
+  may be put in stock: the units left keep the batch number and its ticket reads fewer units. Toast: "4 units of Denim Jacket · Indigo M
+  put in stock." with **See the restock**. The batch leaves Progress, the Denim Jacket's Indigo M shelf reads 4, and Restocks lists a
+  restock with Reference "B-0148" and Note "From production".
+- **Undo batch B-0150?** (a sheet, only for a batch In cutting): "Takes the 4 units of Denim Jacket · Indigo M off Progress and gives
+  back what was cut: 7.92 m Denim 12oz Indigo, 32 pc Metal shank button 17mm, 504 m Polyester thread and 4 pc Woven brand label."
+  **Undo batch** (red) and **Keep batch**. Toast: "Batch B-0150 undone. Materials returned to stock."
 
 ### Work tickets
-Board: INV-5 · Work tickets · print after Start cutting, the ticket, Scan page with a scanner, Tickets column · desktop (Invory App
-UI canvas)
-- A **work ticket** stands for a **bundle**: the units of one colour and size that one Start cutting cut for one order line. "Start
-  cutting · Denim Jacket" with Indigo M 6 and L 10 makes two tickets: **T-0152** (Denim Jacket · Indigo M · 6 units · Boutique Lina)
-  and **T-0153** (Indigo L · 10 units). Tickets are numbered per workshop (T-0001, T-0002 …).
-- Tickets are made at Start cutting, one per colour and size cut. Units still to start have no ticket, so a scan never starts
-  cutting: cutting is always the Start cutting window, with its materials table and its short-stock check.
+Board: INV-5 rev. 3 · Progress for the shelf · batch ticket, Scan page, Settings › Production phases · desktop (Invory App UI canvas)
+- A **work ticket** stands for a **batch** (one colour and one size), and carries the batch's number: **B-0147**. One number for both.
 - **The ticket** (105 × 74 mm on A4), always black on white:
-  1. The top line: "Work ticket" and, large, **T-0142**.
-  2. On the left the QR code (30 mm). On the right **Denim Jacket** (bold, at most two lines), "Indigo · M", **6 units** (large),
-     "Boutique Lina · ordered 15 Oct 2026", and the SKU "PRD-JKT-001-IND-M" in the number font.
-  3. The path, as the phases were when printed, with the phase it was in ticked: "☑ In cutting ☐ Sewing ☐ Finishing ☐ Ready to
-     ship", and "Cut 30 Oct 2026 · printed 30 Oct 2026".
-  4. The bottom line: "Scan to move it to the next phase." A split ticket adds "Split from T-0142".
-  - No phone number and no price on a ticket: it lies on the workshop floor.
-- The QR code opens the ticket in Invory with a secret code, so the phone's own camera opens the right screen; a scanner or the Scan
-  page reads the same. The short number under it ("T-0142") can be typed instead.
-- **Printed again** at any time: the order page's line has **Tickets (2)**, which opens a panel listing its tickets (number, colour ·
-  size, units, phase, "Not printed yet" until printed) with **Print ticket T-0142** for each and **Print all**; the phase view's "⋯"
-  menu has **Print tickets of this row**.
-- **Ticket size**, in Settings › Labels (beside INV-2's label size): "A4 sheet, 8 tickets (2 × 4)" (the default) or "100 × 60 mm, one
-  per label (label printer)".
+  1. The top line: "Work ticket" and, large, **B-0147**.
+  2. On the left the QR code (30 mm). On the right **Denim Jacket** (bold, at most two lines), "Indigo · S", **4 units** (large),
+     "Started 23 Oct 2026", and the SKU "PRD-JKT-001-IND-S" in the number font.
+  3. The path as the phases were when printed, the current one ticked: "☑ In cutting ☐ Sewing ☐ Finishing ☐ Put in stock", and "Printed
+     30 Oct 2026".
+  4. The bottom line: "Scan to move it to the next phase." A split batch adds "Split from B-0149".
+  - **No client, no phone number and no price** on a ticket: it lies on the workshop floor.
+- The QR code opens the batch in Invory with a secret code; the phone's own camera, a scanner or the Scan page reads the same. The
+  batch number can be typed instead.
+- **Printed** from Progress only: at the end of Start batch, from the "⋯" menu (**Print ticket B-0147**), and from a split's toast.
+  Orders have no tickets.
+- **Ticket size**, in Settings › Labels (beside INV-2's label size): "A4 sheet, 8 tickets (2 × 4)" (the default) or "100 × 60 mm, one per
+  label (label printer)".
 
 ### Scan page and the scan confirm
-Board: INV-5 · Scan a ticket · camera, confirm, moved, finished, errors · 375 (Invory App UI canvas)
-- **Scan** in the sidebar (and **Scan a ticket** on Progress): on a phone it opens the camera, with the line "Point the camera at the
-  QR code on a work ticket." and under it "Or type the ticket number", a field and **Find ticket**. On any device the field "Scan or
-  type a ticket number" takes a USB or Bluetooth scanner, which types like a keyboard; hint "A scanner works like typing. Each ticket
-  opens its move to confirm." Under it, "Your scans today" (ticket, product, "→ Finishing", time).
-- The phone's own camera app opens the ticket's link, which opens the same confirm in Invory.
+Board: INV-5 rev. 3 · Progress for the shelf · batch ticket, Scan page, Settings › Production phases · desktop (Invory App UI canvas); INV-5 rev. 3 · Progress, one phase, Start batch, Put in stock, Settings, Scan · 375
+- **Scan** in the sidebar (and **Scan a ticket** on Progress): on a phone it opens the camera, with "Point the camera at the QR code on
+  a work ticket." and under it "Or type the batch number", a field and **Find ticket**. On any device the field "Scan or type a batch
+  number" takes a USB or Bluetooth scanner, which types like a keyboard; hint "A scanner works like typing. Each ticket opens its move
+  to confirm." Under it, "Your scans today" (batch, product, "→ Finishing", time).
 - Any signed-in member of the workshop can scan. Not signed in: the sign-in page, then straight back to the scanned ticket.
-- **One confirm per scan.** Title **Move to Finishing?**; "T-0142 · **6 units** · Denim Jacket · ■ Indigo · M · Boutique Lina
-  (ordered 15 Oct 2026)"; the path "In cutting ✓ · Sewing (now) · **Finishing** · Ready to ship"; **Move 6 units to Finishing** (main,
-  full width, 56 px tall) and **Not now**. The confirm never times out.
-- **Move 6 units to Finishing** moves all the units of the bundle, one phase on, as the order page's move does (same history, same
-  page figures). Moved: a green line "6 units of Denim Jacket · Indigo M moved to Finishing.", the camera or the field ready for the
-  next ticket, and the move added to "Your scans today". Progress and the order page show it at once.
-- **The finish:** scans move a bundle up to Ready to ship. Shipping stays the order page's **Ship**, because a parcel is made per
-  client, often from several bundles.
-- **No moving back by scan.** Moving back stays in the Move back windows of the order page and the phase view.
-
-### Order page
-Board: INV-5 · Order page and New order per colour, Settings › Production phases · desktop (Invory App UI canvas)
-- Each line's table: first column **Colour · size**, grouped by colour as on Progress (a colour row with its subtotal, then its sizes);
-  the columns To start · In cutting · Sewing · Finishing · Ready to ship · Shipped; the Total row as today.
-- Under the Total row, lined up with the figures (as S-71): **Start cutting** · **Move to Sewing** · **Move to Finishing** · **Mark
-  ready** · **Ship**, and below them each **Move back**. A button whose phase holds 0 can't be pressed (grey, as S-71).
-- The line's heading chips: "Indigo S 10 · M 20 · L 15 · XL 5"; with two colours: "Black M 1 · Indigo S 1 · M 2".
-- Under "Products": the link **See these units in Progress** (Progress showing this order).
-- Each line has **Tickets (2)**, which opens the panel of its tickets (see Work tickets).
-- The header, the status words ("Not started", "In progress", "Shipped") and "0 of 80 shipped" don't change.
-- Example, Boutique Lina's Denim Jacket: Indigo S 0 · 0 · 4 · 0 · 6 · 0; M 6 · 4 · 6 · 4 · 0 · 0; L 15 · 0 · 0 · 0 · 0 · 0; XL 0 · 0 ·
-  0 · 0 · 0 · 5; **Move to Sewing** can be pressed (4 in cutting).
-- The Delete order refusal covers every phase: "Boutique Lina can't be deleted: 29 units are in production or ready to ship. Move
-  them back to To start first."
-
-### Orders per colour and size — to be discussed
-Board: INV-5 · Order page and New order per colour, Settings › Production phases · desktop (Invory App UI canvas)
-- **Not decided.** An order line has no colour today. This part is drawn so the rest of the card can be read; it is decided with
-  you later, and Progress, the tickets and the order page follow that decision.
-- As drawn: in New order and Edit order, a line's sizes become the grid "Quantity per colour and size · Denim Jacket": one row per
-  colour of the product (in the order of Settings › Colours), one column per size, an empty field in each cell, **Total** on the right
-  of each row and "Total 50 units" under the grid. A "One size" product: "Quantity per colour", one field per colour. Edit order: a
-  started cell shows "At least 10" under it (as S-70, per colour and size).
-- As drawn: the Orders list's products read "50 × Denim Jacket (Indigo S 10 · M 20 · L 15 · XL 5)", and the order page groups each
-  line's table by colour.
-
-### Orders list
-- The columns To start · **In production** · Ready to ship · Shipped, where In production is In cutting plus the workshop's own
-  phases; the totals "Open orders 3 · To start 48 units · In production 26 units · Ready to ship 6 units" and the link **See
-  Progress**.
+- **One confirm per scan.** Title **Move to Finishing?**; "B-0147 · **4 units** · Denim Jacket · Indigo · S · started 23 Oct 2026"; the
+  path "In cutting ✓ · Sewing (now) · **Finishing** · Put in stock"; **Move 4 units to Finishing** (main, full width, 56 px tall) and **Not
+  now**. The confirm never times out.
+- **At the last phase a scan finishes the batch:** the title reads **Put 4 units in stock?**, with the note "Adds to your finished stock:
+  Indigo M goes from 0 to 4." and the button **Put 4 units in stock**. It is the same Put in stock as on Progress, with the same restock.
+- **No moving back by scan.** Moving back stays in the windows on Progress.
 
 ### Settings › Production phases
-Board: INV-5 · Order page and New order per colour, Settings › Production phases · desktop (Invory App UI canvas)
-- In the Settings menu, a new group **Production** with **Production phases**.
-- Header **Production phases**, description "The phases your units go through between cutting and ready to ship. To start, In
-  cutting, Ready to ship and Shipped are always there." Main button **Add phase**.
-- A list of the whole path: the fixed phases in grey with a lock icon and "Always there" (To start, In cutting … Ready to ship,
-  Shipped); the workshop's phases between them, each with its name, "Holds 15 units" or "Empty", and the buttons **Move up**, **Move
-  down**, **Edit Sewing** and **Remove Sewing**. No dragging.
+Board: INV-5 rev. 3 · Progress for the shelf · batch ticket, Scan page, Settings › Production phases · desktop (Invory App UI canvas)
+- In the Settings menu, a group **Production** with **Production phases**.
+- Header **Production phases**, description "The phases a batch goes through between cutting and putting it in stock. In cutting and Put
+  in stock are always there." Main button **Add phase**.
+- The list of the whole path: **In cutting** (grey, lock icon, "Always there. Start batch puts a batch here and takes the materials."),
+  the workshop's phases (name, "Holds 15 units" or "Empty", **Move up**, **Move down**, **Edit Sewing**, **Remove Sewing**), and **Put in
+  stock** (grey, lock icon, "Always there. Ends a batch: its units are added to your finished stock."). No dragging.
 - **Add phase** and **Edit Sewing** window: **Name** (up to 24 characters), hint "A short verb or noun your team uses, such as Sewing or
   Quality check." · **Cancel** · **Save phase**.
-- Up to 6 phases. A phase that holds units can't be moved or removed.
+- Up to 6 phases of its own. A phase that holds units can't be moved or removed.
 
 ## States
 
 ### Progress · all phases
-- **Default:** the tiles All phases 85 · To start 48 · In cutting 7 · Sewing 15 · Finishing 4 · Ready to ship 6 · Shipped 5; Denim
-  Jacket "54 units on 3 open orders" with Indigo M 6 · 4 · 6 · 4 · 0 · 0 · 20; Denim Jeans 5-pocket "31 units on 2 open orders".
-- **Empty:** "Nothing in production" · "When you record an order, its units show here phase by phase until they ship." · **New order**.
-  The tiles show 0.
-- **No match:** "No unit matches these filters." · "Try another colour or client, or clear the filters." · **Clear filters**.
-- **Filtered:** "Showing Indigo · 81 of 85 units" · **Clear filters**; the tiles To start 47 · In cutting 4 · Sewing 15 · Finishing 4
-  · Ready to ship 6 · Shipped 5.
+- **Default:** the tiles All phases 26 · In cutting 7 · Sewing 15 · Finishing 4; Denim Jacket "21 units in 6 batches"; Denim Jeans
+  5-pocket "5 units in 1 batch".
+- **Filtered:** "Showing Indigo · 23 of 26 units" · **Clear filters**; the tiles In cutting 4 · Sewing 15 · Finishing 4.
+- **No match:** "No batch matches these filters." · "Try another product or colour, or clear the filters." · **Clear filters**.
+- **Empty:** "Nothing in production" · "Start a batch to make products for your shelf. They are added to your finished stock when you put
+  them in stock." · **Start batch**. The tiles show 0.
 - **Loading:** the header, the tiles' frames and the filters at once; the tile counts and 2 product cards as placeholders.
-- **Error:** "Couldn't load the progress of your orders." · **Try again** (reloads the tiles and the tables).
-- **Read-only:** nothing to type here.
-- **Long content:** a 60-character product name wraps in the card header; 12 colours × 11 shoe sizes shows only the variants on open
-  orders; 7-digit counts fit the tiles; 25 products make 3 pages.
+- **Error:** "Couldn't load the progress of your production." · **Try again**.
+- **Long content:** a 60-character product name wraps in the card header; 12 colours × 11 shoe sizes show only the variants in
+  production; 7-digit counts fit the tiles; 25 products make 3 pages.
 
 ### Progress · one phase
-- **Default:** Sewing: Denim Jeans 5-pocket Indigo S 5 · Boutique Lina · since 26 Oct 2026 · 4 days; Denim Jacket Indigo S 4 · since
-  27 Oct 2026 · 3 days; Denim Jacket Indigo M 6 · since 28 Oct 2026 · 2 days.
-- **Empty:** "Nothing in Sewing" · "Units come here from In cutting with Move to Sewing." · **Show all phases**. To start empty:
-  "Nothing to start" · "Every unit of your open orders has started."
+- **Default:** as in Pages (Sewing: B-0146, B-0147, B-0149).
+- **Empty:** "Nothing in Sewing" · "Batches come here from In cutting with Move to Sewing." · **Show all phases**.
 - **No match:** "Nothing in Sewing matches these filters." · **Clear filters**.
-- **Loading:** the heading and the table head at once; 5 placeholder rows.
-- **Error:** "Couldn't load what is in Sewing." · **Try again**.
-- **Can't be pressed:** **Start cutting** on a deleted product: "Denim Jacket was deleted, so it can't be cut." in a tip the keyboard
-  reaches; its name includes the reason.
-- **Moving:** the window's **Move units** shows a spinner and keeps its label.
-- **Refused:** in the window, today's messages: "You can move at most 6 units of Indigo M." · "Enter at least one unit to move." ·
-  "Size 38: Enter a whole number of units." · Start cutting short of stock: "Not enough stock to cut 20 units. You can cut at most 12
-  now: Metal shank button 17mm runs short. Restock it first, or cut 12 or fewer."
-- **Changed meanwhile:** someone moved units of the line: the limit is the count saved now, and the window's "Up to" and the page
-  refresh. A row whose units have all left: the window shows "These units have moved on since you opened this page." and **Close**.
-- **Success:** toast "6 units of Denim Jacket for Boutique Lina moved to Finishing."; one unit: "1 unit of Denim Jacket for Amira Ben
-  Salah moved to In cutting. Materials taken out of stock."; back: "4 units of Denim Jacket for Boutique Lina moved back to In
-  cutting." From the order page, today's toasts without "for …", which the page already says.
-- **Long content:** 40 rows make 2 pages; a 100-character client name is cut with "…", the full text on the order.
+- **Loading:** the heading and the table head at once; 5 placeholder rows. **Error:** "Couldn't load what is in Sewing." · **Try again**.
+- **Can't be pressed:** **Put in stock** on a deleted product (reason above).
+- **Moving:** the window's button shows a spinner and keeps its label.
+- **Refused in a move window:** "You can move at most 6 units of this batch." · "Enter at least one unit to move." · "Enter a whole number of units."
+- **Changed meanwhile:** someone moved the batch: "These units have moved on since you opened this page." and **Close**.
+- **Success:** the toasts above.
+
+### Start batch
+- **Errors:** "Choose a product." · "Enter at least one unit to start." · "Indigo M: Enter a whole number from 0 to 1,000,000." · "The colours
+  or sizes of Denim Jacket have changed. Enter the units again." · "Couldn't start the batch. Try again." and S-53's refusal. Everything
+  typed stays.
+- **Printing blocked:** "Your browser blocked the tickets' tab. Allow pop-ups for Invory, then print again."
+
+### Put in stock and Undo batch
+- **Put in stock errors:** "Enter at least one unit to put in stock." · "You can put at most 4 units of this batch in stock." · "Enter a whole
+  number of units." · "Couldn't put the units in stock. Try again."
+- **Undo errors:** the batch moved on meanwhile: "B-0150 has moved on since you opened this page, so it can't be undone. Move it back to In
+  cutting first." · "Couldn't undo the batch. Try again."
 
 ### Settings › Production phases
-- **Default:** To start · In cutting · **Sewing** "Holds 15 units" · **Finishing** "Holds 4 units" · Ready to ship · Shipped.
-- **No phase:** between In cutting and Ready to ship: "No phase of your own. Units go from In cutting straight to Ready to ship." ·
-  **Add phase**.
-- **Errors:** "Enter the phase's name." · "Keep the name to 24 characters or fewer." · "You already have a phase named "Sewing"." · "To
-  start, In cutting, Ready to ship and Shipped are already there. Choose another name." · "You can have up to 6 phases."
-- **Can't be pressed:** **Move up**, **Move down** and **Remove Sewing** while Sewing holds units: "Sewing holds 15 units, so it can't
-  be moved or removed. Move them on or back first." (a tip the keyboard reaches).
-- **Confirm:** **Remove Quality check?** · "Quality check is empty. It leaves Progress and every order page; units then go from
-  Finishing to Ready to ship." · **Remove phase** · **Keep phase**.
-- **Refused meanwhile:** someone moved units into it: "Quality check now holds 2 units, so it can't be removed." Nothing changes.
+- **Default:** In cutting · **Sewing** "Holds 15 units" · **Finishing** "Holds 4 units" · Put in stock.
+- **No phase of its own:** "No phase of your own. Batches go from In cutting straight to Put in stock." · **Add phase**.
+- **Errors:** "Enter the phase's name." · "Keep the name to 24 characters or fewer." · "You already have a phase named "Sewing"." · "In
+  cutting and Put in stock are already there. Choose another name." · "You can have up to 6 phases."
+- **Can't be pressed:** **Move up**, **Move down** and **Remove Sewing** while Sewing holds units: "Sewing holds 15 units, so it can't be
+  moved or removed. Move them on or back first." (a tip the keyboard reaches).
+- **Confirm:** **Remove Quality check?** · "Quality check is empty. It leaves Progress; batches then go from Finishing to Put in stock." ·
+  **Remove phase** · **Keep phase**.
+- **Refused meanwhile:** "Quality check now holds 2 units, so it can't be removed."
 - **Success:** "Phase added." · "Phase updated." · "Phase removed." · "Phases reordered."
 
 ### Scan page and the scan confirm
-- **Ready, phone:** the camera view with a frame; "Point the camera at the QR code on a work ticket."; under it "Or type the ticket
-  number" · the field · **Find ticket**.
-- **Ready, laptop:** the field "Scan or type a ticket number", with the focus; the hint "A scanner works like typing. Each ticket
-  opens its move to confirm." With no camera, the field only.
-- **Confirm:** **Move to Finishing?** … **Move 6 units to Finishing** · **Not now**.
-- **Moving:** the button shows a spinner and keeps its label.
-- **Moved:** "6 units of Denim Jacket · Indigo M moved to Finishing." and the next scan is ready.
-- **Ready to ship (the finish):** "T-0139 is ready to ship. Its 6 units of Denim Jacket · Indigo S wait for Boutique Lina's shipment."
-  · **Open the order** · **Scan another**. Nothing moves.
-- **Shipped:** "T-0136 shipped on 28 Oct 2026. Nothing left to do." · **Scan another**.
-- **Unknown code, or another workshop's:** "This code isn't a work ticket of your workshop. Check the ticket, or type its number." It
-  never says that another workshop exists.
-- **Number not found:** "No ticket T-0999 in your workshop. Check the number on the ticket."
-- **Not a ticket number:** "A ticket number looks like T-0142. Check what you typed."
-- **No longer used:** "T-0142 is no longer used: its units went back to To start on 30 Oct 2026. They get a new ticket when they are
-  cut again."
-- **Split:** the confirm moves what the ticket holds now, with the note "4 of its units moved apart on ticket T-0157."
-- **Scanned twice quickly:** the confirm shows the bundle as it is now, with a warning line above the button: "T-0142 moved to
-  Finishing 12 seconds ago (Admin). Scanning again moves it on to Ready to ship." The warning shows when the last move was less than 2
-  minutes ago.
-- **Moved meanwhile** (between the scan and the confirm): "T-0142 has moved since you scanned it: it is now in Finishing. Scan it
-  again to move it on." Nothing moves.
-- **Phases changed meanwhile:** "The phases have changed since you scanned. T-0142 now goes to Quality check." The button relabels;
+- **Ready, phone:** the camera view with a frame; "Point the camera at the QR code on a work ticket."; "Or type the batch number" · the field · **Find ticket**.
+- **Ready, laptop:** the field "Scan or type a batch number", with the focus; with no camera, the field only.
+- **Moved:** "4 units of Denim Jacket · Indigo S moved to Finishing." and the next scan is ready. **Put in stock:** "4 units of Denim Jacket
+  · Indigo M put in stock."
+- **Already in stock:** "B-0139 was put in stock on 28 Oct 2026. Nothing left to do." · **Scan another**.
+- **Undone:** "B-0150 was undone on 30 Oct 2026: its materials went back to stock. Nothing to move." · **Scan another**.
+- **Unknown code, or another workshop's:** "This code isn't a work ticket of your workshop. Check the ticket, or type its number." It never
+  says that another workshop exists.
+- **Number not found:** "No batch B-0999 in your workshop. Check the number on the ticket." **Not a batch number:** "A batch number
+  looks like B-0142. Check what you typed."
+- **Scanned twice quickly:** a warning line above the button: "B-0147 moved to Finishing 12 seconds ago (Admin). Scanning again moves it
+  on to Put in stock." It shows when the last move was less than 2 minutes ago.
+- **Moved meanwhile:** "B-0147 has moved since you scanned it: it is now in Finishing. Scan it again to move it on." Nothing moves.
+- **Phases changed meanwhile:** "The phases have changed since you scanned. B-0147 now goes to Quality check." The button relabels;
   nothing has moved.
-- **Product deleted:** the bundle moves as usual; the confirm reads "Denim Jacket (deleted)".
-- **Camera refused:** "Invory can't use the camera. Allow the camera for Invory in your browser's settings, or type the ticket number."
-- **Couldn't move:** "Couldn't move T-0142. Check the connection and try again." · **Try again**.
-- **Couldn't load the ticket:** "Couldn't load ticket T-0142. Try again." · **Try again**.
-- **Print blocked:** "Your browser blocked the tickets' tab. Allow pop-ups for Invory, then print again."
+- **Product deleted:** "Denim Jacket was deleted, so B-0148 can't be put in stock." Other moves work.
+- **Camera refused:** "Invory can't use the camera. Allow the camera for Invory in your browser's settings, or type the batch number."
+- **Couldn't move:** "Couldn't move B-0147. Check the connection and try again." · **Try again**. **Couldn't load:** "Couldn't load ticket
+  B-0147. Try again." · **Try again**.
 - **Your scans today, empty:** "No scan yet today."
-
-### New order, Edit order and Edit product
-- New order, per cell (INV-3's naming; part of "Orders per colour and size", to be discussed): "Indigo M: Enter a whole number from 0 to 1,000,000." · "Enter at least one unit of Denim
-  Jacket." · "A line can hold up to 1,000,000 units."
-- Edit order: "Indigo M can't be less than the 10 units already started or shipped." · changed meanwhile: "The sizes or colours of
-  Denim Jacket have changed. Enter its quantities again."
-- Edit product: "Light wash is on 1 open order, so it can't be removed from Denim Jacket."
 
 ## Wording
 - Sidebar and breadcrumbs: "Progress" · "Progress › Sewing" · "Scan".
-- Progress page: "Scan a ticket" · "Progress" · "Every unit of your open orders, phase by phase, in its colour and size." · "Production phases" · "Phases"
-  (the tiles' group) · "All phases" · "To start" · "In cutting" · "Sewing" · "Finishing" · "Ready to ship" · "Shipped" · "15 units" ·
-  "Product" · "All products" · "Colour" · "All colours" · "Client" · "All clients" · "Order" · "All open orders" · "Clear filters" ·
-  "Showing Indigo · 81 of 85 units" · "54 units on 3 open orders" · "Open orders of Denim Jacket" · "Denim Jacket by phase" · "Colour ·
-  size" · "Total" · "Nothing in production" · "When you record an order, its units show here phase by phase until they ship." · "New
-  order" · "No unit matches these filters." · "Try another colour or client, or clear the filters." · "Couldn't load the progress of
-  your orders." · "Try again".
-- Phase view: "15 units · 2 products · 1 open order · oldest since 26 Oct 2026" · "From In cutting. Next: Finishing." · "In Sewing" ·
-  "Since" · "4 days" · "1 day" · "today" · "ordered 15 Oct 2026" · "before 30 Oct 2026" · "Units" · "Order" · "Move to Finishing" ·
-  "Start cutting" · "Mark ready" · "Ship" · "Move back to In cutting" · "Move back to Ready to ship" · "More moves for Denim Jacket
-  Indigo S, Boutique Lina" · "Nothing in Sewing" · "Units come here from In cutting with Move to Sewing." · "Show all phases" ·
-  "Nothing to start" · "Every unit of your open orders has started." · "Nothing in Sewing matches these filters." · "Couldn't load what
-  is in Sewing." · "Denim Jacket (deleted)" · "Denim Jacket was deleted, so it can't be cut."
-- Move window: "Move to Finishing · Denim Jacket" · "Boutique Lina · ordered 15 Oct 2026 · in Sewing: Indigo S 4 · M 6" · "How many
-  units of each colour and size?" · "Up to 6" · "Cancel" · "Move units" · "These units have moved on since you opened this page." ·
-  "Close", and today's messages.
-- Toasts: "6 units of Denim Jacket for Boutique Lina moved to Finishing." · "1 unit of Denim Jacket for Amira Ben Salah moved to In
-  cutting. Materials taken out of stock." · "4 units of Denim Jacket for Boutique Lina moved back to In cutting."
-- Order page: "Colour · size" · "Move to Sewing" · "Move to Finishing" · "Move back" · "See these units in Progress" · "Boutique Lina
-  can't be deleted: 29 units are in production or ready to ship. Move them back to To start first."
-- Order form (to be discussed): "Quantity per colour and size · Denim Jacket" · "Quantity per colour" · "Total 50 units" · "At least
-  10", and the messages above.
-- Tickets: "Work ticket" · "T-0142" · "6 units" · "Boutique Lina · ordered 15 Oct 2026" · "Cut 30 Oct 2026 · printed 30 Oct 2026" ·
-  "Scan to move it to the next phase." · "Split from T-0142" · Start cutting: "2 tickets to print: T-0152 Indigo M · 6 units, T-0153
-  Indigo L · 10 units" · "Print 2 tickets" · "Done" · order page: "Tickets (2)" · "Not printed yet" · "Print ticket T-0142" · "Print
-  all" · phase view: "Tickets" (column) · "Print tickets of this row" · the split toast "4 units of Denim Jacket for Boutique Lina moved
-  to Finishing. Ticket T-0142 was split: the units moved are on T-0157." with the action "Print ticket T-0157" · Settings › Labels:
-  "Ticket size" · "A4 sheet, 8 tickets (2 × 4)" · "100 × 60 mm, one per label (label printer)".
-- Scan page: "Scan" · "Scan a ticket" · "Point the camera at the QR code on a work ticket." · "Or type the ticket number" · "Scan or
-  type a ticket number" · "A scanner works like typing. Each ticket opens its move to confirm." · "Find ticket" · "Move to Finishing?"
-  · "Move 6 units to Finishing" · "Not now" · "(now)" · "Your scans today" · "Scan another" · "Open the order" · "No scan yet today.",
-  and the scan states' messages above.
-- Orders list: "In production" · "See Progress".
-- Settings › Production phases: "Production" (the menu group) · "Production phases" · "The phases your units go through between cutting
-  and ready to ship. To start, In cutting, Ready to ship and Shipped are always there." · "Add phase" · "Always there" · "Holds 15
-  units" · "Empty" · "Move up" · "Move down" · "Edit Sewing" · "Remove Sewing" · "Name" · "A short verb or noun your team uses, such as
-  Sewing or Quality check." · "Save phase" · "No phase of your own. Units go from In cutting straight to Ready to ship.", and the
-  errors, confirm and toasts above.
-- The same verb through each flow: **Move to Finishing** → "Move to Finishing · Denim Jacket" → **Move units** → "… moved to
-  Finishing."; **Remove Sewing** → "Remove Sewing?" → **Remove phase** → "Phase removed.".
+- Progress page: "Progress" · "The batches you are making for your shelf, phase by phase, in their colour and size." · "Production phases" ·
+  "Scan a ticket" · "Start batch" · "Start a batch of Denim Jacket" · "Phases" · "All phases" · "In cutting" · "Sewing" · "Finishing" · "15
+  units" · "Product" · "All products" · "Colour" · "All colours" · "Clear filters" · "Showing Indigo · 23 of 26 units" · "21 units in 6
+  batches" · "Denim Jacket by phase" · "Colour · size" · "In production" · "On the shelf now" · "Out" · "Total" · "Nothing in production"
+  · "Start a batch to make products for your shelf. They are added to your finished stock when you put them in stock." · "No batch
+  matches these filters." · "Try another product or colour, or clear the filters." · "Couldn't load the progress of your production." ·
+  "Try again".
+- Phase view: "15 units · 3 batches · 2 products · oldest since 26 Oct 2026" · "From In cutting. Next: Finishing." · "In Sewing" · "Since" ·
+  "4 days" · "1 day" · "today" · "Batch" · "Units" · "Move to Sewing" · "Move to Finishing" · "Put in stock" · "Move back to In cutting" ·
+  "Move back to Sewing" · "Undo batch" · "Print ticket B-0147" · "More moves for batch B-0146" · "Nothing in Sewing" · "Batches come here
+  from In cutting with Move to Sewing." · "Show all phases" · "Nothing in Sewing matches these filters." · "Couldn't load what is in
+  Sewing." · "Denim Jacket (deleted)".
+- Start batch: "Start batch" · "Make products for your shelf. Materials are taken out of stock now." · "Product" · "Can produce now 112" · "How many
+  units of each colour and size?" · "Shelf 2" · "Shelf Out" · "Total 16 units · 2 batches (Indigo M 6, Indigo L 10)" · "Materials for
+  16 units" · "Material" · "Taken" · "In stock" · "After" · "Short by" · "Cancel" · "2 batches started" · "16 units of Denim Jacket
+  started. Materials taken out of stock." · "2 tickets to print: B-0153 · Indigo M · 6 units, B-0154 · Indigo L · 10 units" · "Print 2
+  tickets" · "Done".
+- Moves: "Move to Finishing · Denim Jacket" · "B-0149 · Indigo M · in Sewing: 6 units" · "How many units?" · "Up to 6" · "Move units" ·
+  "Put in stock · Denim Jacket" · "Adds to your finished stock: Indigo M goes from 0 to 4. Recorded as a restock "From production"." ·
+  "See the restock" · "Undo batch B-0150?" · "Keep batch" · toasts "4 units of Denim Jacket · Indigo M moved to Finishing. Batch B-0149 was
+  split: the units moved are on B-0155." · "4 units of Denim Jacket · Indigo M put in stock." · "Batch B-0150 undone. Materials returned to
+  stock."
+- Tickets: "Work ticket" · "B-0147" · "4 units" · "Started 23 Oct 2026" · "Printed 30 Oct 2026" · "Scan to move it to the next phase." · "Split
+  from B-0149" · Settings › Labels: "Ticket size" · "A4 sheet, 8 tickets (2 × 4)" · "100 × 60 mm, one per label (label printer)".
+- Scan page: "Scan" · "Point the camera at the QR code on a work ticket." · "Or type the batch number" · "Scan or type a batch number" · "A scanner
+  works like typing. Each ticket opens its move to confirm." · "Find ticket" · "Move to Finishing?" · "Move 4 units to Finishing" · "Put 4
+  units in stock?" · "Put 4 units in stock" · "Not now" · "(now)" · "Your scans today" · "Scan another" · "No scan yet today.", and the scan
+  messages above.
+- Settings › Production phases: "Production" (the menu group) · "Production phases" · "The phases a batch goes through between cutting and
+  putting it in stock. In cutting and Put in stock are always there." · "Add phase" · "Always there. Start batch puts a batch here and takes the
+  materials." · "Always there. Ends a batch: its units are added to your finished stock." · "Holds 15 units" · "Empty" · "Move up" · "Move
+  down" · "Edit Sewing" · "Remove Sewing" · "Name" · "A short verb or noun your team uses, such as Sewing or Quality check." · "Save
+  phase" · "No phase of your own. Batches go from In cutting straight to Put in stock.", and the errors, confirm and toasts above.
+- Restock written by Put in stock: Reference "B-0148", Note "From production".
+- The same verb through each flow: **Move to Finishing** → "Move to Finishing · Denim Jacket" → **Move units** → "… moved to Finishing.";
+  **Put in stock** → "Put in stock · Denim Jacket" → **Put in stock** → "… put in stock."; **Undo batch** → "Undo batch B-0150?" → **Undo
+  batch** → "Batch B-0150 undone.".
+- Gone from the earlier card: "To start", "Ready to ship", "Shipped", "Start cutting", "Mark ready", "Ship", "Tickets (2)", the Order and Client
+  columns and filters, "T-0142" ticket numbers.
 
 ## Phone layout
-Board: INV-5 · Progress, one phase, move window, Settings · 375 (Invory App UI canvas)
-- **Progress:** the title and description; the tiles two to a row (All phases full width first), 64 px tall; **Filters** ("Filters · 1"
-  when a filter is set) opens a panel over the whole screen with Product, Colour, Client and Order; then one card per product: the name
-  and SKU, "54 units on 3 open orders", then per colour a group (the colour tag and "50 units"), and per size one line of the phases
-  that hold units: "S · Sewing 4 · Ready to ship 6", "M · To start 6 · In cutting 4 · Sewing 6 · Finishing 4". The Total line comes
-  first ("Total · To start 22 · In cutting 7 · …").
-- **One phase:** the tiles as above, the chosen one ringed; the heading and its line; one card per row: "Denim Jacket · ■ Indigo · M"
-  as its title, "6 units" in bold, "Boutique Lina · ordered 15 Oct 2026" (a link), "In Sewing since 28 Oct 2026 · 2 days", **Move to
-  Finishing** full width (44 px), and **Move back to In cutting** (outline) full width under it.
-- **Move window:** full screen, the grid one colour at a time (the colour tag as the group's title, the size fields four to a row, as
-  S-70), **Move units** and **Cancel** in a bar fixed at the bottom that never hides the field with the focus.
-- **Order page:** each line's sizes as cards, grouped by colour, showing only the phases with units; the buttons full width.
-- **Settings › Production phases:** one card per phase; the fixed phases flat and grey; **Move up**, **Move down**, **Edit** and
-  **Remove** as a row of named 44 px icon buttons; **Add phase** full width.
-- **Scan page** (board "INV-5 · Scan a ticket · camera, confirm, moved, finished, errors · 375"): it fills the screen: the title, the
-  camera square (full width), the hint, the number field and **Find ticket**, then "Your scans today". The confirm is a panel from the
-  bottom, full width, its buttons one under the other with **Move 6 units to Finishing** first (56 px tall). Every error is a line in
-  that panel with its button; the camera stays usable under it. The camera is never the only way: the number field is always there.
-- At 320 px nothing scrolls sideways; the tiles stay two to a row and the tables become cards.
+Board: INV-5 rev. 3 · Progress, one phase, Start batch, Put in stock, Settings, Scan · 375 (Invory App UI canvas)
+- **Progress:** the title; **Start batch** full width; **Scan a ticket** and **Phases** side by side; the tiles two to a row (All phases full
+  width first); **Filters** ("Filters · 1" when set) opening a full-screen panel with Product and Colour; then a card per product: a band per
+  colour, a line per size with the phases that hold units and the shelf ("M · In cutting 4 · Sewing 6 · Finishing 4 · On the shelf Out"),
+  the Total line first, **Start batch** full width.
+- **One phase:** a card per batch: product and batch number, "Indigo · M", "4 units" in bold, "In Sewing since 27 Oct 2026 · 3 days",
+  **Move to Finishing** and **More** full width (44 px); the last phase has **Put in stock**.
+- **Start batch** and **Put in stock:** full screen, the fields three to a row, **Start batch** or **Put in stock** and **Cancel** in a bar fixed at
+  the bottom that never hides the field with the focus; the materials table is short (Material · Taken · After). **Undo batch** is a sheet
+  from the bottom.
+- **Settings › Production phases:** one card per phase; the fixed phases flat and grey; **Move up**, **Move down**, **Edit** and **Remove** as
+  named 44 px icon buttons; **Add phase** full width.
+- **Scan:** the camera square, the number field, **Find ticket**, and the confirm as a sheet from the bottom with its buttons one under
+  another (56 px for the move).
+- At 320 px nothing scrolls sideways; every control is at least 44 px on a phone.
