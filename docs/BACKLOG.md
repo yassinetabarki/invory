@@ -8,7 +8,8 @@
 > - **INV-2 Done** (accepted 2026-10-31; `46af1cc`, `ab313eb`, `4088200`), so it left the open list. The PostgreSQL parity suite was green before the commits (2619 tests). INV-8 is next.
 > - **INV-10 done** (`76b1770`; its card `1f854bf`), so it left the open list.
 > - **INV-2 Split:** INV-2's card was split into three: **INV-2** (stock, done), **INV-8** (barcodes), and **INV-9** (labels).
-> - **Current Order** (INV-2 done): `INV-8` → `INV-9` → `INV-3` → `INV-4` → `INV-5` → `INV-7`. Next free ID stays **INV-11**: the tab-order fix landed in INV-2, so no INV-11 was needed.
+> - **Added 2026-11-01:** `INV-12` (Refactor the order), an `Idea`, placed after INV-5 and before INV-7. No card yet; it waits its turn.
+> - **Current Order** (INV-2 done): `INV-8` → `INV-9` → `INV-3` → `INV-4` → `INV-5` → `INV-12` → `INV-7`. Next free ID: **INV-13** (INV-11 is the tech-debt item raised in the INV-8 review, see [TECH-DEBT.md](TECH-DEBT.md)). INV-8 is built and in acceptance (2026-11-01).
 > - **INV-1 Done:** "Colours as fixed values" accepted & merged (`a66f4bf`, `78a4eee`), so it left this backlog.
 > - **Added:** `INV-6` (picker-row item) and `INV-7` (Could: bigger tap targets on Settings).
 > - **Archive:** Done items leave this file and are recorded in `STATUS.md` and the archive.
@@ -28,13 +29,15 @@
 - **Size:** `S` ($\le 1$ day agent work) · `M` · `L` *(needs split)*
 - **Card:** Full story cards (story, AC with examples, visual scope, out of scope, questions) live in `docs/stories/<id>-<slug>.md`. This backlog displays the short version.
 - **IDs & History:**
-  - Everything new since **2026-10-24 (D-20, D-21)** is numbered **INV-n** (including technical items without UI cards). Next free ID: **INV-11**.
+  - Everything new since **2026-10-24 (D-20, D-21)** is numbered **INV-n** (including technical items without UI cards). Next free ID: **INV-13**.
   - `INV-1` to `INV-5`: Variant rework items (`INV-1` is done).
   - `INV-6`: Picker-row swatch edge item.
   - `INV-7`: Settings tap targets.
   - `INV-2`: Stock per colour and size (done, `46af1cc`, `ab313eb`, `4088200`).
   - `INV-8` & `INV-9`: Barcodes and labels (split from INV-2 on 2026-10-31).
   - `INV-10`: PostgreSQL test fix (done, `76b1770`).
+  - `INV-11`: Small barcode clean-ups from the INV-8 review (MINOR tech debt, in [TECH-DEBT.md](TECH-DEBT.md); proposed for when barcodes are next touched, INV-9).
+  - `INV-12`: Refactor the order (client first, product search with availability, no cutting on orders, order tracker). Added 2026-11-01.
   - Old `S-` and `F-` IDs are retained and never reused (last story ID: `S-74`).
   - Technical items register: See [TECH-DEBT.md](TECH-DEBT.md).
 
@@ -48,7 +51,7 @@
 ### Execution Plan & Order
 1. **INV-1** (Colours) — `#done` *(Accepted 2026-10-31)*
 2. **INV-2** (Stock per colour and size) — `#done` *(Accepted 2026-10-31)*
-3. **Next Sequence:** `INV-8` ➔ `INV-9` ➔ `INV-3` ➔ `INV-4` ➔ `INV-5`
+3. **Next Sequence:** `INV-8` ➔ `INV-9` ➔ `INV-3` ➔ `INV-4` ➔ `INV-5` ➔ `INV-12` ➔ `INV-7`
 4. **Card Structure:** Each feature receives a UI card first (`INV-n-<slug>-ui.md`), followed by a development card (`INV-n-<slug>.md`).
 5. **Shared UI Cards:** `INV-2`, `INV-8`, and `INV-9` share the same UI card but are accepted individually.
 6. **Phase 7 Tech Allowance:** `F-43` · `F-46` · `F-52` · `F-53`
@@ -57,11 +60,12 @@
 
 | ID | What it brings | Type | Status | Priority / Size |
 | :--- | :--- | :--- | :--- | :--- |
-| **INV-8** | Barcodes for every colour and size | Feature | `Ready` | Must / L |
+| **INV-8** | Barcodes for every colour and size | Feature | `Acceptance` | Must / L |
 | **INV-9** | Print barcode labels | Feature | `Ready` | Must / M |
 | **INV-3** | Restock of finished products | Feature | `UI approved` | Must |
 | **INV-4** | Clients as an entity | Feature | `UI approved` | Must |
 | **INV-5** | Production progress page | Feature | `UI approved` | Must |
+| **INV-12** | Refactor the order: client first, product search, order tracker | Feature | `Idea` | Must / L (to split) |
 | **INV-7** | Bigger tap targets on Settings pages | Feature | `Idea` | Could / S–M |
 
 > [!note] Technical Note on INV-6
@@ -72,7 +76,7 @@
 ### Item Details
 
 #### `INV-8` · Barcodes for every colour and size
-- **Type:** Feature | **Priority:** Must | **Size:** L | **Status:** `Ready`
+- **Type:** Feature | **Priority:** Must | **Size:** L | **Status:** `Acceptance`
 - **Cards:** [Development Card](stories/INV-8-barcodes.md) · [UI Card](stories/INV-2-product-sizes-colours-barcodes-ui.md) *(shared)*
 - **Details:** 
   - Adds "Stock by colour" and "Barcodes" (with "4 missing" badge) tabs to Sizes & colours card.
@@ -113,16 +117,37 @@
   - QR work tickets per bundle cut; Scan page moves bundles forward.
   - *Open discussion:* Counting order lines per colour and size.
 
+#### `INV-12` · Refactor the order
+- **Type:** Feature | **Priority:** Must | **Size:** L *(four parts; split when refined)* | **Status:** `Idea` *(no UI card or development card yet; waits for its turn after `INV-5`)*
+- **Cards:** None yet.
+- **Details:** The human's request, in four points:
+  1. **Client first.** New order starts with the client and all the information we need, like the client card. New order shows the client form. The phone number is unique per client, so each new order creates the client if it doesn't exist yet (match on phone).
+  2. **Products to order.** A good search that finds products and shows, per colour (and size), whether each is in stock or not.
+  3. **No cutting on orders.** Remove the cutting phase and everything related to it from orders. Cutting stays only on the Progress page.
+  4. **Order tracker.** Remove the boxes that track the production phases on the order. Replace them with a tracker for the order itself: units delivered, in progress, cancelled and ready to ship, plus the total, with details per colour and size.
+- **Links:**
+  - `INV-4` (Clients): builds on it. INV-4 stays as approved and ships first; its client form and unique phone number are the base of point 1, and it already adds "Existing client · New client" to New order.
+  - `INV-5` (Progress page): cutting and the production phases move there (points 3 and 4). INV-5's open discussion, counting order lines per colour and size, decides how the order's lines hold colours, so it must be settled before this item; points 2 and 4 depend on it.
+  - `S-65` (closing orders, on hold): the tracker's "delivered" and the "Ready to close" step must agree. Check S-65 against this item before it resumes.
+  - `S-68` (order screen tap targets, on hold): the new order screens must meet the 44 px tap targets, so S-68 is folded in or re-checked when this item is carded.
+  - `INV-3` (Restock): the stock shown in the product search (point 2) is the finished stock that INV-3 and INV-2 maintain.
+- **Today's cutting rules** (cut materials from stock, "Move back to To start", the delete refusal) are business rules; removing them from orders is a rule change the human decides when the card is written.
+
 #### `INV-6` · Picker row swatch edge
 - **Type:** Tech | **Status:** `Idea`
 - **Details:** Fixes contrast ratio on hovered/active rows in light/dark mode (currently ~2.8:1, target 3:1). Join phase tech allowance when proposed by tech-lead.
 
 #### `INV-7` · Bigger tap targets on Settings pages
 - **Type:** Feature | **Priority:** Could | **Size:** S–M | **Status:** `Idea`
-- **Details:** Increases button/field heights on phone/tablet from 32-36 px to 44 px. Related to `S-68` (order screen tap targets). Runs after `INV-5`.
+- **Details:** Increases button/field heights on phone/tablet from 32-36 px to 44 px. Related to `S-68` (order screen tap targets). Runs after `INV-12`.
 
 > [!abstract] Unscheduled Idea
 > **Production for the shelf:** A batch with no attached client moving through production phases, ending with "Put in stock". *(No ID assigned yet).*
+
+> [!abstract] Unscheduled Idea
+> **Barcodes tab polish (from the INV-8 UX review, 2026-11-01):** a visible focus after "Generate" lands on the table; the confirm button
+> keeps the keyboard focus while generating; SKU and "N more" links get bigger tap targets on a phone; the table has one name for screen
+> readers, not two. Could / S. Best planned with INV-9, which touches the same tab. *(No ID assigned yet).*
 
 ---
 

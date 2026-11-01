@@ -5,7 +5,7 @@ type: feature
 phase: Colour × size variants
 priority: Must
 size: L
-status: Ready
+status: Acceptance
 created: 2026-10-31
 tags:
   - story
@@ -48,15 +48,15 @@ tags:
     PRD-JKT-001-LWH-S"). Light wash with nothing made reads: the pill "Light wash · 4 missing", the tab badge "4 missing", and on the
     pills' row the main button **Generate missing barcodes (4)**, shown only while any variant of the product, in any colour, has no
     barcode (the count is the product's total).
-  - **A shared barcode:** under the digits a grey line "Shared with PRD-JKT-002" (PRD-JKT-002 a link to that product); two or three
-    others "Shared with PRD-JKT-002, PRD-JKT-007"; more "Shared with PRD-JKT-002, PRD-JKT-007 and 3 more", where "3 more" opens a
+  - **A shared barcode:** under the digits a grey line "Shared with PRD-JKT-002" (PRD-JKT-002 a link to that product); two
+    others "Shared with PRD-JKT-002 and PRD-JKT-007", three "Shared with PRD-JKT-002, PRD-JKT-007 and PRD-JKT-009"; more "Shared with PRD-JKT-002, PRD-JKT-007 and 3 more", where "3 more" opens a
     small list. A combination that already has a barcode on any product with the same name never counts as missing and never shows
     **Generate**. "The same name" means the same words, ignoring capitals and extra spaces: "denim jacket" is "Denim Jacket".
   - Under the table: "One barcode for each colour and size. Every product named Denim Jacket shares it, and a barcode never
     changes." Archived and draft products show and generate barcodes like active ones.
   - **A "One size" product** (Leather Tote) has no pills: one table with one row per colour, **Colour** · SKU "PRD-TOT-001-CAM" ·
     Barcode · In stock · button.
-  - **Phone:** the pills wrap and are 44 px tall; **Generate missing barcodes (4)** is full width under them; then one card per
+  - **Phone and tablet (up to 1023 px wide; the table starts at 1024 px):** the pills wrap and are 44 px tall; **Generate missing barcodes (4)** is full width under them; then one card per
     size: the size tag and SKU on the first line, the barcode (bars about 140 px wide) with its digits, "In stock 2", "Shared with
     PRD-JKT-002", and, on a variant without a barcode, **Generate** full width, 44 px. 12 colour pills wrap and a 32-character
     colour name wraps inside its pill.
@@ -89,7 +89,8 @@ tags:
     Denim Jacket: all already used by PRD-JKT-002."; one asked from a row: "Barcode ready for Light wash S: already used by
     PRD-JKT-002."; if no product shows the barcode any more (its product was deleted meanwhile), the toast leaves out "by …": "6
     barcodes ready for Denim Jacket: 5 new, 1 already used.", "4 barcodes ready for Denim Jacket: all already used.", "Barcode
-    ready for Light wash S: already used.". On failure the window stays open with "Couldn't generate the barcodes. Try again.".
+    ready for Light wash S: already used.". On failure the window stays open with "Couldn't generate the barcodes. Try again.". If the barcodes asked for are no longer
+  what is missing (someone made them a moment ago), the window closes and a toast reads "Barcodes changed. Check the list.".
 - [ ] **AC-4 · Barcodes follow the name, not the product.** Renaming a product keeps its barcodes; no window asks first (the one
   refusal is AC-5). If a barcode was shared with another product of the old name, it now stands for both names, the other product
   keeps it too, and labels already printed still scan. A product renamed "Trucker Jacket" that later gets Navy shares the barcodes
@@ -97,7 +98,7 @@ tags:
   barcodes, and they come back if the colour is added again under the same name. On a rename, only the colours the product has once
   the save is done follow the new name: a colour taken off before the rename (or in the same save) keeps its barcodes under the old
   name only, and shows "No barcode yet" under the new one. **Delete product** keeps the barcodes: when the product has barcodes,
-  the "Delete product?" window adds, after today's text, "Its 12 barcodes are kept: they come back on any product named Denim
+  the "Delete product?" window adds, after today's text and as its own paragraph, "Its 12 barcodes are kept: they come back on any product named Denim
   Jacket in the same colours and sizes." (exactly one barcode: "Its barcode is kept: it comes back on any product named Denim
   Jacket in the same colour and size."; a "One size" product: "…in the same colours." / "…in the same colour."); with none, the
   window is as today.
@@ -168,7 +169,8 @@ Edit product form already shows a `name` error under the Name field.
   (`workshop_id`, `number`), so a number is given once per workshop and two workshops can each have 2000000000015.
 - `barcode_names`, what a number stands for: `workshop_id`, `barcode_id`, `name_key`, `colour_id`, `size_id`, timestamps; unique
   (`workshop_id`, `name_key`, `colour_id`, `size_id`), so one name, colour and size never has two barcodes. PostgreSQL only: a
-  composite key (`barcode_id`, `colour_id`, `size_id`) → `barcodes`, so a name can't point at a number of another colour or size. Every
+  composite key (`workshop_id`, `barcode_id`, `colour_id`, `size_id`) → `barcodes`, so a name can't point at a number of another
+  workshop, colour or size. Every
   key `restrictOnDelete` (`created_by` `nullOnDelete`, as on materials): nothing in the app ever deletes a barcode.
 - Models `Barcode` and `BarcodeName` with `BelongsToWorkshop`, and their factories. No route yet.
 - The tech-lead writes in this commit: ADR-0020 "Barcodes follow the name" (the two tables, the counter, the locks, the rename rule
@@ -426,16 +428,14 @@ Edit product form already shows a `name` error under the Name field.
 - `products.update`: the rename refusal on `name` (one sentence, built by the server).
 - `products.show?tab=barcodes`: frontend only; the server ignores it.
 
-`resources/js/types/domain.ts`:
+`resources/js/types/domain.ts` (`ProductRef` already exists, so `shared_with` picks its `id` and `sku`):
 ```ts
-/** Another product that shows the same barcode (INV-8). */
-export type ProductRef = { id: number; sku: string };
 /** One variant (a colour in a size) of a product and its barcode (INV-8). */
 export type VariantBarcode = {
     size: Size;
     sku: string; // "PRD-JKT-001-IND-S"; "PRD-TOT-001-CAM" for a "One size" product
     barcode: string | null; // the 13 digits; null = "No barcode yet"
-    shared_with: ProductRef[]; // other non-deleted products showing it, by SKU; [] without a barcode
+    shared_with: Pick<ProductRef, 'id' | 'sku'>[]; // other non-deleted products showing it, by SKU; [] without a barcode
 };
 export type ColourBarcodes = { colour: Colour; missing: number; variants: VariantBarcode[] }; // every size, in order
 export type ProductBarcodes = {
@@ -493,3 +493,6 @@ exists, for Wayfinder), then INV-8-h. Docker must be up for the parity runs.
 
 ### Progress
 - 2026-10-31 · build started. Docs of INV-8-a written (ADR-0020, ARCHITECTURE.md, the Barcodes section of the business rules). Wave 1 dispatched: backend INV-8-a + INV-8-b, frontend INV-8-e.
+- 2026-10-31 · wave 1 reviewed (INV-8-a, INV-8-b, INV-8-e; fixes: show query budget 13, arch guard, cross-workshop composite key). Wave 2 (INV-8-c, INV-8-d, INV-8-f) and wave 3 (INV-8-g, INV-8-h) built and reviewed; every gate green at 22:57.
+- 2026-11-01 · an edit to the size-list migration made outside INV-8 (Apparel XS…XXXL) turns composer test red (Pint + 38 tests). Waiting on the human; parity run under way.
+- 2026-11-01 · UX fix round (B1, B2, 3, 4, 5, 6, 9, Delete paragraph) built and reviewed; B1, B2, 3 and 4 measured in a real browser. Two INV-8 tests that erred only on PostgreSQL fixed (test bugs). All gates green except the 38 tests and the browser step broken by the size-list edit outside INV-8.

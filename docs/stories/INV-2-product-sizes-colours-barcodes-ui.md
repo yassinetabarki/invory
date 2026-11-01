@@ -96,8 +96,8 @@ Board: INV-2 · Barcodes · generate, shared, print labels · desktop (Invory Ap
   button.
 - The row's button: **Print label** (named "Print label for PRD-JKT-001-IND-S") when the variant has a barcode; **Generate** (named
   "Generate barcode for PRD-JKT-001-LWH-S") when it doesn't, and then the Barcode cell shows the warning badge "No barcode yet".
-- **A shared barcode:** under the digits, a grey line "Shared with PRD-JKT-002", where PRD-JKT-002 is a link to that product. Two or
-  three others: "Shared with PRD-JKT-002, PRD-JKT-007". More: "Shared with PRD-JKT-002, PRD-JKT-007 and 3 more", where "3 more" opens
+- **A shared barcode:** under the digits, a grey line "Shared with PRD-JKT-002", where PRD-JKT-002 is a link to that product. Two
+  others: "Shared with PRD-JKT-002 and PRD-JKT-007"; three: "Shared with PRD-JKT-002, PRD-JKT-007 and PRD-JKT-009". More: "Shared with PRD-JKT-002, PRD-JKT-007 and 3 more", where "3 more" opens
   a small list. The SKU is shown, not the name, because the name is the same.
 - "The same name" means the same words, ignoring capitals and extra spaces: "denim jacket" is "Denim Jacket".
 - A combination that already has a barcode on any product with the same name never counts as missing and never shows **Generate**; it
@@ -192,7 +192,7 @@ Board: INV-2 · Settings › Barcodes, Edit and Delete product · desktop (Invor
   L"); a shoe size reads "Indigo sizes 36 and 37"; a "One size" product names its colours ("Camel and Rust"); beyond three colours
   the first three, then "and 2 more colours" ("and 1 more colour" when one is left). Only other capitals or spaces in the name, or a new name that has a barcode where the
   old name has none, never refuse.
-- **Delete product** adds one sentence when the product has barcodes: "Its 12 barcodes are kept: they come back on any product named
+- **Delete product** adds one sentence, as its own paragraph after today's text, when the product has barcodes: "Its 12 barcodes are kept: they come back on any product named
   Denim Jacket in the same colours and sizes." Exactly one barcode: "Its barcode is kept: it comes back on any product named Denim
   Jacket in the same colour and size." A "One size" product drops "and sizes" / "and size". It is left out when the product has none.
 
@@ -221,6 +221,8 @@ Board: INV-2 · Settings › Barcodes, Edit and Delete product · desktop (Invor
 - **Shared:** Indigo S: the barcode and "Shared with PRD-JKT-002".
 - **Generating:** the confirm button shows a spinner and keeps its label.
 - **Generate error:** the confirm window stays open: "Couldn't generate the barcodes. Try again."
+- **Barcodes changed meanwhile:** when the barcodes asked for are no longer what is missing (someone made them a moment ago), the window
+  closes and a toast reads "Barcodes changed. Check the list."
 - **Success:** from **Generate missing barcodes**, toast "4 barcodes generated for Denim Jacket." (exactly one: "Barcode generated
   for Black M."); from a row's **Generate**, "Barcode generated for Light wash S." (a shoe: "Barcode generated for Light wash size
   36."; a "One size" product: "Barcode generated for Camel."; several colours at once on a "One size" product: "2 barcodes generated
@@ -316,7 +318,7 @@ Board: INV-2 · Product page, Update stock, labels · 375 (Invory App UI canvas)
   44 px, one under the other. The tabs fill the width, half each.
 - **Stock tab:** one card per colour in place of the table: the colour tag and its total ("■ Indigo · 6 units"), then the size chips
   [S 2] [M 0] [L 3] [XL 1], zeros kept and grey. Last, a **Total** card "10 units" with the size totals as chips. A shoe's 11 chips wrap.
-- **Barcodes tab:** the pills wrap, 44 px tall; **Generate missing barcodes (4)** and **Print labels · Indigo** full width under them;
+- **Barcodes tab** (this layout holds up to 1023 px wide, so tablets get it too; the table starts at 1024 px): the pills wrap, 44 px tall; **Generate missing barcodes (4)** and **Print labels · Indigo** full width under them;
   then one card per size: the size tag and SKU on the first line, the barcode (bars about 140 px wide) with its digits, "In stock 2",
   "Shared with PRD-JKT-002", and **Print label** (or **Generate**) full width, 44 px.
 - **Update stock:** the window fills the screen; the pills wrap at the top, the size fields four to a row (S-70), the total band, then
