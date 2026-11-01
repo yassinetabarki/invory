@@ -54,6 +54,7 @@ function routeRows(): array
         'products.update' => ['put', 'products.update', 'product'],
         'products.destroy' => ['delete', 'products.destroy', 'product'],
         'products.stock.update' => ['put', 'products.stock.update', 'product'],
+        'products.barcodes.store' => ['post', 'products.barcodes.store', 'product'],
         'sales.index' => ['get', 'sales.index', null],
         'sales.store' => ['post', 'sales.store', null],
         'sales.update' => ['put', 'sales.update', 'sale'],
@@ -146,6 +147,7 @@ it('registers the frozen routes behind auth and verified', function (string $nam
     'products.update' => ['products.update', 'PUT', 'products/{product}'],
     'products.destroy' => ['products.destroy', 'DELETE', 'products/{product}'],
     'products.stock.update' => ['products.stock.update', 'PUT', 'products/{product}/stock'],
+    'products.barcodes.store' => ['products.barcodes.store', 'POST', 'products/{product}/barcodes'],
     'sales.index' => ['sales.index', 'GET', 'sales'],
     'sales.store' => ['sales.store', 'POST', 'sales'],
     'sales.update' => ['sales.update', 'PUT', 'sales/{sale}'],
@@ -230,6 +232,7 @@ it('sends an invalid write back to where it came from, with its errors', functio
     'products.store' => ['post', 'products.store', null, ['sku', 'name', 'category', 'status', 'labor_cost']], // overhead_cost is optional (S-43)
     'products.update' => ['put', 'products.update', 'product', ['sku', 'name', 'category', 'status', 'labor_cost']], // overhead_cost is optional (S-43)
     'products.stock.update' => ['put', 'products.stock.update', 'product', ['stock']],
+    'products.barcodes.store' => ['post', 'products.barcodes.store', 'product', ['variants']],
     'sales.store' => ['post', 'sales.store', null, ['product_id', 'quantity', 'unit_price', 'sold_on']],
     'sales.update' => ['put', 'sales.update', 'sale', ['product_id', 'quantity', 'unit_price', 'sold_on']],
     'orders.store' => ['post', 'orders.store', null, ['client', 'ordered_on', 'lines']],

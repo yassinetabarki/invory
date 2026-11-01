@@ -7,6 +7,7 @@ use App\Http\Controllers\MaterialRestockController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\OrderLineMoveController;
 use App\Http\Controllers\OrderLineMovePreviewController;
+use App\Http\Controllers\ProductBarcodeController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductStockController;
 use App\Http\Controllers\SaleController;
@@ -35,6 +36,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('products/{product}/stock', [ProductStockController::class, 'update'])
         ->where('product', '[0-9]{1,18}')
         ->name('products.stock.update');
+
+    // "Generate" on the Barcodes tab (INV-8-c): in-store numbers for the variants asked for, all or nothing.
+    Route::post('products/{product}/barcodes', [ProductBarcodeController::class, 'store'])
+        ->where('product', '[0-9]{1,18}')
+        ->name('products.barcodes.store');
 
     // {order} is route-model bound (an unknown, soft-deleted or other workshop's order is a 404); the digit constraint keeps a
     // malformed id a 404 too.
