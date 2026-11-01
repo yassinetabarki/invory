@@ -1,7 +1,7 @@
 # Invory — product roadmap
 
-> Owner: **product-owner** · Last updated: 2026-10-31
-> INV-10 is done (`76b1770`), so new cards can be added again. INV-2 is done (`46af1cc`, `ab313eb`, `4088200`). Next is INV-8.
+> Owner: **product-owner** · Last updated: 2026-11-01
+> INV-10 is done (`76b1770`), so new cards can be added again. INV-2 is done (`46af1cc`, `ab313eb`, `4088200`). INV-8 is done (`9f93175` … `3b55319`). Next is INV-9.
 
 ## Product goal
 A small fashion workshop knows, at any moment, what each product costs to make, how many it can make from the stock
@@ -18,14 +18,15 @@ Work goes one item at a time, in the order below. A UI card comes first, then th
 | INV-1  | Colours: a fixed list                              | `Done`        | Every product has colours from a list      |
 | INV-10 | The PostgreSQL check runs to the end (tech)        | `Done`        | The check INV-2 needs runs to the end      |
 | INV-2  | Product sizes × colours: stock per colour and size | `Done`        | Know the shelf stock of each variant       |
-| INV-8  | Barcodes for every colour and size                 | `Ready`       | Every variant gets its own barcode         |
+| INV-8  | Barcodes for every colour and size                 | `Done`        | Every variant gets its own barcode         |
 | INV-9  | Print barcode labels                               | `Ready`       | Print a label for a variant, or a sheet    |
 | INV-3  | Restock of finished products                       | `UI approved` | Add finished units to the shelf at once    |
 | INV-4  | Clients                                            | `UI approved` | Orders belong to a client                  |
 | INV-5  | A production progress page                         | `UI approved` | See where every bundle is in production    |
+| INV-12 | Refactor the order                                 | `Idea`        | Orders start with the client               |
 | INV-7  | Bigger tap targets on the Settings pages (Could)   | `Idea`        | Settings are easy to use on a phone        |
 
-INV-7 comes after INV-5. INV-6 is a tech-lead item (the colour picker row's swatch edge). It has no card and is not in
+INV-12 comes after INV-5 and INV-7 after INV-12. INV-6 is a tech-lead item (the colour picker row's swatch edge). It has no card and is not in
 the order.
 
 - D-20 (2026-10-24): the card flow is paused for this rework. Every older open story is on hold.
@@ -44,5 +45,5 @@ the order.
 - A REST API and a mobile app
 
 ## Done
-Phases 1 to 3 and the first Phase 5 work, plus INV-1. See [STATUS.md §4](STATUS.md#4-delivery-history) and the
+Phases 1 to 3 and the first Phase 5 work, plus INV-1, INV-2, INV-8 and INV-10. See [STATUS.md §4](STATUS.md#4-delivery-history) and the
 [backlog archive](archive/backlog-2026-10-14.md).

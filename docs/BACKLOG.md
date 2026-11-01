@@ -4,12 +4,14 @@
 > **Owner:** `product-owner` (order, wording, acceptance criteria) · **Technical Detail:** `tech-lead` ([TECH-DEBT.md](TECH-DEBT.md), [plans/](plans/README.md))
 > **Phases & Goals:** [ROADMAP.md](ROADMAP.md) · **Progress:** [STATUS.md](STATUS.md)
 
-> [!history] Last Cleaned: 2026-10-31
+> [!history] Last Cleaned: 2026-11-01
+> - **INV-8 Done** (accepted 2026-11-01; `9f93175`, `28003cb`, `63513ef`, `4678cad`, `5704050`, `36b34a3`, `3b55319`; docs `da41e1b`), so it left the open list. INV-9 is next.
 > - **INV-2 Done** (accepted 2026-10-31; `46af1cc`, `ab313eb`, `4088200`), so it left the open list. The PostgreSQL parity suite was green before the commits (2619 tests). INV-8 is next.
 > - **INV-10 done** (`76b1770`; its card `1f854bf`), so it left the open list.
 > - **INV-2 Split:** INV-2's card was split into three: **INV-2** (stock, done), **INV-8** (barcodes), and **INV-9** (labels).
 > - **Added 2026-11-01:** `INV-12` (Refactor the order), an `Idea`, placed after INV-5 and before INV-7. No card yet; it waits its turn.
-> - **Current Order** (INV-2 done): `INV-8` → `INV-9` → `INV-3` → `INV-4` → `INV-5` → `INV-12` → `INV-7`. Next free ID: **INV-13** (INV-11 is the tech-debt item raised in the INV-8 review, see [TECH-DEBT.md](TECH-DEBT.md)). INV-8 is built and in acceptance (2026-11-01).
+> - **Parked idea:** "Barcodes tab polish" (from the INV-8 UX review), planned with INV-9; no ID yet.
+> - **Current Order** (INV-8 done): `INV-9` → `INV-3` → `INV-4` → `INV-5` → `INV-12` → `INV-7`. Next free ID: **INV-13** (INV-11 is the tech-debt item raised in the INV-8 review, see [TECH-DEBT.md](TECH-DEBT.md)).
 > - **INV-1 Done:** "Colours as fixed values" accepted & merged (`a66f4bf`, `78a4eee`), so it left this backlog.
 > - **Added:** `INV-6` (picker-row item) and `INV-7` (Could: bigger tap targets on Settings).
 > - **Archive:** Done items leave this file and are recorded in `STATUS.md` and the archive.
@@ -34,7 +36,7 @@
   - `INV-6`: Picker-row swatch edge item.
   - `INV-7`: Settings tap targets.
   - `INV-2`: Stock per colour and size (done, `46af1cc`, `ab313eb`, `4088200`).
-  - `INV-8` & `INV-9`: Barcodes and labels (split from INV-2 on 2026-10-31).
+  - `INV-8` & `INV-9`: Barcodes (done, `9f93175` … `3b55319`) and labels (split from INV-2 on 2026-10-31).
   - `INV-10`: PostgreSQL test fix (done, `76b1770`).
   - `INV-11`: Small barcode clean-ups from the INV-8 review (MINOR tech debt, in [TECH-DEBT.md](TECH-DEBT.md); proposed for when barcodes are next touched, INV-9).
   - `INV-12`: Refactor the order (client first, product search with availability, no cutting on orders, order tracker). Added 2026-11-01.
@@ -51,16 +53,16 @@
 ### Execution Plan & Order
 1. **INV-1** (Colours) — `#done` *(Accepted 2026-10-31)*
 2. **INV-2** (Stock per colour and size) — `#done` *(Accepted 2026-10-31)*
-3. **Next Sequence:** `INV-8` ➔ `INV-9` ➔ `INV-3` ➔ `INV-4` ➔ `INV-5` ➔ `INV-12` ➔ `INV-7`
-4. **Card Structure:** Each feature receives a UI card first (`INV-n-<slug>-ui.md`), followed by a development card (`INV-n-<slug>.md`).
-5. **Shared UI Cards:** `INV-2`, `INV-8`, and `INV-9` share the same UI card but are accepted individually.
-6. **Phase 7 Tech Allowance:** `F-43` · `F-46` · `F-52` · `F-53`
+3. **INV-8** (Barcodes) — `#done` *(Accepted 2026-11-01)*
+4. **Next Sequence:** `INV-9` ➔ `INV-3` ➔ `INV-4` ➔ `INV-5` ➔ `INV-12` ➔ `INV-7`
+5. **Card Structure:** Each feature receives a UI card first (`INV-n-<slug>-ui.md`), followed by a development card (`INV-n-<slug>.md`).
+6. **Shared UI Cards:** `INV-2`, `INV-8`, and `INV-9` share the same UI card but are accepted individually.
+7. **Phase 7 Tech Allowance:** `F-43` · `F-46` · `F-52` · `F-53`
 
 ### Open Backlog Table
 
 | ID | What it brings | Type | Status | Priority / Size |
 | :--- | :--- | :--- | :--- | :--- |
-| **INV-8** | Barcodes for every colour and size | Feature | `Acceptance` | Must / L |
 | **INV-9** | Print barcode labels | Feature | `Ready` | Must / M |
 | **INV-3** | Restock of finished products | Feature | `UI approved` | Must |
 | **INV-4** | Clients as an entity | Feature | `UI approved` | Must |
@@ -74,15 +76,6 @@
 ---
 
 ### Item Details
-
-#### `INV-8` · Barcodes for every colour and size
-- **Type:** Feature | **Priority:** Must | **Size:** L | **Status:** `Acceptance`
-- **Cards:** [Development Card](stories/INV-8-barcodes.md) · [UI Card](stories/INV-2-product-sizes-colours-barcodes-ui.md) *(shared)*
-- **Details:** 
-  - Adds "Stock by colour" and "Barcodes" (with "4 missing" badge) tabs to Sizes & colours card.
-  - Shows one EAN-13 barcode per name + colour + size.
-  - "Generate" always prompts first and is all-or-nothing. Runs after `INV-2` (done).
-  - **Rules (2026-10-31):** Variant SKU format = `PRODUCT_SKU-COLOUR_CODE-SIZE_LABEL` (e.g., `PRD-JKT-001-IND-S`). In-store numbers run per workshop from `2000000000015`.
 
 #### `INV-9` · Print barcode labels
 - **Type:** Feature | **Priority:** Must | **Size:** M | **Status:** `Ready`

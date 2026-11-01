@@ -5,7 +5,7 @@ type: feature
 phase: Colour × size variants
 priority: Must
 size: L
-status: Acceptance
+status: Done
 created: 2026-10-31
 tags:
   - story
@@ -30,14 +30,14 @@ tags:
 > undone.".
 
 ## Acceptance criteria
-- [ ] **AC-1 · Two tabs in the Sizes & colours card.** The card's line becomes "3 colours × 4 sizes = 12 variants. Each variant has its
+- [x] **AC-1 · Two tabs in the Sizes & colours card.** The card's line becomes "3 colours × 4 sizes = 12 variants. Each variant has its
   own stock and its own barcode." (other products: "1 colour × 4 sizes = 4 variants", "2 colours × One size = 2 variants"). Under the
   heading, two tabs: **Stock by colour**, which holds the stock table of INV-2, and **Barcodes**. The page opens on Stock by colour,
   and the open tab is kept in the page address, so a link can open Barcodes. While any variant has no barcode, **Barcodes** carries the
   warning badge "4 missing". The link **By size and colour** under the In stock figure moves to the card and opens its Stock tab. While
   loading: the frame, heading and tabs at once, with a placeholder of 3 rows; an error shows "Couldn't load the stock and barcodes."
-  with **Try again**, which reloads the card and the In stock figure together. On a phone the tabs fill the width, half each.
-- [ ] **AC-2 · Barcodes tab.** The Barcodes tab shows each variant's barcode, with Black, Indigo and Light wash as colour pills (a
+  with **Try again**, which reloads the card and the In stock figure together. On a phone the tabs fill the width, half each. ✅ 2026-11-01 · 3b55319
+- [x] **AC-2 · Barcodes tab.** The Barcodes tab shows each variant's barcode, with Black, Indigo and Light wash as colour pills (a
   group named "Colour"): swatch, name and in grey "· 4 missing" when that colour has variants without a barcode; the chosen pill has a
   2 px ring and a tint and is announced "pressed"; the first colour (Black) is chosen when the tab opens.
   - A table "Barcodes for Indigo": **Size** (the size tag) · **SKU** (the number font: product SKU, colour code, size,
@@ -59,8 +59,8 @@ tags:
   - **Phone and tablet (up to 1023 px wide; the table starts at 1024 px):** the pills wrap and are 44 px tall; **Generate missing barcodes (4)** is full width under them; then one card per
     size: the size tag and SKU on the first line, the barcode (bars about 140 px wide) with its digits, "In stock 2", "Shared with
     PRD-JKT-002", and, on a variant without a barcode, **Generate** full width, 44 px. 12 colour pills wrap and a 32-character
-    colour name wraps inside its pill.
-- [ ] **AC-3 · Generate barcodes.** Generating always asks first, because a number is used for good.
+    colour name wraps inside its pill. ✅ 2026-11-01 · 28003cb, 5704050, 36b34a3
+- [x] **AC-3 · Generate barcodes.** Generating always asks first, because a number is used for good.
   - From **Generate missing barcodes (4)**, which asks for every variant of the product that has no barcode, whatever its colour: the
     title **Generate 4 barcodes?**, the text "Denim Jacket gets a barcode for Light wash S, M, L and XL, from your in-store numbers. A
     barcode never changes, and its number is never given to anything else." and the buttons **Not now** and **Generate 4 barcodes**.
@@ -90,8 +90,8 @@ tags:
     PRD-JKT-002."; if no product shows the barcode any more (its product was deleted meanwhile), the toast leaves out "by …": "6
     barcodes ready for Denim Jacket: 5 new, 1 already used.", "4 barcodes ready for Denim Jacket: all already used.", "Barcode
     ready for Light wash S: already used.". On failure the window stays open with "Couldn't generate the barcodes. Try again.". If the barcodes asked for are no longer
-  what is missing (someone made them a moment ago), the window closes and a toast reads "Barcodes changed. Check the list.".
-- [ ] **AC-4 · Barcodes follow the name, not the product.** Renaming a product keeps its barcodes; no window asks first (the one
+  what is missing (someone made them a moment ago), the window closes and a toast reads "Barcodes changed. Check the list.". ✅ 2026-11-01 · 63513ef, 36b34a3
+- [x] **AC-4 · Barcodes follow the name, not the product.** Renaming a product keeps its barcodes; no window asks first (the one
   refusal is AC-5). If a barcode was shared with another product of the old name, it now stands for both names, the other product
   keeps it too, and labels already printed still scan. A product renamed "Trucker Jacket" that later gets Navy shares the barcodes
   of Navy under its current name: Navy S is the same number on every "Trucker Jacket". A colour taken off a product keeps its
@@ -101,8 +101,8 @@ tags:
   the "Delete product?" window adds, after today's text and as its own paragraph, "Its 12 barcodes are kept: they come back on any product named Denim
   Jacket in the same colours and sizes." (exactly one barcode: "Its barcode is kept: it comes back on any product named Denim
   Jacket in the same colour and size."; a "One size" product: "…in the same colours." / "…in the same colour."); with none, the
-  window is as today.
-- [ ] **AC-5 · A rename that would give a colour and size two numbers is refused.** A colour and size can have only one barcode
+  window is as today. ✅ 2026-11-01 · 4678cad, 3b55319
+- [x] **AC-5 · A rename that would give a colour and size two numbers is refused.** A colour and size can have only one barcode
   under a name, so two different numbers can't be joined. When the product is saved with a new name (not only other capitals or
   spaces), and for a colour and size it keeps, the old name and the new name each already have a barcode, with different numbers,
   nothing is saved and the Name field reads, in red text under it, the new name as typed with the extra spaces taken out: "Trucker
@@ -113,7 +113,7 @@ tags:
   the first three are named, then "and 2 more colours" ("and 1 more colour" when one is left). Example: Denim Jacket (Black, Indigo and Light wash, 8 barcodes) renamed
   "Trucker Jacket" while another Trucker Jacket has its own Indigo S and Indigo L barcodes is refused with the sentence above; a
   Trucker Jacket with a Light wash S barcode only (Denim Jacket has none for Light wash S) renames fine and then shows that
-  barcode. The same check runs if someone makes the clash while the form is open.
+  barcode. The same check runs if someone makes the clash while the form is open. ✅ 2026-11-01 · 4678cad, 3b55319
 
 ---
 
