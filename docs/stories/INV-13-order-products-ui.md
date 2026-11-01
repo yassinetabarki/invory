@@ -5,6 +5,7 @@ type: ui
 priority: Must
 status: Approved
 created: 2026-11-01
+reapproved: 2026-11-01
 tags:
   - ui-card
 ---
@@ -86,7 +87,7 @@ The card sits between Client (INV-12) and Details (Order date, Note, as today). 
      size" product: the columns Colour · Quantity;
    - under the table, "Total 12 units".
    - After the products, a grey band: "Total on this order · 22 units · 2 products".
-6. The owner types Indigo S 4 and Indigo M 8 on the Jacket (M is out of stock, so it will be made), adds the Jeans and types Indigo
+6. The owner types Indigo S 4 and Indigo M 8 on the Jacket (M is out of stock, so those units wait for the shelf), adds the Jeans and types Indigo
    M 10: "Total 12 units" on the Jacket, "Total 10 units" on the Jeans, "Total on this order · 22 units · 2 products". An empty cell or
    0 means no units in that colour and size.
 7. Next to **Save order** and **Cancel**: "22 units · 2 products".
