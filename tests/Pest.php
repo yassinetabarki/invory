@@ -646,6 +646,17 @@ function productSizeStockColoursMigration(): Migration
 }
 
 /**
+ * The barcodes migration object (INV-8-a): `name_key` on `products`, `last_barcode_serial` on `workshops` and the two barcode tables, which
+ * point at the workshops, colours, sizes and users. It is the newest of the hand-kept list (F-60): a test that rolls any older one back
+ * that it depends on (the workshop columns, the colours, the size lists or the products table) must roll this one back first, and bring it
+ * back up last.
+ */
+function barcodesMigration(): Migration
+{
+    return require database_path('migrations/2026_11_01_100000_create_barcodes_tables.php');
+}
+
+/**
  * Puts the finished stock of a product on the shelf, per colour (INV-2-a): `setFinishedStock($jacket, ['Black' => [1, 0, 2, 1], 'Indigo' => [2, 0, 3, 1]])`
  * is each colour's NAME → units per size in the order of the product's size list. It replaces every row of the product, links each
  * named colour to the product when it isn't (a colour at 0 is linked too, with no row), and leaves the product's other colours alone.

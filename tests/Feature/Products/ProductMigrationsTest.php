@@ -1,5 +1,6 @@
 <?php
 
+use App\Domain\Barcodes\NameKey;
 use App\Models\Material;
 use App\Models\Product;
 use App\Models\ProductCategory;
@@ -62,10 +63,10 @@ function materialRow04(array $overrides = []): array
     ];
 }
 
-/** A `products` row for DB::table() inserts. */
+/** A `products` row for DB::table() inserts. `name_key` (NOT NULL since INV-8-a) only while a test has the barcodes migration applied. */
 function productRow04(array $overrides = []): array
 {
-    return [
+    $row = [
         ...rawWorkshop('products'),
         'sku' => 'PRD-'.fake()->unique()->numerify('######'),
         'name' => 'Row product',
@@ -74,6 +75,8 @@ function productRow04(array $overrides = []): array
         'updated_at' => now(),
         ...$overrides,
     ];
+
+    return Schema::hasColumn('products', 'name_key') ? [...$row, 'name_key' => $row['name_key'] ?? NameKey::of($row['name'])] : $row;
 }
 
 /** A `product_components` row for DB::table() inserts. */
@@ -223,6 +226,7 @@ describe('up, down, up', function () {
         $material = Material::factory()->create(['sku' => 'KEEP-1', 'name' => 'Survivor']);
 
         // Newest first, as `migrate:rollback` does: newer migrations that depend on `(workshop_id, id)` (orders) go before the workshop one.
+        barcodesMigration()->down();
         productSizeStockColoursMigration()->down();
         productColoursMigration()->down();
         productSizeStocksMigration()->down();
@@ -256,6 +260,7 @@ describe('up, down, up', function () {
         productSizeStocksMigration()->up();
         productColoursMigration()->up();
         productSizeStockColoursMigration()->up();
+        barcodesMigration()->up();
 
         expect(Schema::hasTable('products'))->toBeTrue()
             ->and(Schema::hasTable('product_components'))->toBeTrue()
@@ -271,6 +276,7 @@ describe('up, down, up', function () {
     it('keeps the partial SKU index of materials through the audit columns, up and down', function () {
         // SQLite rebuilds `materials` when a column is dropped, and would lose the `WHERE` of a partial index it re-creates itself.
         // The migrations before and after this one are rolled back first, so only the audit columns change.
+        barcodesMigration()->down();
         productSizeStockColoursMigration()->down();
         productColoursMigration()->down();
         productSizeStocksMigration()->down();
@@ -294,6 +300,7 @@ describe('up, down, up', function () {
     });
 
     it('runs the products migration down and up more than once', function () {
+        barcodesMigration()->down();
         productSizeStockColoursMigration()->down();
         productColoursMigration()->down();
         productSizeStocksMigration()->down();
@@ -316,6 +323,7 @@ describe('up, down, up', function () {
         productSizeStocksMigration()->up();
         productColoursMigration()->up();
         productSizeStockColoursMigration()->up();
+        barcodesMigration()->up();
 
         expect(Schema::hasIndex('products', 'products_sku_unique'))->toBeTrue();
 

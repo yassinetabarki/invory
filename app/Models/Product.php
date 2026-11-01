@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Domain\Barcodes\NameKey;
 use App\Enums\ProductStatus;
 use App\Models\Concerns\BelongsToWorkshop;
 use App\Services\Costing\ProductCosting;
@@ -31,6 +32,7 @@ use Illuminate\Support\Facades\Storage;
  * @property int $workshop_id The workshop the product belongs to. Never mass-assignable.
  * @property string $sku
  * @property string $name
+ * @property string $name_key The name in plain form ({@see NameKey::of()}), set together with `name`; never mass-assignable (INV-8).
  * @property int $category_id
  * @property ProductStatus $status
  * @property string|null $description
@@ -73,6 +75,17 @@ class Product extends Model
             'overhead_cost' => 'decimal:4',
             'selling_price' => 'decimal:4',
         ];
+    }
+
+    /**
+     * Setting the name sets `name_key` with it (INV-8, ADR-0020), so every writer (Actions, factories, seeders) keeps the same-name
+     * rule right. Reading the name is untouched.
+     *
+     * @return Attribute<string, string>
+     */
+    protected function name(): Attribute
+    {
+        return Attribute::set(fn (mixed $value): array => ['name' => $value, 'name_key' => NameKey::of((string) $value)]);
     }
 
     /**

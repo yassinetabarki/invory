@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * It has no attributes yet (S-46 adds its name), so nothing is mass-assignable.
  *
  * @property int $id
+ * @property int $last_barcode_serial The last in-store barcode serial given (INV-8, ADR-0020); read and saved under the workshop's row lock.
  * @property CarbonInterface $created_at
  * @property CarbonInterface $updated_at
  */
@@ -24,6 +25,19 @@ class Workshop extends Model
 {
     /** @use HasFactory<WorkshopFactory> */
     use HasFactory;
+
+    /**
+     * The database default, so a freshly created workshop reads like a stored one without a refresh.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = ['last_barcode_serial' => 0];
+
+    /** @return array<string, string> */
+    protected function casts(): array
+    {
+        return ['last_barcode_serial' => 'integer'];
+    }
 
     /** @return HasMany<User, $this> */
     public function users(): HasMany

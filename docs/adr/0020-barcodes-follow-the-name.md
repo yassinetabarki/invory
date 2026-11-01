@@ -16,8 +16,8 @@ that would give one colour and size two numbers is refused. INV-9 prints labels 
 1. **Two tables.** `barcodes` holds one row per number (`workshop_id`, `number`, `colour_id`, `size_id`, `created_by`), unique
    (`workshop_id`, `number`): a number is given once per workshop, and two workshops can each have 2000000000015. `barcode_names`
    holds what a number stands for (`workshop_id`, `barcode_id`, `name_key`, `colour_id`, `size_id`), unique (`workshop_id`, `name_key`,
-   `colour_id`, `size_id`): one name, colour and size never has two barcodes. On PostgreSQL a composite foreign key (`barcode_id`,
-   `colour_id`, `size_id`) → `barcodes` stops a name pointing at a number of another colour or size. Every key is `restrictOnDelete`
+   `colour_id`, `size_id`): one name, colour and size never has two barcodes. On PostgreSQL a composite foreign key (`workshop_id`,
+   `barcode_id`, `colour_id`, `size_id`) → `barcodes` stops a name pointing at a number of another workshop, colour or size. Every key is `restrictOnDelete`
    (`created_by` `nullOnDelete`): nothing in the app deletes a barcode.
 2. **The same-name rule is one PHP function**, `App\Domain\Barcodes\NameKey::of()` (trimmed, runs of spaces as one, `mb_strtolower`,
    accents kept), stored as `products.name_key` (set by a mutator whenever `name` is set) and never computed in SQL: PostgreSQL's and

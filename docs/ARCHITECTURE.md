@@ -300,7 +300,7 @@ page gets it as `finished_stock`, a deferred prop in its own group `stock`, resc
 | `barcodes.colour_id`, `size_id`  | FK → colours, sizes        | `restrictOnDelete`; the one colour and size the number stands for                         |
 | `barcodes.created_by`            | FK → users nullable        | `nullOnDelete`                                                                            |
 | `barcode_names`                  | id, timestamps             | what a number stands for: one row per name; a rename adds a row, the old one stays        |
-| `barcode_names.barcode_id`       | FK → barcodes              | `restrictOnDelete`; PostgreSQL: composite FK (`barcode_id`, `colour_id`, `size_id`)       |
+| `barcode_names.barcode_id`       | FK → barcodes              | `restrictOnDelete`; PostgreSQL: composite FK (`workshop_id`, `barcode_id`, `colour_id`, `size_id`) |
 | `barcode_names.name_key`         | string(150)                | `NameKey::of()` of a product name; `unique(workshop_id, name_key, colour_id, size_id)`    |
 | `products.name_key`              | string(150), NOT NULL      | set by a mutator whenever `name` is set; `index(workshop_id, name_key)`                   |
 | `workshops.last_barcode_serial`  | unsigned bigint, default 0 | the last in-store serial given; read and saved under the workshop's row lock (Generate)   |
