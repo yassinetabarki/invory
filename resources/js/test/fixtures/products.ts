@@ -16,6 +16,7 @@ import type {
     Option,
     Paginated,
     Product,
+    ProductBarcodes,
     ProductCategory,
     ProductComponentLine,
     ProductFilters,
@@ -24,6 +25,7 @@ import type {
     Sale,
     SizeList,
     UnitOfMeasure,
+    VariantBarcode,
 } from '@/types/domain';
 
 // ---------------------------------------------------------------------------
@@ -491,6 +493,95 @@ export const denimStockByColour = stockByColour(sizeListSToXl, [
 export const toteStockByColour = stockByColour(sizeListOneSize, [
     ['Camel', [4]],
     ['Black', [0]],
+]);
+
+// ---------------------------------------------------------------------------
+// Barcodes per colour and size (INV-8)
+// ---------------------------------------------------------------------------
+
+/**
+ * The barcodes the server sends: one row per colour (by name, in list order)
+ * with the number of each size (`null` = none yet) and how many are missing.
+ * The totals are written out, never added up here. Variant SKUs follow the
+ * server's rule ("PRD-JKT-001-IND-S", "PRD-TOT-001-CAM" for "One size").
+ */
+export function barcodesByColour(
+    sku: string,
+    list: SizeList,
+    rows: [colour: string, numbers: (string | null)[], missing: number][],
+    totals: Pick<ProductBarcodes, 'missing' | 'missing_names' | 'with_barcode'>,
+): ProductBarcodes {
+    return {
+        ...totals,
+        colours: rows.map(([name, numbers, missing]) => {
+            const colour = colourNamed(name);
+
+            return {
+                colour,
+                missing,
+                variants: list.sizes.map((size, index): VariantBarcode => ({
+                    size,
+                    sku:
+                        list.sizes.length === 1
+                            ? `${sku}-${colour.code}`
+                            : `${sku}-${colour.code}-${size.label}`,
+                    barcode: numbers[index] ?? null,
+                    shared_with: [],
+                })),
+            };
+        }),
+    };
+}
+
+/** The worked example: Black and Indigo made, Light wash not → missing 4, with a barcode 8. */
+export const denimBarcodes = barcodesByColour(
+    'PRD-JKT-001',
+    sizeListSToXl,
+    [
+        [
+            'Black',
+            [
+                '2000000000053',
+                '2000000000060',
+                '2000000000077',
+                '2000000000084',
+            ],
+            0,
+        ],
+        [
+            'Indigo',
+            [
+                '2000000000015',
+                '2000000000022',
+                '2000000000039',
+                '2000000000046',
+            ],
+            0,
+        ],
+        ['Light wash', [], 4],
+    ],
+    {
+        missing: 4,
+        missing_names: 'Light wash S, M, L and XL',
+        with_barcode: 8,
+    },
+);
+
+/** The Leather Tote ("One size") in Camel and Rust: Camel made, Rust not. */
+export const toteBarcodes = barcodesByColour(
+    'PRD-TOT-001',
+    sizeListOneSize,
+    [
+        ['Camel', ['2000000000091'], 0],
+        ['Rust', [], 1],
+    ],
+    { missing: 1, missing_names: 'Rust', with_barcode: 1 },
+);
+
+/** The Leather Tote's stock for those two colours: Camel 4, Rust 0. */
+export const toteCamelRustStock = stockByColour(sizeListOneSize, [
+    ['Camel', [4]],
+    ['Rust', [0]],
 ]);
 
 /** Out of stock: the cupsole is at 0, so nothing can be produced. */
