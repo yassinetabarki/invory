@@ -32,6 +32,8 @@ it('gives every product of every workshop its name key, soft-deleted ones too, a
     $links = fn (): array => [DB::table('product_colours')->count(), DB::table('product_size_stocks')->count()];
     $before = $links();
 
+    clientsMigration()->down();
+
     barcodesMigration()->down();
 
     expect(Schema::hasColumn('products', 'name_key'))->toBeFalse()
@@ -45,6 +47,8 @@ it('gives every product of every workshop its name key, soft-deleted ones too, a
     DB::table('products')->where('id', $tote->id)->update(['name' => 'ÉCRU  Tote']);
 
     barcodesMigration()->up();
+
+    clientsMigration()->up();
 
     expect(DB::table('products')->pluck('name_key', 'id')->all())->toBe([$jacket->id => 'denim jacket', $tote->id => 'écru tote', $foreign->id => 'denim jacket'])
         ->and(DB::table('workshops')->pluck('last_barcode_serial')->unique()->all())->toBe([0])

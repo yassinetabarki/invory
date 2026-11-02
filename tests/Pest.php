@@ -647,13 +647,23 @@ function productSizeStockColoursMigration(): Migration
 
 /**
  * The barcodes migration object (INV-8-a): `name_key` on `products`, `last_barcode_serial` on `workshops` and the two barcode tables, which
- * point at the workshops, colours, sizes and users. It is the newest of the hand-kept list (F-60): a test that rolls any older one back
+ * point at the workshops, colours, sizes and users. It was the newest of the hand-kept list (F-60) until INV-4's clients: a test that rolls any older one back
  * that it depends on (the workshop columns, the colours, the size lists or the products table) must roll this one back first, and bring it
  * back up last.
  */
 function barcodesMigration(): Migration
 {
     return require database_path('migrations/2026_11_01_100000_create_barcodes_tables.php');
+}
+
+/**
+ * The clients migration object (INV-4-a): the `clients` table and `orders.client_id`, which point at the workshops, the users and the
+ * orders table. It is the newest of the hand-kept list (F-60): a test that rolls back any older migration it depends on (the workshop
+ * columns, the orders table) rolls this one back first, and brings it back up last.
+ */
+function clientsMigration(): Migration
+{
+    return require database_path('migrations/2026_11_02_200000_create_clients_table.php');
 }
 
 /**

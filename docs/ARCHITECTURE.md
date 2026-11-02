@@ -242,13 +242,34 @@ Indexes: `index(workshop_id, sold_on, id)`, `index(product_id, sold_on)`. `total
 | ---------------------- | --------------------- | ------------------------------------------------------------------------- |
 | id                     | bigint PK             |                                                                           |
 | workshop_id            | FK → workshops        | see above                                                                 |
-| client                 | string(100)           | required                                                                  |
+| client_id              | FK → clients nullable | INV-4: the client; null only for an order put away by INV-4's migration   |
+| client                 | string(100)           | required; since INV-4 the client's name, copied by the Actions            |
 | ordered_on             | date                  | ≤ today                                                                   |
 | note                   | string(1000) nullable | delivery date, packing, anything the client asked for                     |
 | user_id                | FK → users nullable   | who recorded it (`nullOnDelete`), not shown yet                           |
 | timestamps, deleted_at |                       | soft deletes: a deleted order is hidden everywhere, its lines stay (S-53) |
 
 Index: `index(workshop_id, ordered_on, id)` (the list: newest order date first, then the order recorded last).
+
+### `clients` (INV-4, [ADR-0021](adr/0021-clients-are-found-by-their-phone.md))
+
+| Column       | Type                | Rules                                                                                         |
+| ------------ | ------------------- | --------------------------------------------------------------------------------------------- |
+| id           | bigint PK           |                                                                                               |
+| workshop_id  | FK → workshops      | see above                                                                                     |
+| name         | string(100)         | required; two clients may share a name                                                        |
+| phone        | string(32)          | the display form ("22 345 678"), set with `phone_key` by `PhoneNumber::parse()`               |
+| phone_key    | string(16)          | digits with the country code ("21622345678"); unique (`workshop_id`, `phone_key`)             |
+| city         | string(60)          | required                                                                                      |
+| source       | string(16) nullable | `ClientSource`: instagram, facebook, tiktok, whatsapp, website, walk_in, word_of_mouth, other |
+| source_other | string(40) nullable | only with `other`                                                                             |
+| user_id      | FK → users nullable | who added her (`nullOnDelete`)                                                                |
+| timestamps   |                     | no soft deletes: a client is never edited or removed                                          |
+
+Index `(workshop_id, name, id)` (the A → Z list). PostgreSQL only: `unique(workshop_id, id)`. `orders.client_id` → clients
+(`restrictOnDelete`), nullable only for the orders INV-4's migration put away (soft-deleted); PostgreSQL adds the composite key
+(`workshop_id`, `client_id`) → clients and the CHECK `client_id IS NOT NULL OR deleted_at IS NOT NULL`. `orders.client` keeps the
+client's name, copied by the Actions (a client is never renamed).
 
 ### `order_lines` (S-48)
 

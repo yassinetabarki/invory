@@ -62,6 +62,7 @@ function categoryListsAndProducts(): array
 
 it('gives every category the right list, by code, and keeps every product in its category', function () {
     $migration = sizeListsMigration();
+    clientsMigration()->down();
     barcodesMigration()->down();
     productSizeStockColoursMigration()->down();
     productSizeStocksMigration()->down();
@@ -87,6 +88,7 @@ it('gives every category the right list, by code, and keeps every product in its
 
 it('round-trips: down takes the lists away and leaves the rest, up gives the same rows', function () {
     $migration = sizeListsMigration();
+    clientsMigration()->down();
     barcodesMigration()->down();
     productSizeStockColoursMigration()->down();
     productSizeStocksMigration()->down();
@@ -129,6 +131,7 @@ describe('the partial name index of product categories survives the table rebuil
 
     it('after up', function () use ($assertNamesAreUniqueAmongActiveRows) {
         $migration = sizeListsMigration();
+        clientsMigration()->down();
         barcodesMigration()->down();
         productSizeStockColoursMigration()->down();
         productSizeStocksMigration()->down();
@@ -141,6 +144,7 @@ describe('the partial name index of product categories survives the table rebuil
 
     it('after down and up again', function () use ($assertNamesAreUniqueAmongActiveRows) {
         $migration = sizeListsMigration();
+        clientsMigration()->down();
         barcodesMigration()->down();
         productSizeStockColoursMigration()->down();
         productSizeStocksMigration()->down();
@@ -154,6 +158,7 @@ describe('the partial name index of product categories survives the table rebuil
     });
 
     it('after down', function () {
+        clientsMigration()->down();
         barcodesMigration()->down();
         productSizeStockColoursMigration()->down();
         productSizeStocksMigration()->down();

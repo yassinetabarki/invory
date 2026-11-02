@@ -66,6 +66,7 @@ it('moves today\'s data into the one workshop of its accounts, and back, losing 
 
     foreach ([1, 2] as $round) {
         // Newer migrations that depend on `(workshop_id, id)` (orders) are rolled back first and brought back last.
+        clientsMigration()->down();
         barcodesMigration()->down();
         productSizeStockColoursMigration()->down();
         productColoursMigration()->down();
@@ -89,6 +90,7 @@ it('moves today\'s data into the one workshop of its accounts, and back, losing 
         productColoursMigration()->up();
         productSizeStockColoursMigration()->up();
         barcodesMigration()->up();
+        clientsMigration()->up();
 
         // One workshop, the accounts' one, holds every row of every table: soft-deleted ones too, none moved or lost.
         expect(Workshop::query()->count())->toBe(1)
@@ -110,6 +112,7 @@ it('moves today\'s data into the one workshop of its accounts, and back, losing 
 
 it('gives every owned table a NOT NULL workshop and per-workshop indexes, and creates no workshop for an empty database', function () {
     // An empty database: nothing to move, so no workshop (also after a rollback and a new migration).
+    clientsMigration()->down();
     barcodesMigration()->down();
     productSizeStockColoursMigration()->down();
     productColoursMigration()->down();
@@ -128,6 +131,7 @@ it('gives every owned table a NOT NULL workshop and per-workshop indexes, and cr
     productColoursMigration()->up();
     productSizeStockColoursMigration()->up();
     barcodesMigration()->up();
+    clientsMigration()->up();
 
     expect(Workshop::query()->count())->toBe(0);
 

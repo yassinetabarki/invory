@@ -33,6 +33,7 @@ function referenceMigration(): Migration
     // The INV-1-e product colours migration points at products (on PostgreSQL through `unique(workshop_id, id)`), so it is the very first to go.
     // The INV-8-a barcodes migration points at the workshops, colours and sizes, so it goes before everything it depends on.
     if (Schema::hasTable('barcodes')) {
+        clientsMigration()->down();
         barcodesMigration()->down();
     }
 

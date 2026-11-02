@@ -36,7 +36,7 @@ use App\Models\Workshop;
 const WORKSHOP_ADR = 'docs/adr/0013-one-workshop-per-account.md';
 
 /** The tables of workshop data (S-45 adds units and the two category tables). */
-const WORKSHOP_TABLES = ['materials', 'products', 'product_components', 'stock_movements', 'sales', 'orders', 'order_lines', 'order_line_cuts', 'order_line_cut_materials', 'order_line_sizes', 'product_size_stocks', 'colours', 'product_colours', 'barcodes', 'barcode_names'];
+const WORKSHOP_TABLES = ['clients', 'materials', 'products', 'product_components', 'stock_movements', 'sales', 'orders', 'order_lines', 'order_line_cuts', 'order_line_cut_materials', 'order_line_sizes', 'product_size_stocks', 'colours', 'product_colours', 'barcodes', 'barcode_names'];
 
 /**
  * Every PHP file under `app/`, as [path relative to the project root, source without comments]: a comment that talks about

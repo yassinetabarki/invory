@@ -24,7 +24,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  *
  * @property int $id
  * @property int $workshop_id Never mass-assignable: Actions set it from the actor.
- * @property string $client
+ * @property int|null $client_id The client (INV-4). Null only for an order put away by the INV-4 migration. Never mass-assignable: Actions set it.
+ * @property string $client The client's name, copied from her by the Actions (a client is never renamed, ADR-0021).
  * @property CarbonImmutable $ordered_on The day (a date, no time).
  * @property string|null $note
  * @property int|null $user_id Who recorded it. Never mass-assignable: it comes from the actor.
@@ -105,6 +106,16 @@ class Order extends Model
             $this->lines->every(fn (OrderLine $line): bool => $line->progress() === OrderProgress::Shipped) => OrderProgress::Shipped,
             default => OrderProgress::InProgress,
         };
+    }
+
+    /**
+     * The client (INV-4). Not `client()`: the `client` column (her name) would shadow the relation.
+     *
+     * @return BelongsTo<Client, $this>
+     */
+    public function clientRecord(): BelongsTo
+    {
+        return $this->belongsTo(Client::class, 'client_id');
     }
 
     /** @return BelongsTo<User, $this> */
