@@ -902,3 +902,35 @@ export type ProductionPhase = {
 };
 export type ProductionPhasesProps = { phases: ProductionPhase[] };
 export type ProductionPhaseFormData = { name: string };
+
+/** `GET progress.products.line`: the Start batch window's grid of one product, with its shelf ("Shelf 2") and "Can produce now 112". */
+export type StartBatchLine = RestockLine & {
+    can_produce: number | null; // null when the product has no composition
+    bottleneck: string | null; // the material that stops it
+};
+/** `GET progress.products.materials` (`?units=16`): the table "Materials for 16 units" (Material · Taken · In stock · After). */
+export type StartBatchPreview = {
+    units: number;
+    rows: MaterialMoveRow[]; // by material name; `quantity` is "Taken", `short_by` only when stock is short
+    has_composition: boolean; // false: nothing is taken
+    max_cuttable: number | null;
+    // only when the units exceed max_cuttable, the same text as the refusal under `units`:
+    //   "Not enough stock to cut 20 units. You can cut at most 12 now: Metal shank button 17mm runs short. Restock it first, or cut 12 or fewer."
+    short_message: string | null;
+};
+/** Flash `batches_started` after Start batch: "2 batches started" · "16 units of Denim Jacket started. …" and the tickets' lines. */
+export type BatchesStarted = {
+    product: string;
+    units: number;
+    batches: {
+        number: string;
+        colour: string;
+        size: string | null;
+        units: number;
+    }[]; // size null for a "One size" product
+};
+/** `POST progress.batches.store`. Errors: `product_id`, `units` (changed, nothing typed, short stock), `units.{colour}.{size}`. */
+export type StartBatchFormData = {
+    product_id: number | null;
+    units: Record<number, Record<number, string>>; // colour id → size id → typed ('' = 0)
+};
