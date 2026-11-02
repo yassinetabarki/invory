@@ -35,6 +35,16 @@ class UpdateOrderRequest extends StoreOrderRequest
     }
 
     /**
+     * The rules of a new order without the Client card: Edit order keeps the order's client (INV-4-d gives it its own picker).
+     *
+     * @return array<string, mixed>
+     */
+    public function rules(): array
+    {
+        return array_filter(parent::rules(), fn (string $field): bool => $field !== 'client' && ! str_starts_with($field, 'client.'), ARRAY_FILTER_USE_KEY);
+    }
+
+    /**
      * The units of every line, then the started-line rules once the lines themselves are valid. This runs on unlocked data, to answer early; `UpdateOrder` repeats
      * it on the counts read under the order lock, which is the check that counts.
      *

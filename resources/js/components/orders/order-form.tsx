@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 import type {
+    ClientFields,
     Order,
     OrderFormData,
     OrderFormProduct,
@@ -37,19 +38,28 @@ type OrderFormProps = {
     cancelHref: string;
 };
 
+/** An empty Client card (INV-4-b: the phone finds the client, or Name and City add her). */
+const NO_CLIENT: ClientFields = {
+    phone: '',
+    name: '',
+    city: '',
+    source: '',
+    source_other: '',
+};
+
 /** Starting values: today and one empty line, or the order's own details and lines. */
 function toFormState(order: Order | undefined, today: string): OrderFormState {
     if (!order) {
         return {
-            client: '',
+            client: NO_CLIENT,
             ordered_on: today,
             note: '',
             lines: [newOrderLine()],
         };
     }
 
+    // Edit order keeps the order's client (INV-4-d gives it a picker): nothing about the client is sent.
     return {
-        client: order.client,
         ordered_on: order.ordered_on,
         note: order.note ?? '',
         lines: order.lines.map((line) =>
@@ -126,6 +136,11 @@ export function OrderForm({
             ),
     );
     const { errors, processing } = form;
+    const client = form.data.client;
+
+    function setClient(field: keyof ClientFields, value: string) {
+        form.setData('client', { ...(client ?? NO_CLIENT), [field]: value });
+    }
 
     const errorSignature = Object.entries(errors)
         .filter(([, message]) => Boolean(message))
@@ -191,23 +206,76 @@ export function OrderForm({
                     Details
                 </h2>
                 <div className="grid gap-4 sm:grid-cols-[2fr_1fr]">
-                    <FormField
-                        id={`${uid}-client`}
-                        label="Client"
-                        error={errors.client}
-                    >
-                        {(control) => (
-                            <Input
-                                {...control}
-                                value={form.data.client}
-                                placeholder="e.g. Boutique Lina"
-                                autoComplete="off"
-                                onChange={(event) =>
-                                    form.setData('client', event.target.value)
-                                }
-                            />
-                        )}
-                    </FormField>
+                    {client ? (
+                        <div className="grid gap-4 sm:col-span-2 sm:grid-cols-3">
+                            <FormField
+                                id={`${uid}-client-phone`}
+                                label="Phone"
+                                error={errors['client.phone']}
+                            >
+                                {(control) => (
+                                    <Input
+                                        {...control}
+                                        type="tel"
+                                        inputMode="tel"
+                                        value={client.phone}
+                                        autoComplete="off"
+                                        onChange={(event) =>
+                                            setClient(
+                                                'phone',
+                                                event.target.value,
+                                            )
+                                        }
+                                    />
+                                )}
+                            </FormField>
+                            <FormField
+                                id={`${uid}-client-name`}
+                                label="Name"
+                                error={errors['client.name']}
+                            >
+                                {(control) => (
+                                    <Input
+                                        {...control}
+                                        value={client.name}
+                                        autoComplete="off"
+                                        onChange={(event) =>
+                                            setClient(
+                                                'name',
+                                                event.target.value,
+                                            )
+                                        }
+                                    />
+                                )}
+                            </FormField>
+                            <FormField
+                                id={`${uid}-client-city`}
+                                label="City"
+                                error={errors['client.city']}
+                            >
+                                {(control) => (
+                                    <Input
+                                        {...control}
+                                        value={client.city}
+                                        autoComplete="off"
+                                        onChange={(event) =>
+                                            setClient(
+                                                'city',
+                                                event.target.value,
+                                            )
+                                        }
+                                    />
+                                )}
+                            </FormField>
+                        </div>
+                    ) : (
+                        <p className="text-sm">
+                            <span className="text-muted-foreground">
+                                Client{' '}
+                            </span>
+                            <span className="font-medium">{order?.client}</span>
+                        </p>
+                    )}
                     <FormField
                         id={`${uid}-ordered-on`}
                         label="Order date"

@@ -5,13 +5,16 @@ declare(strict_types=1);
 namespace App\Http\Requests\Orders;
 
 use App\Actions\Orders\SyncOrderLines;
+use App\Domain\Clients\PhoneNumber;
 use App\Enums\OrderLineSizeMode;
 use App\Enums\ProductStatus;
+use App\Models\Client;
 use App\Models\Order;
 use App\Models\OrderLine;
 use App\Models\Product;
 use App\Services\Orders\OrderMessages;
 use App\Services\Products\SizeNames;
+use App\Validation\ClientFieldRules;
 use Closure;
 use Illuminate\Auth\Access\Response;
 use Illuminate\Database\Eloquent\Collection;
@@ -43,11 +46,18 @@ class StoreOrderRequest extends FormRequest
         return $this->user()?->can('create', Order::class) ?? false;
     }
 
-    /** @return array<string, mixed> */
+    /**
+     * The Client card (INV-4, AC-5): a phone always; Name and City only when no client of the workshop has that phone, since a known
+     * phone uses the saved client unchanged (the other fields are then ignored). {@see UpdateOrderRequest} has its own client rule.
+     *
+     * @return array<string, mixed>
+     */
     public function rules(): array
     {
         return [
-            'client' => ['required', 'string', 'max:100'],
+            // Missing, the card's three required fields each say so ("Check the client: 3 fields can't be saved.").
+            'client' => ['nullable', 'array'],
+            ...ClientFieldRules::rules('client.', newClient: ! $this->phoneIsKnown()),
             'ordered_on' => ['bail', 'required', 'date_format:Y-m-d', 'before_or_equal:today'],
             'note' => ['nullable', 'string', 'max:1000'],
             'lines' => ['bail', 'required', 'array', 'min:1', 'max:'.self::MAX_LINES],
@@ -69,6 +79,8 @@ class StoreOrderRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'client.array' => __("Enter the client's phone."),
+            ...ClientFieldRules::messages('client.'),
             'ordered_on.before_or_equal' => __("The order date can't be in the future."),
             'lines.required' => __('Add at least one product.'),
             'lines.min' => __('Add at least one product.'),
@@ -96,6 +108,15 @@ class StoreOrderRequest extends FormRequest
                 }
             }
         }];
+    }
+
+    /** True when the typed phone is valid and already the phone of a client of the workshop. */
+    private function phoneIsKnown(): bool
+    {
+        $phone = $this->input('client.phone');
+        $parsed = is_string($phone) ? PhoneNumber::parse($phone) : null;
+
+        return $parsed !== null && Client::query()->where('phone_key', $parsed->key)->exists();
     }
 
     /**

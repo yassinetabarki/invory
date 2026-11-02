@@ -1,6 +1,7 @@
 <?php
 
 use App\Actions\Products\CreateProduct;
+use App\Models\Client;
 use App\Models\Colour;
 use App\Models\Material;
 use App\Models\Order;
@@ -310,7 +311,8 @@ function validSalePayload(array $overrides = []): array
 function validOrderPayload(array $overrides = []): array
 {
     return [
-        'client' => 'Boutique Lina',
+        // INV-4: New order's Client card. A phone no client has yet, so the save adds Boutique Lina with the order.
+        'client' => ['phone' => '71 234 567', 'name' => 'Boutique Lina', 'city' => 'Tunis', 'source' => 'walk_in', 'source_other' => ''],
         'ordered_on' => now()->toDateString(),
         'note' => 'Deliver before 30 Oct, in 2 boxes',
         'lines' => [
@@ -796,4 +798,49 @@ function figuresOrdersLeaveAlone(): array
         'sales' => Sale::query()->orderBy('id')->get()->toArray(),
         'dashboard' => Arr::only($dashboard, ['stats', 'top_products', 'needs_restock', 'recent_sales', 'alerts']),
     ];
+}
+
+/**
+ * The example clients of INV-4's card, by name: source, city and phone. `demoClient('Amira Ben Salah')` adds her to the current
+ * workshop (once per test: a second call is refused by the unique phone).
+ *
+ * @var array<string, array{string|null, string, string}>
+ */
+const DEMO_CLIENTS = [
+    'Amira Ben Salah' => ['instagram', 'Sousse', '22 345 678'],
+    'Boutique Lina' => ['walk_in', 'Tunis', '71 234 567'],
+    'Mehdi Jaziri' => ['whatsapp', 'Ariana', '29 111 222'],
+    'Nour Gharbi' => ['tiktok', 'Sfax', '55 123 456'],
+    'Rania Hamdi' => ['website', 'Bizerte', '50 987 654'],
+    'Yassine Trabelsi' => ['facebook', 'Tunis', '98 765 432'],
+];
+
+function demoClient(string $name): Client
+{
+    [$source, $city, $phone] = DEMO_CLIENTS[$name];
+
+    return Client::factory()->create(['name' => $name, 'source' => $source, 'city' => $city, 'phone' => $phone]);
+}
+
+/**
+ * An order of the client on that day with one line of the Leather Tote (needs the demo products): open (nothing shipped) or fully
+ * shipped, of `$units` units.
+ */
+function clientOrder(Client $client, string $orderedOn, bool $shipped = false, int $units = 2): Order
+{
+    $order = Order::factory()->create(['client_id' => $client->id, 'client' => $client->name, 'ordered_on' => $orderedOn]);
+    OrderLine::factory()->stages(0, 0, $shipped ? $units : 0)->create(['order_id' => $order->id, 'product_id' => pid(4), 'quantity' => $units, 'position' => 0]);
+
+    return $order;
+}
+
+/** Amira Ben Salah with the card's three orders: 28 Oct 2026 open, 14 Oct and 1 Sep 2026 shipped (3 orders, 1 open, last 28 Oct). */
+function amiraWithOrders(): Client
+{
+    $amira = demoClient('Amira Ben Salah');
+    clientOrder($amira, '2026-09-01', shipped: true);
+    clientOrder($amira, '2026-10-14', shipped: true, units: 1);
+    clientOrder($amira, '2026-10-28');
+
+    return $amira;
 }

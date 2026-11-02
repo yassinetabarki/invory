@@ -235,8 +235,8 @@ it('sends an invalid write back to where it came from, with its errors', functio
     'products.barcodes.store' => ['post', 'products.barcodes.store', 'product', ['variants']],
     'sales.store' => ['post', 'sales.store', null, ['product_id', 'quantity', 'unit_price', 'sold_on']],
     'sales.update' => ['put', 'sales.update', 'sale', ['product_id', 'quantity', 'unit_price', 'sold_on']],
-    'orders.store' => ['post', 'orders.store', null, ['client', 'ordered_on', 'lines']],
-    'orders.update' => ['put', 'orders.update', 'order', ['client', 'ordered_on', 'lines']],
+    'orders.store' => ['post', 'orders.store', null, ['client.phone', 'client.name', 'client.city', 'ordered_on', 'lines']],
+    'orders.update' => ['put', 'orders.update', 'order', ['ordered_on', 'lines']],
     'orders.lines.moves.store' => ['post', 'orders.lines.moves.store', 'order line', ['move', 'units']],
     'restock' => ['post', 'materials.restocks.store', 'material', ['quantity', 'unit_price', 'received_on']], // update_unit_cost is optional (F-20)
 ]);

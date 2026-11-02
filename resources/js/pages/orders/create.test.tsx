@@ -24,6 +24,9 @@ const props: OrderCreateProps = {
         }),
     ],
     size_lists: sizeLists,
+    cities: [],
+    client_sources: [],
+    client_preset: null,
 };
 
 describe('orders/create page', () => {

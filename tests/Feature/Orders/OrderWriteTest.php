@@ -86,7 +86,7 @@ it('records Boutique Lina\'s order and lands on its page, where the list shows i
 
     $response->assertRedirect(route('orders.show', $order))
         ->assertSessionHasNoErrors()
-        ->assertInertiaFlash('toast', ['type' => 'success', 'message' => 'Order recorded.']);
+        ->assertInertiaFlash('toast', ['type' => 'success', 'message' => 'Order recorded. Boutique Lina is now one of your clients.']);
 
     expect($order->only(['client', 'note', 'user_id']))
         ->toBe(['client' => 'Boutique Lina', 'note' => 'Deliver before 30 Oct, in 2 boxes', 'user_id' => $this->user->id])
@@ -121,8 +121,13 @@ it('refuses a mistake with the card\'s message under its field and saves nothing
         ->and(Order::query()->count())->toBe(0)
         ->and(OrderLine::query()->count())->toBe(0);
 })->with([
-    'client empty' => [['client' => ''], 'client', 'The client field is required.'],
-    'client of 101 characters' => [['client' => str_repeat('a', 101)], 'client', 'The client field must not be greater than 100 characters.'],
+    'phone empty' => [['client' => ['phone' => '', 'name' => 'Boutique Lina', 'city' => 'Tunis']], 'client.phone', "Enter the client's phone."],
+    'phone of 7 digits' => [['client' => ['phone' => '2234567', 'name' => 'Boutique Lina', 'city' => 'Tunis']], 'client.phone', 'Enter 8 digits, such as 22 345 678, or a number abroad starting with +.'],
+    'a new phone without a name' => [['client' => ['phone' => '71 234 567', 'name' => '', 'city' => 'Tunis']], 'client.name', "Enter the client's name."],
+    'a name of 101 characters' => [['client' => ['phone' => '71 234 567', 'name' => str_repeat('a', 101), 'city' => 'Tunis']], 'client.name', 'Keep the name to 100 characters or fewer.'],
+    'a new phone without a city' => [['client' => ['phone' => '71 234 567', 'name' => 'Boutique Lina', 'city' => '']], 'client.city', "Enter the client's city."],
+    'a city of 61 characters' => [['client' => ['phone' => '71 234 567', 'name' => 'Boutique Lina', 'city' => str_repeat('a', 61)]], 'client.city', 'Keep the city to 60 characters or fewer.'],
+    'another source of 41 characters' => [['client' => ['phone' => '71 234 567', 'name' => 'Boutique Lina', 'city' => 'Tunis', 'source' => 'other', 'source_other' => str_repeat('a', 41)]], 'client.source_other', 'Keep it to 40 characters or fewer.'],
     'order date empty' => [['ordered_on' => ''], 'ordered_on', 'The order date field is required.'],
     'order date tomorrow' => [['ordered_on' => '2026-10-16'], 'ordered_on', 'The order date can\'t be in the future.'],
     'note of 1001 characters' => [['note' => str_repeat('a', 1001)], 'note', 'The note field must not be greater than 1000 characters.'],

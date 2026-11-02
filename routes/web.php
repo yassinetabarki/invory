@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ClientLookupController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MaterialController;
 use App\Http\Controllers\MaterialOptionController;
@@ -41,6 +42,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('products/{product}/barcodes', [ProductBarcodeController::class, 'store'])
         ->where('product', '[0-9]{1,18}')
         ->name('products.barcodes.store');
+
+    // New order's Client card (INV-4-b): the client with this phone, or with this name. JSON, read-only (ADR-0009 rule 5).
+    Route::get('clients/lookup', [ClientLookupController::class, 'show'])->name('clients.lookup');
 
     // {order} is route-model bound (an unknown, soft-deleted or other workshop's order is a 404); the digit constraint keeps a
     // malformed id a 404 too.

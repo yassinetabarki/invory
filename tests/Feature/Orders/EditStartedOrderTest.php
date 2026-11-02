@@ -121,7 +121,8 @@ it('keeps what has not started free to change, and a started line free to grow (
         ->assertSessionHasNoErrors();
 
     expect(savedStages($order))->toBe($stages)
-        ->and(Order::query()->findOrFail($order->id)->client)->toBe('Changed Client');
+        // Edit order keeps the order's client: a typed name is no longer read (INV-4-b; INV-4-d gives Edit order its picker).
+        ->and(Order::query()->findOrFail($order->id)->client)->toBe('Boutique Lina');
 })->with([
     'Denim Jacket 40' => [[['jacket', 40], ['jeans', 30]], [[10, 20, 10, 0], [30, 0, 0, 0]]],
     'Denim Jeans swapped' => [[['jacket', 50], ['tshirt', 5]], [[20, 20, 10, 0], [5, 0, 0, 0]]],

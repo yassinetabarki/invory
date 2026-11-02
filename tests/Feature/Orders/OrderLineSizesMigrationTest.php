@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Client;
 use Database\Seeders\DemoCatalogSeeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -22,8 +23,10 @@ const LINE_COLUMNS_BEFORE_SIZES = ['id', 'workshop_id', 'order_id', 'product_id'
 function putLinesInTheOldShape(): int
 {
     $workshopId = DB::table('products')->where('id', pid(1))->value('workshop_id');
+    // INV-4: an order shown has a client (PostgreSQL's CHECK), named like the order.
     $order = fn (string $client, string $orderedOn): int => DB::table('orders')->insertGetId([
         'workshop_id' => $workshopId, 'client' => $client, 'ordered_on' => $orderedOn, 'created_at' => now(), 'updated_at' => now(),
+        'client_id' => Client::factory()->create(['workshop_id' => $workshopId, 'name' => $client])->id,
     ]);
     $line = fn (int $orderId, int $product, int $quantity, array $counts): array => [
         'workshop_id' => $workshopId, 'order_id' => $orderId, 'product_id' => pid($product), 'quantity' => $quantity, 'position' => 0,

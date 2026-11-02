@@ -88,7 +88,9 @@ describe('orders/edit page', () => {
         expect(
             screen.getByRole('heading', { level: 1, name: 'Edit order' }),
         ).toBeInTheDocument();
-        expect(screen.getByLabelText('Client')).toHaveValue('Boutique Lina');
+        // Edit order shows the order's client and keeps it (INV-4-d gives it a picker).
+        expect(screen.getByText('Boutique Lina')).toBeInTheDocument();
+        expect(screen.queryByLabelText('Phone')).not.toBeInTheDocument();
         expect(screen.getByLabelText('Order date')).toHaveValue('2026-10-15');
         expect(screen.getByLabelText('Note (optional)')).toHaveValue('');
 
@@ -112,7 +114,6 @@ describe('orders/edit page', () => {
             action: '/orders/7',
             method: 'put',
             data: {
-                client: 'Boutique Lina',
                 ordered_on: '2026-10-15',
                 note: '',
                 lines: [

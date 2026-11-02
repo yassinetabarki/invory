@@ -484,7 +484,8 @@ tests/
 | DELETE | /sales/{sale} | sales.destroy | @destroy | redirect back |
 | GET | /orders | orders.index | OrderController@index | `orders/index` (S-48: list, search) |
 | GET | /orders/create | orders.create | @create | `orders/create` (active products only) |
-| POST | /orders | orders.store | @store | redirect → show ("Order recorded.") |
+| POST | /orders | orders.store | @store | redirect → show ("Order recorded.", or "Order recorded. Ines Mrad is now one of your clients."); INV-4: `client` is the Client card, found by the phone's key or added with the order |
+| GET | /clients/lookup | clients.lookup | ClientLookupController@show | JSON `ClientLookup` by `phone` or `name` (INV-4-b, ADR-0009 rule 5, ADR-0021) |
 | GET | /orders/{order} | orders.show | @show | `orders/show` (S-49: stage figures per line, the move window) |
 | GET | /orders/{order}/edit | orders.edit | @edit | `orders/edit` (also the order's own non-active or deleted products) |
 | PUT | /orders/{order} | orders.update | @update | redirect → show ("Order updated.") |

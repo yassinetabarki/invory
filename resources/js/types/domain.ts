@@ -439,12 +439,53 @@ export type OrderLineFormRow = {
     sizes?: Record<number, string>;
 };
 
+/** Where a client found the workshop (INV-4): a fixed list, in this order. */
+export type ClientSource =
+    | 'instagram'
+    | 'facebook'
+    | 'tiktok'
+    | 'whatsapp'
+    | 'website'
+    | 'walk_in'
+    | 'word_of_mouth'
+    | 'other';
+
+/** Who a client is (INV-4): every client line, picker option and chosen client. */
+export type ClientRef = {
+    id: number;
+    name: string;
+    phone: string; // as the screens show it: "22 345 678", or a number abroad as typed with single spaces
+    city: string;
+    source: ClientSource | null;
+    source_label: string | null; // "Instagram", "Walk-in / shop"…; null with no source
+    source_other: string | null; // only with 'other': "Fashion fair Sousse"
+};
+
+/** A client with her orders (INV-4): the Existing client block, the client page and the Clients list. */
+export type ClientSummary = ClientRef & {
+    orders: number; // her orders still shown
+    open_orders: number; // the Orders list's "open": units still to ship
+    last_order_on: string | null; // 'YYYY-MM-DD'; null with no order
+};
+
+/** `GET clients/lookup?phone=` or `?name=` (INV-4-b): the client with that phone (its digits) or name (ignoring capitals). */
+export type ClientLookup = { client: ClientSummary | null };
+
+/** The Client card's fields (New order) and the Add client window's. Errors: client.phone, client.name, client.city, client.source_other. */
+export type ClientFields = {
+    phone: string;
+    name: string;
+    city: string;
+    source: ClientSource | '';
+    source_other: string;
+};
+
 /**
- * Fields the order form submits. Errors come back as client, ordered_on, note, lines, lines.N.product_id, lines.N.quantity (single-field
+ * Fields the order form submits. Errors come back as client.phone, client.name, client.city, client.source_other (New order), ordered_on, note, lines, lines.N.product_id, lines.N.quantity (single-field
  * lines), lines.N.sizes (a by_size line) and lines.N.sizes.<size id> (one size).
  */
 export type OrderFormData = {
-    client: string;
+    client?: ClientFields; // New order only (INV-4): the server finds the client by the phone's digits, or adds her
     ordered_on: string; // 'YYYY-MM-DD'
     note: string;
     lines: OrderLineFormRow[];
@@ -463,6 +504,9 @@ export type OrderFormProduct = OrderProduct & { size_list_code: string };
 export type OrderCreateProps = {
     products: OrderFormProduct[];
     size_lists: Record<string, SizeList>; // the size lists by code, each once
+    cities: string[]; // the workshop's clients' cities, A → Z, each once (City suggests them)
+    client_sources: Option<ClientSource>[]; // the eight sources, in order, with their words
+    client_preset: ClientSummary | null; // from a client page (`?client=<id>`): her, shown as Existing client
 };
 export type OrderEditProps = {
     order: Order;

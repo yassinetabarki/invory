@@ -80,10 +80,7 @@ describe('<OrderForm>', () => {
     it('records an order with two one-size products (AC-2)', async () => {
         const user = renderForm();
 
-        expect(screen.getByLabelText('Client')).toHaveAttribute(
-            'placeholder',
-            'e.g. Boutique Lina',
-        );
+        expect(screen.getByLabelText('Phone')).toHaveValue('');
         expect(screen.getByLabelText('Order date')).toHaveValue('2026-10-08');
         expect(screen.getByLabelText('Note (optional)')).toHaveAttribute(
             'placeholder',
@@ -96,7 +93,9 @@ describe('<OrderForm>', () => {
             lineGroup(1).getByRole('combobox', { name: 'Product' }),
         ).toHaveTextContent('Choose a product…');
 
-        await user.type(screen.getByLabelText('Client'), 'Boutique Lina');
+        await user.type(screen.getByLabelText('Phone'), '71 234 567');
+        await user.type(screen.getByLabelText('Name'), 'Boutique Lina');
+        await user.type(screen.getByLabelText('City'), 'Tunis');
         fireEvent.change(screen.getByLabelText('Order date'), {
             target: { value: '2026-10-15' },
         });
@@ -116,7 +115,13 @@ describe('<OrderForm>', () => {
             action: '/orders',
             method: 'post',
             data: {
-                client: 'Boutique Lina',
+                client: {
+                    phone: '71 234 567',
+                    name: 'Boutique Lina',
+                    city: 'Tunis',
+                    source: '',
+                    source_other: '',
+                },
                 ordered_on: '2026-10-15',
                 note: 'Deliver before 30 Oct, in 2 boxes',
                 lines: [
@@ -139,13 +144,13 @@ describe('<OrderForm>', () => {
     it("shows the server's messages under their fields and keeps what was typed (AC-4)", async () => {
         const user = renderForm();
 
-        await user.type(screen.getByLabelText('Client'), 'Boutique Lina');
+        await user.type(screen.getByLabelText('Name'), 'Boutique Lina');
         await fillLine(user, 1, 'Leather Tote · PRD-TOT-002', '0');
         await user.click(screen.getByRole('button', { name: 'Add product' }));
 
         setFormState({
             errors: {
-                client: 'The client field must not be greater than 100 characters.',
+                'client.name': 'Keep the name to 100 characters or fewer.',
                 ordered_on: "The order date can't be in the future.",
                 note: 'The note field must not be greater than 1000 characters.',
                 lines: 'An order can hold up to 50 products.',
@@ -157,8 +162,8 @@ describe('<OrderForm>', () => {
 
         for (const [field, message] of [
             [
-                screen.getByLabelText('Client'),
-                'The client field must not be greater than 100 characters.',
+                screen.getByLabelText('Name'),
+                'Keep the name to 100 characters or fewer.',
             ],
             [
                 screen.getByLabelText('Order date'),
@@ -195,7 +200,7 @@ describe('<OrderForm>', () => {
         ).toBeValid();
 
         // Nothing typed was lost.
-        expect(screen.getByLabelText('Client')).toHaveValue('Boutique Lina');
+        expect(screen.getByLabelText('Name')).toHaveValue('Boutique Lina');
         expect(lineGroup(1).getByLabelText('Quantity')).toHaveValue('0');
         expect(
             lineGroup(1).getByRole('combobox', { name: 'Product' }),
@@ -206,7 +211,7 @@ describe('<OrderForm>', () => {
         const user = renderForm();
         const line = lineGroup(1);
 
-        await user.type(screen.getByLabelText('Client'), 'Boutique Lina');
+        await user.type(screen.getByLabelText('Name'), 'Boutique Lina');
         await user.click(line.getByRole('combobox', { name: 'Product' }));
         await user.click(
             screen.getByRole('option', { name: 'Denim Jacket · PRD-JKT-001' }),
@@ -277,7 +282,7 @@ describe('<OrderForm>', () => {
         );
         const line = lineGroup(1);
 
-        await user.type(screen.getByLabelText('Client'), 'Boutique Lina');
+        await user.type(screen.getByLabelText('Name'), 'Boutique Lina');
         await user.click(line.getByRole('combobox', { name: 'Product' }));
         await user.click(
             screen.getByRole('option', { name: 'Denim Jacket · PRD-JKT-001' }),

@@ -45,7 +45,7 @@ it('records a quantity per size, with a size left empty having no row, and a "On
         [pid(1), sizeIds(['S' => '10', 'M' => '20', 'L' => '15', 'XL' => '5'])],
         [pid(4), '12'],
     ]))->assertSessionHasNoErrors()
-        ->assertInertiaFlash('toast', ['type' => 'success', 'message' => 'Order recorded.']);
+        ->assertInertiaFlash('toast', ['type' => 'success', 'message' => 'Order recorded. Boutique Lina is now one of your clients.']);
 
     $order = Order::query()->firstOrFail();
 
