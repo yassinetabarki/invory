@@ -34,7 +34,7 @@ use Illuminate\View\View;
 */
 
 /** The only parameters a walked GET route may have, each answered with the scanning user's OWN record. */
-const LEAK_SCAN_PARAMETERS = ['material', 'product', 'order'];
+const LEAK_SCAN_PARAMETERS = ['material', 'product', 'order', 'client'];
 
 /**
  * Why a GET route behind `auth` is not walked, or null when it is. Every skip is a route that shows no workshop data.
@@ -132,7 +132,9 @@ it('shows no record of the other workshop on any signed-in page', function (stri
     $workshops = ['ZZ-ALPHA' => leakScanWorkshop('ZZ-ALPHA'), 'ZZ-BRAVO' => leakScanWorkshop('ZZ-BRAVO')];
     [$own, $other] = [$workshops[$mine], $workshops[$theirs]];
 
-    $parameters = ['material' => $own['material']->id, 'product' => $own['product']->id, 'order' => $own['order']->id];
+    $parameters = ['material' => $own['material']->id, 'product' => $own['product']->id, 'order' => $own['order']->id, 'client' => $own['order']->client_id];
+    // INV-4: the order's client is "<marker> Boutique", made by the order factory.
+    $theirClient = $other['order']->clientRecord;
     // A prefix of the other marker: it matches that workshop's rows, and a page echoing it back still doesn't contain the marker itself.
     $echoSafeSearch = ['search' => substr($theirs, 0, -1)];
 
@@ -142,6 +144,10 @@ it('shows no record of the other workshop on any signed-in page', function (stri
         'materials.options' => [['include' => [$other['material']->id, $other['outOfStock']->id]]],
         'products.index' => [['cant_produce' => 1], [...$echoSafeSearch, 'cant_produce' => 1]],
         'sales.index' => [['product_id' => $other['product']->id], ['product_id' => $other['product']->id, 'period' => SalesPeriod::ThisYear->value]],
+        'clients.index' => [['source' => 'instagram']],
+        'clients.options' => [['include' => [$theirClient->id]]],
+        'clients.lookup' => [['phone' => $theirClient->phone], ['name' => $theirClient->name]],
+        'orders.create' => [['client' => $theirClient->id]],
         'dashboard' => array_map(static fn (SalesPeriod $period): array => ['period' => $period->value], SalesPeriod::cases()),
     ];
 
@@ -187,7 +193,7 @@ it('shows no record of the other workshop on any signed-in page', function (stri
     }
 
     // The scan is not vacuous: the pages that list or show records do show the scanning workshop's own marker.
-    expect(array_keys($ownSeenOn))->toContain('dashboard', 'materials.index', 'materials.show', 'materials.edit', 'materials.options', 'products.index', 'products.show', 'products.edit', 'sales.index', 'orders.index', 'orders.create', 'orders.show', 'orders.edit');
+    expect(array_keys($ownSeenOn))->toContain('dashboard', 'materials.index', 'materials.show', 'materials.edit', 'materials.options', 'products.index', 'products.show', 'products.edit', 'sales.index', 'orders.index', 'orders.create', 'orders.show', 'orders.edit', 'clients.index', 'clients.show', 'clients.options');
     // ... and so do the photos of its own material and product, so the photo search isn't vacuous either.
     expect(array_keys($ownPhotoSeenOn))->toContain('materials.index', 'materials.show', 'products.index', 'products.show', 'sales.index');
     expect($walked)->not->toBeEmpty();

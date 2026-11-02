@@ -19,12 +19,12 @@ final readonly class FindOrAddClient
      * client found keeps her saved details: an order never changes them. Called inside the order's transaction: the insert runs in a
      * savepoint, so a client added meanwhile by someone else (the unique key refuses the second row) is found instead.
      *
-     * @param  array{phone: string, name?: string|null, city?: string|null, source?: string|null, source_other?: string|null}  $fields  validated
+     * @param  array<string, mixed>  $fields  validated: `phone`, and `name`, `city`, `source`, `source_other` for a new client
      * @return array{Client, bool} the client, and whether she was added now
      */
     public function handle(array $fields, User $actor): array
     {
-        $phone = PhoneNumber::parse($fields['phone']) ?? throw new InvalidArgumentException('The phone was not validated.');
+        $phone = PhoneNumber::parse(self::text($fields, 'phone')) ?? throw new InvalidArgumentException('The phone was not validated.');
         $found = $this->byKey($phone->key);
 
         if ($found !== null) {
@@ -41,17 +41,17 @@ final readonly class FindOrAddClient
     /**
      * A new client of the actor's workshop. Other source is kept only with the source Other. Shared with `AddClient`.
      *
-     * @param  array{phone: string, name?: string|null, city?: string|null, source?: string|null, source_other?: string|null}  $fields  validated
+     * @param  array<string, mixed>  $fields  validated: `phone`, `name`, `city`, and `source`, `source_other` when given
      */
     public static function add(array $fields, User $actor): Client
     {
-        $source = ClientSource::tryFrom((string) ($fields['source'] ?? ''));
-        $other = trim((string) ($fields['source_other'] ?? ''));
+        $source = ClientSource::tryFrom(self::text($fields, 'source'));
+        $other = self::text($fields, 'source_other');
 
         $client = new Client([
-            'name' => trim((string) ($fields['name'] ?? '')),
-            'phone' => $fields['phone'],
-            'city' => trim((string) ($fields['city'] ?? '')),
+            'name' => self::text($fields, 'name'),
+            'phone' => self::text($fields, 'phone'),
+            'city' => self::text($fields, 'city'),
             'source' => $source,
             'source_other' => $source === ClientSource::Other && $other !== '' ? $other : null,
         ]);
@@ -62,6 +62,18 @@ final readonly class FindOrAddClient
         $client->save();
 
         return $client;
+    }
+
+    /**
+     * A validated text field, trimmed; '' when it was left out or empty.
+     *
+     * @param  array<string, mixed>  $fields
+     */
+    private static function text(array $fields, string $key): string
+    {
+        $value = $fields[$key] ?? null;
+
+        return is_string($value) ? trim($value) : '';
     }
 
     private function byKey(string $key): ?Client

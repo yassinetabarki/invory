@@ -10,6 +10,8 @@ use App\Models\Concerns\BelongsToWorkshop;
 use Carbon\CarbonInterface;
 use Database\Factories\ClientFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -74,5 +76,50 @@ class Client extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Clients whose name or city contains the term (case-insensitive), or whose phone contains its digits ("22 345" finds 22 345 678).
+     * No filter for a null or empty term.
+     *
+     * @param  Builder<Client>  $query
+     */
+    #[Scope]
+    protected function search(Builder $query, ?string $term): void
+    {
+        $term = trim((string) $term);
+
+        if ($term === '') {
+            return;
+        }
+
+        $digits = PhoneNumber::searchDigits($term);
+
+        $query->where(fn (Builder $q) => $q
+            ->whereLike('name', "%{$term}%")
+            ->orWhereLike('city', "%{$term}%")
+            ->when($digits !== null, fn (Builder $phone) => $phone->orWhereLike('phone_key', "%{$digits}%")));
+    }
+
+    /**
+     * Clients who came from this source (no filter for null).
+     *
+     * @param  Builder<Client>  $query
+     */
+    #[Scope]
+    protected function fromSource(Builder $query, ?ClientSource $source): void
+    {
+        $query->when($source !== null, fn (Builder $q) => $q->where('source', $source?->value));
+    }
+
+    /**
+     * A → Z by name, then the oldest first: the order of every client list.
+     *
+     * @param  Builder<Client>  $query
+     */
+    #[Scope]
+    protected function alphabetical(Builder $query): void
+    {
+        $query->orderBy('name')->orderBy('id');
     }
 }

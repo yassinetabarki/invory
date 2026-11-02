@@ -485,6 +485,10 @@ tests/
 | GET | /orders | orders.index | OrderController@index | `orders/index` (S-48: list, search) |
 | GET | /orders/create | orders.create | @create | `orders/create` (active products only) |
 | POST | /orders | orders.store | @store | redirect → show ("Order recorded.", or "Order recorded. Ines Mrad is now one of your clients."); INV-4: `client` is the Client card, found by the phone's key or added with the order |
+| GET | /clients | clients.index | ClientController@index | `clients/index` (INV-4-c: search name, city or phone digits; `source`; 25 a page A → Z) |
+| POST | /clients | clients.store | @store | redirect back ("Client created."), flash `client_created` (`ClientRef`); a taken phone: error on `phone` + `phone_taken_by` |
+| GET | /clients/{client} | clients.show | @show | `clients/show` (her figures and orders, `status` default `all`) |
+| GET | /clients/options | clients.options | ClientOptionController@index | JSON `ClientRef[]` (`search`, `limit` ≤ 50, `include`), A → Z |
 | GET | /clients/lookup | clients.lookup | ClientLookupController@show | JSON `ClientLookup` by `phone` or `name` (INV-4-b, ADR-0009 rule 5, ADR-0021) |
 | GET | /orders/{order} | orders.show | @show | `orders/show` (S-49: stage figures per line, the move window) |
 | GET | /orders/{order}/edit | orders.edit | @edit | `orders/edit` (also the order's own non-active or deleted products) |

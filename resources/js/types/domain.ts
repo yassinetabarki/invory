@@ -471,6 +471,41 @@ export type ClientSummary = ClientRef & {
 /** `GET clients/lookup?phone=` or `?name=` (INV-4-b): the client with that phone (its digits) or name (ignoring capitals). */
 export type ClientLookup = { client: ClientSummary | null };
 
+/** The Clients page's filters (INV-4): in the page address, combined. */
+export type ClientFilters = {
+    search: string | null; // name, city, or the digits of a phone ("22 345")
+    source: ClientSource | null;
+};
+
+export type ClientsIndexProps = {
+    clients: Paginated<ClientSummary>; // 25 a page, A → Z
+    filters: ClientFilters;
+    client_sources: Option<ClientSource>[];
+    cities: string[]; // for the Add client window's City
+    has_clients: boolean; // any client at all: tells "No clients yet" from "No client matches"
+};
+
+/** The client page (INV-4): her figures and her orders, "All orders" by default. */
+export type ClientShowProps = {
+    client: ClientSummary;
+    orders: Paginated<Order>; // newest first, 25 a page
+    filters: { status: OrderStatusFilter };
+    statuses: Option<OrderStatusFilter>[];
+};
+
+/** `GET clients/options` (INV-4): the picker's search. */
+export type ClientOptionsQuery = {
+    search?: string;
+    limit?: number;
+    include?: number[];
+};
+
+/**
+ * The Add client window posts `ClientFields` to `clients.store`. Errors: name, phone, city, source_other, and `phone_taken_by` (the id
+ * of the client whose phone it is, as a string) with "22 345 678 is already the phone of Amira Ben Salah." on phone. Then the flash
+ * `client_created` carries the new `ClientRef`.
+ */
+
 /** The Client card's fields (New order) and the Add client window's. Errors: client.phone, client.name, client.city, client.source_other. */
 export type ClientFields = {
     phone: string;

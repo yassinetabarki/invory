@@ -1,6 +1,8 @@
 <?php
 
+use App\Http\Controllers\ClientController;
 use App\Http\Controllers\ClientLookupController;
+use App\Http\Controllers\ClientOptionController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MaterialController;
 use App\Http\Controllers\MaterialOptionController;
@@ -45,6 +47,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // New order's Client card (INV-4-b): the client with this phone, or with this name. JSON, read-only (ADR-0009 rule 5).
     Route::get('clients/lookup', [ClientLookupController::class, 'show'])->name('clients.lookup');
+
+    // The client picker's typeahead (INV-4-c): JSON, read-only.
+    Route::get('clients/options', [ClientOptionController::class, 'index'])->name('clients.options');
+
+    // Clients (INV-4-c): never edited or removed. {client} is route-model bound; the digit constraint keeps a malformed id a 404.
+    Route::resource('clients', ClientController::class)->only(['index', 'store', 'show'])
+        ->where(['client' => '[0-9]{1,18}']);
 
     // {order} is route-model bound (an unknown, soft-deleted or other workshop's order is a 404); the digit constraint keeps a
     // malformed id a 404 too.

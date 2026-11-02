@@ -844,3 +844,32 @@ function amiraWithOrders(): Client
 
     return $amira;
 }
+
+/**
+ * The six example clients of INV-4's card with their orders, so the Clients page reads as in AC-2 (orders · open · last order):
+ * Amira 3 · 1 · 28 Oct, Boutique Lina 3 · 1 · 15 Oct, Mehdi 2 · 0 · 12 Oct, Nour 1 · 0 · 20 Oct, Rania 1 · 0 · 9 Oct, Yassine 1 · 1 ·
+ * 27 Oct 2026. Needs the demo products.
+ *
+ * @return array<string, Client> by name
+ */
+function demoClientsWithOrders(): array
+{
+    $clients = ['Amira Ben Salah' => amiraWithOrders()];
+    $orders = [
+        'Boutique Lina' => [['2026-09-20', true], ['2026-10-01', true], ['2026-10-15', false]],
+        'Mehdi Jaziri' => [['2026-09-05', true], ['2026-10-12', true]],
+        'Nour Gharbi' => [['2026-10-20', true]],
+        'Rania Hamdi' => [['2026-10-09', true]],
+        'Yassine Trabelsi' => [['2026-10-27', false]],
+    ];
+
+    foreach ($orders as $name => $dates) {
+        $clients[$name] = demoClient($name);
+
+        foreach ($dates as [$date, $shipped]) {
+            clientOrder($clients[$name], $date, $shipped);
+        }
+    }
+
+    return $clients;
+}

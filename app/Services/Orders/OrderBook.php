@@ -27,15 +27,18 @@ final readonly class OrderBook
     private const PRODUCT_COLUMNS = ['id', 'sku', 'name', 'status', 'deleted_at', 'category_id'];
 
     /**
-     * The list: orders of that status matching the search (client, note, or a line's product name or SKU), newest first, with what
+     * The list: orders of that status (and of that client, when given) matching the search (client, note, or a line's product name or
+     * SKU), newest first, with what
      * the order resources read: the lines in the order entered, each with its product (soft-deleted ones
      * included), and the units sum. Only the product columns the resources use; `deleted_at` and `status` are among them.
      *
      * @return Builder<Order>
      */
-    public function list(?string $search, OrderStatusFilter $status): Builder
+    public function list(?string $search, OrderStatusFilter $status, ?int $clientId = null): Builder
     {
         return Order::query()
+            // INV-4: one client's orders (her page, the Orders list's Client filter).
+            ->when($clientId !== null, fn (Builder $orders) => $orders->where('client_id', $clientId))
             ->when($status === OrderStatusFilter::Open, fn (Builder $orders) => $orders->open())
             ->when($status === OrderStatusFilter::Shipped, fn (Builder $orders) => $orders->shipped())
             ->search($search)->newestFirst()

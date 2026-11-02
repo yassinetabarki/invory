@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Clients;
 
 use App\Domain\Clients\PhoneNumber;
+use App\Enums\ClientSource;
 use App\Models\Client;
 use App\Models\Order;
 use Illuminate\Database\Eloquent\Builder;
@@ -36,6 +37,41 @@ final readonly class ClientBook
     private static function openOnly(Builder $orders): void
     {
         $orders->open();
+    }
+
+    /**
+     * The Clients page: matching the search and the source, A → Z, with their figures.
+     *
+     * @return Builder<Client>
+     */
+    public function list(?string $search, ?ClientSource $source): Builder
+    {
+        return $this->withFigures()->search($search)->fromSource($source)->alphabetical();
+    }
+
+    /**
+     * The picker's options (Find a client by name, Edit order, the Orders list's Client filter): matching the search, A → Z, at most
+     * `$limit`, plus the clients asked for by id (the chosen one) when they don't match.
+     *
+     * @param  list<int>  $include
+     * @return list<Client>
+     */
+    public function options(?string $search, int $limit, array $include = []): array
+    {
+        $matches = Client::query()->search($search)->alphabetical()->limit($limit)->get();
+        $missing = array_values(array_diff($include, $matches->modelKeys()));
+
+        if ($missing !== []) {
+            $matches = $matches->concat(Client::query()->whereKey($missing)->alphabetical()->get());
+        }
+
+        return array_values($matches->all());
+    }
+
+    /** True when the workshop has any client at all: tells "No clients yet" from "No client matches". */
+    public function hasClients(): bool
+    {
+        return Client::query()->exists();
     }
 
     /** The client with this phone (compared on its key), with her figures; none for a phone Invory doesn't know. */
