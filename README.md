@@ -45,9 +45,34 @@ Check: `php -m | grep -E "pdo_pgsql|intl|zip|sockets"`
 **Windows:** install PHP and Composer natively (any source: the php.net zip, Laragon's `bin\php` folder, Scoop…) and make sure `php` and
 `composer` are on your PATH. Restart the terminal after changing the PATH.
 
+**Ubuntu:** the distro's default PHP is usually missing `pgsql`/`sockets`, so install from Ondřej Surý's PPA, which tracks current PHP
+releases:
+
+```bash
+sudo add-apt-repository ppa:ondrej/php
+sudo apt-get update
+sudo apt-get install -y php8.3 php8.3-cli php8.3-pgsql php8.3-sqlite3 php8.3-intl php8.3-mbstring php8.3-zip \
+    php8.3-xml php8.3-curl php8.3-bcmath
+```
+
+`sockets` ships in PHP's core on Linux builds, so no separate package is needed — just confirm it with the check command above.
+
+Install Composer (no `apt` package ships a current version):
+
+```bash
+curl -sS https://getcomposer.org/installer | php
+sudo mv composer.phar /usr/local/bin/composer
+composer -V
+```
+
+Install Node 20+ (via [nvm](https://github.com/nvm-sh/nvm), Volta, or NodeSource) and Docker Engine + the Compose plugin (the
+[official Docker install guide](https://docs.docker.com/engine/install/ubuntu/) — the Ubuntu-repo `docker.io`/`docker-compose` packages are
+often too old). Add your user to the `docker` group so `docker compose` doesn't need `sudo`: `sudo usermod -aG docker $USER` (log out/in to
+apply).
+
 > **Shortcut:** after Step 3 (Docker running), `composer setup` does the rest of the installation in one command: `composer install`,
 > creates `.env` from `.env.example` (only if `.env` doesn't exist), `php artisan key:generate`, `php artisan migrate --force`,
-> `php artisan storage:link`, `npm install` and `npm run build`. Then go to Step 6 (demo data) and Step 7 (run).
+> `php artisan storage:link`, `pnpm install` and `pnpm run build`. Then go to Step 6 (demo data) and Step 7 (run).
 
 ---
 
@@ -57,8 +82,13 @@ Check: `php -m | grep -E "pdo_pgsql|intl|zip|sockets"`
 git clone <repo-url> invory
 cd invory
 composer install
-npm install
+pnpm install
 ```
+
+> This repo is a **pnpm workspace** (`pnpm-workspace.yaml`): use `pnpm`, not `npm`, for every Node command in this guide (`pnpm install`,
+> `pnpm run dev`/`build`, `pnpm exec vp test`…). Plain `npm install` can fail on this project's peer-dependency graph with an internal npm
+> error (`Cannot read properties of null (reading 'edgesOut')`) — that's a bug in npm's resolver, not a problem with your machine.
+> Install pnpm once if you don't have it: `corepack enable` (ships with Node ≥ 16.9), or `npm install -g pnpm`.
 
 ---
 
@@ -216,13 +246,13 @@ composer dev
 ```
 
 `composer dev` runs `php artisan dev`, which starts, in one terminal: `php artisan serve` on http://localhost:8000, the queue listener
-(`php artisan queue:listen`) and Vite (`npm run dev`, hot reload). Ctrl+C stops them all.
+(`php artisan queue:listen`) and Vite (`pnpm run dev`, hot reload). Ctrl+C stops them all.
 
 Alternative, in two terminals:
 
 ```bash
 php artisan serve --port=8000
-npm run dev
+pnpm run dev
 ```
 
 > PHP's built-in server handles **one request at a time on Windows**, so the dashboard and product pages fill their panels one after another.
@@ -247,20 +277,20 @@ Run the gates **one after another** (in parallel, a long frontend test can time 
 
 ```bash
 composer test         # Pint (style check) + Larastan + Pest on SQLite in-memory (no Docker needed)
-npx vp test           # Vitest (React component tests)
-npm run check         # Oxfmt + Oxlint
-npm run types:check   # TypeScript
-npm run build         # production bundle
+pnpm exec vp test     # Vitest (React component tests)
+pnpm run check        # Oxfmt + Oxlint
+pnpm run types:check  # TypeScript
+pnpm run build        # production bundle
 composer test:browser # the golden path in Chromium (needs the build above)
 ```
 
 All six gates must be green before committing.
 
 `composer test:browser` runs one browser test, from sign-in to a sale on the dashboard, in Chromium, on its own throwaway database. Run it
-after `npm run build`: it loads the built assets. Install the browser once first (about 110 MB, not part of `composer setup`):
+after `pnpm run build`: it loads the built assets. Install the browser once first (about 110 MB, not part of `composer setup`):
 
 ```bash
-npx playwright install chromium
+pnpm exec playwright install chromium
 ```
 
 PostgreSQL parity (Docker running):
@@ -285,3 +315,5 @@ PostgreSQL suite on PHP 8.3 and 8.5. The golden-path browser test runs in its ow
 | Photos return 403 or 404 | `php artisan storage:link` (Step 5) |
 | `php` or `composer`: command not found | Add PHP and Composer to your PATH, then restart the terminal |
 | Emails don't arrive in Mailpit | In `.env`: `MAIL_HOST=127.0.0.1` and `MAIL_PORT=1026` (the SMTP port, not the 8026 inbox). Then `php artisan config:clear`, and check `docker compose ps` shows `mailpit` running |
+| `php artisan migrate` fails: `could not find driver` | The `pdo_pgsql`/`pgsql` PHP extensions aren't installed. Ubuntu: `sudo apt-get install -y php8.3-pgsql` (see Prerequisites), then re-run `php -m | grep pgsql` to confirm, no restart needed |
+| `php artisan migrate` fails: `password authentication failed for user "sail"` | The `sail-pgsql` Docker volume was created earlier with different credentials than the ones now in `.env` (Postgres only applies `POSTGRES_PASSWORD` the first time a volume initialises). If the volume holds no data you care about: `docker compose down pgsql && docker volume rm <project>_sail-pgsql && docker compose up -d pgsql`, then re-run `php artisan migrate`. Check first with `docker volume inspect <project>_sail-pgsql` that nothing else depends on it — never do this if the database already has real data |
