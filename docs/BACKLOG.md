@@ -5,7 +5,7 @@
 > **Phases & Goals:** [ROADMAP.md](ROADMAP.md) · **Progress:** [STATUS.md](STATUS.md)
 
 > [!history] Last Cleaned: 2026-11-01
-> - **D-22 (2026-11-02, human):** `INV-4` comes next, ahead of `INV-9` and `INV-3`. New order uses `INV-12`'s phone-first Client card instead of INV-4's switch, so `INV-12` is built within INV-4 and leaves the open list. INV-4's development card is approved (`Ready`, 2026-11-02).
+> - **D-22 (2026-11-02, human):** `INV-4` comes next, ahead of `INV-9` and `INV-3`. New order uses `INV-12`'s phone-first Client card instead of INV-4's switch, so `INV-12` is built within INV-4 and leaves the open list. INV-4's development card is approved (`Ready`, 2026-11-02) and its Technical work too (`Planned`, 2026-11-02: 9 steps, INV-4-a … INV-4-i).
 > - **INV-8 Done** (accepted 2026-11-01; `9f93175`, `28003cb`, `63513ef`, `4678cad`, `5704050`, `36b34a3`, `3b55319`; docs `da41e1b`), so it left the open list. INV-9 is next.
 > - **INV-2 Done** (accepted 2026-10-31; `46af1cc`, `ab313eb`, `4088200`), so it left the open list. The PostgreSQL parity suite was green before the commits (2619 tests). INV-8 is next.
 > - **INV-10 done** (`76b1770`; its card `1f854bf`), so it left the open list.
@@ -64,7 +64,7 @@
 
 | ID | What it brings | Type | Status | Priority / Size |
 | :--- | :--- | :--- | :--- | :--- |
-| **INV-4** | Clients as an entity, found by phone on New order *(takes in INV-12)* | Feature | `Ready` | Must / L |
+| **INV-4** | Clients as an entity, found by phone on New order *(takes in INV-12)* | Feature | `Planned` | Must / L |
 | **INV-9** | Print barcode labels | Feature | `Ready` | Must / M |
 | **INV-3** | Restock of finished products | Feature | `UI approved` | Must |
 | **INV-5** | Production for the shelf: Progress page *(UI card rewritten and approved 2026-11-01)* | Feature | `UI approved` | Must |
@@ -96,7 +96,7 @@
   - Restock serves as the main action on the product page's Sizes & colours card.
 
 #### `INV-4` · Clients as an entity
-- **Type:** Feature | **Priority:** Must | **Size:** L | **Status:** `Ready` *(development card approved 2026-11-02)*
+- **Type:** Feature | **Priority:** Must | **Size:** L | **Status:** `Planned` *(development card and Technical work approved 2026-11-02)*
 - **Cards:** [Development Card](stories/INV-4-clients.md) · [UI Card](stories/INV-4-clients-ui.md) · [INV-12 UI Card](stories/INV-12-client-first-ui.md) *(New order's Client card)*
 - **Details:** 
   - B2C buyer focus: Clients page in sidebar with Source filter, plus individual client profiles.

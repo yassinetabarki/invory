@@ -19,7 +19,7 @@ Work goes one item at a time, in the order below. A UI card comes first, then th
 | INV-10 | The PostgreSQL check runs to the end (tech)        | `Done`        | The check INV-2 needs runs to the end      |
 | INV-2  | Product sizes × colours: stock per colour and size | `Done`        | Know the shelf stock of each variant       |
 | INV-8  | Barcodes for every colour and size                 | `Done`        | Every variant gets its own barcode         |
-| INV-4  | Clients, found by phone on New order (+ INV-12)    | `Ready`       | Orders belong to a client                  |
+| INV-4  | Clients, found by phone on New order (+ INV-12)    | `Planned`     | Orders belong to a client                  |
 | INV-9  | Print barcode labels                               | `Ready`       | Print a label for a variant, or a sheet    |
 | INV-3  | Restock of finished products                       | `UI approved` | Add finished units to the shelf at once    |
 | INV-5  | Production for the shelf: a progress page          | `UI approved` | See where every bundle is in production    |
