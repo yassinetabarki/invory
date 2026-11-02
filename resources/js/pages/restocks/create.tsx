@@ -9,6 +9,8 @@ import {
     restockFieldId,
 } from '@/components/restocks/restock-line';
 import { RestockProductPicker } from '@/components/restocks/restock-product-picker';
+import { ScanField } from '@/components/restocks/scan-field';
+import { typedUnits } from '@/components/orders/order-size-fields';
 import { PageHeader } from '@/components/shared/page-header';
 import {
     AlertDialog,
@@ -101,6 +103,11 @@ export default function RestocksCreate({ preset }: RestockCreateProps) {
     const [focusId, setFocusId] = useState<string | null>(
         preset ? firstFieldOf(preset) : null,
     );
+    const [scanned, setScanned] = useState<{
+        productId: number;
+        colourId: number;
+        sizeId: number;
+    } | null>(null);
     const topRef = useRef<HTMLDivElement>(null);
 
     // Focus a field once it is on the page (a line just added, or the first wrong field after saving).
@@ -133,6 +140,31 @@ export default function RestocksCreate({ preset }: RestockCreateProps) {
                 },
             },
         }));
+    }
+
+    /** One scanned unit (AC-4): the product's line is added at the end if it isn't there, then its field goes up by 1. */
+    function addOne(
+        line: RestockLine,
+        colourId: number,
+        sizeId: number,
+    ): { units: number } | { error: string } {
+        const productId = line.product.id;
+        const onRestock = lines.some((entry) => entry.product.id === productId);
+
+        if (!onRestock && lines.length >= MAX_PRODUCTS) {
+            return { error: 'A restock can hold up to 50 products.' };
+        }
+
+        const next = typedUnits(values[productId]?.[colourId]?.[sizeId]) + 1;
+
+        if (!onRestock) {
+            setLines((current) => [...current, line]);
+        }
+
+        change(productId, colourId, sizeId, String(next));
+        setScanned({ productId, colourId, sizeId });
+
+        return { units: next };
     }
 
     function remove(productId: number) {
@@ -410,6 +442,11 @@ export default function RestocksCreate({ preset }: RestockCreateProps) {
                     </div>
                 </section>
 
+                <ScanField
+                    chosen={lines.map((line) => line.product.id)}
+                    onAdd={addOne}
+                />
+
                 <section
                     aria-labelledby="restock-products"
                     className="flex flex-col gap-3"
@@ -448,6 +485,11 @@ export default function RestocksCreate({ preset }: RestockCreateProps) {
                                     )
                                 }
                                 onRemove={() => remove(line.product.id)}
+                                scanned={
+                                    scanned?.productId === line.product.id
+                                        ? scanned
+                                        : null
+                                }
                                 fieldErrors={fieldErrors}
                                 lineError={errors[`products.${i}`]}
                             />
