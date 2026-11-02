@@ -20,7 +20,7 @@ Work goes one item at a time, in the order below. A UI card comes first, then th
 | INV-2  | Product sizes × colours: stock per colour and size | `Done`        | Know the shelf stock of each variant       |
 | INV-8  | Barcodes for every colour and size                 | `Done`        | Every variant gets its own barcode         |
 | INV-4  | Clients, found by phone on New order (+ INV-12)    | `Done`        | Orders belong to a client                  |
-| INV-5  | Production for the shelf: a progress page          | `Ready`       | See where every batch is in production     |
+| INV-5  | Production for the shelf: a progress page          | `Planned`     | See where every batch is in production     |
 | INV-3  | Restock of finished products                       | `Planned`     | Add finished units to the shelf at once    |
 | INV-9  | Print barcode labels                               | `Ready`       | Print a label for a variant, or a sheet    |
 | INV-15 | Work tickets and the Scan page                     | `UI approved` | Move a batch on by scanning its ticket     |

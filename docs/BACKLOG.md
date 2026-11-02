@@ -69,7 +69,7 @@
 
 | ID | What it brings | Type | Status | Priority / Size |
 | :--- | :--- | :--- | :--- | :--- |
-| **INV-5** | Production for the shelf: Progress page *(development card approved 2026-11-02)* | Feature | `Ready` | Must / L |
+| **INV-5** | Production for the shelf: Progress page *(Technical work approved 2026-11-02: 12 steps, INV-5-a … INV-5-l)* | Feature | `Planned` | Must / L |
 | **INV-3** | Restock of finished products *(built, waiting for acceptance)* | Feature | `Planned` | Must / L |
 | **INV-9** | Print barcode labels | Feature | `Ready` | Must / M |
 | **INV-15** | Work tickets and the Scan page *(split from INV-5)* | Feature | `UI approved` | Must / M |
@@ -101,7 +101,7 @@
   - Restock serves as the main action on the product page's Sizes & colours card.
 
 #### `INV-5` · Production progress page
-- **Type:** Feature | **Priority:** Must | **Size:** L | **Status:** `Ready` *(development card approved 2026-11-02, D-24; UI card reopened and rewritten 2026-11-01, validated the same day)*
+- **Type:** Feature | **Priority:** Must | **Size:** L | **Status:** `Planned` *(Technical work approved 2026-11-02: 12 steps, INV-5-a … INV-5-l; development card approved 2026-11-02, D-24; UI card reopened and rewritten 2026-11-01, validated the same day)*
 - **Cards:** [Development Card](stories/INV-5-progress.md) · [UI Card](stories/INV-5-progress-ui.md) *(the rewritten version replaces the one validated on 2026-10-30)* · design spec [INV-5-production-for-the-shelf](design/specs/INV-5-production-for-the-shelf.md)
 - **Details:** 
   - Progress page in sidebar: phase tiles (In cutting, the workshop's own phases), per-product colour × size table with "On the shelf now", phase-by-phase view of **batches** (one product, colour and size; oldest first).
