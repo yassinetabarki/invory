@@ -72,7 +72,20 @@ describe('settings layout navigation', () => {
             'Material categories',
             'Product categories',
             'Colours',
+            'Production phases',
         ]);
+    });
+
+    it('adds a Production group with Production phases (INV-5)', () => {
+        renderAt('/settings/profile');
+
+        const group = screen.getByRole('group', { name: 'Production' });
+
+        expect(
+            within(group)
+                .getAllByRole('link')
+                .map((link) => [link.textContent, link.getAttribute('href')]),
+        ).toEqual([['Production phases', '/settings/production-phases']]);
     });
 
     it.each([
@@ -80,6 +93,7 @@ describe('settings layout navigation', () => {
         ['/settings/material-categories', 'Material categories'],
         ['/settings/product-categories', 'Product categories'],
         ['/settings/colours', 'Colours'],
+        ['/settings/production-phases', 'Production phases'],
         ['/settings/profile', 'Profile'],
     ])('marks the entry of %s as the current page', (url, title) => {
         renderAt(url);

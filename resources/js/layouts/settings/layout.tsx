@@ -11,6 +11,7 @@ import { edit as editSecurity } from '@/routes/security';
 import { index as coloursIndex } from '@/routes/settings/colours';
 import { index as materialCategoriesIndex } from '@/routes/settings/material-categories';
 import { index as productCategoriesIndex } from '@/routes/settings/product-categories';
+import { index as productionPhasesIndex } from '@/routes/settings/production-phases';
 import { index as unitsIndex } from '@/routes/settings/units';
 import type { NavItem } from '@/types';
 
@@ -56,12 +57,21 @@ const catalogueNavItems: NavItem[] = [
     },
 ];
 
+/** How the workshop makes its products (INV-5): the phases a batch goes through. */
+const productionNavItems: NavItem[] = [
+    {
+        title: 'Production phases',
+        href: productionPhasesIndex(),
+        icon: null,
+    },
+];
+
 export default function SettingsLayout({ children }: PropsWithChildren) {
     const { isCurrentOrParentUrl } = useCurrentUrl();
 
     // The catalogue pages hold tables, so they get the full width of the page
     // instead of the narrow column the profile forms use.
-    const wide = catalogueNavItems.some((item) =>
+    const wide = [...catalogueNavItems, ...productionNavItems].some((item) =>
         isCurrentOrParentUrl(item.href),
     );
 
@@ -118,6 +128,20 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
                                 Catalogue
                             </h3>
                             {renderItems(catalogueNavItems)}
+                        </div>
+
+                        <div
+                            role="group"
+                            aria-labelledby="settings-production-heading"
+                            className="flex flex-col space-y-1 pt-4"
+                        >
+                            <h3
+                                id="settings-production-heading"
+                                className="px-3 text-xs font-medium tracking-wide text-muted-foreground uppercase"
+                            >
+                                Production
+                            </h3>
+                            {renderItems(productionNavItems)}
                         </div>
                     </nav>
                 </aside>

@@ -6,6 +6,8 @@ use App\Http\Controllers\Settings\ArchiveUnitController;
 use App\Http\Controllers\Settings\ColourController;
 use App\Http\Controllers\Settings\MaterialCategoryController;
 use App\Http\Controllers\Settings\ProductCategoryController;
+use App\Http\Controllers\Settings\ProductionPhaseController;
+use App\Http\Controllers\Settings\ProductionPhaseOrderController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\RestoreMaterialCategoryController;
 use App\Http\Controllers\Settings\RestoreProductCategoryController;
@@ -58,6 +60,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('settings/colours', [ColourController::class, 'index'])->name('settings.colours.index');
     Route::post('settings/colours', [ColourController::class, 'store'])->name('settings.colours.store');
     Route::put('settings/colours/{colour}', [ColourController::class, 'update'])->where('colour', '[0-9]{1,18}')->name('settings.colours.update');
+
+    // The workshop's production phases (INV-5-b, ADR-0023): list, add, rename, remove, and Move up / Move down.
+    Route::get('settings/production-phases', [ProductionPhaseController::class, 'index'])->name('settings.production-phases.index');
+    Route::post('settings/production-phases', [ProductionPhaseController::class, 'store'])->name('settings.production-phases.store');
+    Route::put('settings/production-phases/{phase}', [ProductionPhaseController::class, 'update'])->where('phase', '[0-9]{1,18}')->name('settings.production-phases.update');
+    Route::delete('settings/production-phases/{phase}', [ProductionPhaseController::class, 'destroy'])->where('phase', '[0-9]{1,18}')->name('settings.production-phases.destroy');
+    Route::patch('settings/production-phases/{phase}/position', [ProductionPhaseOrderController::class, 'update'])->where('phase', '[0-9]{1,18}')->name('settings.production-phases.position');
 });
 
 Route::get('.well-known/passkey-endpoints', function () {

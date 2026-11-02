@@ -888,3 +888,17 @@ export type ColourFormData = {
     swatch: string;
     position: string;
 }; // code on create only; '' = last
+
+// Production for the shelf (INV-5, ADR-0023): the workshop's phases, batches and Progress.
+/** A phase of the path: 'cutting' is In cutting (no row), a number is one of the workshop's own phases. */
+export type PhaseRef = 'cutting' | number;
+/** One of the workshop's own phases on Settings › Production phases (INV-5-b), in path order. */
+export type ProductionPhase = {
+    id: number;
+    name: string; // at most 24 characters, unique in the workshop ignoring capitals
+    position: number; // 1…6
+    units: number; // what its batches in production hold now ("Holds 15 units" / "Empty")
+    refusal: string | null; // "Sewing holds 15 units, so it can't be moved or removed. Move them on or back first."; null when empty
+};
+export type ProductionPhasesProps = { phases: ProductionPhase[] };
+export type ProductionPhaseFormData = { name: string };
