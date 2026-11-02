@@ -5,6 +5,7 @@ import {
     LayoutGrid,
     ReceiptText,
     Shirt,
+    Users,
 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
@@ -19,6 +20,7 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+import { index as clientsIndex } from '@/routes/clients';
 import { index as materialsIndex } from '@/routes/materials';
 import { index as ordersIndex } from '@/routes/orders';
 import { index as productsIndex } from '@/routes/products';
@@ -45,6 +47,11 @@ const mainNavItems: NavItem[] = [
         title: 'Orders',
         href: ordersIndex(),
         icon: ClipboardList,
+    },
+    {
+        title: 'Clients',
+        href: clientsIndex(),
+        icon: Users,
     },
     {
         title: 'Sales',
