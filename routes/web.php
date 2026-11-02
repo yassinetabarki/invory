@@ -14,6 +14,7 @@ use App\Http\Controllers\ProductBarcodeController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductStockController;
 use App\Http\Controllers\RestockController;
+use App\Http\Controllers\RestockUndoController;
 use App\Http\Controllers\SaleController;
 use Illuminate\Support\Facades\Route;
 
@@ -48,6 +49,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Restocks of finished products (INV-3): never edited or deleted.
     Route::resource('restocks', RestockController::class)->only(['index', 'store']);
+
+    // Undo restock (INV-3-c). {restock} is route-model bound (an unknown or other workshop's restock is a 404).
+    Route::post('restocks/{restock}/undo', [RestockUndoController::class, 'store'])
+        ->where('restock', '[0-9]{1,18}')
+        ->name('restocks.undo');
 
     // New order's Client card (INV-4-b): the client with this phone, or with this name. JSON, read-only (ADR-0009 rule 5).
     Route::get('clients/lookup', [ClientLookupController::class, 'show'])->name('clients.lookup');
