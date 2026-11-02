@@ -31,7 +31,7 @@ function sizesOfCategory(string $code): array
 it('gives each default category its sizes, in order', function (string $category, string $listCode, string $listName, array $labels) {
     expect(sizesOfCategory($category))->toBe([$listCode, $listName, $labels]);
 })->with([
-    'apparel' => ['apparel', 's_to_xl', 'S, M, L, XL', ['S', 'M', 'L', 'XL']],
+    'apparel' => ['apparel', 's_to_xl', 'XS to XXXL', ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']],
     'footwear' => ['footwear', 'eu_36_to_46', '36 to 46', ['36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '46']],
     'bag' => ['bag', 'one_size', 'One size', ['One size']],
     'accessory' => ['accessory', 'one_size', 'One size', ['One size']],
@@ -43,8 +43,19 @@ it('stores each size once, at its own position', function () {
     $apparel = SizeList::query()->where('code', SizeList::S_TO_XL)->value('id');
 
     expect(SizeList::query()->count())->toBe(3)
-        ->and(Size::query()->count())->toBe(4 + 11 + 1)
-        ->and(Size::query()->where('size_list_id', $apparel)->orderBy('position')->pluck('position')->all())->toBe([1, 2, 3, 4]);
+        ->and(Size::query()->count())->toBe(7 + 11 + 1)
+        ->and(Size::query()->where('size_list_id', $apparel)->orderBy('position')->pluck('position')->all())->toBe([1, 2, 3, 4, 5, 6, 7]);
+});
+
+it('grows Apparel to XS … XXXL and keeps the ids of S, M, L and XL, so their stock, order lines and barcodes stay theirs', function () {
+    $apparel = SizeList::query()->where('code', SizeList::S_TO_XL)->value('id');
+    $byLabel = Size::query()->where('size_list_id', $apparel)->orderBy('position')->pluck('id', 'label')->all();
+    $firstFour = Size::query()->where('size_list_id', $apparel)->orderBy('id')->limit(4)->pluck('label')->all();
+
+    expect(array_keys($byLabel))->toBe(['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'])
+        ->and($firstFour)->toBe(['S', 'M', 'L', 'XL'])
+        ->and($byLabel['XS'])->toBeGreaterThan($byLabel['XL'])
+        ->and(SizeList::query()->whereKey($apparel)->value('name'))->toBe('XS to XXXL');
 });
 
 it('gives a category added in Settings the "One size" list', function () {
@@ -59,7 +70,7 @@ it('keeps the sizes of Apparel through a rename, an archive and a restore', func
     $apparelId = ProductCategory::query()->where('code', 'apparel')->value('id');
     $change(actingAs(User::factory()->create()), $apparelId);
 
-    expect(sizesOfCategory('apparel'))->toBe(['s_to_xl', 'S, M, L, XL', ['S', 'M', 'L', 'XL']]);
+    expect(sizesOfCategory('apparel'))->toBe(['s_to_xl', 'XS to XXXL', ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']]);
 })->with([
     'renamed Clothing' => [fn ($user, int $id) => $user->put(route('settings.product-categories.update', $id), ['name' => 'Clothing'])->assertSessionHasNoErrors()],
     'archived' => [fn ($user, int $id) => $user->patch(route('settings.product-categories.archive', $id))->assertSessionHasNoErrors()],

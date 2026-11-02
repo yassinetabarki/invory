@@ -18,7 +18,7 @@ use function Pest\Laravel\actingAs;
 |
 | A product owns no barcode: it looks up the numbers of its name. Saving a product under a new name gives the new name the barcodes of the
 | old one for the colours and sizes the product has once the save is done; the old name keeps them, so PRD-JKT-002, still "Denim Jacket",
-| keeps its own. The Denim Jacket (PRD-JKT-001) has Indigo and Light wash here, each with a barcode in all four sizes. The barcodes the
+| keeps its own. The Denim Jacket (PRD-JKT-001) has Indigo and Light wash here, each with a barcode in all seven sizes. The barcodes the
 | tests plant use the factory's numbers (outside the in-store range), so the real Generate can go on after them.
 */
 
@@ -28,7 +28,7 @@ beforeEach(function () {
     $this->twin = keepColours(Product::factory()->create(['sku' => 'PRD-JKT-002', 'name' => 'Denim Jacket', 'category' => 'apparel']), 'IND', 'LWH');
 
     foreach (['IND', 'LWH'] as $code) {
-        foreach (['S', 'M', 'L', 'XL'] as $size) {
+        foreach (['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'] as $size) {
             keepMake('Denim Jacket', $code, $size);
         }
     }
@@ -61,7 +61,7 @@ function keepMake(string $name, string $colourCode, string $sizeLabel): Barcode
 function keepStored(string $name): array
 {
     return BarcodeName::query()->where('name_key', NameKey::of($name))->with(['barcode', 'colour', 'size'])->get()
-        ->sortBy(fn (BarcodeName $row): string => sprintf('%05d-%05d', $row->colour->position, $row->size_id))
+        ->sortBy(fn (BarcodeName $row): string => sprintf('%05d-%05d', $row->colour->position, $row->size->position))
         ->mapWithKeys(fn (BarcodeName $row): array => ["{$row->colour->code} {$row->size->label}" => $row->barcode->number])->all();
 }
 
@@ -106,7 +106,7 @@ it('carries the barcodes of the old name to the new one for the colours it keeps
 
     // The new name has the carried numbers (and, for a change of capitals or spaces only, no row more); the old name keeps all of its own.
     expect($newKey)->toBe(keepOnly($this->baseline, $carried))
-        ->and(BarcodeName::query()->count())->toBe(8 + (NameKey::of($name) === 'denim jacket' ? 0 : count($newKey)))
+        ->and(BarcodeName::query()->count())->toBe(14 + (NameKey::of($name) === 'denim jacket' ? 0 : count($newKey)))
         ->and(keepStored('Denim Jacket'))->toBe($this->baseline)
         // The product shows them, and PRD-JKT-002, still "Denim Jacket", keeps its own.
         ->and(keepShown($this->jacket->fresh()))->toBe(keepOnly($this->baseline, $codes))
@@ -119,7 +119,7 @@ it('carries the barcodes of the old name to the new one for the colours it keeps
     'a colour taken off in the same save is not carried, and added back later shows no barcode under the new name' => ['Trucker Jacket', ['IND'], ['IND'], function (string $name) {
         keepSave($this->jacket, $name, ['IND', 'LWH'])->assertSessionHasNoErrors();
 
-        expect(keepShown($this->jacket->fresh()))->toBe([...keepStored($name), 'LWH S' => null, 'LWH M' => null, 'LWH L' => null, 'LWH XL' => null])
+        expect(keepShown($this->jacket->fresh()))->toBe([...keepStored($name), 'LWH XS' => null, 'LWH S' => null, 'LWH M' => null, 'LWH L' => null, 'LWH XL' => null, 'LWH XXL' => null, 'LWH XXXL' => null])
             ->and(keepStored('Denim Jacket'))->toBe($this->baseline);
     }],
     'a new colour shares the barcodes of its colour under the new name' => ['Trucker Jacket', ['IND', 'LWH'], ['IND', 'LWH'], function (string $name) {
@@ -140,7 +140,7 @@ it('shows the old numbers again when a colour is added back under the same name,
     // Light wash taken off (nothing else changes) keeps its barcodes under the name; added back, it shows them.
     keepSave($this->jacket, 'Denim Jacket', ['IND'])->assertSessionHasNoErrors();
 
-    expect(array_keys(keepShown($this->jacket->fresh())))->toBe(['IND S', 'IND M', 'IND L', 'IND XL'])
+    expect(array_keys(keepShown($this->jacket->fresh())))->toBe(['IND XS', 'IND S', 'IND M', 'IND L', 'IND XL', 'IND XXL', 'IND XXXL'])
         ->and(keepStored('Denim Jacket'))->toBe($this->baseline);
 
     keepSave($this->jacket, 'Denim Jacket', ['IND', 'LWH'])->assertSessionHasNoErrors();
@@ -152,5 +152,5 @@ it('shows the old numbers again when a colour is added back under the same name,
     $new = keepColours(Product::factory()->create(['sku' => 'PRD-JKT-050', 'name' => 'Denim Jacket', 'category' => 'apparel']), 'IND', 'LWH');
 
     expect(keepShown($new))->toBe($this->baseline)
-        ->and(BarcodeName::query()->count())->toBe(8);
+        ->and(BarcodeName::query()->count())->toBe(14);
 });

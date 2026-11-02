@@ -91,12 +91,12 @@ it('moves every unit into the first colour of its product, keeps each workshop\'
         ->and(DB::table('product_colours')->where('product_id', $foreign->id)->count())->toBe(2)
         ->and(DB::table('colours')->whereIn('id', DB::table('product_size_stocks')->where('product_id', $foreign->id)->select('colour_id'))->value('workshop_id'))->toBe($other->id);
 
-    // The Denim Jacket reads White S 3 · M 0 · L 5 · XL 2, and Black all 0.
+    // The Denim Jacket reads White XS 0 · S 3 · M 0 · L 5 · XL 2 · XXL 0 · XXXL 0, and Black all 0.
     actingAs($this->user);
     $stock = app(FinishedStock::class)->of($jacket);
 
     expect(array_map(fn (array $colour): array => [$colour['colour']->name, $colour['units'], array_column($colour['sizes'], 'units')], $stock->colours))
-        ->toBe([['White', 10, [3, 0, 5, 2]], ['Black', 0, [0, 0, 0, 0]]])
+        ->toBe([['White', 10, [0, 3, 0, 5, 2, 0, 0]], ['Black', 0, [0, 0, 0, 0, 0, 0, 0]]])
         ->and($stock->units)->toBe(10);
 
     // The keys of the new shape, kept by the rebuild SQLite makes: the colour is required and restricted, a row is unique per product,

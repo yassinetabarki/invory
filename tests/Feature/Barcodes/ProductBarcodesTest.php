@@ -58,26 +58,26 @@ function barcodesOf(Product $product): array
 it('gives every variant its SKU, its number and what is missing, for sizes in letters, in numbers and "One size"', function () {
     $jacket = giveColours(demoProduct('PRD-JKT-001'), 'BLK', 'IND', 'LWH');
 
-    // Black S..XL are 5..8, Indigo S..XL are 1..4; Light wash has none.
-    foreach (['S', 'M', 'L', 'XL'] as $position => $size) {
+    // Indigo XS..XXXL are 1..7, Black XS..XXXL are 8..14; Light wash has none.
+    foreach (['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'] as $position => $size) {
         makeBarcode('Denim Jacket', 'IND', $size, Ean13::inStore($position + 1));
-        makeBarcode('Denim Jacket', 'BLK', $size, Ean13::inStore($position + 5));
+        makeBarcode('Denim Jacket', 'BLK', $size, Ean13::inStore($position + 8));
     }
 
     $barcodes = barcodesOf($jacket);
     $indigo = $barcodes['colours'][1];
 
-    expect($barcodes['missing'])->toBe(4)
-        ->and($barcodes['with_barcode'])->toBe(8)
-        ->and($barcodes['missing_names'])->toBe('Light wash S, M, L and XL')
+    expect($barcodes['missing'])->toBe(7)
+        ->and($barcodes['with_barcode'])->toBe(14)
+        ->and($barcodes['missing_names'])->toBe('Light wash XS, S, M, L, XL, XXL and XXXL')
         ->and(array_column(array_column($barcodes['colours'], 'colour'), 'name'))->toBe(['Black', 'Indigo', 'Light wash'])
-        ->and(array_column($barcodes['colours'], 'missing'))->toBe([0, 0, 4])
-        ->and(array_column(array_column($indigo['variants'], 'size'), 'label'))->toBe(['S', 'M', 'L', 'XL'])
-        ->and(array_column($indigo['variants'], 'barcode'))->toBe(['2000000000015', '2000000000022', '2000000000039', '2000000000046'])
-        ->and(array_column($indigo['variants'], 'sku'))->toBe(['PRD-JKT-001-IND-S', 'PRD-JKT-001-IND-M', 'PRD-JKT-001-IND-L', 'PRD-JKT-001-IND-XL'])
-        ->and(array_column($barcodes['colours'][0]['variants'], 'barcode'))->toBe(['2000000000053', '2000000000060', '2000000000077', '2000000000084'])
-        ->and(array_column($barcodes['colours'][2]['variants'], 'barcode'))->toBe([null, null, null, null])
-        ->and($barcodes['colours'][2]['variants'][0]['sku'])->toBe('PRD-JKT-001-LWH-S');
+        ->and(array_column($barcodes['colours'], 'missing'))->toBe([0, 0, 7])
+        ->and(array_column(array_column($indigo['variants'], 'size'), 'label'))->toBe(['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'])
+        ->and(array_column($indigo['variants'], 'barcode'))->toBe(['2000000000015', '2000000000022', '2000000000039', '2000000000046', '2000000000053', '2000000000060', '2000000000077'])
+        ->and(array_column($indigo['variants'], 'sku'))->toBe(['PRD-JKT-001-IND-XS', 'PRD-JKT-001-IND-S', 'PRD-JKT-001-IND-M', 'PRD-JKT-001-IND-L', 'PRD-JKT-001-IND-XL', 'PRD-JKT-001-IND-XXL', 'PRD-JKT-001-IND-XXXL'])
+        ->and(array_column($barcodes['colours'][0]['variants'], 'barcode'))->toBe(['2000000000084', '2000000000091', '2000000000107', '2000000000114', '2000000000121', '2000000000138', '2000000000145'])
+        ->and(array_column($barcodes['colours'][2]['variants'], 'barcode'))->toBe(array_fill(0, 7, null))
+        ->and($barcodes['colours'][2]['variants'][0]['sku'])->toBe('PRD-JKT-001-LWH-XS');
 
     // A shoe: the size is a number in the SKU and in the sentence ("sizes", not "size").
     $shoe = barcodesOf(giveColours(demoProduct('PRD-SNK-003'), 'BLK'));
@@ -98,11 +98,11 @@ it('gives every variant its SKU, its number and what is missing, for sizes in le
         ->and($tote['colours'][0]['variants'][0]['size']['label'])->toBe('One size');
 
     // Everything made: nothing missing, and no sentence.
-    foreach (['S', 'M', 'L', 'XL'] as $position => $size) {
-        makeBarcode('Denim Jacket', 'LWH', $size, Ean13::inStore($position + 9));
+    foreach (['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'] as $position => $size) {
+        makeBarcode('Denim Jacket', 'LWH', $size, Ean13::inStore($position + 15));
     }
 
-    expect(barcodesOf($jacket))->toMatchArray(['missing' => 0, 'missing_names' => null, 'with_barcode' => 12]);
+    expect(barcodesOf($jacket))->toMatchArray(['missing' => 0, 'missing_names' => null, 'with_barcode' => 21]);
 });
 
 /** Another product that carries the same name, with Indigo (the colours can be said). */
@@ -112,10 +112,10 @@ function sharingProduct(string $sku, array $attributes = [], array $colours = ['
 }
 
 it('lists the other products that show the same barcode, by SKU, and no one else', function (Closure $arrange, array $expected, int $missing) {
-    // The jacket has Indigo only, with a barcode in each of its four sizes.
+    // The jacket has Indigo only, with a barcode in each of its seven sizes.
     $jacket = giveColours(demoProduct('PRD-JKT-001'), 'IND');
 
-    foreach (['S', 'M', 'L', 'XL'] as $position => $size) {
+    foreach (['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'] as $position => $size) {
         makeBarcode('Denim Jacket', 'IND', $size, Ean13::inStore($position + 1));
     }
 
@@ -124,8 +124,8 @@ it('lists the other products that show the same barcode, by SKU, and no one else
     $variants = $barcodes['colours'][0]['variants'];
 
     expect($barcodes['missing'])->toBe($missing)
-        ->and(array_column($variants, 'barcode'))->toBe(['2000000000015', '2000000000022', '2000000000039', '2000000000046'])
-        ->and(array_map(fn (array $variant): array => array_column($variant['shared_with'], 'sku'), $variants))->toBe(array_fill(0, 4, $expected));
+        ->and(array_column($variants, 'barcode'))->toBe(['2000000000015', '2000000000022', '2000000000039', '2000000000046', '2000000000053', '2000000000060', '2000000000077'])
+        ->and(array_map(fn (array $variant): array => array_column($variant['shared_with'], 'sku'), $variants))->toBe(array_fill(0, 7, $expected));
 })->with([
     'one other product' => [function () {
         sharingProduct('PRD-JKT-002');

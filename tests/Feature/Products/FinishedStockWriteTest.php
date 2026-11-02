@@ -78,8 +78,8 @@ it('sets the count of every colour and size at once; empty counts as 0 and a siz
     // Indigo M from 0 to 4: 14 units in all.
     actingAs($this->user)
         ->put(route('products.stock.update', $this->jacket), ['stock' => stockBody([
-            'White' => ['S' => '3', 'M' => '0', 'L' => '5', 'XL' => '2'],
-            'Indigo' => ['S' => '0', 'M' => '4', 'L' => '0', 'XL' => '0'],
+            'White' => ['XS' => '0', 'S' => '3', 'M' => '0', 'L' => '5', 'XL' => '2', 'XXL' => '0', 'XXXL' => '0'],
+            'Indigo' => ['XS' => '0', 'S' => '0', 'M' => '4', 'L' => '0', 'XL' => '0', 'XXL' => '0', 'XXXL' => '0'],
         ])])
         ->assertRedirect(route('products.show', $this->jacket))
         ->assertSessionHasNoErrors()
@@ -91,8 +91,8 @@ it('sets the count of every colour and size at once; empty counts as 0 and a siz
     // An empty field is 0: White L and Indigo M go, the rest is as typed.
     actingAs($this->user)
         ->put(route('products.stock.update', $this->jacket), ['stock' => stockBody([
-            'White' => ['S' => '3', 'M' => '', 'L' => '', 'XL' => '2'],
-            'Indigo' => ['S' => '1', 'M' => '', 'L' => '', 'XL' => ''],
+            'White' => ['XS' => '0', 'S' => '3', 'M' => '', 'L' => '', 'XL' => '2', 'XXL' => '0', 'XXXL' => '0'],
+            'Indigo' => ['XS' => '0', 'S' => '1', 'M' => '', 'L' => '', 'XL' => '', 'XXL' => '0', 'XXXL' => '0'],
         ])])
         ->assertRedirect(route('products.show', $this->jacket))
         ->assertSessionHasNoErrors();
@@ -110,7 +110,7 @@ it('refuses a bad count with the message of its size on its own colour and size,
     $list = $isJacket ? SizeList::S_TO_XL : SizeList::EU_36_TO_46;
     $sizeId = array_key_first(sizeIds([$isJacket ? 'M' : '36' => ''], $list));
     $body = $isJacket
-        ? stockBody(['White' => ['S' => '3', 'M' => '0', 'L' => '5', 'XL' => '2'], 'Indigo' => ['S' => '0', 'M' => '0', 'L' => '0', 'XL' => '0']])
+        ? stockBody(['White' => ['XS' => '0', 'S' => '3', 'M' => '0', 'L' => '5', 'XL' => '2', 'XXL' => '0', 'XXXL' => '0'], 'Indigo' => ['XS' => '0', 'S' => '0', 'M' => '0', 'L' => '0', 'XL' => '0', 'XXL' => '0', 'XXXL' => '0']])
         : stockBody(['White' => array_fill_keys(range(36, 46), '1')], $list);
     $colourId = array_key_last($body);
     $body[$colourId][$sizeId] = $typed;
@@ -135,8 +135,8 @@ it('refuses a bad count with the message of its size on its own colour and size,
 it('refuses colours or sizes that are not exactly the product\'s with one message on stock, and saves nothing (AC-3)', function (string $case) {
     stockShelf($this->jacket, ['S' => 3, 'L' => 5, 'XL' => 2]);
     $before = ProductSizeStock::query()->orderBy('id')->get()->toArray();
-    $white = ['S' => '3', 'M' => '0', 'L' => '5', 'XL' => '2'];
-    $indigo = ['S' => '0', 'M' => '4', 'L' => '0', 'XL' => '0'];
+    $white = ['XS' => '0', 'S' => '3', 'M' => '0', 'L' => '5', 'XL' => '2', 'XXL' => '0', 'XXXL' => '0'];
+    $indigo = ['XS' => '0', 'S' => '0', 'M' => '4', 'L' => '0', 'XL' => '0', 'XXL' => '0', 'XXXL' => '0'];
     $foreignIndigo = CurrentWorkshop::run(Workshop::factory()->create(), fn (): int => Colour::query()->where('code', 'IND')->value('id'));
     $attachBlack = fn () => $this->jacket->colours()->attach(demoColour('BLK')->id, ['workshop_id' => $this->jacket->workshop_id]);
 
@@ -167,8 +167,8 @@ it('checks the colours and sizes again under the product\'s lock, and saves noth
     $before = ProductSizeStock::query()->orderBy('id')->get()->toArray();
     $stale = demoProduct('PRD-JKT-001');
     $body = fn (): array => array_map(fn (array $sizes): array => array_map('intval', $sizes), stockBody([
-        'White' => ['S' => 9, 'M' => 1, 'L' => 1, 'XL' => 1],
-        'Indigo' => ['S' => 1, 'M' => 1, 'L' => 1, 'XL' => 1],
+        'White' => ['XS' => 0, 'S' => 9, 'M' => 1, 'L' => 1, 'XL' => 1, 'XXL' => 0, 'XXXL' => 0],
+        'Indigo' => ['XS' => 0, 'S' => 1, 'M' => 1, 'L' => 1, 'XL' => 1, 'XXL' => 0, 'XXXL' => 0],
     ]));
     actingAs($this->user);
 
@@ -212,7 +212,7 @@ it('sends a guest to login and answers 404 for the product of another workshop o
         'deleted' => tap(demoProduct('PRD-TSH-002'))->delete(),
         default => $this->jacket,
     };
-    $payload = ['stock' => stockBody(['White' => ['S' => '1', 'M' => '1', 'L' => '1', 'XL' => '1'], 'Indigo' => ['S' => '1', 'M' => '1', 'L' => '1', 'XL' => '1']])];
+    $payload = ['stock' => stockBody(['White' => ['XS' => '0', 'S' => '1', 'M' => '1', 'L' => '1', 'XL' => '1', 'XXL' => '0', 'XXXL' => '0'], 'Indigo' => ['XS' => '0', 'S' => '1', 'M' => '1', 'L' => '1', 'XL' => '1', 'XXL' => '0', 'XXXL' => '0']])];
 
     if ($who === 'guest') {
         $this->put(route('products.stock.update', $product), $payload)->assertRedirect(route('login'));
@@ -233,8 +233,8 @@ it('changes nothing but the count: capacity, cost, materials, history, dashboard
 
     actingAs($this->user)
         ->put(route('products.stock.update', $this->jacket), ['stock' => stockBody([
-            'White' => ['S' => '3', 'M' => '0', 'L' => '5', 'XL' => '2'],
-            'Indigo' => ['S' => '0', 'M' => '4', 'L' => '0', 'XL' => '0'],
+            'White' => ['XS' => '0', 'S' => '3', 'M' => '0', 'L' => '5', 'XL' => '2', 'XXL' => '0', 'XXXL' => '0'],
+            'Indigo' => ['XS' => '0', 'S' => '0', 'M' => '4', 'L' => '0', 'XL' => '0', 'XXL' => '0', 'XXXL' => '0'],
         ])])
         ->assertRedirect(route('products.show', $this->jacket));
 

@@ -167,7 +167,8 @@ Defaults are inserted by the migration (frozen snapshot, `insertOrIgnore` by cod
 | `sizes`                           | id, `size_list_id` FK `restrictOnDelete`, `label` string(16), `position`, timestamps; unique per list on label and on position |
 | `product_categories.size_list_id` | FK → size_lists, NOT NULL, `restrictOnDelete`, indexed                                                                         |
 
-Installation-wide, filled by the migration (frozen snapshot by code): `s_to_xl` "S, M, L, XL", `eu_36_to_46` "36 to 46" (36 … 46),
+Installation-wide, filled by the migration (frozen snapshot by code): `s_to_xl` "XS to XXXL" (XS, S, M, L, XL, XXL, XXXL; S … XL
+until `2026_11_02_100000` added XS, XXL and XXXL around them, keeping their ids), `eu_36_to_46` "36 to 46" (36 … 46),
 `one_size` "One size". No screen edits them and they carry no `workshop_id` (allow-listed in the workshop arch test). The migration links
 each category by **code** (apparel → `s_to_xl`, footwear → `eu_36_to_46`, every other code → `one_size`); `CreateProductCategory` gives a
 new category `one_size`; rename, archive and restore never touch the link. A product stores no sizes: it has its category's list. A

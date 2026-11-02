@@ -100,7 +100,7 @@ it('lets a colour whose stock was set to 0 come off, and starts it at 0 when it 
     // 6 units: refused. Set to 0 on Update stock, then it comes off.
     saveJacketColours($this, ['White', 'Black', 'Light wash'])->assertSessionHasErrors(["colours.removed.{$indigo}"]);
 
-    $zeroes = $this->jacket->colours()->pluck('colours.id')->mapWithKeys(fn (int $id): array => [$id => sizeIds(['S' => '0', 'M' => '0', 'L' => '0', 'XL' => '0'])])->all();
+    $zeroes = $this->jacket->colours()->pluck('colours.id')->mapWithKeys(fn (int $id): array => [$id => sizeIds(['XS' => '0', 'S' => '0', 'M' => '0', 'L' => '0', 'XL' => '0', 'XXL' => '0', 'XXXL' => '0'])])->all();
     actingAs($this->user)->put(route('products.stock.update', $this->jacket), ['stock' => $zeroes])->assertSessionHasNoErrors();
     saveJacketColours($this, ['White', 'Black', 'Light wash'])->assertSessionHasNoErrors();
 

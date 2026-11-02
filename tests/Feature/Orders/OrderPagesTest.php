@@ -40,8 +40,8 @@ it('sends the three size lists by code, once each, and the code of each product\
         $response = actingAs($this->user)->get($uri)->assertOk();
 
         expect(array_keys(pageProp($response, 'size_lists')))->toBe(['s_to_xl', 'eu_36_to_46', 'one_size'])
-            ->and(pageProp($response, 'size_lists.s_to_xl.name'))->toBe('S, M, L, XL')
-            ->and(pageProp($response, 'size_lists.s_to_xl.sizes.*.label'))->toBe(['S', 'M', 'L', 'XL'])
+            ->and(pageProp($response, 'size_lists.s_to_xl.name'))->toBe('XS to XXXL')
+            ->and(pageProp($response, 'size_lists.s_to_xl.sizes.*.label'))->toBe(['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'])
             ->and(pageProp($response, 'size_lists.eu_36_to_46.name'))->toBe('36 to 46')
             ->and(pageProp($response, 'size_lists.eu_36_to_46.sizes'))->toHaveCount(11)
             ->and(pageProp($response, 'size_lists.one_size'))->toMatchArray(['code' => 'one_size', 'name' => 'One size'])

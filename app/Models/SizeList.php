@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * A fixed list of sizes (ADR-0015, table `size_lists`). Installation-wide reference data, filled by a migration, edited by no screen.
- * `code` is immutable; `name` is the text the screens show ("S, M, L, XL", "36 to 46", "One size").
+ * `code` is immutable; `name` is the text the screens show ("XS to XXXL", "36 to 46", "One size").
  *
  * @property int $id
  * @property string $code

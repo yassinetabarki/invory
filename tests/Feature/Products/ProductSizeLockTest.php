@@ -28,11 +28,11 @@ beforeEach(function () {
     Storage::fake('public');
 });
 
-const SIZE_LOCK_JACKET = 'Denim Jacket is on orders, so its category can\'t change to one with other sizes. Keep a category with sizes S, M, L, XL.';
+const SIZE_LOCK_JACKET = 'Denim Jacket is on orders, so its category can\'t change to one with other sizes. Keep a category with sizes XS to XXXL.';
 const SIZE_LOCK_SNEAKER = 'Canvas Low Sneaker is on orders, so its category can\'t change to one with other sizes. Keep a category with sizes 36 to 46.';
 const SIZE_LOCK_TOTE = 'Leather Tote is on orders, so its category can\'t change to one with other sizes. Keep a "One size" category.';
 
-const SIZE_LOCK_STOCK_JACKET = 'Denim Jacket has units in stock, so its category can\'t change to one with other sizes. Keep a category with sizes S, M, L, XL.';
+const SIZE_LOCK_STOCK_JACKET = 'Denim Jacket has units in stock, so its category can\'t change to one with other sizes. Keep a category with sizes XS to XXXL.';
 const SIZE_LOCK_STOCK_TOTE = 'Leather Tote has units in stock, so its category can\'t change to one with other sizes. Keep a "One size" category.';
 
 /** Put finished units in stock for demo product `$id`: size label => units (a row per size, as the Action stores them). */

@@ -202,7 +202,7 @@ export type Size = { id: number; label: string }; // "S", "36", "One size"
 /** The fixed sizes of a product category (S-58, ADR-0015). */
 export type SizeList = {
     code: string; // immutable: 's_to_xl', 'eu_36_to_46' or 'one_size' today
-    name: string; // what the screens show: "S, M, L, XL", "36 to 46" or "One size"
+    name: string; // what the screens show: "XS to XXXL", "36 to 46" or "One size"
     sizes: Size[]; // in order, at least one
 };
 

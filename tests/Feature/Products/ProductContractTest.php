@@ -176,20 +176,20 @@ it('sends FinishedStock with its exact keys, order and types (S-56, INV-2)', fun
 
     expect(keysOf($stock))->toBe(['units', 'sizes', 'colours'])
         ->and($stock['units'])->toBe(4)
-        ->and($stock['sizes'])->toHaveCount(4)
-        ->and(keysOf($stock['sizes'][1]))->toBe(['size', 'units'])
-        ->and(keysOf($stock['sizes'][1]['size']))->toBe(['id', 'label'])
-        ->and($stock['sizes'][1]['size']['id'])->toBeInt()
-        ->and($stock['sizes'][1]['size']['label'])->toBe('M')
-        ->and($stock['sizes'][1]['units'])->toBe(4)
+        ->and($stock['sizes'])->toHaveCount(7)
+        ->and(keysOf($stock['sizes'][2]))->toBe(['size', 'units'])
+        ->and(keysOf($stock['sizes'][2]['size']))->toBe(['id', 'label'])
+        ->and($stock['sizes'][2]['size']['id'])->toBeInt()
+        ->and($stock['sizes'][2]['size']['label'])->toBe('M')
+        ->and($stock['sizes'][2]['units'])->toBe(4)
         // INV-2: one entry per colour of the product (the jacket has White only), each with the same sizes for that colour.
         ->and($stock['colours'])->toHaveCount(1)
         ->and(keysOf($stock['colours'][0]))->toBe(['colour', 'units', 'sizes'])
         ->and(keysOf($stock['colours'][0]['colour']))->toBe(['id', 'code', 'name', 'swatch'])
         ->and($stock['colours'][0]['colour']['id'])->toBeInt()
         ->and($stock['colours'][0]['units'])->toBe(4)
-        ->and(keysOf($stock['colours'][0]['sizes'][1]))->toBe(['size', 'units'])
-        ->and($stock['colours'][0]['sizes'][1]['units'])->toBe(4);
+        ->and(keysOf($stock['colours'][0]['sizes'][2]))->toBe(['size', 'units'])
+        ->and($stock['colours'][0]['sizes'][2]['units'])->toBe(4);
 });
 
 it('sends ProductBarcodes with its exact keys, order and types (INV-8)', function () {
@@ -203,25 +203,25 @@ it('sends ProductBarcodes with its exact keys, order and types (INV-8)', functio
     $barcodes = loadedPageProp(actingAs($this->user)->get(route('products.show', pid(1))), 'barcodes');
 
     expect(keysOf($barcodes))->toBe(['missing', 'missing_names', 'with_barcode', 'colours'])
-        ->and($barcodes['missing'])->toBe(3)
-        ->and($barcodes['missing_names'])->toBe('White M, L and XL')
+        ->and($barcodes['missing'])->toBe(6)
+        ->and($barcodes['missing_names'])->toBe('White XS, M, L, XL, XXL and XXXL')
         ->and($barcodes['with_barcode'])->toBe(1)
         ->and($barcodes['colours'])->toHaveCount(1)
         ->and(keysOf($barcodes['colours'][0]))->toBe(['colour', 'missing', 'variants'])
         ->and(keysOf($barcodes['colours'][0]['colour']))->toBe(['id', 'code', 'name', 'swatch'])
-        ->and($barcodes['colours'][0]['missing'])->toBe(3)
-        ->and($barcodes['colours'][0]['variants'])->toHaveCount(4)
-        ->and(keysOf($barcodes['colours'][0]['variants'][0]))->toBe(['size', 'sku', 'barcode', 'shared_with'])
-        ->and(keysOf($barcodes['colours'][0]['variants'][0]['size']))->toBe(['id', 'label'])
-        ->and($barcodes['colours'][0]['variants'][0]['size']['id'])->toBeInt()
-        ->and($barcodes['colours'][0]['variants'][0]['sku'])->toBe('PRD-JKT-001-WHT-S')
-        ->and($barcodes['colours'][0]['variants'][0]['barcode'])->toBe('2000000000015')
-        ->and(keysOf($barcodes['colours'][0]['variants'][0]['shared_with'][0]))->toBe(['id', 'sku'])
-        ->and($barcodes['colours'][0]['variants'][0]['shared_with'][0]['id'])->toBe($twin->id)
-        ->and($barcodes['colours'][0]['variants'][0]['shared_with'][0]['sku'])->toBe('PRD-JKT-009')
-        // A variant without a barcode: null, and shared with nobody.
-        ->and($barcodes['colours'][0]['variants'][1]['barcode'])->toBeNull()
-        ->and($barcodes['colours'][0]['variants'][1]['shared_with'])->toBe([]);
+        ->and($barcodes['colours'][0]['missing'])->toBe(6)
+        ->and($barcodes['colours'][0]['variants'])->toHaveCount(7)
+        ->and(keysOf($barcodes['colours'][0]['variants'][1]))->toBe(['size', 'sku', 'barcode', 'shared_with'])
+        ->and(keysOf($barcodes['colours'][0]['variants'][1]['size']))->toBe(['id', 'label'])
+        ->and($barcodes['colours'][0]['variants'][1]['size']['id'])->toBeInt()
+        ->and($barcodes['colours'][0]['variants'][1]['sku'])->toBe('PRD-JKT-001-WHT-S')
+        ->and($barcodes['colours'][0]['variants'][1]['barcode'])->toBe('2000000000015')
+        ->and(keysOf($barcodes['colours'][0]['variants'][1]['shared_with'][0]))->toBe(['id', 'sku'])
+        ->and($barcodes['colours'][0]['variants'][1]['shared_with'][0]['id'])->toBe($twin->id)
+        ->and($barcodes['colours'][0]['variants'][1]['shared_with'][0]['sku'])->toBe('PRD-JKT-009')
+        // XS, a variant without a barcode: null, and shared with nobody.
+        ->and($barcodes['colours'][0]['variants'][0]['barcode'])->toBeNull()
+        ->and($barcodes['colours'][0]['variants'][0]['shared_with'])->toBe([]);
 });
 
 it('sends the props of the create and edit pages (S-25: statuses, plus the product on edit, and no materials list)', function () {

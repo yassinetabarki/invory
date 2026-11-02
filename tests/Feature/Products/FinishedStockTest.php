@@ -50,8 +50,8 @@ it('sends every size of the list in order with its units, 0 included, and the to
         ->and($stock['units'])->toBe($expected['units'])
         ->and($stock['sizes'][0]['size']['id'])->toBe(sizeIdOf($expected['sizes'][0][0]));
 })->with([
-    'Denim Jacket with S 3, L 5 and XL 2' => ['PRD-JKT-001', ['S' => 3, 'L' => 5, 'XL' => 2], ['units' => 10, 'sizes' => [['S', 3], ['M', 0], ['L', 5], ['XL', 2]]]],
-    'a product with nothing in stock' => ['PRD-JKT-006', [], ['units' => 0, 'sizes' => [['S', 0], ['M', 0], ['L', 0], ['XL', 0]]]],
+    'Denim Jacket with S 3, L 5 and XL 2' => ['PRD-JKT-001', ['S' => 3, 'L' => 5, 'XL' => 2], ['units' => 10, 'sizes' => [['XS', 0], ['S', 3], ['M', 0], ['L', 5], ['XL', 2], ['XXL', 0], ['XXXL', 0]]]],
+    'a product with nothing in stock' => ['PRD-JKT-006', [], ['units' => 0, 'sizes' => [['XS', 0], ['S', 0], ['M', 0], ['L', 0], ['XL', 0], ['XXL', 0], ['XXXL', 0]]]],
     'a "One size" product with 4' => ['PRD-TOT-004', ['One size' => 4], ['units' => 4, 'sizes' => [['One size', 4]]]],
 ]);
 
@@ -83,16 +83,16 @@ it('sends every colour of the product in list order with its totals, and the tot
     // The worked example has no White: its colours are Black, Indigo and Light wash (the list order is not the order they are given in).
     $jacket->colours()->detach(demoColour('WHT')->id);
     $tote->colours()->detach(demoColour('WHT')->id);
-    setFinishedStock($jacket, ['Light wash' => [0, 0, 0, 0], 'Indigo' => [2, 0, 3, 1], 'Black' => [1, 0, 2, 1]]);
+    setFinishedStock($jacket, ['Light wash' => [0, 0, 0, 0, 0, 0, 0], 'Indigo' => [0, 2, 0, 3, 1, 0, 0], 'Black' => [0, 1, 0, 2, 1, 0, 0]]);
     setFinishedStock($tote, ['Black' => [0], 'Camel' => [4]]);
     $read = fn (Product $product): array => loadedPageProp(actingAs($this->user)->get(route('products.show', $product)), 'finished_stock');
     $figures = fn (array $stock): array => array_map(fn (array $row): array => [$row['colour']['name'], $row['units'], array_column($row['sizes'], 'units')], $stock['colours']);
 
     $stock = $read($jacket);
 
-    expect($figures($stock))->toBe([['Black', 4, [1, 0, 2, 1]], ['Indigo', 6, [2, 0, 3, 1]], ['Light wash', 0, [0, 0, 0, 0]]])
+    expect($figures($stock))->toBe([['Black', 4, [0, 1, 0, 2, 1, 0, 0]], ['Indigo', 6, [0, 2, 0, 3, 1, 0, 0]], ['Light wash', 0, [0, 0, 0, 0, 0, 0, 0]]])
         ->and($stock['units'])->toBe(10)
-        ->and(array_column($stock['sizes'], 'units'))->toBe([3, 0, 5, 2])
+        ->and(array_column($stock['sizes'], 'units'))->toBe([0, 3, 0, 5, 2, 0, 0])
         ->and(array_column($stock['colours'][0]['sizes'], 'size'))->toBe(array_column($stock['sizes'], 'size'))
         ->and($stock['colours'][1]['colour'])->toBe(['id' => demoColour('IND')->id, 'code' => 'IND', 'name' => 'Indigo', 'swatch' => '#3E4C7E']);
 

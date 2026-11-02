@@ -22,8 +22,8 @@ function expectDefaultCategorySizes(array $sizes): void
 {
     $labels = fn (string $category): array => array_column($sizes[$category]['sizes'], 'label');
 
-    expect($sizes['apparel']['name'])->toBe('S, M, L, XL')
-        ->and($labels('apparel'))->toBe(['S', 'M', 'L', 'XL'])
+    expect($sizes['apparel']['name'])->toBe('XS to XXXL')
+        ->and($labels('apparel'))->toBe(['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'])
         ->and($sizes['footwear']['name'])->toBe('36 to 46')
         ->and($labels('footwear'))->toBe(['36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '46'])
         ->and($sizes['bag']['name'])->toBe('One size')
@@ -44,10 +44,10 @@ it('shows each demo product the sizes of its category and leaves its figures alo
         expect([$product['cost']['unit_cost'], $product['capacity']['max_producible'], $product['capacity']['bottleneck']['name']])->toBe($figures);
     }
 })->with([
-    'Denim Jacket' => [1, 'S, M, L, XL', ['S', 'M', 'L', 'XL'], ['35.7540', 112, 'Metal shank button 17mm']],
-    'Denim Jeans 5-pocket' => [5, 'S, M, L, XL', ['S', 'M', 'L', 'XL'], null],
-    'Classic White T-shirt' => [2, 'S, M, L, XL', ['S', 'M', 'L', 'XL'], null],
-    'Canvas Chore Jacket' => [6, 'S, M, L, XL', ['S', 'M', 'L', 'XL'], null],
+    'Denim Jacket' => [1, 'XS to XXXL', ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'], ['35.7540', 112, 'Metal shank button 17mm']],
+    'Denim Jeans 5-pocket' => [5, 'XS to XXXL', ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'], null],
+    'Classic White T-shirt' => [2, 'XS to XXXL', ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'], null],
+    'Canvas Chore Jacket' => [6, 'XS to XXXL', ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'], null],
     'Canvas Low Sneaker' => [3, '36 to 46', ['36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '46'], null],
     'Leather Tote' => [4, 'One size', ['One size'], null],
     'Leather Belt' => [7, 'One size', ['One size'], null],
@@ -76,7 +76,7 @@ it('sends the sizes of every category to Add product and Edit product, as an obj
             ->and(json_decode($raw)->props->category_sizes->{'2027'}->name)->toBe('One size');
     }
 
-    expect(actingAs($this->user)->get(route('products.edit', pid(1)))->inertiaProps('product.size_list.name'))->toBe('S, M, L, XL');
+    expect(actingAs($this->user)->get(route('products.edit', pid(1)))->inertiaProps('product.size_list.name'))->toBe('XS to XXXL');
 });
 
 it('gives an account that has just signed up the same sizes on Add product', function () {
