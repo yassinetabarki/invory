@@ -1,4 +1,4 @@
-import { ChevronsUpDown, Plus } from 'lucide-react';
+import { ChevronsUpDown, Plus, Search } from 'lucide-react';
 import { useRef, useState } from 'react';
 import type { KeyboardEvent, ReactNode } from 'react';
 import { sourceText } from '@/components/clients/source-label';
@@ -46,6 +46,8 @@ type ClientPickerProps = {
     /** A first option that clears the choice: "All clients" on the Orders list. */
     clearLabel?: string;
     placeholder?: string;
+    /** New order's "Find a client by name" (INV-12): an outline button that opens the same search. */
+    findButton?: boolean;
 };
 
 /**
@@ -65,6 +67,7 @@ export function ClientPicker({
     onAdd,
     clearLabel,
     placeholder = 'Choose a client…',
+    findButton = false,
 }: ClientPickerProps) {
     const mobile = useIsMobile();
     const [open, setOpen] = useState(false);
@@ -87,7 +90,20 @@ export function ClientPicker({
         }
     }
 
-    const trigger = (
+    const trigger = findButton ? (
+        <Button
+            id={id}
+            type="button"
+            variant="outline"
+            aria-expanded={open}
+            aria-haspopup="listbox"
+            className="max-sm:h-11 max-sm:w-full"
+            onClick={mobile ? () => setOpen(true) : undefined}
+        >
+            <Search aria-hidden="true" />
+            Find a client by name
+        </Button>
+    ) : (
         <Button
             id={id}
             type="button"

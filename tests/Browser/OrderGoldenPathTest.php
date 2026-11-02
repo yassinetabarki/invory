@@ -44,7 +44,10 @@ it('records an order with two products, starts cutting 14 jackets by size and fi
     }, $page);
 
     GoldenPathStep::run('new order: fill in the client and two products', function () use ($browser) {
-        $browser->getByLabel('Client', true)->fill('Boutique Lina');
+        // INV-4: the Client card, phone first; a new number adds Boutique Lina with the order.
+        $browser->getByLabel('Phone', true)->fill('71 234 567');
+        $browser->getByLabel('Name', true)->fill('Boutique Lina');
+        $browser->getByLabel('City', true)->fill('Tunis');
         $browser->getByLabel('Note (optional)', true)->fill('Deliver before 30 Oct, in 2 boxes');
 
         // Both products are counted by size (S-60): a quantity per size, the line's total under them.
@@ -65,7 +68,7 @@ it('records an order with two products, starts cutting 14 jackets by size and fi
     GoldenPathStep::run('new order: save lands on the order page', function () use ($page, $browser) {
         $browser->getByRole('button', ['name' => 'Save order', 'exact' => true])->click();
         $page->assertPathIs(route('orders.show', Order::query()->firstOrFail(), false))
-            ->assertSee('Order recorded.')
+            ->assertSee('Order recorded. Boutique Lina is now one of your clients.')
             ->assertSee('Ordered ')
             ->assertSee('2 products · 80 units')
             ->assertSee('0 of 80 shipped');

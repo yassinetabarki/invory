@@ -163,7 +163,8 @@ describe('<OrderForm>', () => {
         for (const [field, message] of [
             [
                 screen.getByLabelText('Name'),
-                'Keep the name to 100 characters or fewer.',
+                // After the field's hint (INV-4: "The person or the shop, as you call them.").
+                /Keep the name to 100 characters or fewer\.$/,
             ],
             [
                 screen.getByLabelText('Order date'),

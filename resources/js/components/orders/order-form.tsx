@@ -1,6 +1,8 @@
 import { Link, useForm, usePage } from '@inertiajs/react';
 import { useEffect, useId, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
+import { ClientCard } from '@/components/clients/client-card';
+import { EMPTY_CLIENT } from '@/components/clients/client-fields';
 import { countingFor, newOrderLine } from '@/components/orders/order-line-row';
 import type {
     OrderLineRow,
@@ -14,7 +16,9 @@ import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 import type {
-    ClientFields,
+    ClientSource,
+    ClientSummary,
+    Option,
     Order,
     OrderFormData,
     OrderFormProduct,
@@ -36,22 +40,21 @@ type OrderFormProps = {
     /** Where to send the form (Wayfinder in the page). */
     action: { url: string; method: 'post' | 'put' };
     cancelHref: string;
-};
-
-/** An empty Client card (INV-4-b: the phone finds the client, or Name and City add her). */
-const NO_CLIENT: ClientFields = {
-    phone: '',
-    name: '',
-    city: '',
-    source: '',
-    source_other: '',
+    /** New order's Client card (INV-4): the workshop's cities, the sources, and the client chosen on her page. */
+    cities?: readonly string[];
+    clientSources?: Option<ClientSource>[];
+    clientPreset?: ClientSummary | null;
 };
 
 /** Starting values: today and one empty line, or the order's own details and lines. */
-function toFormState(order: Order | undefined, today: string): OrderFormState {
+function toFormState(
+    order: Order | undefined,
+    today: string,
+    preset: ClientSummary | null,
+): OrderFormState {
     if (!order) {
         return {
-            client: NO_CLIENT,
+            client: { ...EMPTY_CLIENT, phone: preset?.phone ?? '' },
             ordered_on: today,
             note: '',
             lines: [newOrderLine()],
@@ -120,12 +123,15 @@ export function OrderForm({
     sizeLists,
     action,
     cancelHref,
+    cities = [],
+    clientSources = [],
+    clientPreset = null,
 }: OrderFormProps) {
     const uid = useId();
     const { today } = usePage().props.app;
     const formRef = useRef<HTMLFormElement>(null);
     // Only seeds the form; computed once so the lines keep their keys.
-    const [initial] = useState(() => toFormState(order, today));
+    const [initial] = useState(() => toFormState(order, today, clientPreset));
     const form = useForm<OrderFormState>(initial);
     // The saved lines with work started, by row key (a new line is never one).
     const [started] = useState(() => startedLines(order, initial.lines));
@@ -138,10 +144,22 @@ export function OrderForm({
     );
     const { errors, processing } = form;
     const client = form.data.client;
+    const clientErrors = {
+        phone: errors['client.phone'],
+        name: errors['client.name'],
+        city: errors['client.city'],
+        source: errors['client.source'],
+        source_other: errors['client.source_other'],
+    };
 
-    function setClient(field: keyof ClientFields, value: string) {
-        form.setData('client', { ...(client ?? NO_CLIENT), [field]: value });
-    }
+    // From a client page, the client is known: the focus starts in Products (INV-4, AC-5).
+    useEffect(() => {
+        if (clientPreset) {
+            formRef.current
+                ?.querySelector<HTMLElement>('[data-action="product"]')
+                ?.focus();
+        }
+    }, [clientPreset]);
 
     const errorSignature = Object.entries(errors)
         .filter(([, message]) => Boolean(message))
@@ -190,6 +208,73 @@ export function OrderForm({
         form.submit(action, { preserveScroll: 'errors' });
     }
 
+    const details = (
+        <section
+            aria-labelledby={`${uid}-details`}
+            className="flex flex-col gap-4 rounded-xl border bg-card p-5 text-card-foreground"
+        >
+            <h2 id={`${uid}-details`} className="text-base font-bold">
+                Details
+            </h2>
+            <div className="grid gap-4 sm:grid-cols-[2fr_1fr]">
+                {!client && (
+                    <p className="text-sm sm:col-span-2">
+                        <span className="text-muted-foreground">Client </span>
+                        <span className="font-medium">{order?.client}</span>
+                    </p>
+                )}
+                <FormField
+                    id={`${uid}-ordered-on`}
+                    label="Order date"
+                    error={errors.ordered_on}
+                >
+                    {(control) => (
+                        <Input
+                            {...control}
+                            type="date"
+                            max={today}
+                            value={form.data.ordered_on}
+                            onChange={(event) =>
+                                form.setData('ordered_on', event.target.value)
+                            }
+                        />
+                    )}
+                </FormField>
+                <FormField
+                    id={`${uid}-note`}
+                    label="Note"
+                    optional
+                    error={errors.note}
+                    className="sm:col-span-2"
+                >
+                    {(control) => (
+                        <Textarea
+                            {...control}
+                            rows={3}
+                            value={form.data.note}
+                            placeholder="Delivery date, packing, anything the client asked for"
+                            onChange={(event) =>
+                                form.setData('note', event.target.value)
+                            }
+                        />
+                    )}
+                </FormField>
+            </div>
+        </section>
+    );
+
+    const lines = (
+        <OrderLinesEditor
+            rows={form.data.lines}
+            products={products}
+            sizeLists={sizeLists}
+            savedModes={savedModes}
+            errors={errors}
+            started={started}
+            onChange={(lines) => form.setData('lines', lines)}
+        />
+    );
+
     return (
         <form
             ref={formRef}
@@ -199,135 +284,25 @@ export function OrderForm({
         >
             <PageHeader title={title} />
 
-            <section
-                aria-labelledby={`${uid}-details`}
-                className="flex flex-col gap-4 rounded-xl border bg-card p-5 text-card-foreground"
-            >
-                <h2 id={`${uid}-details`} className="text-base font-bold">
-                    Details
-                </h2>
-                <div className="grid gap-4 sm:grid-cols-[2fr_1fr]">
-                    {client ? (
-                        <div className="grid gap-4 sm:col-span-2 sm:grid-cols-3">
-                            <FormField
-                                id={`${uid}-client-phone`}
-                                label="Phone"
-                                error={errors['client.phone']}
-                            >
-                                {(control) => (
-                                    <Input
-                                        {...control}
-                                        type="tel"
-                                        inputMode="tel"
-                                        value={client.phone}
-                                        autoComplete="off"
-                                        onChange={(event) =>
-                                            setClient(
-                                                'phone',
-                                                event.target.value,
-                                            )
-                                        }
-                                    />
-                                )}
-                            </FormField>
-                            <FormField
-                                id={`${uid}-client-name`}
-                                label="Name"
-                                error={errors['client.name']}
-                            >
-                                {(control) => (
-                                    <Input
-                                        {...control}
-                                        value={client.name}
-                                        autoComplete="off"
-                                        onChange={(event) =>
-                                            setClient(
-                                                'name',
-                                                event.target.value,
-                                            )
-                                        }
-                                    />
-                                )}
-                            </FormField>
-                            <FormField
-                                id={`${uid}-client-city`}
-                                label="City"
-                                error={errors['client.city']}
-                            >
-                                {(control) => (
-                                    <Input
-                                        {...control}
-                                        value={client.city}
-                                        autoComplete="off"
-                                        onChange={(event) =>
-                                            setClient(
-                                                'city',
-                                                event.target.value,
-                                            )
-                                        }
-                                    />
-                                )}
-                            </FormField>
-                        </div>
-                    ) : (
-                        <p className="text-sm">
-                            <span className="text-muted-foreground">
-                                Client{' '}
-                            </span>
-                            <span className="font-medium">{order?.client}</span>
-                        </p>
-                    )}
-                    <FormField
-                        id={`${uid}-ordered-on`}
-                        label="Order date"
-                        error={errors.ordered_on}
-                    >
-                        {(control) => (
-                            <Input
-                                {...control}
-                                type="date"
-                                max={today}
-                                value={form.data.ordered_on}
-                                onChange={(event) =>
-                                    form.setData(
-                                        'ordered_on',
-                                        event.target.value,
-                                    )
-                                }
-                            />
-                        )}
-                    </FormField>
-                    <FormField
-                        id={`${uid}-note`}
-                        label="Note"
-                        optional
-                        error={errors.note}
-                        className="sm:col-span-2"
-                    >
-                        {(control) => (
-                            <Textarea
-                                {...control}
-                                rows={3}
-                                value={form.data.note}
-                                placeholder="Delivery date, packing, anything the client asked for"
-                                onChange={(event) =>
-                                    form.setData('note', event.target.value)
-                                }
-                            />
-                        )}
-                    </FormField>
-                </div>
-            </section>
-
-            <OrderLinesEditor
-                rows={form.data.lines}
-                products={products}
-                sizeLists={sizeLists}
-                savedModes={savedModes}
-                errors={errors}
-                started={started}
-                onChange={(lines) => form.setData('lines', lines)}
-            />
+            {client ? (
+                <>
+                    <ClientCard
+                        values={client}
+                        onChange={(values) => form.setData('client', values)}
+                        errors={clientErrors}
+                        cities={cities}
+                        sources={clientSources}
+                        preset={clientPreset}
+                    />
+                    {lines}
+                    {details}
+                </>
+            ) : (
+                <>
+                    {details}
+                    {lines}
+                </>
+            )}
 
             <div className="flex flex-wrap items-center gap-2">
                 <Button type="submit" disabled={processing}>

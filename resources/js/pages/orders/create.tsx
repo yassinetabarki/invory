@@ -6,6 +6,9 @@ import type { OrderCreateProps } from '@/types/domain';
 export default function OrdersCreate({
     products,
     size_lists,
+    cities,
+    client_sources,
+    client_preset,
 }: OrderCreateProps) {
     return (
         <>
@@ -18,6 +21,9 @@ export default function OrdersCreate({
                     sizeLists={size_lists}
                     action={store()}
                     cancelHref={index.url()}
+                    cities={cities}
+                    clientSources={client_sources}
+                    clientPreset={client_preset}
                 />
             </div>
         </>
