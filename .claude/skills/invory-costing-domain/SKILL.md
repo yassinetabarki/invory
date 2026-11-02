@@ -30,6 +30,7 @@ If a rule here is wrong or incomplete, stop and ask the tech-lead to update it (
 | Stock movement | A history entry of a material: `created`, `restock`, `correction`, `price_change`, `cutting`, `cutting_return` ("Back from cutting") | `StockMovement` / `StockMovementType` enum |
 | Order | A client's order: its client (INV-4; the order keeps her name), order date, optional note, and one or more order lines. Recording, editing or deleting an order **never changes material stock or sales** (S-48); only "Start cutting" and "Move back to To start" on a line do (S-53). An order can't be deleted while any unit is in cutting or ready to ship (S-49) | `Order` / `orders` |
 | Client | A person or a shop who orders: a name (up to 100 characters, may repeat), a phone (unique in the workshop, compared on its digits: "22345678", "+216 22 345 678" and "22.345.678" are one number, shown "22 345 678"), a city (up to 60) and, if known, a source (Instagram, Facebook, TikTok, WhatsApp, Website, Walk-in / shop, Word of mouth, Other with an optional text of 40). Never edited or removed; every order has one (INV-4, ADR-0021) | `Client` / `clients`, `ClientSource`, `PhoneNumber` |
+| Restock of finished products | Finished units that were made or arrived, **added** to the shelf in their colours and sizes for 1 to 50 products, with a date (not after today), an optional reference (64) and note (255), and who recorded it. Never changes materials, costing, sales or orders. Undone as a whole while every variant still holds what it added; it then stays, marked Undone (INV-3, ADR-0022). Not the material Restock | `ProductRestock` / `product_restocks`, `ProductRestockLine` |
 | Order line | One product of an order with its whole-unit quantity (1 … 1 000 000); one line per product per order, at most 50 per order | `OrderLine` / `order_lines` |
 | Stage counts | How many units of an order line are To start, In cutting, Ready to ship and Shipped; they always add up to the line's quantity. To start = quantity − the other three (S-49) | `in_cutting`, `ready_to_ship`, `shipped` (`to_start` derived) |
 | Open order | An order with at least one line not fully shipped (`shipped < quantity`). Once every line is fully shipped the order is "Shipped". One rule drives the Orders list's "Open orders" filter, its count and its totals (S-50) | `Order::open()` / `Order::shipped()` scopes, `OrderStatusFilter` enum |
@@ -37,7 +38,7 @@ If a rule here is wrong or incomplete, stop and ask the tech-lead to update it (
 | Order line size | One size of an order line: the units ordered in that size and its stage counts (In cutting, Ready to ship, Shipped; To start derived). Only sizes ordered have one. The line's quantity and stage counts are the sums of its sizes. A line recorded before sizes holds one "One size" row (S-60, S-61, ADR-0016) | `OrderLineSize` / `order_line_sizes`, `OrderLineSizeMode` |
 | Size list | The fixed sizes of a product category, in order, with the name the screens show: "S, M, L, XL" (Apparel), "36 to 46" (Footwear), "One size" (every other category). Installation-wide; no screen edits them (S-58, ADR-0015) | `SizeList` / `size_lists` |
 | Size | One size of a size list ("S", "36", "One size"). A product has every size of its category; later stories count orders, production and finished stock by size id | `Size` / `sizes` |
-| Finished stock | The finished units of a product on the shelf, counted per colour and size (per size before INV-2). Set by "Update stock" (a count, not a plus or minus; the last save wins); S-57 adds cancelled units. Never changes "Can produce now", the unit cost, the materials, sales, orders or the Inventory value (S-56, ADR-0017) | `ProductSizeStock` / `product_size_stocks`, `FinishedStock` |
+| Finished stock | The finished units of a product on the shelf, counted per colour and size (per size before INV-2). Set by "Update stock" (a count, not a plus or minus; the last save wins); a Restock of finished products adds to it (INV-3); S-57 adds cancelled units. Never changes "Can produce now", the unit cost, the materials, sales, orders or the Inventory value (S-56, ADR-0017) | `ProductSizeStock` / `product_size_stocks`, `FinishedStock` |
 | Colour | One colour of the workshop's list: a name (at most 32 characters, unique in the workshop ignoring capitals), a code (2 to 4 capitals or digits, unique in the workshop, never changed; INV-2 builds variant SKUs from it), a swatch (`#RRGGBB`, capitals) and a position. Never removed. Every workshop starts with 20 defaults. A product has at least one colour, from its own workshop (INV-1, ADR-0018) | `Colour` / `colours`, `product_colours` |
 | Variant | One colour of a product in one size ("the Denim Jacket in Indigo, size M"). Not stored on its own: a product, a colour and a size, with its own finished stock (INV-2, ADR-0019) | product id + colour id + size id |
 | Barcode | An EAN-13 number of the workshop, made by Invory, for one colour and one size; it stands for one or more product names and never changes (INV-8, ADR-0020) | `Barcode` / `barcodes`, `BarcodeName` / `barcode_names` |
@@ -330,6 +331,28 @@ variants(P)           = |colours(P)| × |sizes(P)|
 
 Worked example: Black S 1 · M 0 · L 2 · XL 1, Indigo 2 · 0 · 3 · 1, Light wash 0 → Black 4, Indigo 6, Light wash 0, sizes 3 · 0 · 5 · 2,
 "In stock 10 units", 3 colours × 4 sizes = 12 variants. Indigo M from 0 to 4 → Indigo 10, 14 units; "Can produce now" still 112.
+
+### Restock of finished products (added 2026-11-02, INV-3, ADR-0022)
+
+```
+restock(R)            = { (P, c, z, n) }: n ≥ 1 units of product P in colour c and size z, for 1 to 50 products
+record(R)             : finished(P, c, z)' = finished(P, c, z) + n for every line, in one save, all or nothing
+units(R)              = Σ n over its lines                                              (stored: a restock is never edited)
+can_undo(R)           = not undone and finished(P, c, z) ≥ n for every line whose product P isn't deleted
+undo(R)               : finished(P, c, z)' = finished(P, c, z) − n for those lines; R is marked undone, never deleted
+last_restock(P)       = the newest restock not undone with a line of P (date, then id), and Σ n of P's lines on it
+```
+- **Refused on save, nothing written:** a field not a whole number from 0 to 1,000,000 ("Indigo M: Enter a whole number from 0 to
+  1,000,000."); finished + n over 1,000,000 ("Indigo M: This would put more than 1,000,000 units on the shelf."); a product with
+  nothing typed; no unit at all; a 51st product; a product deleted or whose colours or sizes changed since the page.
+- **Undo refused:** "This restock can't be undone: Denim Jacket in Indigo, size M, has 2 units on the shelf, fewer than the 8 it
+  added. Set the right count with Update stock instead." (the first short variant: products by position, colours in list order,
+  sizes in size order).
+- **Changes no figure:** materials, "Can produce now", the unit cost, margin, sales, orders and the Inventory value. Draft and archived
+  products are restocked like active ones. Update stock still sets counts and wins when saved after a restock.
+
+Worked example: Denim Jacket Black 1 · 0 · 2 · 1, Indigo 2 · 0 · 3 · 1 (10 units). A restock of Indigo S 4 · M 8 · L 6 · XL 2 and
+Black M 4 (24) → Black 1 · 4 · 2 · 1 = 8, Indigo 6 · 8 · 9 · 3 = 26, 34 units. Undone → back to 10.
 
 ### Colours (added 2026-10-30, INV-1, ADR-0018)
 

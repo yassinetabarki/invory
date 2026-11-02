@@ -98,6 +98,8 @@ code testable and ready to scale.
                            │ (one Start cutting)│          │ (per unit + taken)   │
                            └────────────────────┘          └──────────────────────┘
 ```
+Status (2026-11-02): INV-3 records each restock of finished products in `product_restocks` and `product_restock_lines` (ADR-0022);
+saving adds to `product_size_stocks`, Undo takes the units back off and marks the restock undone.
 Status (2026-10-31): INV-2 counts the finished units per colour and size: each `product_size_stocks` row names a colour too
 (ADR-0019); a colour with stock can't be taken off its product.
 Status (2026-10-23): S-56 keeps the finished units of a product on the shelf, per size, in `product_size_stocks` (ADR-0017); nothing
@@ -310,7 +312,28 @@ the database: 1,000,000 per variant is the input rule of "Update stock".
 `App\Services\Products\FinishedStock` is the only reader (every colour of the product × every size of the list, in order, 0 included,
 with the per-colour, per-size and grand totals); the product
 page gets it as `finished_stock`, a deferred prop in its own group `stock`, rescued. Whole units only: it never reaches
-`App\Domain\Costing`, the products list, sales or the dashboard. Every writer takes the product's row lock first.
+`App\Domain\Costing`, the products list, sales or the dashboard. Every writer takes the product's row lock first: Update stock and Delete product (one product), Record and Undo restock (INV-3, several products, in id order).
+
+### `product_restocks` and `product_restock_lines` (INV-3, [ADR-0022](adr/0022-restocks-of-finished-products.md))
+
+| Table / column                               | Type                          | Rules                                                                                |
+| -------------------------------------------- | ----------------------------- | ------------------------------------------------------------------------------------ |
+| `product_restocks`                           | id, timestamps                | one restock; never edited or deleted; `created_at` is when it was recorded           |
+| `product_restocks.workshop_id`               | FK → workshops                | `restrictOnDelete`; index (`workshop_id`, `restocked_on`, `id`) for newest first     |
+| `product_restocks.restocked_on`              | date                          | not after today                                                                      |
+| `product_restocks.reference`, `note`         | string(64), string(255), null |                                                                                      |
+| `product_restocks.units`                     | unsigned integer              | its total, written once (CHECK ≥ 1 on PostgreSQL)                                    |
+| `product_restocks.user_id`                   | FK → users nullable           | who recorded it (`nullOnDelete`)                                                     |
+| `product_restocks.undone_at`, `undone_by`    | timestamp, FK → users, null   | set by Undo (`undone_by` `nullOnDelete`)                                             |
+| `product_restock_lines`                      | id, timestamps                | one product, colour and size that got units; unique (restock, product, colour, size) |
+| `product_restock_lines.product_restock_id`   | FK → product_restocks         | `cascadeOnDelete` (nothing deletes a restock)                                        |
+| `product_restock_lines.product_id`           | FK → products                 | `restrictOnDelete` (products are soft-deleted); index (`product_id`, restock)        |
+| `product_restock_lines.colour_id`, `size_id` | FK → colours, sizes           | `restrictOnDelete`, indexed                                                          |
+| `product_restock_lines.position`             | unsigned small integer        | the product's place on the restock, from 1                                           |
+| `product_restock_lines.units`                | unsigned integer              | 1 … 1,000,000 (CHECK on PostgreSQL)                                                  |
+
+PostgreSQL only: `unique(workshop_id, id)` on restocks and composite keys (`workshop_id`, `product_restock_id`) → product_restocks
+and (`workshop_id`, `product_id`) → products. The shelf count stays in `product_size_stocks`; these tables are the record.
 
 ### `barcodes` and `barcode_names` (INV-8, [ADR-0020](adr/0020-barcodes-follow-the-name.md))
 
