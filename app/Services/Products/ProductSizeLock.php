@@ -7,11 +7,12 @@ namespace App\Services\Products;
 use App\Models\OrderLine;
 use App\Models\Product;
 use App\Models\ProductCategory;
+use App\Models\ProductionBatch;
 
 /**
- * The sizes of a product are locked once it is on an order (S-58, AC-4, ADR-0015 decision 4) or has finished units in stock (S-56-e,
- * ADR-0017 decision 5): its category may change only to one with the same size list. An order counts until it is deleted, also once
- * it is fully shipped; stock counts while any size holds a unit (a row in `product_size_stocks`). The order message wins when both
+ * The sizes of a product are locked once it is on an order (S-58, AC-4, ADR-0015 decision 4), has finished units in stock (S-56-e,
+ * ADR-0017 decision 5) or has units in production (INV-5-g): its category may change only to one with the same size list. An order
+ * counts until it is deleted, also once it is fully shipped; stock counts while any size holds a unit (a row in `product_size_stocks`). The order message wins when both
  * apply. Add product has no lock, and a product on no order and with no stock can change to any category.
  *
  * Checked twice: by the update request, so the error shows with the other errors, and by `UpdateProduct` under the product row lock.
@@ -37,6 +38,9 @@ final class ProductSizeLock
             $reason = __(':product is on orders, so its category can\'t change to one with other sizes.', ['product' => $product->name]);
         } elseif ($product->sizeStocks()->exists()) {
             $reason = __(':product has units in stock, so its category can\'t change to one with other sizes.', ['product' => $product->name]);
+        } elseif (ProductionBatch::query()->inProduction()->where('product_id', $product->id)->exists()) {
+            // INV-5-g: a batch in production is of one size of the current list.
+            $reason = __(':product has units in production, so its category can\'t change to one with other sizes.', ['product' => $product->name]);
         } else {
             return null;
         }
