@@ -13,13 +13,14 @@ import { Button } from '@/components/ui/button';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { create, destroy, index } from '@/routes/orders';
 import type {
+    ClientRef,
     Order,
     OrderStatusFilter,
     OrdersIndexProps,
 } from '@/types/domain';
 
 /** A search or page change reloads only the list and its filters. */
-const LIST_PROPS = ['orders', 'filters'];
+const LIST_PROPS = ['orders', 'filters', 'client_filter'];
 
 function NewOrderButton() {
     return (
@@ -38,6 +39,7 @@ export default function OrdersIndex({
     statuses,
     totals,
     has_orders: hasOrders,
+    client_filter: clientFilter,
 }: OrdersIndexProps) {
     // The search box owns its text (seeded from the server) so a slow response
     // never overwrites what the user typed meanwhile.
@@ -47,6 +49,9 @@ export default function OrdersIndex({
     const [seenSearch, setSeenSearch] = useState(serverFilters.search);
     const [status, setStatus] = useState(serverFilters.status);
     const [seenStatus, setSeenStatus] = useState(serverFilters.status);
+    // INV-4: the chosen client, as the server sent it (so the filter shows her name).
+    const [client, setClient] = useState<ClientRef | null>(clientFilter);
+    const [seenClient, setSeenClient] = useState(serverFilters.client);
 
     const [deleting, setDeleting] = useState<Order | null>(null);
     const [deleteProcessing, setDeleteProcessing] = useState(false);
@@ -69,12 +74,23 @@ export default function OrdersIndex({
         setStatus(serverFilters.status);
     }
 
-    function visit(search: string | null, nextStatus: OrderStatusFilter) {
+    // A client we did not ask for (back / forward button) is adopted.
+    if (serverFilters.client !== seenClient) {
+        setSeenClient(serverFilters.client);
+        setClient(clientFilter);
+    }
+
+    function visit(
+        search: string | null,
+        nextStatus: OrderStatusFilter,
+        nextClient: ClientRef | null = client,
+    ) {
         // `page` is never sent, so a new search or status returns to page 1;
         // `status` is left out while it is the default, "open".
         const query = {
             ...(search === null ? {} : { search }),
             ...(nextStatus === 'open' ? {} : { status: nextStatus }),
+            ...(nextClient === null ? {} : { client: nextClient.id }),
         };
 
         router.get(index.url(), query, {
@@ -105,11 +121,17 @@ export default function OrdersIndex({
         visit(emitted, next);
     }
 
+    function chooseClient(next: ClientRef | null) {
+        setClient(next);
+        visit(emitted, status, next);
+    }
+
     function clearFilters() {
         setText('');
         setEmitted(null);
         setStatus('open');
-        visit(null, 'open');
+        setClient(null);
+        visit(null, 'open', null);
     }
 
     function askToDelete(order: Order) {
@@ -138,7 +160,9 @@ export default function OrdersIndex({
 
     const isEmpty = orders.data.length === 0;
     const everyOrderShipped =
-        serverFilters.search === null && serverFilters.status === 'open';
+        serverFilters.search === null &&
+        serverFilters.status === 'open' &&
+        serverFilters.client === null;
 
     return (
         <>
@@ -165,6 +189,8 @@ export default function OrdersIndex({
                             statuses={statuses}
                             onSearchChange={setText}
                             onStatusChange={chooseStatus}
+                            client={client}
+                            onClientChange={chooseClient}
                         />
                     )}
 

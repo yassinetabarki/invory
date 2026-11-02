@@ -3,6 +3,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { ClientCard } from '@/components/clients/client-card';
 import { EMPTY_CLIENT } from '@/components/clients/client-fields';
+import { EditClientField } from '@/components/clients/edit-client-field';
 import { countingFor, newOrderLine } from '@/components/orders/order-line-row';
 import type {
     OrderLineRow,
@@ -123,7 +124,7 @@ export function OrderForm({
     sizeLists,
     action,
     cancelHref,
-    cities = [],
+    cities,
     clientSources = [],
     clientPreset = null,
 }: OrderFormProps) {
@@ -217,11 +218,18 @@ export function OrderForm({
                 Details
             </h2>
             <div className="grid gap-4 sm:grid-cols-[2fr_1fr]">
-                {!client && (
-                    <p className="text-sm sm:col-span-2">
-                        <span className="text-muted-foreground">Client </span>
-                        <span className="font-medium">{order?.client}</span>
-                    </p>
+                {!client && order && (
+                    <EditClientField
+                        id={`${uid}-client`}
+                        clientId={form.data.client_id ?? ''}
+                        clientName={order.client}
+                        onChange={(chosen) =>
+                            form.setData('client_id', chosen.id)
+                        }
+                        error={errors.client_id}
+                        cities={cities ? [...cities] : undefined}
+                        sources={clientSources}
+                    />
                 )}
                 <FormField
                     id={`${uid}-ordered-on`}
@@ -290,7 +298,7 @@ export function OrderForm({
                         values={client}
                         onChange={(values) => form.setData('client', values)}
                         errors={clientErrors}
-                        cities={cities}
+                        cities={cities ?? []}
                         sources={clientSources}
                         preset={clientPreset}
                     />

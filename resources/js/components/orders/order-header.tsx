@@ -1,11 +1,14 @@
 import { Link } from '@inertiajs/react';
 import { Pencil, Trash2 } from 'lucide-react';
+import { telHref } from '@/components/clients/client-header';
+import { SourceLabel } from '@/components/clients/source-label';
 import { formatUnits } from '@/components/orders/stage-figure';
 import { ProgressStatus } from '@/components/orders/progress-status';
 import { PageHeader } from '@/components/shared/page-header';
 import { Button } from '@/components/ui/button';
 import { useAppSettings } from '@/hooks/use-app-settings';
 import { formatCount, formatDate } from '@/lib/format';
+import { show as showClient } from '@/routes/clients';
 import { edit } from '@/routes/orders';
 import type { Order } from '@/types/domain';
 
@@ -48,6 +51,36 @@ export function OrderHeader({ order, onDelete }: OrderHeaderProps) {
                     </>
                 }
             />
+
+            {order.client_details && (
+                // INV-4, AC-7: who the client is; on a phone the line wraps.
+                <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+                    {order.client_details.source && (
+                        <>
+                            <SourceLabel client={order.client_details} />
+                            <span aria-hidden="true">·</span>
+                        </>
+                    )}
+                    <span>{order.client_details.city}</span>
+                    <span aria-hidden="true">·</span>
+                    <a
+                        href={telHref(order.client_details.phone)}
+                        aria-label={`Call ${order.client_details.name}, ${order.client_details.phone}`}
+                        className="font-mono hover:underline focus-visible:underline"
+                    >
+                        {order.client_details.phone}
+                    </a>
+                    <span aria-hidden="true" className="max-sm:hidden">
+                        ·
+                    </span>
+                    <Link
+                        href={showClient(order.client_details.id)}
+                        className="font-semibold text-foreground hover:underline focus-visible:underline max-sm:basis-full"
+                    >
+                        All orders of {order.client_details.name}
+                    </Link>
+                </p>
+            )}
 
             <div className="flex flex-wrap items-center gap-3">
                 <ProgressStatus

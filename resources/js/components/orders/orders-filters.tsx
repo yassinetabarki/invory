@@ -1,4 +1,5 @@
 import { Search } from 'lucide-react';
+import { ClientPicker } from '@/components/clients/client-picker';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -8,7 +9,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import type { Option, OrderStatusFilter } from '@/types/domain';
+import type { ClientRef, Option, OrderStatusFilter } from '@/types/domain';
 
 type OrdersFiltersProps = {
     /** The text in the search box (controlled; the page debounces it). */
@@ -18,15 +19,20 @@ type OrdersFiltersProps = {
     statuses: Option<OrderStatusFilter>[];
     onSearchChange: (text: string) => void;
     onStatusChange: (status: OrderStatusFilter) => void;
+    /** INV-4, AC-7: one client's orders; null for "All clients". */
+    client: ClientRef | null;
+    onClientChange: (client: ClientRef | null) => void;
 };
 
-/** The search box and the Status select above the orders list. */
+/** The search box, the Status select and the Client filter above the orders list. */
 export function OrdersFilters({
     search,
     status,
     statuses,
     onSearchChange,
     onStatusChange,
+    client,
+    onClientChange,
 }: OrdersFiltersProps) {
     return (
         <div
@@ -74,6 +80,19 @@ export function OrdersFilters({
                         ))}
                     </SelectContent>
                 </Select>
+            </div>
+
+            <div className="md:w-56">
+                <p id="orders-client-label" className="sr-only">
+                    Client
+                </p>
+                <ClientPicker
+                    id="orders-client"
+                    labelledBy="orders-client-label"
+                    value={client}
+                    onSelect={onClientChange}
+                    clearLabel="All clients"
+                />
             </div>
         </div>
     );

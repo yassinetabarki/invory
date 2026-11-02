@@ -7,6 +7,8 @@ export default function OrdersEdit({
     order,
     products,
     size_lists,
+    cities,
+    client_sources,
 }: OrderEditProps) {
     return (
         <>
@@ -22,6 +24,8 @@ export default function OrdersEdit({
                     sizeLists={size_lists}
                     action={update(order.id)}
                     cancelHref={index.url()}
+                    cities={cities}
+                    clientSources={client_sources}
                 />
             </div>
         </>

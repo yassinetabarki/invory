@@ -3,6 +3,8 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import OrdersIndex from '@/pages/orders/index';
 import { paginate, withOneSize } from '@/test/fixtures';
+import { act } from '@testing-library/react';
+import { amira, ref } from '@/test/fixtures/clients';
 import { inertiaMock, resetInertiaMock, setPageProps } from '@/test/inertia';
 import type {
     OpenOrderTotals,
@@ -115,7 +117,7 @@ function renderPage(props: OrdersIndexProps) {
 }
 
 const LIST_VISIT_OPTIONS = {
-    only: ['orders', 'filters'],
+    only: ['orders', 'filters', 'client_filter'],
     preserveState: true,
     preserveScroll: true,
     replace: true,
@@ -237,5 +239,36 @@ describe('orders/index page', () => {
                 .getAllByRole('definition')
                 .map((item) => item.textContent),
         ).toEqual(['0', '0 units', '0 units', '0 units']);
+    });
+
+    it('filters by client, kept with the search and status in the address, and Clear filters drops it (INV-4 AC-7)', async () => {
+        const { user } = renderPage(withOrders([lina], { search: 'lina' }));
+
+        await user.click(
+            screen.getByRole('combobox', { name: 'Client All clients' }),
+        );
+        await act(async () => {
+            inertiaMock.http.requests.at(-1)?.resolve([ref(amira)]);
+        });
+
+        expect(
+            screen.getByRole('option', { name: 'All clients' }),
+        ).toBeInTheDocument();
+        expect(
+            screen.getByRole('option', { name: /Amira Ben Salah/ }),
+        ).toHaveTextContent('Instagram · Sousse · 22 345 678');
+
+        await user.click(
+            screen.getByRole('option', { name: /Amira Ben Salah/ }),
+        );
+
+        expect(inertiaMock.router.get).toHaveBeenLastCalledWith(
+            '/orders',
+            { search: 'lina', client: 1 },
+            LIST_VISIT_OPTIONS,
+        );
+        expect(
+            screen.getByRole('combobox', { name: 'Client Amira Ben Salah' }),
+        ).toBeInTheDocument();
     });
 });

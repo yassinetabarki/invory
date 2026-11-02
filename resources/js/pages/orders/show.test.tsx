@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import OrdersShow from '@/pages/orders/show';
 import { Toaster } from '@/components/ui/sonner';
 import { withOneSize } from '@/test/fixtures';
+import { boutiqueLina, ines, ref } from '@/test/fixtures/clients';
 import { inertiaMock, resetInertiaMock } from '@/test/inertia';
 import type { OrderLine, OrderProduct, OrderShowProps } from '@/types/domain';
 
@@ -292,5 +293,43 @@ describe('orders/show page', () => {
                 }),
             ).toBeInTheDocument();
         });
+    });
+
+    it('shows who the client is under the summary: source, city, a call link and all her orders (INV-4 AC-7)', () => {
+        render(
+            <OrdersShow
+                order={{ ...props.order, client_details: ref(boutiqueLina) }}
+            />,
+        );
+
+        expect(screen.getByText('Walk-in / shop')).toBeInTheDocument();
+        expect(
+            screen.getByRole('link', {
+                name: 'Call Boutique Lina, 71 234 567',
+            }),
+        ).toHaveAttribute('href', 'tel:71234567');
+        expect(
+            screen.getByRole('link', { name: 'All orders of Boutique Lina' }),
+        ).toHaveAttribute('href', '/clients/2');
+    });
+
+    it('starts the client line with the city when the client has no source (INV-4 AC-7)', () => {
+        render(
+            <OrdersShow
+                order={{
+                    ...props.order,
+                    client: 'Ines Mrad',
+                    client_details: ref(ines),
+                }}
+            />,
+        );
+
+        const line = screen.getByRole('link', {
+            name: 'All orders of Ines Mrad',
+        }).parentElement;
+
+        expect(line).toHaveTextContent(
+            /^Monastir·20 456 789·All orders of Ines Mrad$/,
+        );
     });
 });

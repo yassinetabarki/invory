@@ -9,7 +9,9 @@ import {
     sizeLists,
     withOneSize,
 } from '@/test/fixtures';
-import { inertiaMock, resetInertiaMock } from '@/test/inertia';
+import { act } from '@testing-library/react';
+import { amira, boutiqueLina, ref } from '@/test/fixtures/clients';
+import { inertiaMock, resetInertiaMock, setFormState } from '@/test/inertia';
 import type { OrderEditProps, OrderLine, OrderProduct } from '@/types/domain';
 
 vi.mock('@inertiajs/react', async (importOriginal) => {
@@ -245,5 +247,88 @@ describe('orders/edit page', () => {
             "Denim Jacket can't be removed: 30 units have started.",
         );
         expect(second.getByRole('combobox', { name: 'Product' })).toBeEnabled();
+    });
+
+    it("shows the order's client in the picker with her grey line, and moves the order to another client (INV-4 AC-6)", async () => {
+        const user = userEvent.setup();
+
+        render(<OrdersEdit {...props} />);
+
+        expect(
+            screen.getByRole('combobox', { name: 'Client Boutique Lina' }),
+        ).toBeInTheDocument();
+        // Who she is comes from the picker's search, which brings her along by id.
+        expect(inertiaMock.http.requests[0]).toMatchObject({
+            path: '/clients/options',
+            params: { include: ['3'] },
+        });
+
+        await act(async () => {
+            inertiaMock.http.requests[0].resolve([
+                { ...ref(boutiqueLina), id: 3 },
+            ]);
+        });
+
+        expect(
+            screen.getByText('Walk-in / shop · Tunis · 71 234 567'),
+        ).toBeInTheDocument();
+
+        await user.click(
+            screen.getByRole('combobox', { name: 'Client Boutique Lina' }),
+        );
+        await act(async () => {
+            inertiaMock.http.requests
+                .at(-1)
+                ?.resolve([ref(amira), { ...ref(boutiqueLina), id: 3 }]);
+        });
+        await user.click(
+            screen.getByRole('option', { name: /Amira Ben Salah/ }),
+        );
+        await user.click(screen.getByRole('button', { name: 'Save order' }));
+
+        expect(inertiaMock.submissions.at(-1)?.data).toMatchObject({
+            client_id: 1,
+        });
+    });
+
+    it('adds a new client from the picker over the order, and chooses her (INV-4 AC-6)', async () => {
+        const user = userEvent.setup();
+
+        // The first visit has no cities: the window asks for them.
+        render(<OrdersEdit {...props} cities={undefined} />);
+        await user.click(
+            screen.getByRole('combobox', { name: 'Client Boutique Lina' }),
+        );
+        await user.type(screen.getByPlaceholderText('Search clients'), 'Ines');
+        await act(async () => {
+            for (const request of inertiaMock.http.requests) {
+                if (request.status === 'pending') {
+                    request.resolve([]);
+                }
+            }
+        });
+        await user.click(
+            await screen.findByRole('option', {
+                name: 'Add "Ines" as a new client',
+            }),
+        );
+
+        expect(
+            screen.getByRole('dialog', { name: 'Add client' }),
+        ).toBeInTheDocument();
+        expect(screen.getByLabelText('Name')).toHaveValue('Ines');
+        // The cities come when the window asks for them.
+        expect(inertiaMock.router.reload).toHaveBeenCalledWith({
+            only: ['cities'],
+        });
+    });
+
+    it('asks to choose a client when the save says so (INV-4 AC-6)', () => {
+        render(<OrdersEdit {...props} />);
+
+        setFormState({ errors: { client_id: 'Choose a client.' } });
+
+        expect(screen.getByText('Choose a client.')).toBeInTheDocument();
+        expect(screen.getByRole('combobox', { name: /^Client/ })).toBeInvalid();
     });
 });
