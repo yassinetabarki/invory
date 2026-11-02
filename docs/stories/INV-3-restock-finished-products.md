@@ -263,7 +263,8 @@ run their PostgreSQL tests; after the last wave the whole tree runs `composer te
   runs `UndoCheck`, takes each line's units off (a row reaching 0 is deleted, as everywhere), sets `undone_at` and `undone_by`.
   A refusal is a `ValidationException` on `undo` with "This restock can't be undone: Denim Jacket in Indigo, size M, has 2 units on the
   shelf, fewer than the 8 it added. Set the right count with Update stock instead."
-- `RestockController@undo` (`POST restocks/{restock}/undo`, policy `update`) → back with "Restock undone.".
+- `RestockUndoController@store` (`POST restocks/{restock}/undo`, policy `update`) → back with "Restock undone.". Its own controller:
+  Laravel's arch preset allows only resource methods on a controller.
 
 **Tests**
 - The 25 Oct restock undone: Denim Jacket back to 10, Denim Jeans 5-pocket back to no rows, the restock marked with who and when.
@@ -272,8 +273,8 @@ run their PostgreSQL tests; after the last wave the whole tree runs `composer te
 
 > [!example]- Files (6)
 > - `app/Actions/Restocks/UndoRestock.php` (new), `app/Services/Restocks/UndoCheck.php` (new)
-> - `app/Http/Controllers/RestockController.php`, `routes/web.php`
-> - `tests/Feature/Restocks/UndoRestockTest.php` (new), `tests/Unit/Restocks/UndoCheckTest.php` (new)
+> - `app/Http/Controllers/RestockUndoController.php` (new), `routes/web.php`
+> - `tests/Feature/Restocks/UndoRestockTest.php` (new; it also covers `UndoCheck`)
 
 #### INV-3-d · Restocks list, detail, New restock page, picker, grid
 **Commit:** `feat(restocks): the Restocks list and detail, the New restock page and its product picker (INV-3-d)`
@@ -288,7 +289,8 @@ run their PostgreSQL tests; after the last wave the whole tree runs `composer te
 - JSON (ADR-0009 rule 5, as `materials.options`): `restocks.products.options` (`search`, `limit` ≤ 50, `include`; every non-deleted
   product, any status, A → Z, name, SKU, status) and `restocks.products.line` (`restocks/products/{product}`: the product, its sizes,
   whether it is "One size", and its finished stock through `FinishedStock`, for "now 2").
-- Resources and the `domain.ts` types of the Contract below, in the same commit.
+- Resources and the `domain.ts` types of the Contract below, in the same commit; one-line stub pages `restocks/index` and
+  `restocks/create` (as INV-4-c did), replaced by INV-3-g and INV-3-i.
 
 **Tests**
 - The three example rows as in AC-2, "and 2 more", the Undone flag; search "BL-04" and the product filter; "No restocks yet" vs no
@@ -436,7 +438,7 @@ export type RestockBlock = {
     totals: number[] | null;                                                    // per size, only with two colours or more
 };
 export type RestockDetail = RestockSummary & {
-    note: string | null; recorded_at: string; products_count: number;          // recorded_at ISO 8601
+    note: string | null; recorded_at: string; products_count: number;          // "2026-10-25T14:32", wall-clock time
     undone_at: string | null; undone_by: string | null;
     blocks: RestockBlock[]; undo_refusal: string | null;
 };

@@ -790,6 +790,7 @@ export type ProductShowProps = {
     recent_sales?: Sale[]; // deferred prop: newest 5
     finished_stock?: FinishedStock | null; // deferred prop (group 'stock'); null and listed in rescuedProps when it couldn't load
     barcodes?: ProductBarcodes | null; // deferred prop (group 'stock'); null and listed in rescuedProps when it couldn't load
+    last_restock?: { restocked_on: string; units: number } | null; // INV-3: deferred (group 'stock'); null = "Not restocked yet."
 };
 export type SalesIndexProps = {
     sales: Paginated<Sale>; // sold_on desc, then id desc

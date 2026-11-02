@@ -501,6 +501,13 @@ tests/
 | PUT | /products/{product}/stock | products.stock.update | ProductStockController@update | redirect → show ("Stock updated."); S-56: `sizes` by size id, every size of the list; the window reloads only `finished_stock` |
 | POST | /products/{product}/barcodes | products.barcodes.store | ProductBarcodeController@store | redirect → show `?tab=barcodes` with the server's toast; INV-8: `variants` [{colour_id, size_id}], all or nothing; the window reloads only `barcodes` |
 | POST | /materials/{material}/restocks | materials.restocks.store | MaterialRestockController@store | redirect back |
+| GET | /restocks | restocks.index | RestockController@index | `restocks/index` (INV-3: `search` reference, note or product name; `product`; 25 a page newest first; `restock` opens the panel, prop `restock`) |
+| GET | /restocks/create | restocks.create | @create | `restocks/create` (`?product=` → `preset`, that product's line) |
+| POST | /restocks | restocks.store | @store | redirect → index ("34 units restocked."); with `from_product` → that product's page ("24 units of Denim Jacket restocked." when alone); refusals on `products.{i}` and `products.{i}.units.{colour}.{size}` |
+| POST | /restocks/{restock}/undo | restocks.undo | RestockUndoController@store | redirect back ("Restock undone."); a refusal is an error on `undo` |
+| GET | /restocks/products/options | restocks.products.options | RestockProductController@index | JSON `RestockProductRef[]` (`search`, `limit` ≤ 50, `include`), every non-deleted product by name |
+| GET | /restocks/products/{product} | restocks.products.line | RestockProductController@show | JSON `RestockLine` (sizes, "One size", finished stock) |
+| GET | /restocks/barcode | restocks.barcode | RestockBarcodeController@show | JSON `RestockBarcodeLookup` (`number`; ADR-0020, ADR-0022) |
 | GET | /sales | sales.index | SaleController@index | `sales/index` (log, totals, record / edit panel) |
 | POST | /sales | sales.store | @store | redirect back |
 | PUT | /sales/{sale} | sales.update | @update | redirect back |

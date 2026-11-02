@@ -60,11 +60,28 @@ final class RestockController extends Controller
         ]);
     }
 
-    /** Saving (AC-1, AC-3): the Restocks list with the new restock on top and "34 units restocked.". */
+    /**
+     * Saving (AC-1, AC-3): the Restocks list with the new restock on top and "34 units restocked."; from a product's page, that page
+     * (AC-7).
+     */
     public function store(StoreRestockRequest $request, RecordRestock $record): RedirectResponse
     {
         $user = $request->user();
-        $restock = $record->handle($request->restock(), $user instanceof User ? $user : abort(401));
+        $data = $request->restock();
+        $restock = $record->handle($data, $user instanceof User ? $user : abort(401));
+
+        // Started from a product's page (AC-7): back to it, naming the product when the restock was that product alone (otherwise
+        // the general toast: the human's answer, 2026-11-02).
+        $from = $request->fromProduct() === null ? null : Product::query()->find($request->fromProduct());
+
+        if ($from !== null) {
+            $alone = array_column($data['products'], 'product_id') === [$from->id];
+            Inertia::flash('toast', ['type' => 'success', 'message' => $alone
+                ? RestockMessages::productRestocked($restock->units, $from->name)
+                : RestockMessages::restocked($restock->units)]);
+
+            return to_route('products.show', $from);
+        }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => RestockMessages::restocked($restock->units)]);
 

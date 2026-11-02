@@ -27,6 +27,7 @@ use App\Services\Products\FinishedStock;
 use App\Services\Products\ProductBarcodes;
 use App\Services\Products\ProductIndexQuery;
 use App\Services\Products\SizeLists;
+use App\Services\Restocks\RestockBook;
 use App\Services\Sales\SalesReport;
 use ArrayObject;
 use Illuminate\Database\Eloquent\Collection;
@@ -114,6 +115,8 @@ final class ProductController extends Controller
                 'stock',
                 rescue: true,
             ),
+            // INV-3: "Last restock" sits under the stock table, so it shares the group too.
+            'last_restock' => Inertia::defer(fn (): ?array => app(RestockBook::class)->lastOf($product), 'stock', rescue: true),
         ]);
     }
 

@@ -185,4 +185,21 @@ final readonly class RestockBook
 
         return array_values($matches->all());
     }
+
+    /**
+     * "Last restock: 25 Oct 2026, 24 units" on the product page (AC-7): the newest restock not undone with units of this product (by
+     * date, then the latest recorded) and the units it gave this product; null when there is none ("Not restocked yet."). One query.
+     *
+     * @return array{restocked_on: string, units: int}|null
+     */
+    public function lastOf(Product $product): ?array
+    {
+        $last = ProductRestock::query()->active()
+            ->whereIn('id', ProductRestockLine::query()->select('product_restock_id')->where('product_id', $product->id))
+            ->withSum(['lines as product_units' => fn (Builder $lines) => $lines->where('product_id', $product->id)], 'units')
+            ->newestFirst()
+            ->first();
+
+        return $last === null ? null : ['restocked_on' => $last->restocked_on->toDateString(), 'units' => (int) $last->getAttribute('product_units')];
+    }
 }
