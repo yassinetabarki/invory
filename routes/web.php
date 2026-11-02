@@ -13,6 +13,7 @@ use App\Http\Controllers\OrderLineMovePreviewController;
 use App\Http\Controllers\ProductBarcodeController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductStockController;
+use App\Http\Controllers\RestockBarcodeController;
 use App\Http\Controllers\RestockController;
 use App\Http\Controllers\RestockProductController;
 use App\Http\Controllers\RestockUndoController;
@@ -53,6 +54,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('restocks/products/{product}', [RestockProductController::class, 'show'])
         ->where('product', '[0-9]{1,18}')
         ->name('restocks.products.line');
+
+    // New restock's scan field (INV-3-e): what a barcode stands for. JSON, read-only.
+    Route::get('restocks/barcode', [RestockBarcodeController::class, 'show'])->name('restocks.barcode');
 
     // Restocks of finished products (INV-3): never edited or deleted.
     Route::resource('restocks', RestockController::class)->only(['index', 'create', 'store']);

@@ -628,6 +628,18 @@ export type RestockProductOptionsQuery = {
     limit?: number;
     include?: number[];
 };
+/** `GET restocks/barcode?number=` (the scan field): the products, colour and size a number stands for, or why there are none. */
+export type RestockBarcodeLookup =
+    | {
+          result: 'found';
+          colour_id: number;
+          size_id: number;
+          matches: RestockLine[];
+      } // by SKU; more than one: ask which
+    | {
+          result: 'invalid' | 'unknown' | 'colour_gone' | 'size_gone';
+          message: string;
+      }; // the red line, word for word
 /**
  * New restock posts this to `restocks.store`. Errors: restocked_on, reference, note, products (nothing typed, a 51st product),
  * products.{i} (a line: nothing typed, deleted, changed), products.{i}.units.{colourId}.{sizeId} (a field).
