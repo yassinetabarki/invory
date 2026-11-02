@@ -4,7 +4,8 @@
 > **Owner:** `product-owner` (order, wording, acceptance criteria) · **Technical Detail:** `tech-lead` ([TECH-DEBT.md](TECH-DEBT.md), [plans/](plans/README.md))
 > **Phases & Goals:** [ROADMAP.md](ROADMAP.md) · **Progress:** [STATUS.md](STATUS.md)
 
-> [!history] Last Cleaned: 2026-11-01
+> [!history] Last Cleaned: 2026-11-02
+> - **INV-4 Done, with INV-12** (accepted 2026-11-02 by the human; on `PI-DEV`: `4ed7e4d`, `0e6fcec`, `f4f9fd8`, `ab5bb22`, `2448e70`, `d8b2ccb`, `a2c2a05`, `5966a39`, `7102486`, `d2bf98f`; card `ccd4fe4`, Technical work `7528910`, delivered `64f463c`). INV-12's New order Client card was built within INV-4 (D-22), so INV-12 is done too. Both left the open list. INV-9 is next.
 > - **D-22 (2026-11-02, human):** `INV-4` comes next, ahead of `INV-9` and `INV-3`. New order uses `INV-12`'s phone-first Client card instead of INV-4's switch, so `INV-12` is built within INV-4 and leaves the open list. INV-4's development card is approved (`Ready`, 2026-11-02) and its Technical work too (`Planned`, 2026-11-02: 9 steps, INV-4-a … INV-4-i).
 > - **INV-8 Done** (accepted 2026-11-01; `9f93175`, `28003cb`, `63513ef`, `4678cad`, `5704050`, `36b34a3`, `3b55319`; docs `da41e1b`), so it left the open list. INV-9 is next.
 > - **INV-2 Done** (accepted 2026-10-31; `46af1cc`, `ab313eb`, `4088200`), so it left the open list. The PostgreSQL parity suite was green before the commits (2619 tests). INV-8 is next.
@@ -12,7 +13,7 @@
 > - **INV-2 Split:** INV-2's card was split into three: **INV-2** (stock, done), **INV-8** (barcodes), and **INV-9** (labels).
 > - **Added 2026-11-01:** `INV-12` (Refactor the order), placed after INV-5 and before INV-7. **Split the same day into `INV-12`, `INV-13` and `INV-14`, each with a UI card.** `INV-12`, `INV-13` and `INV-14` are `UI approved` (2026-11-01); `INV-5`'s UI card, reopened because finished products are not tied to an order, was rewritten and is `UI approved` again (2026-11-01). `INV-13`'s card got a one-line wording fix (re-approved 2026-11-01). They wait their turn for building.
 > - **Parked idea:** "Barcodes tab polish" (from the INV-8 UX review), planned with INV-9; no ID yet.
-> - **Current Order** (D-22): `INV-4` (with `INV-12`) → `INV-9` → `INV-3` → `INV-5` → `INV-13` → `INV-14` → `INV-7`. Next free ID: **INV-15** (INV-11 is the tech-debt item raised in the INV-8 review, see [TECH-DEBT.md](TECH-DEBT.md)).
+> - **Current Order** (INV-4 done): `INV-9` → `INV-3` → `INV-5` → `INV-13` → `INV-14` → `INV-7`. Next free ID: **INV-15** (INV-11 is the tech-debt item raised in the INV-8 review, see [TECH-DEBT.md](TECH-DEBT.md)).
 > - **INV-1 Done:** "Colours as fixed values" accepted & merged (`a66f4bf`, `78a4eee`), so it left this backlog.
 > - **Added:** `INV-6` (picker-row item) and `INV-7` (Could: bigger tap targets on Settings).
 > - **Archive:** Done items leave this file and are recorded in `STATUS.md` and the archive.
@@ -55,16 +56,16 @@
 1. **INV-1** (Colours) — `#done` *(Accepted 2026-10-31)*
 2. **INV-2** (Stock per colour and size) — `#done` *(Accepted 2026-10-31)*
 3. **INV-8** (Barcodes) — `#done` *(Accepted 2026-11-01)*
-4. **Next Sequence (D-22):** `INV-4` *(with `INV-12`)* ➔ `INV-9` ➔ `INV-3` ➔ `INV-5` ➔ `INV-13` ➔ `INV-14` ➔ `INV-7` *(the UI cards of INV-5, INV-12, INV-13 and INV-14 are all `UI approved`, 2026-11-01)*
-5. **Card Structure:** Each feature receives a UI card first (`INV-n-<slug>-ui.md`), followed by a development card (`INV-n-<slug>.md`).
-6. **Shared UI Cards:** `INV-2`, `INV-8`, and `INV-9` share the same UI card but are accepted individually.
-7. **Phase 7 Tech Allowance:** `F-43` · `F-46` · `F-52` · `F-53`
+4. **INV-4** (Clients, with INV-12's Client card) — `#done` *(Accepted 2026-11-02)*
+5. **Next Sequence:** `INV-9` ➔ `INV-3` ➔ `INV-5` ➔ `INV-13` ➔ `INV-14` ➔ `INV-7` *(the UI cards of INV-5, INV-12, INV-13 and INV-14 are all `UI approved`, 2026-11-01)*
+6. **Card Structure:** Each feature receives a UI card first (`INV-n-<slug>-ui.md`), followed by a development card (`INV-n-<slug>.md`).
+7. **Shared UI Cards:** `INV-2`, `INV-8`, and `INV-9` share the same UI card but are accepted individually.
+8. **Phase 7 Tech Allowance:** `F-43` · `F-46` · `F-52` · `F-53`
 
 ### Open Backlog Table
 
 | ID | What it brings | Type | Status | Priority / Size |
 | :--- | :--- | :--- | :--- | :--- |
-| **INV-4** | Clients as an entity, found by phone on New order *(takes in INV-12)* | Feature | `Planned` | Must / L |
 | **INV-9** | Print barcode labels | Feature | `Ready` | Must / M |
 | **INV-3** | Restock of finished products | Feature | `UI approved` | Must |
 | **INV-5** | Production for the shelf: Progress page *(UI card rewritten and approved 2026-11-01)* | Feature | `UI approved` | Must |
@@ -95,16 +96,6 @@
   - Restock adds to shelf and never touches materials; can be undone as a whole.
   - Restock serves as the main action on the product page's Sizes & colours card.
 
-#### `INV-4` · Clients as an entity
-- **Type:** Feature | **Priority:** Must | **Size:** L | **Status:** `Planned` *(development card and Technical work approved 2026-11-02)*
-- **Cards:** [Development Card](stories/INV-4-clients.md) · [UI Card](stories/INV-4-clients-ui.md) · [INV-12 UI Card](stories/INV-12-client-first-ui.md) *(New order's Client card)*
-- **Details:** 
-  - B2C buyer focus: Clients page in sidebar with Source filter, plus individual client profiles.
-  - Fields: Name, Phone (unique), City (all required), and Source (optional: Instagram, Facebook, TikTok, WhatsApp, Website, Walk-in, Word of mouth, Other).
-  - New order: `INV-12`'s phone-first Client card, built here (D-22); INV-4's "Existing client · New client" switch is never built. Edit order, the Clients page, the client page and the Add client window stay as approved.
-  - The sidebar leaves out Restocks until `INV-3` ships.
-  - *Answers (human, 2026-11-02):* one card, one build, size L (the tech-lead splits it into steps); orders recorded before INV-4 are test data and are removed when it ships; `INV-12` closes when INV-4 is done; from a client page, New order puts the focus on the first product field.
-
 #### `INV-5` · Production progress page
 - **Type:** Feature | **Priority:** Must | **Status:** `UI approved` *(reopened and rewritten 2026-11-01; the human validated the new card the same day)*
 - **Cards:** [UI Card](stories/INV-5-progress-ui.md) *(the rewritten version replaces the one validated on 2026-10-30)* · design spec [INV-5-production-for-the-shelf](design/specs/INV-5-production-for-the-shelf.md)
@@ -120,13 +111,13 @@
 - **Type:** Feature | **Priority:** Must | **Size:** L, split on 2026-11-01 into three, one UI card each | **Status:** `INV-12`, `INV-13` and `INV-14` all `UI approved` (2026-11-01; `INV-14` was redrawn the same day for the shelf model). Building waits for its turn after `INV-5`.
 - **Cards:** [INV-12 UI card: client first](stories/INV-12-client-first-ui.md) · [INV-13 UI card: product search with stock](stories/INV-13-order-products-ui.md) · [INV-14 UI card: order tracker, covered from the shelf](stories/INV-14-order-tracker-ui.md) · design spec [INV-12-refactor-the-order](design/specs/INV-12-refactor-the-order.md). No development cards yet.
 - **The split (own order, each validated on its own):**
-  - `INV-12` · client first on New order (point 1). **Built within `INV-4` (D-22, 2026-11-02).**
+  - `INV-12` · client first on New order (point 1). **Built within `INV-4` (D-22) and done with it, 2026-11-02.**
   - `INV-13` · product search with stock per colour and size, and order lines per colour and size (point 2). Needs `INV-2`, `INV-3`, and the answer on order lines per colour and size.
   - `INV-14` · order tracker (To deliver · Delivered · Cancelled), Mark delivered taking units off the finished stock, Cancel units, no production on orders (points 3 and 4). Needs `INV-13` and a redrawn `INV-5` (Progress makes products for the shelf, so cutting has somewhere to go).
 - **Decision of 2026-11-01 (human, on Q1–Q10):** order lines are a colour × size grid, built before `INV-13`; "Not started" and "Delivered" are the words; the client is phone first; cancel only what is not delivered, no undo, no stock effect. **Also:** a finished product is not tied to an order. Progress makes products **for the shelf**; an order is covered from the finished stock (the shelf is checked, never set aside). This changes `INV-5`, see below.
   - **Answers on the model (human, 2026-11-01):** (1) the shelf is checked, never held: no reservation, "On the shelf now" shown beside each colour × size, Mark delivered takes units off the finished stock up to what the shelf holds, its move back returns them, Cancel changes no stock. (2) An order counts **To deliver · Delivered · Cancelled · Total**; its status is Not started · In progress (partly delivered) · Delivered · Cancelled; the list filter is Open orders · Delivered · Cancelled · All orders. (3) Deleting an order is always allowed (no refusal); the confirm adds a sentence when units were delivered. (4) `INV-5`'s UI card is reopened (see `INV-5`).
   - **Answers on Progress and the order (human, 2026-11-01, all the recommended options):** Put in stock writes a restock (Reference = the batch number, Note "From production"), undoable in Restocks, and an undone restock doesn't bring the batch back; a scan can finish a batch; Undo batch only while In cutting; no order data on Progress (a "Waiting in open orders" column could be a later card); part of a batch can be put in stock; INV-13's line now reads "(M is out of stock, so those units wait for the shelf)"; and the defaults: "In stock" in the search and "On the shelf now" on the order page and Progress, no delivery history, no "Make more" link, one number for batch and ticket, Start batch only on Progress and its product cards, and the two new Edit product locks (a colour or a category with units in production).
-  - **Order of work (D-22):** `INV-4` (with `INV-12`) → `INV-9` → `INV-3` → `INV-5` (UI card rewritten and validated again on 2026-11-01; development card next) → `INV-13` → `INV-14`. The order lines per colour and size are built before `INV-13`; the tech-lead says in which card. Existing orders with units in cutting, ready to ship or shipped need a mapping (Shipped → Delivered, the rest → To deliver); materials already taken by cuts on orders belong to no batch. The tech-lead says how to treat them.
+  - **Order of work (D-22, INV-4 and INV-12 done 2026-11-02):** `INV-9` → `INV-3` → `INV-5` (UI card rewritten and validated again on 2026-11-01; development card next) → `INV-13` → `INV-14`. The order lines per colour and size are built before `INV-13`; the tech-lead says in which card. Existing orders with units in cutting, ready to ship or shipped need a mapping (Shipped → Delivered, the rest → To deliver); materials already taken by cuts on orders belong to no batch. The tech-lead says how to treat them.
 - **The request, in four points:**
   1. **Client first.** New order starts with the client and all the information we need, like the client card. New order shows the client form. The phone number is unique per client, so each new order creates the client if it doesn't exist yet (match on phone).
   2. **Products to order.** A good search that finds products and shows, per colour (and size), whether each is in stock or not.

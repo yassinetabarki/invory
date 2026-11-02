@@ -1,6 +1,6 @@
 # Invory — project status report
 
-> Owner: **product-owner** (updated at every phase boundary and after every accepted story) · Report date: **2026-11-01**
+> Owner: **product-owner** (updated at every phase boundary and after every accepted story) · Report date: **2026-11-02**
 > Sources: every plan in [docs/plans/](plans/README.md), the [backlog archive](archive/backlog-2026-10-14.md) and `git log` on `main`.
 > Gate results: run by the main session on 2026-10-14 for this first report. Later updates quote the tech-lead's latest delivery report
 > (the product-owner never runs gates).
@@ -280,6 +280,7 @@ a PostgreSQL parity suite (last green: 2 604 of 2 604 on 2026-10-31, during INV-
 | **Colour × size variants** | INV-10 the PostgreSQL check runs to the end, on the right PHP (tech) | 2026-10-31 (card `1f854bf`; `76b1770`: `composer.json` and `docs/SETUP.md`; on `main`) | ✅ Done 2026-10-31. The time limit on `composer test:pgsql` is removed (proven by a 61-minute run) and `docs/SETUP.md` says which PHP runs the gates; the developer's PHP 8.3 run passed 2 604 of 2 604. **Pending:** the tech-lead's own green run of `composer test:pgsql`, to be confirmed when Docker is up |
 | **Colour × size variants** | INV-2 stock per colour and size | 2026-10-31 (`46af1cc`, `ab313eb`, `4088200`; on `main`) | ✅ Done, accepted 2026-10-31. PostgreSQL parity green before the commits (2 619 tests) |
 | **Colour × size variants** | INV-8 barcodes for every colour and size (L, 8 steps) | 2026-11-01 (INV-8-a `9f93175`, -b `28003cb`, -c `63513ef`, -d `4678cad`, -e `5704050`, -f/g `36b34a3`, -h `3b55319`; docs `da41e1b`; on `main`) | ✅ Done, accepted 2026-11-01 (AC-1 to AC-5) after the designer's review and one fix round (visible focus, 44 px phone tabs, the "N missing" badge on a phone, tablet cards up to 1023 px, the "Barcodes changed. Check the list." toast, the Delete sentence as its own paragraph). Tech-lead APPROVED, all 8 steps. Gates quoted from the tech-lead's delivery report, 2026-11-01: screen tests, lint and format, type check and build green. `composer test`, the PostgreSQL parity suite and the browser golden path are red only because of your own uncommitted edit to the size-list migration (Apparel gets XS, XXL and XXXL; 38 tests still expect S to XL, the same on both databases); you are handling that edit, and it is not an INV-8 gap. Follow-ups: INV-11 (small barcode clean-ups, minor tech debt) and the parked idea "Barcodes tab polish", planned with INV-9 |
+| **Colour × size variants** | INV-4 clients, found by phone on New order, with INV-12's Client card (L, 9 steps; D-22) | 2026-11-02 (card `ccd4fe4`, Technical work `7528910`; INV-4-a `4ed7e4d`, -b `0e6fcec`, -c `f4f9fd8`, -d `ab5bb22`, test fix `2448e70`, -e `d8b2ccb`, -f `a2c2a05`, -g `5966a39`, -h `7102486`, -i `d2bf98f`; delivered `64f463c`; on branch `PI-DEV`, not merged to `main`, not pushed) | ✅ Done, accepted by the human 2026-11-02 (AC-1 to AC-7). INV-12 is done with it. Built in this session without the separate agents (the human's choice). Gates on this machine: `composer test` green except the tests that need PHP's GD extension (not installed here); Pint and PHPStan clean; screen tests (1 416), lint, type check and build green. **Not run here:** the PostgreSQL parity suite (Docker not running), the browser golden path and the GD tests: run them before merging to `main`. The orders recorded before INV-4 are put away by its migration (`php artisan migrate` on the dev database removes them, as decided). Changes during the build: the client's details load only on the order page (query budget); on a phone the Orders list shows Status and Client in the filter bar rather than a Filters panel |
 
 All phase branches (`phase/1-materials`, `phase/2-ui-first-preview`, `phase/3-performance-spa-data`, `fix/rl-02-product-show-loading`,
 `worktree-fix-hover-prefetch-bug`) are fully merged into `main`. They and the worktree under `.claude/worktrees/` can be deleted (human decision D-6).
@@ -326,8 +327,10 @@ All phase branches (`phase/1-materials`, `phase/2-ui-first-preview`, `phase/3-pe
 1. Done 2026-10-30: all five UI cards are approved (INV-1 to INV-3 on 2026-10-25, INV-4 and INV-5 on 2026-10-30).
 2. Done 2026-10-31: INV-1 colours accepted and committed (`a66f4bf`, `78a4eee`); INV-10 (the PostgreSQL check) committed as
    `76b1770`. Done 2026-10-31: INV-2 stock per colour and size accepted and committed (`46af1cc`, `ab313eb`, `4088200`; PostgreSQL parity
-   green before the commits). Done 2026-11-01: INV-8 barcodes accepted and committed (`9f93175` … `3b55319`). **Next: INV-9** (labels).
-   Human: the size-list migration edit (Apparel gets XS, XXL, XXXL) leaves 38 tests red on both databases until it is finished.
+   green before the commits). Done 2026-11-01: INV-8 barcodes accepted and committed (`9f93175` … `3b55319`).
+   Done 2026-11-02: the sizes XS to XXXL through a new migration (`1ea9c7c`), and INV-4 clients (with INV-12) accepted, on branch
+   `PI-DEV` (`4ed7e4d` … `64f463c`). **Next: INV-9** (labels). Human: run the PostgreSQL parity suite, the browser golden path and the GD
+   tests on `PI-DEV`, then merge it to `main`.
 3. Human: discuss orders per colour and size (INV-5's "to be discussed" part); it is decided before INV-5's development card.
 4. Done 2026-10-31: INV-2's development card (stock per colour and size) was built and accepted, with the rule "a colour with stock
    can't be taken off a product". INV-8 was built and accepted on 2026-11-01. INV-9 (card `Ready`) follows, then INV-3 to INV-5, INV-12 and INV-7 in order.

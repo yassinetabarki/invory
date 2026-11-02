@@ -5,7 +5,7 @@ type: feature
 phase: Colour × size variants
 priority: Must
 size: L
-status: Planned
+status: Done
 created: 2026-11-02
 tags:
   - story
@@ -49,7 +49,7 @@ The examples use these clients (Boutique Lina is the one shop; today is 30 Oct 2
 | Rania Hamdi      | Website        | Bizerte | 50 987 654 | 1      | 0           | 9 Oct 2026  |
 | Yassine Trabelsi | Facebook       | Tunis   | 98 765 432 | 1      | 1           | 27 Oct 2026 |
 
-- [ ] **AC-1 · A client and her details.** A client has a **Name** (required, up to 100 characters), a **Phone** (required), a
+- [x] **AC-1 · A client and her details.** A client has a **Name** (required, up to 100 characters), a **Phone** (required), a
   **City** (required, up to 60 characters) and a **Source** (optional), and belongs to the workshop like every other record.
   - **Phone:** a Tunisian number of 8 digits, typed with or without +216 or 00216, spaces, dots or dashes, is kept and shown as "22 345
     678" ("22345678", "+216 22 345 678" and "22.345.678" are all "22 345 678"). A number abroad is accepted when it starts with + and
@@ -72,8 +72,8 @@ The examples use these clients (Boutique Lina is the one shop; today is 30 Oct 2
     city." · "Keep the city to 60 characters or fewer." · "Keep it to 40 characters or fewer." (Other source). The hints: Name "The
     person or the shop, as you call them." · Phone "8 digits, such as 22 345 678. For a number abroad, start with + and the country
     code." · Source "Where did this client find you?" · Other source "In a few words, such as a fashion fair.". The phone field uses
-    the number font, opens the number keypad on a phone and its text is 16 px.
-- [ ] **AC-2 · Clients page.** The sidebar reads Dashboard, Materials, Products, Orders, **Clients** (users icon), Sales. The page
+    the number font, opens the number keypad on a phone and its text is 16 px. ✅ 2026-11-02 · 4ed7e4d, 0e6fcec, d8b2ccb (tests fixed in 2448e70; on PI-DEV)
+- [x] **AC-2 · Clients page.** The sidebar reads Dashboard, Materials, Products, Orders, **Clients** (users icon), Sales. The page
   **Clients**, "The people and shops who order from you, and where they found you. Each order belongs to one client.", has the main
   button **Add client** (plus sign), the search "Search name, phone or city" and the list **Source** ("All sources", then the eight
   sources), both kept in the page address and combined. The table, 25 a page, sorted by name A → Z: **Client** (bold, a link to her
@@ -87,8 +87,8 @@ The examples use these clients (Boutique Lina is the one shop; today is 30 Oct 2
     " with 40 characters are cut with "…" in the table, in full on the client page.
   - **Phone (375 px):** the header and **Add client** full width, the search, **Filters** ("Filters · 1" when a source is chosen; a
     panel with Source), then one card per client: the name (a link), the source label, "Sousse · 22 345 678", "1 open order · last 28
-    Oct 2026". At 320 px nothing scrolls sideways.
-- [ ] **AC-3 · Add client window.** **Add client** opens the window **Add client** with Name, Phone, City and **Source (optional)**
+    Oct 2026". At 320 px nothing scrolls sideways. ✅ 2026-11-02 · f4f9fd8, a2c2a05 (tests fixed in 2448e70; on PI-DEV)
+- [x] **AC-3 · Add client window.** **Add client** opens the window **Add client** with Name, Phone, City and **Source (optional)**
   (the eight chips; **Other** adds "Other source (optional)"), and the buttons **Cancel** and **Save client**, which shows a spinner
   while saving. Saving Ines Mrad · 20 456 789 · Monastir · Instagram closes it with the toast "Client created." and Ines Mrad shows in
   the list in her place. On an error the window stays open with what was typed.
@@ -97,8 +97,8 @@ The examples use these clients (Boutique Lina is the one shop; today is 30 Oct 2
   - A name already used is never an error: under Name, "You already have a client named Amira Ben Salah (Sousse · 22 345 678)." with
     **Open Amira Ben Salah**.
   - Save failed: "Couldn't save the client. Try again.", and everything typed stays.
-  - **Phone:** a panel over the whole screen, the fields one under another, **Save client** in a bar fixed at the bottom.
-- [ ] **AC-4 · Client page.** Breadcrumb "Clients › Amira Ben Salah", header **Amira Ben Salah**, under it "[Instagram] · [map pin]
+  - **Phone:** a panel over the whole screen, the fields one under another, **Save client** in a bar fixed at the bottom. ✅ 2026-11-02 · f4f9fd8, d8b2ccb (tests fixed in 2448e70; on PI-DEV)
+- [x] **AC-4 · Client page.** Breadcrumb "Clients › Amira Ben Salah", header **Amira Ben Salah**, under it "[Instagram] · [map pin]
   Sousse · [phone] 22 345 678", the phone a call link named "Call Amira Ben Salah, 22 345 678" (a client with no source: the line
   starts with the city). The main button **New order**, named "New order for Amira Ben Salah", opens New order with her already
   shown as Existing client (AC-5). Three figures: **Open orders** "1" · **Orders** "3" · **Last order** "28 Oct 2026". The section
@@ -111,8 +111,8 @@ The examples use these clients (Boutique Lina is the one shop; today is 30 Oct 2
     and figures at once, 3 placeholder rows. **Error:** "Couldn't load the orders of Amira Ben Salah." · **Try again**. The page is
     read-only: there is no Edit.
   - **Phone:** the title, the source label and city, a full-width **Call 22 345 678** button (44 px), **New order** full width, the
-    figures two to a row, her orders as today's order cards without the name.
-- [ ] **AC-5 · New order starts with the client, found by her phone.** New order shows its cards in the order **Client**, then
+    figures two to a row, her orders as today's order cards without the name. ✅ 2026-11-02 · f4f9fd8, 5966a39 (tests fixed in 2448e70; on PI-DEV)
+- [x] **AC-5 · New order starts with the client, found by her phone.** New order shows its cards in the order **Client**, then
   **Products**, then **Details** (Order date and Note; the Client field leaves Details). The Client card: the heading **Client**, "A
   phone number belongs to one client. If it is already one of your clients, the order goes to them.", the outline button **Find a
   client by name** (search icon), and a grey box "Client details" with **Phone** next to **Name**, then **City**, then **Source
@@ -145,15 +145,15 @@ The examples use these clients (Boutique Lina is the one shop; today is 30 Oct 2
   - **From a client page** (AC-4), New order opens with her as Existing client and the focus in the Products card.
   - **Phone:** the Client card first; **Find a client by name** full width (44 px); Phone, Name, City and the Source chips two to a row
     (44 px), one under another; **Use another number** full width (44 px); **Save order** in the bar fixed at the bottom, never hiding
-    the field with the focus. A 100-character name is cut with "…" in the block. At 320 px nothing scrolls sideways.
-- [ ] **AC-6 · Edit order chooses from the clients.** Edit order's Client field is a picker, with no phone lookup, showing the order's
+    the field with the focus. A 100-character name is cut with "…" in the block. At 320 px nothing scrolls sideways. ✅ 2026-11-02 · 0e6fcec, 7102486 (tests fixed in 2448e70; on PI-DEV)
+- [x] **AC-6 · Edit order chooses from the clients.** Edit order's Client field is a picker, with no phone lookup, showing the order's
   client; any client can be chosen at any stage of the order. The search "Search clients" and the options are those of AC-5, with
   "Instagram · Sousse · 22 345 678" shown under the chosen client. The last option, with a plus icon, "+ Add "amira" as a new client"
   ("+ New client" when nothing is typed), opens the Add client window (AC-3) over the order with Name filled in (digits typed fill
   Phone instead); **Save client** → "Client created.", the window closes and the new client is chosen, and a phone already used reads
   "22 345 678 is already the phone of Amira Ben Salah." with **Choose Amira Ben Salah instead**. **Save order** → "Order updated.". On a phone the list
-  is a panel over the whole screen titled "Choose a client", with the search on top and **Close**.
-- [ ] **AC-7 · The client on the order page and the Orders list.** The order page's title and breadcrumb are the client's name, as
+  is a panel over the whole screen titled "Choose a client", with the search on top and **Close**. ✅ 2026-11-02 · ab5bb22, d2bf98f (tests fixed in 2448e70; on PI-DEV)
+- [x] **AC-7 · The client on the order page and the Orders list.** The order page's title and breadcrumb are the client's name, as
   today; under "Ordered 28 Oct 2026 · 2 products · 2 units" the line "[Instagram] · Sousse · 22 345 678 · **All orders of Amira Ben
   Salah**" (a link to her page; the phone a call link; with no source it starts with the city; on a phone it wraps: the label and
   city, then the phone, then the link). The Delete order
@@ -161,7 +161,7 @@ The examples use these clients (Boutique Lina is the one shop; today is 30 Oct 2
   "All clients" first, then the clients A → Z with their phone in grey, with its own search; kept in the page address and combined
   with the search and Status. Client "Amira Ben Salah" lists her open order of 28 Oct 2026; the four totals above the list still count
   every open order; no match shows today's message, and **Clear filters** also clears Client. On a phone, **Filters** holds Status and
-  Client.
+  Client. ✅ 2026-11-02 · ab5bb22, d2bf98f (tests fixed in 2448e70; on PI-DEV)
 
 ---
 

@@ -1,7 +1,7 @@
 # Invory — product roadmap
 
-> Owner: **product-owner** · Last updated: 2026-11-02
-> INV-10 is done (`76b1770`), so new cards can be added again. INV-2 is done (`46af1cc`, `ab313eb`, `4088200`). INV-8 is done (`9f93175` … `3b55319`). Next is INV-4 (D-22: it moves ahead of INV-9 and INV-3, and takes in INV-12).
+> Owner: **product-owner** · Last updated: 2026-11-02 (INV-4 accepted)
+> INV-10 is done (`76b1770`), so new cards can be added again. INV-2 is done (`46af1cc`, `ab313eb`, `4088200`). INV-8 is done (`9f93175` … `3b55319`). INV-4 is done, with INV-12 (accepted 2026-11-02, on `PI-DEV`). Next is INV-9.
 
 ## Product goal
 A small fashion workshop knows, at any moment, what each product costs to make, how many it can make from the stock
@@ -19,11 +19,11 @@ Work goes one item at a time, in the order below. A UI card comes first, then th
 | INV-10 | The PostgreSQL check runs to the end (tech)        | `Done`        | The check INV-2 needs runs to the end      |
 | INV-2  | Product sizes × colours: stock per colour and size | `Done`        | Know the shelf stock of each variant       |
 | INV-8  | Barcodes for every colour and size                 | `Done`        | Every variant gets its own barcode         |
-| INV-4  | Clients, found by phone on New order (+ INV-12)    | `Planned`     | Orders belong to a client                  |
+| INV-4  | Clients, found by phone on New order (+ INV-12)    | `Done`        | Orders belong to a client                  |
 | INV-9  | Print barcode labels                               | `Ready`       | Print a label for a variant, or a sheet    |
 | INV-3  | Restock of finished products                       | `UI approved` | Add finished units to the shelf at once    |
 | INV-5  | Production for the shelf: a progress page          | `UI approved` | See where every bundle is in production    |
-| INV-12 | Refactor the order, 1 of 3: client first           | `Merged`      | Built within INV-4                         |
+| INV-12 | Refactor the order, 1 of 3: client first           | `Done`        | Built within INV-4                         |
 | INV-13 | Refactor the order, 2 of 3: product search, stock  | `UI approved` | See what is in stock when taking an order  |
 | INV-14 | Refactor the order, 3 of 3: tracker, from shelf    | `UI approved` | See where an order stands at a glance      |
 | INV-7  | Bigger tap targets on the Settings pages (Could)   | `Idea`        | Settings are easy to use on a phone        |
@@ -49,5 +49,5 @@ the order.
 - A REST API and a mobile app
 
 ## Done
-Phases 1 to 3 and the first Phase 5 work, plus INV-1, INV-2, INV-8 and INV-10. See [STATUS.md §4](STATUS.md#4-delivery-history) and the
+Phases 1 to 3 and the first Phase 5 work, plus INV-1, INV-2, INV-8, INV-10 and INV-4 (with INV-12). See [STATUS.md §4](STATUS.md#4-delivery-history) and the
 [backlog archive](archive/backlog-2026-10-14.md).
