@@ -173,7 +173,7 @@ it('refuses a product deleted, or whose colours or sizes changed, since the page
 
     actingAs($this->user)
         ->post(route('restocks.store'), $body)
-        ->assertSessionHasErrors(['products.0' => $message]);
+        ->assertSessionHasErrors(['products.0.product' => $message]);
 
     expect(ProductRestock::query()->count())->toBe(0)
         ->and(shelfByColour($this->jeans))->toBe([]);
@@ -208,7 +208,7 @@ it('refuses another workshop\'s product as if it didn\'t exist', function () {
 
     actingAs($this->user)
         ->post(route('restocks.store'), restockBody([['product_id' => $theirs->id, 'units' => []]]))
-        ->assertSessionHasErrors(['products.0' => 'This product no longer exists. Remove it from this restock.']);
+        ->assertSessionHasErrors(['products.0.product' => 'This product no longer exists. Remove it from this restock.']);
 
     expect(ProductRestock::query()->count())->toBe(0);
 });

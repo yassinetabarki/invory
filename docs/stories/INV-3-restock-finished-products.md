@@ -454,7 +454,8 @@ export type NewRestockFormData = { restocked_on: string; reference: string; note
 // Changed
 ProductShowProps += { last_restock?: { restocked_on: string; units: number } | null }; // deferred, group 'stock', rescued
 ```
-Errors: `restocked_on`, `reference`, `note`, `products`, `products.{i}`, `products.{i}.units.{colour}.{size}` (New restock) · `undo`
+Errors: `restocked_on`, `reference`, `note`, `products`, `products.{i}` (nothing typed), `products.{i}.product` (deleted or
+changed), `products.{i}.units.{colour}.{size}` (New restock) · `undo`
 (Undo). Routes: `restocks.index` GET restocks · `restocks.create` GET restocks/create · `restocks.store` POST restocks ·
 `restocks.undo` POST restocks/{restock}/undo · `restocks.products.options` GET restocks/products/options (JSON) ·
 `restocks.products.line` GET restocks/products/{product} (JSON) · `restocks.barcode` GET restocks/barcode (JSON). `{restock}` and

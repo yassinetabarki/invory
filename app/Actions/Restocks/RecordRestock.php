@@ -32,7 +32,7 @@ final readonly class RecordRestock
     /**
      * @param  array{restocked_on: string, reference: ?string, note: ?string, products: list<array{product_id: int, units: array<int, array<int, int>>}>}  $data  units by colour id then size id, 0 for an empty field
      *
-     * @throws ValidationException on `products.{i}` (deleted, changed) or `products.{i}.units.{colour}.{size}` (over the limit)
+     * @throws ValidationException on `products.{i}.product` (deleted, changed: the page shows it at the top) or `products.{i}.units.{colour}.{size}` (over the limit)
      */
     public function handle(array $data, User $user): ProductRestock
     {
@@ -47,13 +47,13 @@ final readonly class RecordRestock
                 $product = $products->get($line['product_id']);
 
                 if ($product === null) {
-                    $errors["products.{$i}"] = RestockMessages::unknownProduct();
+                    $errors["products.{$i}.product"] = RestockMessages::unknownProduct();
 
                     continue;
                 }
 
                 if ($product->trashed()) {
-                    $errors["products.{$i}"] = RestockMessages::deleted($product->name);
+                    $errors["products.{$i}.product"] = RestockMessages::deleted($product->name);
 
                     continue;
                 }
@@ -63,7 +63,7 @@ final readonly class RecordRestock
                 $sizes = $sizeList->sizes->keyBy('id');
 
                 if (! UpdateFinishedStock::matches($line['units'], $colours->keys()->all(), $sizes->keys()->all())) {
-                    $errors["products.{$i}"] = RestockMessages::changed($product->name);
+                    $errors["products.{$i}.product"] = RestockMessages::changed($product->name);
 
                     continue;
                 }

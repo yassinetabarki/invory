@@ -642,7 +642,8 @@ export type RestockBarcodeLookup =
       }; // the red line, word for word
 /**
  * New restock posts this to `restocks.store`. Errors: restocked_on, reference, note, products (nothing typed, a 51st product),
- * products.{i} (a line: nothing typed, deleted, changed), products.{i}.units.{colourId}.{sizeId} (a field).
+ * products.{i} (a line with nothing typed: under its table), products.{i}.product (deleted or changed since the page: at the top),
+ * products.{i}.units.{colourId}.{sizeId} (a field).
  */
 export type NewRestockFormData = {
     restocked_on: string; // 'YYYY-MM-DD'

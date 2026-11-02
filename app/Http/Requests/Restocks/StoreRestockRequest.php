@@ -110,7 +110,7 @@ final class StoreRestockRequest extends FormRequest
                 $product = $this->products()->get($line['product_id']);
 
                 if ($product === null) {
-                    $validator->errors()->add("products.{$i}", RestockMessages::unknownProduct());
+                    $validator->errors()->add("products.{$i}.product", RestockMessages::unknownProduct());
                     $anything = true;
 
                     continue;
