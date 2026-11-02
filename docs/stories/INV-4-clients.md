@@ -167,7 +167,7 @@ The examples use these clients (Boutique Lina is the one shop; today is 30 Oct 2
 
 ## Technical work
 > [!warning] Complex · CRITICAL · backend + frontend · 9 commits
-> Tech-lead · 2026-11-02 · approved 2026-11-02
+> Tech-lead · 2026-11-02 · approved 2026-11-02 · delivered 2026-11-02 (on PI-DEV, waiting for acceptance)
 > Why complex: a new table with a uniqueness rule on a normalised phone, a migration that puts every existing order away, a new
 > payload for New order (find or create the client in the same save), new JSON routes and a changed contract on four pages.
 
