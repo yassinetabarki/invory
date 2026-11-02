@@ -35,7 +35,6 @@ beforeEach(fn () => $this->user = prepareDemo($this));
 function startedEditBody(array $lines): array
 {
     return validOrderPayload([
-        'client' => 'Changed Client',
         'lines' => array_map(static fn (array $line): array => [
             'product_id' => match ($line[0]) {
                 'jacket' => pid(1),
@@ -213,7 +212,6 @@ dataset('started sizes', [
 function sizedEditBody(array $sizes): array
 {
     return validOrderPayload([
-        'client' => 'Changed Client',
         'lines' => [['product_id' => pid(1), 'sizes' => sizeIds(array_map('strval', $sizes))]],
     ]);
 }

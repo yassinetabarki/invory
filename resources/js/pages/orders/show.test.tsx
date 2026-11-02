@@ -64,6 +64,8 @@ const props: OrderShowProps = {
         status: 'not_started',
         status_label: 'Not started',
         delete_refusal: null,
+        client_id: 3,
+        client_details: null,
     },
 };
 

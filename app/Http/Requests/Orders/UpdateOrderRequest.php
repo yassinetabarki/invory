@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Http\Requests\Orders;
 
 use App\Actions\Orders\SyncOrderLines;
+use App\Models\Client;
 use App\Models\Order;
 use App\Models\OrderLine;
+use App\Validation\WorkshopRule;
 use Illuminate\Auth\Access\Response;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
@@ -35,13 +37,24 @@ class UpdateOrderRequest extends StoreOrderRequest
     }
 
     /**
-     * The rules of a new order without the Client card: Edit order keeps the order's client (INV-4-d gives it its own picker).
+     * The rules of a new order, with Edit order's client picker instead of the Client card (INV-4, AC-6): `client_id`, a client of the
+     * workshop. The order can move to another client at any stage.
      *
      * @return array<string, mixed>
      */
     public function rules(): array
     {
-        return array_filter(parent::rules(), fn (string $field): bool => $field !== 'client' && ! str_starts_with($field, 'client.'), ARRAY_FILTER_USE_KEY);
+        $rules = array_filter(parent::rules(), fn (string $field): bool => $field !== 'client' && ! str_starts_with($field, 'client.'), ARRAY_FILTER_USE_KEY);
+
+        return ['client_id' => ['bail', 'required', 'integer', WorkshopRule::exists(Client::class)], ...$rules];
+    }
+
+    /** @return array<string, string> */
+    public function messages(): array
+    {
+        $choose = __('Choose a client.');
+
+        return [...parent::messages(), 'client_id.required' => $choose, 'client_id.integer' => $choose, 'client_id.exists' => $choose];
     }
 
     /**

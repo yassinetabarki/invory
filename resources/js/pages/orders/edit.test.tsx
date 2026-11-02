@@ -70,9 +70,21 @@ const props: OrderEditProps = {
         status: 'not_started',
         status_label: 'Not started',
         delete_refusal: null,
+        client_id: 3,
+        client_details: {
+            id: 3,
+            name: 'Boutique Lina',
+            phone: '71 234 567',
+            city: 'Tunis',
+            source: 'walk_in',
+            source_label: 'Walk-in / shop',
+            source_other: null,
+        },
     },
     products: [formProduct(jacket), formProduct(jeans)],
     size_lists: sizeLists,
+    cities: ['Tunis'],
+    client_sources: [],
 };
 
 describe('orders/edit page', () => {
@@ -114,6 +126,7 @@ describe('orders/edit page', () => {
             action: '/orders/7',
             method: 'put',
             data: {
+                client_id: 3,
                 ordered_on: '2026-10-15',
                 note: '',
                 lines: [

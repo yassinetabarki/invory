@@ -67,6 +67,8 @@ const lina: Order = {
     status: 'not_started',
     status_label: 'Not started',
     delete_refusal: null,
+    client_id: 3,
+    client_details: null,
 };
 
 const zeroTotals: OpenOrderTotals = {
@@ -92,7 +94,7 @@ function withOrders(
 ): OrdersIndexProps {
     return {
         orders: paginate(orders, { path: '/orders' }),
-        filters: { search, status },
+        filters: { search, status, client: null },
         statuses: [
             { value: 'open', label: 'Open orders' },
             { value: 'shipped', label: 'Shipped' },
@@ -100,6 +102,7 @@ function withOrders(
         ],
         totals: zeroTotals,
         has_orders: hasOrders,
+        client_filter: null,
     };
 }
 

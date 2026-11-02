@@ -80,6 +80,8 @@ const lina: Order = {
     status: 'in_progress',
     status_label: 'In progress',
     delete_refusal: null,
+    client_id: 3,
+    client_details: null,
 };
 
 const fiveProducts: Order = {

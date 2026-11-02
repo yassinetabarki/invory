@@ -13,6 +13,7 @@ use App\Exceptions\OrderDeleteRefusedException;
 use App\Http\Requests\Orders\IndexOrderRequest;
 use App\Http\Requests\Orders\StoreOrderRequest;
 use App\Http\Requests\Orders\UpdateOrderRequest;
+use App\Http\Resources\ClientRefResource;
 use App\Http\Resources\ClientSummaryResource;
 use App\Http\Resources\OrderFormProductResource;
 use App\Http\Resources\OrderResource;
@@ -38,18 +39,23 @@ use Inertia\Response;
  */
 final class OrderController extends Controller
 {
-    public function index(IndexOrderRequest $request, OrderBook $book): Response
+    public function index(IndexOrderRequest $request, OrderBook $book, ClientBook $clients): Response
     {
         Gate::authorize('viewAny', Order::class);
 
         $filters = $request->filters();
+        // INV-4: an id that is not a client of the workshop filters nothing.
+        $client = $filters['client'] === null ? null : $clients->find($filters['client']);
+        $filters['client'] = $client?->id;
 
         // Every prop that costs a query is a closure, so a partial reload skips what it does not list.
         return Inertia::render('orders/index', [
             'orders' => fn (): AnonymousResourceCollection => OrderResource::collection(
-                $book->list($filters['search'], OrderStatusFilter::from($filters['status']))->paginate((int) config('invory.per_page'))->withQueryString(),
+                $book->list($filters['search'], OrderStatusFilter::from($filters['status']), $filters['client'])->paginate((int) config('invory.per_page'))->withQueryString(),
             ),
             'filters' => $filters,
+            // The chosen client, so the filter shows her without loading every client.
+            'client_filter' => $client === null ? null : (new ClientRefResource($client))->resolve(),
             'statuses' => fn (): array => OrderStatusFilter::options(),
             // Never follow the search or the filter: a search, filter or page change reloads only `orders` and `filters`.
             'totals' => fn (): array => $book->openTotals(),
@@ -83,7 +89,7 @@ final class OrderController extends Controller
         Gate::authorize('view', $order);
 
         return Inertia::render('orders/show', [
-            'order' => fn (): OrderResource => new OrderResource($book->load($order)),
+            'order' => fn (): OrderResource => new OrderResource($book->load($order, withClient: true)),
         ]);
     }
 
@@ -99,7 +105,7 @@ final class OrderController extends Controller
         return to_route('orders.show', $order);
     }
 
-    public function edit(Order $order, OrderBook $book, SizeLists $sizes): Response
+    public function edit(Order $order, OrderBook $book, SizeLists $sizes, ClientBook $clients): Response
     {
         Gate::authorize('update', $order);
 
@@ -107,6 +113,9 @@ final class OrderController extends Controller
             'order' => fn (): OrderResource => new OrderResource($book->load($order)),
             'products' => fn (): AnonymousResourceCollection => OrderFormProductResource::collection($book->editOrderProducts($order)),
             'size_lists' => fn (): ArrayObject => $this->sizeLists($sizes),
+            // INV-4: the Add client window over the order asks for the cities when it opens (a partial reload), not on every visit.
+            'cities' => Inertia::optional(fn (): array => $clients->cities()),
+            'client_sources' => fn (): array => ClientSource::options(),
         ]);
     }
 

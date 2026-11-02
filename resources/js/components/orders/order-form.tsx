@@ -58,8 +58,9 @@ function toFormState(order: Order | undefined, today: string): OrderFormState {
         };
     }
 
-    // Edit order keeps the order's client (INV-4-d gives it a picker): nothing about the client is sent.
+    // Edit order sends the order's client (INV-4-i gives it a picker).
     return {
+        client_id: order.client_id ?? '',
         ordered_on: order.ordered_on,
         note: order.note ?? '',
         lines: order.lines.map((line) =>

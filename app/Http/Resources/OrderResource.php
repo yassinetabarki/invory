@@ -39,6 +39,11 @@ final class OrderResource extends JsonResource
             'status' => $progress->value,
             'status_label' => $progress->label(),
             'delete_refusal' => $held > 0 ? OrderMessages::deleteRefusal($this->client, $held) : null,
+            // INV-4: her id (Edit order's picker, the lists), and who she is on the order page only (loaded there, never queried here).
+            'client_id' => $this->client_id,
+            'client_details' => $this->relationLoaded('clientRecord') && $this->clientRecord !== null
+                ? (new ClientRefResource($this->clientRecord))->resolve($request)
+                : null,
         ];
     }
 }

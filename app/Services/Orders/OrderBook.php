@@ -75,11 +75,13 @@ final readonly class OrderBook
     }
 
     /**
-     * What an order resource reads, for an order read by route-model binding (the edit page).
+     * What an order resource reads, for an order read by route-model binding (the order page, with its client, and the edit page).
      */
-    public function load(Order $order): Order
+    public function load(Order $order, bool $withClient = false): Order
     {
-        $order->load($this->lineRelations());
+        // INV-4: the client (`client_details`) only for the order page's client line; the lists and Edit order read `client_id` and the
+        // name the order keeps, so they stay within their query budget.
+        $order->load($withClient ? [...$this->lineRelations(), 'clientRecord'] : $this->lineRelations());
 
         // The units are the sum of the loaded lines' whole quantities: no query of their own (the page stays within its query budget).
         return $order->setAttribute('lines_sum_quantity', $order->lines->sum('quantity'));

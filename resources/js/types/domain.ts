@@ -414,6 +414,8 @@ export type Order = {
     // Set while units are in cutting or ready to ship: "Boutique Lina can't be deleted: 30 units are in cutting or ready to
     // ship. Move them back to To start first." (30 = in_cutting + ready_to_ship; for one: "1 unit is" and "Move it back"); null when it may be deleted
     delete_refusal: string | null;
+    client_id: number | null; // INV-4: her id (Edit order's picker, the Client filter); null only for an order put away by INV-4's migration
+    client_details: ClientRef | null; // INV-4: who she is, on the order page only (its client line); null on the lists and Edit order
 };
 
 export type OrderStatusFilter = 'open' | 'shipped' | 'all';
@@ -421,6 +423,7 @@ export type OrderStatusFilter = 'open' | 'shipped' | 'all';
 export type OrderFilters = {
     search: string | null; // client, note, or a line's product name or SKU
     status: OrderStatusFilter; // 'open' when the URL has none
+    client: number | null; // INV-4: one client's orders; null for "All clients" (an id that isn't a client of the workshop too)
 };
 
 /** Every line of every open order of the workshop, whatever the search and the filter (S-50). */
@@ -521,6 +524,7 @@ export type ClientFields = {
  */
 export type OrderFormData = {
     client?: ClientFields; // New order only (INV-4): the server finds the client by the phone's digits, or adds her
+    client_id?: number | ''; // Edit order only (INV-4): the client chosen in the picker; '' → "Choose a client."
     ordered_on: string; // 'YYYY-MM-DD'
     note: string;
     lines: OrderLineFormRow[];
@@ -532,6 +536,7 @@ export type OrdersIndexProps = {
     statuses: Option<OrderStatusFilter>[]; // "Open orders", "Shipped", "All orders", from the server
     totals: OpenOrderTotals;
     has_orders: boolean; // any order at all in the workshop, whatever its status
+    client_filter: ClientRef | null; // INV-4: the client chosen in the Client filter
 };
 /** A product the order forms offer (S-60): an OrderProduct and the code of its size list in `size_lists`. */
 export type OrderFormProduct = OrderProduct & { size_list_code: string };
@@ -547,6 +552,8 @@ export type OrderEditProps = {
     order: Order;
     products: OrderFormProduct[];
     size_lists: Record<string, SizeList>;
+    cities?: string[]; // INV-4: for the Add client window over the order; an optional prop, asked for (`only: ['cities']`) when it opens
+    client_sources: Option<ClientSource>[];
 };
 export type OrderShowProps = { order: Order };
 

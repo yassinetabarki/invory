@@ -41,6 +41,9 @@ it('shows Boutique Lina\'s order with its lines in the order entered, nothing st
             ->where('status', 'not_started')
             ->where('status_label', 'Not started')
             ->where('delete_refusal', null)
+            ->where('client_id', fn (int $id): bool => $id > 0)
+            ->where('client_details.name', 'Boutique Lina')
+            ->etc()
             ->has('lines', 2)
             ->has('lines.0', fn (Assert $line) => $line
                 ->has('id')

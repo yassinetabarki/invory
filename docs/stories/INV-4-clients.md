@@ -317,12 +317,14 @@ replaces.
 
 - `UpdateOrderRequest`: `client_id` required, `WorkshopRule::exists(Client::class)`, "Choose a client." when missing.
   `UpdateOrder` sets `client_id` and copies her name into `orders.client`, under the order's row lock as today.
-- `OrderResource` adds `client_details` (`ClientRef`, null only for an order put away by INV-4-a, which no page shows); `OrderBook`
-  loads the client with the order.
+- `OrderResource` adds `client_id` and `client_details` (`ClientRef`). The client is loaded only for the order page (its client
+  line); the lists and Edit order read `client_id` and the name the order keeps, so they stay within the 10-query budget, and Edit
+  order's picker fetches the chosen client through `clients.options` (`include`). *(Revised during the build, 2026-11-02: loading the
+  client everywhere put the Orders list and Edit order at 11 and 12 queries.)*
 - `IndexOrderRequest` and `OrderBook::list()` take `client` (an id of the workshop; an unknown id is ignored); `filters.client`, and
   the prop `client_filter` (the chosen `ClientRef`, so the filter shows her name without loading every client). `totals` still
   ignore every filter.
-- `orders/edit` gets `cities` and `client_sources` for the Add client window.
+- `orders/edit` gets `client_sources`, and `cities` as an optional prop the Add client window asks for when it opens.
 
 **Tests**
 - 1 feature dataset: Edit order moves the order to Boutique Lina and the copy of the name follows; no client, another workshop's
@@ -446,11 +448,11 @@ export type ClientsIndexProps = { clients: Paginated<ClientSummary>; filters: Cl
 export type ClientShowProps = { client: ClientSummary; orders: Paginated<Order>; filters: { status: OrderStatusFilter };
     statuses: Option<OrderStatusFilter>[] };
 // Changed
-Order          += { client_details: ClientRef | null };
+Order          += { client_id: number | null; client_details: ClientRef | null };  // details on the order page only
 OrderFilters   += { client: number | null };
 OrdersIndexProps += { client_filter: ClientRef | null };
 OrderCreateProps += { cities: string[]; client_sources: Option<ClientSource>[]; client_preset: ClientSummary | null };
-OrderEditProps   += { cities: string[]; client_sources: Option<ClientSource>[] };
+OrderEditProps   += { cities?: string[]; client_sources: Option<ClientSource>[] };  // cities: optional, asked for by the window
 OrderFormData: New order sends `client: ClientFields`; Edit order sends `client_id: number`. Errors: client.phone, client.name,
 client.city, client.source_other (New order) · client_id (Edit order) · name, phone, city, source_other, phone_taken_by (Add client).
 Flash after Add client: `client_created: ClientRef`.

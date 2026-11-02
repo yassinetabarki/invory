@@ -313,6 +313,8 @@ function validOrderPayload(array $overrides = []): array
     return [
         // INV-4: New order's Client card. A phone no client has yet, so the save adds Boutique Lina with the order.
         'client' => ['phone' => '71 234 567', 'name' => 'Boutique Lina', 'city' => 'Tunis', 'source' => 'walk_in', 'source_other' => ''],
+        // INV-4-d: Edit order's picker. The client of the newest order, so an edit keeps it; New order ignores it.
+        'client_id' => Order::query()->orderByDesc('id')->value('client_id'),
         'ordered_on' => now()->toDateString(),
         'note' => 'Deliver before 30 Oct, in 2 boxes',
         'lines' => [

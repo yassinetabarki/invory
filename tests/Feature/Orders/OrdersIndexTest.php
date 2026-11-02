@@ -32,7 +32,7 @@ it('lists an order with its lines in the order entered and the sum of their unit
 
     orderList()->assertOk()->assertInertia(fn (Assert $page) => $page
         ->component('orders/index')
-        ->where('filters', ['search' => null, 'status' => 'open'])
+        ->where('filters', ['search' => null, 'status' => 'open', 'client' => null])
         ->has('orders.data', 1)
         ->has('orders.data.0', fn (Assert $order) => $order
             ->has('id')
@@ -120,7 +120,7 @@ it('lists open, shipped or all orders, with the search, and an order with one li
 
     expect(pageProp($response, 'orders.data.*.client'))->toBe($clients)
         ->and(pageProp($response, 'orders.data.*.status'))->toBe(array_map(fn (string $client): string => $statuses[$client], $clients))
-        ->and(pageProp($response, 'filters'))->toBe(['search' => $query['search'] ?? null, 'status' => $query['status'] ?? 'open'])
+        ->and(pageProp($response, 'filters'))->toBe(['search' => $query['search'] ?? null, 'status' => $query['status'] ?? 'open', 'client' => null])
         ->and(pageProp($response, 'statuses'))->toBe([
             ['value' => 'open', 'label' => 'Open orders'],
             ['value' => 'shipped', 'label' => 'Shipped'],
