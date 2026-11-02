@@ -1,4 +1,5 @@
 import { Link } from '@inertiajs/react';
+import { Plus } from 'lucide-react';
 import { useCallback, useId, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { BarcodesTab } from '@/components/products/barcodes-tab';
@@ -16,9 +17,19 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAppSettings } from '@/hooks/use-app-settings';
-import { formatCount } from '@/lib/format';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { formatCount, formatDate } from '@/lib/format';
 import { cn } from '@/lib/utils';
-import type { FinishedStock, Product, ProductBarcodes } from '@/types/domain';
+import {
+    create as restockCreate,
+    index as restocksIndex,
+} from '@/routes/restocks';
+import type {
+    FinishedStock,
+    Product,
+    ProductBarcodes,
+    ProductShowProps,
+} from '@/types/domain';
 
 const TABLE_NAME = 'Units in stock per colour and size';
 const BUTTON = 'h-11 w-full md:h-9 md:w-auto';
@@ -117,9 +128,10 @@ function asTab(value: string): 'stock' | 'barcodes' {
 }
 
 /**
- * "Sizes & colours" on the product page (INV-2, INV-8): how many colours and
+ * "Sizes & colours" on the product page (INV-2, INV-8, INV-3): how many colours and
  * sizes make how many variants, the buttons **Manage sizes & colours** (Edit
- * product, with the focus on the Colours field) and **Update stock**, then two
+ * product, with the focus on the Colours field), **Update stock** and **Restock**
+ * (New restock with this product in it), then two
  * tabs kept in the address (`?tab=barcodes`): **Stock by colour**, the stock of
  * every variant, and **Barcodes**. The stock tab is a table on a laptop (a shoe's 11 columns scroll inside the card), one
  * card per colour and a Total card on a phone. A "One size" product has one
@@ -130,14 +142,18 @@ export function SizesColoursCard({
     stock,
     barcodes,
     manageHref,
+    lastRestock,
 }: {
     product: Pick<Product, 'id' | 'name' | 'sku' | 'size_list'>;
     stock: FinishedStock;
     barcodes: ProductBarcodes;
     /** Edit product with `#colours`. */
     manageHref: string;
+    /** INV-3: the newest restock not undone of this product; null "Not restocked yet."; absent: no line. */
+    lastRestock?: ProductShowProps['last_restock'];
 }) {
     const { locale } = useAppSettings();
+    const mobile = useIsMobile();
     const [tab, openTab] = useSizesColoursTab();
     const [updating, setUpdating] = useState(false);
     const updateButtonRef = useRef<HTMLButtonElement>(null);
@@ -183,12 +199,23 @@ export function SizesColoursCard({
     const showTotals = colours.length > 1;
     // Every cell is a grey 0 when nothing is on the shelf: nothing to explain then.
     const showNote = stock.units > 0;
+    const restockButton = (
+        <Button asChild className={BUTTON}>
+            <Link href={restockCreate({ query: { product: product.id } })}>
+                <Plus aria-hidden="true" />
+                Restock
+            </Link>
+        </Button>
+    );
 
     return (
         <CardFrame
             line={line}
             actions={
+                // On a laptop Manage · Update stock · Restock; on a phone they stack with Restock first (INV-3, AC-7). The DOM
+                // order is the visual order either way, so it is the keyboard order too.
                 <div className="flex flex-col gap-2 md:shrink-0 md:flex-row">
+                    {mobile && restockButton}
                     <Button asChild variant="outline" className={BUTTON}>
                         <Link href={manageHref}>
                             Manage sizes &amp; colours
@@ -203,6 +230,7 @@ export function SizesColoursCard({
                     >
                         Update stock
                     </Button>
+                    {!mobile && restockButton}
                 </div>
             }
         >
@@ -404,6 +432,33 @@ export function SizesColoursCard({
                     {showNote && (
                         <p className="text-xs text-muted-foreground">
                             Grey zeros are variants with nothing on the shelf.
+                        </p>
+                    )}
+                    {/* INV-3: the newest restock not undone, or "Not restocked yet.". */}
+                    {lastRestock !== undefined && (
+                        <p className="text-sm text-muted-foreground">
+                            {lastRestock === null ? (
+                                'Not restocked yet.'
+                            ) : (
+                                <>
+                                    Last restock:{' '}
+                                    {formatDate(
+                                        lastRestock.restocked_on,
+                                        locale,
+                                    )}
+                                    , {formatCount(lastRestock.units, locale)}{' '}
+                                    {lastRestock.units === 1 ? 'unit' : 'units'}{' '}
+                                    ·{' '}
+                                    <Link
+                                        href={restocksIndex({
+                                            query: { product: product.id },
+                                        })}
+                                        className="font-medium text-primary hover:underline focus-visible:underline"
+                                    >
+                                        See the restocks of {product.name}
+                                    </Link>
+                                </>
+                            )}
                         </p>
                     )}
                 </TabsContent>

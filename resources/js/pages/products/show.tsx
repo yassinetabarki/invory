@@ -44,6 +44,8 @@ type ProductDetailsProps = {
     finishedStock: ProductShowProps['finished_stock'];
     /** The Barcodes tab's data and the Delete sentence; absent until it lands, and while it is rescued. */
     barcodes: ProductShowProps['barcodes'];
+    /** INV-3: the "Last restock" line; lands with the stock. */
+    lastRestock: ProductShowProps['last_restock'];
 };
 
 /**
@@ -74,6 +76,7 @@ function ProductDetails({
     recentSales,
     finishedStock,
     barcodes,
+    lastRestock,
 }: ProductDetailsProps) {
     const { locale } = useAppSettings();
     const [confirming, setConfirming] = useState(false);
@@ -212,6 +215,7 @@ function ProductDetails({
                             stock={finishedStock}
                             barcodes={barcodes}
                             manageHref={`${editHref}#colours`}
+                            lastRestock={lastRestock}
                         />
                     )}
                 </Deferred>
@@ -317,6 +321,7 @@ export default function ProductsShow({
     recent_sales: recentSales,
     finished_stock: finishedStock,
     barcodes,
+    last_restock: lastRestock,
 }: ProductShowProps) {
     return (
         <>
@@ -335,6 +340,7 @@ export default function ProductsShow({
                         recentSales={recentSales ?? []}
                         finishedStock={finishedStock}
                         barcodes={barcodes}
+                        lastRestock={lastRestock}
                     />
                 )}
             </Deferred>

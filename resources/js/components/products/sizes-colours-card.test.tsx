@@ -1,6 +1,13 @@
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
+import {
+    afterEach,
+    beforeEach,
+    describe,
+    expect,
+    it,
+    vi,
+} from 'vite-plus/test';
 import { FinishedStockFigure } from '@/components/products/finished-stock-figure';
 import {
     SizesColoursCard,
@@ -18,7 +25,17 @@ import {
     toteStockByColour,
 } from '@/test/fixtures/products';
 import { inertiaMock, resetInertiaMock, setPageProps } from '@/test/inertia';
-import type { FinishedStock, ProductBarcodes, SizeList } from '@/types/domain';
+import type {
+    FinishedStock,
+    ProductBarcodes,
+    ProductShowProps,
+    SizeList,
+} from '@/types/domain';
+
+// The phone layout of the buttons (INV-3): `useIsMobile` reads the viewport once, so the tests set it here.
+const viewport = vi.hoisted(() => ({ mobile: false }));
+
+vi.mock('@/hooks/use-mobile', () => ({ useIsMobile: () => viewport.mobile }));
 
 vi.mock('@inertiajs/react', async (importOriginal) => {
     const { createInertiaModule } = await import('@/test/inertia');
@@ -35,6 +52,7 @@ function renderCard(
     list: SizeList = sizeListSToXl,
     name = 'Denim Jacket',
     barcodes: ProductBarcodes = denimBarcodes,
+    lastRestock?: ProductShowProps['last_restock'],
 ) {
     return render(
         <SizesColoursCard
@@ -42,6 +60,7 @@ function renderCard(
             stock={stock}
             barcodes={barcodes}
             manageHref="/products/1/edit#colours"
+            lastRestock={lastRestock}
         />,
     );
 }
@@ -478,5 +497,76 @@ describe('<SizesColoursCard>', () => {
         expect(
             within(total).getByText('Total per size: S 3, M 0, L 5, XL 2'),
         ).toBeInTheDocument();
+    });
+
+    describe('Restock (INV-3, AC-7)', () => {
+        afterEach(() => {
+            viewport.mobile = false;
+        });
+
+        it('is the main button after Update stock, and opens New restock with this product', () => {
+            renderCard();
+
+            const restock = screen.getByRole('link', { name: 'Restock' });
+            const update = screen.getByRole('button', { name: 'Update stock' });
+
+            expect(restock).toHaveAttribute(
+                'href',
+                '/restocks/create?product=1',
+            );
+            expect(
+                update.compareDocumentPosition(restock) &
+                    Node.DOCUMENT_POSITION_FOLLOWING,
+            ).toBeTruthy();
+        });
+
+        it('comes first on a phone', () => {
+            viewport.mobile = true;
+            renderCard();
+
+            const restock = screen.getByRole('link', { name: 'Restock' });
+            const manage = screen.getByRole('link', {
+                name: 'Manage sizes & colours',
+            });
+
+            expect(
+                restock.compareDocumentPosition(manage) &
+                    Node.DOCUMENT_POSITION_FOLLOWING,
+            ).toBeTruthy();
+        });
+
+        it('says when the product was last restocked, with a link to its restocks', () => {
+            renderCard(
+                denimStockByColour,
+                sizeListSToXl,
+                'Denim Jacket',
+                denimBarcodes,
+                { restocked_on: '2026-10-25', units: 24 },
+            );
+
+            expect(
+                screen.getByText(/^Last restock: 25 Oct 2026, 24 units/),
+            ).toBeInTheDocument();
+            expect(
+                screen.getByRole('link', {
+                    name: 'See the restocks of Denim Jacket',
+                }),
+            ).toHaveAttribute('href', '/restocks?product=1');
+        });
+
+        it('says "Not restocked yet." without a link when it never was', () => {
+            renderCard(
+                denimStockByColour,
+                sizeListSToXl,
+                'Denim Jacket',
+                denimBarcodes,
+                null,
+            );
+
+            expect(screen.getByText('Not restocked yet.')).toBeInTheDocument();
+            expect(
+                screen.queryByRole('link', { name: /See the restocks/ }),
+            ).not.toBeInTheDocument();
+        });
     });
 });
