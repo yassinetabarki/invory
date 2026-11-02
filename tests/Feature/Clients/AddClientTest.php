@@ -5,6 +5,8 @@ use App\Models\Client;
 use App\Models\Workshop;
 use App\Services\Workshops\CurrentWorkshop;
 
+use function Pest\Laravel\actingAs;
+
 /*
 |--------------------------------------------------------------------------
 | Add client (INV-4-c, AC-1, AC-3)
@@ -60,11 +62,10 @@ it('refuses a phone another client has, however typed, and says whose it is', fu
     $amira = demoClient('Amira Ben Salah');
 
     actingAs($this->user)->from(route('clients.index'))->post(route('clients.store'), inesMrad(['phone' => $typed]))
-        ->assertRedirect(route('clients.index'));
+        ->assertRedirect(route('clients.index'))
+        ->assertSessionHasErrors(['phone' => '22 345 678 is already the phone of Amira Ben Salah.', 'phone_taken_by' => (string) $amira->id]);
 
-    expect(session('errors')->get('phone'))->toBe(['22 345 678 is already the phone of Amira Ben Salah.'])
-        ->and(session('errors')->get('phone_taken_by'))->toBe([(string) $amira->id])
-        ->and(Client::query()->count())->toBe(1);
+    expect(Client::query()->count())->toBe(1);
 })->with(['22 345 678', '+216 22345678']);
 
 it('adds a client whose name is already used, and a phone another workshop has', function () {

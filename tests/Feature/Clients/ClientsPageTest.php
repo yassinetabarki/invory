@@ -4,6 +4,8 @@ use App\Models\Client;
 use App\Models\Workshop;
 use App\Services\Workshops\CurrentWorkshop;
 
+use function Pest\Laravel\actingAs;
+
 /*
 |--------------------------------------------------------------------------
 | The Clients page (INV-4-c, AC-2)

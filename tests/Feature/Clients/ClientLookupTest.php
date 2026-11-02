@@ -4,6 +4,8 @@ use App\Models\Client;
 use App\Models\Workshop;
 use App\Services\Workshops\CurrentWorkshop;
 
+use function Pest\Laravel\actingAs;
+
 /*
 |--------------------------------------------------------------------------
 | New order's lookup (INV-4-b, AC-5, ADR-0009 rule 5)

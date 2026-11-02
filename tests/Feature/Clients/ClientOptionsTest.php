@@ -4,6 +4,8 @@ use App\Models\Client;
 use App\Models\Workshop;
 use App\Services\Workshops\CurrentWorkshop;
 
+use function Pest\Laravel\actingAs;
+
 /*
 |--------------------------------------------------------------------------
 | The client picker's search (INV-4-c, AC-5, AC-6, AC-7; ADR-0009 rule 5)
@@ -19,7 +21,7 @@ beforeEach(function () {
 });
 
 it('offers the clients A → Z as ClientRef, matching a name, phone digits or a city', function (array $query, array $names) {
-    $options = actingAs($this->user)->getJson(route('clients.options', $query))->assertOk()->json('data');
+    $options = actingAs($this->user)->getJson(route('clients.options', $query))->assertOk()->json();
 
     expect(array_column($options, 'name'))->toBe($names);
 })->with([
@@ -35,7 +37,7 @@ it('sends the shape of a ClientRef, the chosen client along even when she does n
     $yassine = Client::query()->where('name', 'Yassine Trabelsi')->sole();
     CurrentWorkshop::run(Workshop::factory()->create(), fn () => Client::factory()->create(['name' => 'Amira Other']));
 
-    $options = actingAs($this->user)->getJson(route('clients.options', ['search' => 'amira', 'include' => [$yassine->id]]))->json('data');
+    $options = actingAs($this->user)->getJson(route('clients.options', ['search' => 'amira', 'include' => [$yassine->id]]))->json();
 
     expect(array_column($options, 'name'))->toBe(['Amira Ben Salah', 'Yassine Trabelsi'])
         ->and(array_keys($options[0]))->toBe(['id', 'name', 'phone', 'city', 'source', 'source_label', 'source_other'])

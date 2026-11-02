@@ -15,6 +15,7 @@ use Illuminate\Database\UniqueConstraintViolationException;
 */
 
 it('leaves no order, no line and no new client behind when a line fails to save', function () {
+    $user = User::factory()->create();
     $product = Product::factory()->create(['category' => 'bag']); // "One size": counted by quantity, so only the repeated product can fail
 
     // The second line repeats the product: the database's unique index refuses it, after the order and the first line were written.
@@ -23,7 +24,7 @@ it('leaves no order, no line and no new client behind when a line fails to save'
         'ordered_on' => '2026-10-15',
         'note' => null,
         'lines' => [['product_id' => $product->id, 'quantity' => 5], ['product_id' => $product->id, 'quantity' => 7]],
-    ], $user = User::factory()->create()))->toThrow(UniqueConstraintViolationException::class)
+    ], $user))->toThrow(UniqueConstraintViolationException::class)
         ->and(Order::query()->count())->toBe(0)
         ->and(Client::query()->withoutGlobalScopes()->where('workshop_id', $user->workshop_id)->count())->toBe(0)
         ->and(OrderLine::query()->count())->toBe(0);

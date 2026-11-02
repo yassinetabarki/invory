@@ -14,6 +14,8 @@ use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
+use function Pest\Laravel\actingAs;
+
 /*
 |--------------------------------------------------------------------------
 | The clients table and the orders put away (INV-4-a, ADR-0021)
@@ -34,35 +36,38 @@ function untouchedByClients(): array
 }
 
 it('puts away every order recorded before clients, and changes nothing else: lines, cuts, materials, their history, sales, finished stock', function () {
-    $other = Workshop::factory()->create();
-    $cut = bookSizedOrder(['S' => 10, 'M' => 20, 'L' => 15, 'XL' => 5], ['M' => [10, 0, 0]]);
-    OrderLineCut::factory()->create(['order_line_id' => $cut->lines()->value('id'), 'units' => 10]);
-    StockMovement::factory()->create(['material_id' => demoMaterial('FAB-DNM-001')->id, 'type' => StockMovementType::Cutting, 'order_id' => $cut->id, 'product_id' => demoProduct('PRD-JKT-001')->id, 'units' => 10]);
-    $plain = bookOrder(['client' => 'Mehdi Jaziri']);
-    $deletedBefore = tap(bookOrder(['client' => 'Rania Hamdi']))->delete();
-    $foreign = CurrentWorkshop::run($other, fn (): Order => Order::factory()->create(['client' => 'Boutique Sfax']));
-    $deletedAt = Order::withTrashed()->whereKey($deletedBefore->id)->value('deleted_at');
-
+    // Rolled back first (on SQLite the rollback rebuilds `orders`, which rows of other tables may not point at), then orders made the
+    // old way: no client.
     clientsMigration()->down();
-    $before = untouchedByClients();
 
-    expect(Schema::hasTable('clients'))->toBeFalse()
-        ->and(Schema::hasColumn('orders', 'client_id'))->toBeFalse();
+    $workshop = (int) DB::table('products')->where('id', pid(1))->value('workshop_id');
+    $other = Workshop::factory()->create();
+    $order = fn (int $workshopId, string $client, ?string $deletedAt = null): int => DB::table('orders')->insertGetId([
+        'workshop_id' => $workshopId, 'client' => $client, 'ordered_on' => '2026-10-01', 'deleted_at' => $deletedAt,
+        'created_at' => now(), 'updated_at' => now(),
+    ]);
+    $cut = $order($workshop, 'Boutique Lina');
+    $line = OrderLine::factory()->sized(['S' => 10, 'M' => 20, 'L' => 15, 'XL' => 5], ['M' => [10, 0, 0]])
+        ->create(['order_id' => $cut, 'product_id' => pid(1), 'position' => 0]);
+    OrderLineCut::factory()->create(['order_line_id' => $line->id, 'units' => 10]);
+    StockMovement::factory()->create(['material_id' => demoMaterial('MAT-DEN-012')->id, 'type' => StockMovementType::Cutting, 'order_id' => $cut, 'product_id' => pid(1), 'units' => 10]);
+    $plain = $order($workshop, 'Mehdi Jaziri');
+    $deletedBefore = $order($workshop, 'Rania Hamdi', '2026-10-05 10:00:00');
+    $foreign = $order($other->id, 'Boutique Sfax');
+    $before = untouchedByClients();
 
     clientsMigration()->up();
 
     expect(DB::table('orders')->whereNull('deleted_at')->count())->toBe(0)
-        ->and(DB::table('orders')->whereIn('id', [$cut->id, $plain->id, $foreign->id])->pluck('client', 'id')->all())
-        ->toBe([$cut->id => 'Boutique Lina', $plain->id => 'Mehdi Jaziri', $foreign->id => 'Boutique Sfax'])
+        ->and(DB::table('orders')->whereIn('id', [$cut, $plain, $foreign])->orderBy('id')->pluck('client')->all())
+        ->toBe(['Boutique Lina', 'Mehdi Jaziri', 'Boutique Sfax'])
         ->and(DB::table('orders')->whereNotNull('client_id')->count())->toBe(0)
-        ->and(Order::withTrashed()->whereKey($deletedBefore->id)->value('deleted_at'))->toEqual($deletedAt)
+        ->and((string) DB::table('orders')->where('id', $deletedBefore)->value('deleted_at'))->toBe('2026-10-05 10:00:00')
         ->and(untouchedByClients())->toBe($before)
         ->and(DB::table('clients')->count())->toBe(0);
 
-    // The Orders list shows none of them; the materials' history still names the order's client.
-    actingAs($this->user)->get(route('orders.index', ['status' => 'all']))->assertOk();
-
-    expect(pageProp(actingAs($this->user)->get(route('orders.index', ['status' => 'all'])), 'orders.data'))->toBe([]);
+    // The Orders list shows none of them.
+    expect(pageProp(actingAs($this->user)->get(route('orders.index', ['status' => 'all']))->assertOk(), 'orders.data'))->toBe([]);
 });
 
 it('rolls back to the orders table as it was, with no clients', function () {

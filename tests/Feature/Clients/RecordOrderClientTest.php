@@ -5,7 +5,10 @@ use App\Models\Client;
 use App\Models\Order;
 use App\Models\Workshop;
 use App\Services\Workshops\CurrentWorkshop;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Support\Facades\DB;
+
+use function Pest\Laravel\actingAs;
 
 /*
 |--------------------------------------------------------------------------
@@ -87,12 +90,13 @@ it('saves no client when the order is refused', function () {
 it('finds the client someone else added between the check and the save, instead of adding her twice', function () {
     $added = false;
 
-    // Someone else saves Amira first: her row lands just before this save's own insert, which the unique phone then refuses.
-    Client::creating(function (Client $client) use (&$added): void {
-        if (! $added) {
+    // Someone else saves Amira right after this save looked for her phone, and before it adds her: the unique phone then refuses
+    // this save's insert, inside its savepoint, and the save finds her instead.
+    DB::listen(function (QueryExecuted $query) use (&$added): void {
+        if (! $added && str_starts_with($query->sql, 'select * from "clients"') && str_contains($query->sql, '"phone_key" = ?')) {
             $added = true;
             DB::table('clients')->insert([
-                'workshop_id' => $client->workshop_id, 'name' => 'Amira Ben Salah', 'phone' => '22 345 678', 'phone_key' => '21622345678',
+                'workshop_id' => $this->user->workshop_id, 'name' => 'Amira Ben Salah', 'phone' => '22 345 678', 'phone_key' => '21622345678',
                 'city' => 'Sousse', 'created_at' => now(), 'updated_at' => now(),
             ]);
         }
@@ -102,7 +106,8 @@ it('finds the client someone else added between the check and the save, instead 
         ->assertSessionHasNoErrors()
         ->assertInertiaFlash('toast', ['type' => 'success', 'message' => 'Order recorded.']);
 
-    expect(Client::query()->where('phone_key', '21622345678')->count())->toBe(1)
+    expect($added)->toBeTrue()
+        ->and(Client::query()->where('phone_key', '21622345678')->count())->toBe(1)
         ->and(Order::query()->sole()->client)->toBe('Amira Ben Salah');
 });
 

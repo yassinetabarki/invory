@@ -5,6 +5,8 @@ use App\Models\Order;
 use App\Models\Workshop;
 use App\Services\Workshops\CurrentWorkshop;
 
+use function Pest\Laravel\actingAs;
+
 /*
 |--------------------------------------------------------------------------
 | Edit order's client, the order page's client line, the Orders list's Client filter (INV-4-d, AC-6, AC-7)
@@ -42,10 +44,10 @@ it('asks to choose a client when none, another workshop\'s or an unknown one is 
     $order = Order::query()->where('client_id', $amira->id)->firstOrFail();
 
     actingAs($this->user)->from(route('orders.edit', $order))->put(route('orders.update', $order), editWithClient($order, $clientId()))
-        ->assertRedirect(route('orders.edit', $order));
+        ->assertRedirect(route('orders.edit', $order))
+        ->assertSessionHasErrors(['client_id' => 'Choose a client.']);
 
-    expect(session('errors')->get('client_id'))->toBe(['Choose a client.'])
-        ->and($order->fresh()->client_id)->toBe($amira->id);
+    expect($order->fresh()->client_id)->toBe($amira->id);
 })->with([
     'none' => [fn () => ''],
     'another workshop\'s' => [fn () => CurrentWorkshop::run(Workshop::factory()->create(), fn (): int => Client::factory()->create()->id)],

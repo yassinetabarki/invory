@@ -44,9 +44,16 @@ return new class extends Migration
             DB::statement('ALTER TABLE clients ADD CONSTRAINT clients_workshop_id_id_unique UNIQUE (workshop_id, id)');
         }
 
-        Schema::table('orders', function (Blueprint $table): void {
-            $table->foreignId('client_id')->nullable()->after('workshop_id')->constrained('clients')->restrictOnDelete();
-        });
+        // SQLite adds a nullable column with its foreign key in place; Laravel's way would rebuild `orders`, which fails while order
+        // lines, cuts and stock movements point at its rows.
+        if (DB::getDriverName() === 'sqlite') {
+            DB::statement('ALTER TABLE orders ADD COLUMN client_id INTEGER NULL REFERENCES clients (id) ON DELETE RESTRICT');
+            DB::statement('CREATE INDEX orders_client_id_index ON orders (client_id)');
+        } else {
+            Schema::table('orders', function (Blueprint $table): void {
+                $table->foreignId('client_id')->nullable()->after('workshop_id')->constrained('clients')->restrictOnDelete();
+            });
+        }
 
         // Every order recorded so far has no client: put it away (the human's decision, 2026-11-02).
         DB::table('orders')->whereNull('deleted_at')->update(['deleted_at' => now(), 'updated_at' => now()]);
@@ -64,9 +71,20 @@ return new class extends Migration
             DB::statement('ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_workshop_client_foreign');
         }
 
-        Schema::table('orders', function (Blueprint $table): void {
-            $table->dropConstrainedForeignId('client_id');
-        });
+        if (DB::getDriverName() === 'sqlite') {
+            // A column of a foreign key can't be dropped in place on SQLite: Laravel rebuilds the table (with no row pointing at orders).
+            DB::statement('DROP INDEX IF EXISTS orders_client_id_index');
+            Schema::table('orders', function (Blueprint $table): void {
+                $table->dropForeign(['client_id']);
+            });
+            Schema::table('orders', function (Blueprint $table): void {
+                $table->dropColumn('client_id');
+            });
+        } else {
+            Schema::table('orders', function (Blueprint $table): void {
+                $table->dropConstrainedForeignId('client_id');
+            });
+        }
 
         Schema::dropIfExists('clients');
     }
