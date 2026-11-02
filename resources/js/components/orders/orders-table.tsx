@@ -31,8 +31,10 @@ const STAGES = [
 
 type OrdersTableProps = {
     orders: Order[];
-    /** The page opens the confirm dialog; this component never deletes. */
-    onDelete: (order: Order) => void;
+    /** The page opens the confirm dialog; this component never deletes. Left out, the rows have no Edit or Delete. */
+    onDelete?: (order: Order) => void;
+    /** A client's own page (INV-4, AC-4): no Client column, and the order date opens the order. */
+    withoutClient?: boolean;
 };
 
 type RowActionsProps = {
@@ -160,7 +162,11 @@ function TextActions({ order, date, onDelete }: RowActionsProps) {
  * below. Every figure and the status come from the server; this component only
  * formats them.
  */
-export function OrdersTable({ orders, onDelete }: OrdersTableProps) {
+export function OrdersTable({
+    orders,
+    onDelete,
+    withoutClient = false,
+}: OrdersTableProps) {
     const { locale } = useAppSettings();
 
     return (
@@ -172,7 +178,9 @@ export function OrdersTable({ orders, onDelete }: OrdersTableProps) {
                     <TableHeader>
                         <TableRow>
                             <TableHead scope="col">Order date</TableHead>
-                            <TableHead scope="col">Client</TableHead>
+                            {!withoutClient && (
+                                <TableHead scope="col">Client</TableHead>
+                            )}
                             <TableHead scope="col">Products</TableHead>
                             <TableHead scope="col" className="text-right">
                                 Ordered
@@ -187,9 +195,11 @@ export function OrdersTable({ orders, onDelete }: OrdersTableProps) {
                                 </TableHead>
                             ))}
                             <TableHead scope="col">Status</TableHead>
-                            <TableHead scope="col" className="text-right">
-                                <span className="sr-only">Actions</span>
-                            </TableHead>
+                            {onDelete && (
+                                <TableHead scope="col" className="text-right">
+                                    <span className="sr-only">Actions</span>
+                                </TableHead>
+                            )}
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -199,21 +209,32 @@ export function OrdersTable({ orders, onDelete }: OrdersTableProps) {
                             return (
                                 <TableRow key={order.id}>
                                     <TableCell className="align-top whitespace-nowrap text-muted-foreground">
-                                        {date}
-                                    </TableCell>
-                                    <TableCell className="align-top">
-                                        <p className="font-semibold">
-                                            <ClientLink order={order} />
-                                        </p>
-                                        {order.note && (
-                                            <p
-                                                className="max-w-48 truncate text-sm text-muted-foreground"
-                                                title={order.note}
+                                        {withoutClient ? (
+                                            <Link
+                                                href={showOrder(order.id)}
+                                                className="font-medium text-foreground hover:underline focus-visible:underline"
                                             >
-                                                {order.note}
-                                            </p>
+                                                {date}
+                                            </Link>
+                                        ) : (
+                                            date
                                         )}
                                     </TableCell>
+                                    {!withoutClient && (
+                                        <TableCell className="align-top">
+                                            <p className="font-semibold">
+                                                <ClientLink order={order} />
+                                            </p>
+                                            {order.note && (
+                                                <p
+                                                    className="max-w-48 truncate text-sm text-muted-foreground"
+                                                    title={order.note}
+                                                >
+                                                    {order.note}
+                                                </p>
+                                            )}
+                                        </TableCell>
+                                    )}
                                     <TableCell className="align-top whitespace-normal">
                                         <ProductLines order={order} />
                                     </TableCell>
@@ -234,13 +255,15 @@ export function OrdersTable({ orders, onDelete }: OrdersTableProps) {
                                             label={order.status_label}
                                         />
                                     </TableCell>
-                                    <TableCell className="align-top">
-                                        <IconActions
-                                            order={order}
-                                            date={date}
-                                            onDelete={onDelete}
-                                        />
-                                    </TableCell>
+                                    {onDelete && (
+                                        <TableCell className="align-top">
+                                            <IconActions
+                                                order={order}
+                                                date={date}
+                                                onDelete={onDelete}
+                                            />
+                                        </TableCell>
+                                    )}
                                 </TableRow>
                             );
                         })}
@@ -257,7 +280,16 @@ export function OrdersTable({ orders, onDelete }: OrdersTableProps) {
                         <li key={order.id} className="space-y-3 border-t p-4">
                             <div className="flex items-start justify-between gap-3">
                                 <p className="font-semibold break-words">
-                                    <ClientLink order={order} />
+                                    {withoutClient ? (
+                                        <Link
+                                            href={showOrder(order.id)}
+                                            className="hover:underline focus-visible:underline"
+                                        >
+                                            {date}
+                                        </Link>
+                                    ) : (
+                                        <ClientLink order={order} />
+                                    )}
                                 </p>
                                 <ProgressStatus
                                     status={order.status}
@@ -272,9 +304,11 @@ export function OrdersTable({ orders, onDelete }: OrdersTableProps) {
                                         `${label} ${formatCount(order[key], locale)}`,
                                 ).join(' · ')}
                             </p>
-                            <p className="text-sm text-muted-foreground">
-                                {date}
-                            </p>
+                            {!withoutClient && (
+                                <p className="text-sm text-muted-foreground">
+                                    {date}
+                                </p>
+                            )}
                             {order.note && (
                                 <p
                                     className="line-clamp-2 text-sm text-muted-foreground"
@@ -283,11 +317,13 @@ export function OrdersTable({ orders, onDelete }: OrdersTableProps) {
                                     {order.note}
                                 </p>
                             )}
-                            <TextActions
-                                order={order}
-                                date={date}
-                                onDelete={onDelete}
-                            />
+                            {onDelete && (
+                                <TextActions
+                                    order={order}
+                                    date={date}
+                                    onDelete={onDelete}
+                                />
+                            )}
                         </li>
                     );
                 })}
