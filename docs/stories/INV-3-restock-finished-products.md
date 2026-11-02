@@ -155,7 +155,7 @@ The examples use the Denim Jacket above, the Denim Jeans 5-pocket (Indigo, sizes
 
 ## Technical work
 > [!warning] Complex · CRITICAL · backend + frontend · 11 commits
-> Tech-lead (main session standing in, at the human's request) · 2026-11-02 · approved 2026-11-02
+> Tech-lead (main session standing in, at the human's request) · 2026-11-02 · approved 2026-11-02 · delivered 2026-11-02 (on PI-DEV, waiting for acceptance)
 > Why complex: two new tables, multi-row writes on the finished stock under row locks (add, undo), a new business rule (undo only
 > while every variant still holds what it added), five new routes (three of them JSON) and a new contract on two pages.
 
@@ -477,6 +477,19 @@ changed), `products.{i}.units.{colour}.{size}` (New restock) · `undo`
 - **The human's answers, 2026-11-02:** a restock started on a product page with other products added comes back to that page with the
   general toast; "By" (list and detail) shows "—" when the person who recorded or undid it has deleted their account; a scanned
   barcode whose size the product no longer has gets its own message, like a colour taken off.
+
+### Delivered differently from the plan
+- **The product picker came with INV-3-g**, not INV-3-i: the Restocks page's Product filter is the same picker (`filter` mode) as
+  New restock's **Add product** (`add` mode).
+- **A product deleted or changed since the page is refused on `products.{i}.product`** (shown at the top of the page, and its line is
+  fetched again with its new colours and sizes); a product with nothing typed stays on `products.{i}` (under its table).
+- **New restock has its own fields** (`restock-line.tsx`) instead of reusing `finished-stock-fields.tsx`, which keeps its "was N".
+- **The Restocks list with a product chosen and no restock** reads "No restock of Denim Jacket yet." (the card only words the
+  search's no-match).
+- **The phone layouts are chosen with `useIsMobile`**, so the DOM order is the visual order (Restock first on a phone).
+- **The browser golden path (`tests/Browser/RestockGoldenPathTest.php`) is written but not committed**: on this machine every browser
+  test stops with "Playwright is outdated", the existing ones included.
+- **Seven migration tests** roll the restock tables back before `colours`, `sizes` or `products` (`9b184aa`), as INV-4 did for clients.
 
 ### Order
 Wave 1 (backend, one after another, they share `routes/web.php`, the controller and `domain.ts`): INV-3-a → INV-3-b → INV-3-c →
