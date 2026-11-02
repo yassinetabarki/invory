@@ -5,7 +5,7 @@ type: feature
 phase: Colour × size variants
 priority: Must
 size: L
-status: Ready
+status: Planned
 created: 2026-11-02
 tags:
   - story
@@ -150,3 +150,340 @@ The examples use the Denim Jacket above, the Denim Jeans 5-pocket (Indigo, sizes
   - Under the stock table, after "Grey zeros are variants with nothing on the shelf.": "Last restock: 25 Oct 2026, 24 units · **See
     the restocks of Denim Jacket**", a link to Restocks with Product "Denim Jacket" chosen. Never restocked, or only undone restocks:
     "Not restocked yet.", with no link. Loading and error as the card today ("Couldn't load the stock and barcodes." · **Try again**).
+
+---
+
+## Technical work
+> [!warning] Complex · CRITICAL · backend + frontend · 11 commits
+> Tech-lead (main session standing in, at the human's request) · 2026-11-02 · approved 2026-11-02
+> Why complex: two new tables, multi-row writes on the finished stock under row locks (add, undo), a new business rule (undo only
+> while every variant still holds what it added), five new routes (three of them JSON) and a new contract on two pages.
+
+### In short
+A restock becomes a record of its own: one row for the restock (date, reference, note, who, its total, and when and by whom it was
+undone) and one row per product, colour and size it added. Saving locks every product on it, checks each one still exists and still
+has the colours and sizes the screen showed, refuses a count that would go over 1,000,000, then adds the units to the finished stock and
+writes the record, all in one transaction. Undo locks the same products, checks every variant still holds at least what the restock
+added, takes the units back off and marks the restock undone; nothing is ever deleted. Update stock, materials, costing, sales and
+orders are untouched. The screens read through small read-only routes: a product picker, a product's grid with its "now" counts, and
+a barcode lookup for the scan field. The product page gets its "Last restock" line in the same deferred group as the stock, so one
+"Try again" still reloads the whole card.
+
+### Steps
+
+| Step        | What it does                                          | Proves           | Lane         | Who      | Size       |
+| ----------- | ----------------------------------------------------- | ---------------- | ------------ | -------- | ---------- |
+| **INV-3-a** | The restock tables, their models and policy           | AC-1             | CRITICAL     | Backend  | ~240 lines |
+| **INV-3-b** | Save a restock: add to the shelf, all or nothing      | AC-1, AC-3       | CRITICAL     | Backend  | ~380 lines |
+| **INV-3-c** | Undo a restock, or say why it can't be                | AC-6             | CRITICAL     | Backend  | ~240 lines |
+| **INV-3-d** | Restocks list, detail, New restock page, picker, grid | AC-2, AC-3, AC-5 | CRITICAL     | Backend  | ~380 lines |
+| **INV-3-e** | Barcode lookup for the scan field                     | AC-4             | CRITICAL     | Backend  | ~200 lines |
+| **INV-3-f** | Last restock on the product page, back to it on save  | AC-7             | NON-CRITICAL | Backend  | ~120 lines |
+| **INV-3-g** | The Restocks page and the sidebar entry               | AC-2             | NON-CRITICAL | Frontend | ~320 lines |
+| **INV-3-h** | The restock panel and Undo                            | AC-5, AC-6       | CRITICAL     | Frontend | ~300 lines |
+| **INV-3-i** | The New restock page                                  | AC-3             | CRITICAL     | Frontend | ~400 lines |
+| **INV-3-j** | Scan or type a barcode                                | AC-4             | CRITICAL     | Frontend | ~260 lines |
+| **INV-3-k** | Restock on the product page                           | AC-7             | NON-CRITICAL | Frontend | ~140 lines |
+
+Every step keeps `composer test`, `npx vp test`, `npm run check`, `npm run types:check` and `npm run build` green. The backend steps
+run their PostgreSQL tests; after the last wave the whole tree runs `composer test:pgsql` and `php artisan test tests/Browser` (after
+`npm run build`).
+
+#### INV-3-a · The restock tables, their models and policy
+**Commit:** `feat(restocks): restocks of finished products and their lines (INV-3-a)`
+
+- Migration `product_restocks`: `workshop_id`, `restocked_on` (date), `reference` (64, nullable), `note` (255, nullable), `units`
+  (unsigned integer, the restock's total, written once), `user_id` (who recorded it, `nullOnDelete`), `undone_at` (nullable),
+  `undone_by` (FK users, nullable, `nullOnDelete`), timestamps (`created_at` is "recorded … at 14:32"). Index (`workshop_id`,
+  `restocked_on`, `id`) for the newest-first list. PostgreSQL only: `unique(workshop_id, id)`, CHECK `units >= 1`.
+- Same migration, `product_restock_lines`: `workshop_id`, `product_restock_id` (`cascadeOnDelete`; nothing deletes a restock),
+  `product_id` (`restrictOnDelete`; products are soft-deleted), `colour_id`, `size_id` (`restrictOnDelete`), `position` (unsigned
+  small integer, the product's place on the restock), `units` (unsigned integer). Unique (`product_restock_id`, `product_id`,
+  `colour_id`, `size_id`); index (`product_id`, `product_restock_id`) for the product filter and "Last restock". Only variants that got
+  units have a row. PostgreSQL only: composite foreign constraints (`workshop_id`, `product_restock_id`) → product_restocks and (`workshop_id`,
+  `product_id`) → products, CHECK `units BETWEEN 1 AND 1000000`.
+- Models `ProductRestock` (`BelongsToWorkshop`, `lines()`, `recorder()`, `undoer()`, scopes `active()` (not undone), `newestFirst()`)
+  and `ProductRestockLine` (`BelongsToWorkshop`, `product()` with trashed, `colour()`, `size()`); `ProductRestockPolicy` (any member of
+  the workshop; another workshop is a 404 by the scope); factories.
+- The tech-lead writes in this commit: ADR-0022 "Restocks of finished products are recorded and undone as a whole",
+  `docs/ARCHITECTURE.md` (both tables, `product_size_stocks` gains its second writer and third, the routes) and the business rules file
+  ("Restock" of finished products next to the material Restock in the glossary).
+
+**Tests**
+- 1 PostgreSQL schema test: a line pointing at another workshop's restock or product is refused; units 0 and 1,000,001 are refused;
+  a second line for the same restock, product, colour and size is refused.
+- The workshop arch test lists both models; 1 policy dataset (guest · member · other workshop 404).
+
+> [!example]- Files (11)
+> - `.claude/skills/invory-costing-domain/SKILL.md`, `docs/adr/0022-restocks-of-finished-products.md` (new), `docs/ARCHITECTURE.md` (tech-lead)
+> - `app/Models/{ProductRestock,ProductRestockLine}.php` (new), `app/Policies/ProductRestockPolicy.php` (new)
+> - `database/migrations/2026_11_03_100000_create_product_restocks_tables.php` (new)
+> - `database/factories/{ProductRestock,ProductRestockLine}Factory.php` (new)
+> - `tests/Feature/Restocks/RestockSchemaTest.php` (new), `tests/Arch/WorkshopScopeTest.php`
+
+#### INV-3-b · Save a restock: add to the shelf, all or nothing
+**Commit:** `feat(restocks): a restock adds its units to the shelf, all or nothing (INV-3-b)`
+
+- `StoreRestockRequest`: `restocked_on` a date ≤ today (the workshop's today, as `app.today`), `reference` ≤ 64, `note` ≤ 255,
+  `products` 1 to 50 entries, each `product_id` a product of the workshop (deleted ones included, through `WorkshopRule`, so the Action
+  can name it) and `units` colour id → size id → empty or a whole number 0 to 1,000,000; `from_product` nullable. Every message is the
+  card's: field errors on `products.{i}.units.{colour}.{size}` start with the variant's name ("Indigo M", "Black, size 38", "Camel"),
+  a line with nothing typed on `products.{i}`, nothing typed at all and the 51st product on `products`.
+- `App\Actions\Restocks\RecordRestock`: one transaction. Locks the products in id order (`lockForUpdate`, with trashed: the lock
+  `UpdateFinishedStock` and `DeleteProduct` take). For each line, in order: deleted → "Denim Jacket was deleted. Remove it from this
+  restock."; colours or sizes not exactly the product's (reuse `UpdateFinishedStock::matches`) → "The sizes or colours of Denim Jacket
+  have changed. Enter its units again."; then every cell where stock + added > 1,000,000 → "Indigo M: This would put more than
+  1,000,000 units on the shelf.". Any refusal throws one `ValidationException` with every message and writes nothing. Then it adds the
+  units to `product_size_stocks` (update or insert, whole integers), writes the restock with its total and its lines (non-zero cells
+  only, `position` = the product's place), and returns it.
+- `App\Services\Restocks\RestockMessages`: every text and toast of the restock pages (as `OrderMessages`, `ClientMessages`).
+- `RestockController@store` → `restocks.index` with "34 units restocked." ("1 unit restocked.").
+
+**Tests**
+- AC-1's example end to end: Denim Jacket 10 → 34 with the exact rows; Denim Jeans 5-pocket gets new rows; the restock and its 6
+  lines; materials, stock movements, sales, orders and the product rows unchanged (`updated_at` too).
+- Datasets: each message with its key; nothing written on any refusal (one bad product among two); a product deleted and a colour
+  taken off between the page and the save; 999,990 + 10 accepted, + 11 refused; a draft and an archived product accepted; another
+  workshop's product refused.
+- 1 race test: Update stock and a restock on the same product, the second save wins as the card says.
+
+> [!example]- Files (8)
+> - `app/Actions/Restocks/RecordRestock.php` (new), `app/Services/Restocks/RestockMessages.php` (new)
+> - `app/Http/Requests/Restocks/StoreRestockRequest.php` (new), `app/Http/Controllers/RestockController.php` (new)
+> - `routes/web.php`
+> - `tests/Feature/Restocks/RecordRestockTest.php` (new), `tests/Feature/Restocks/StoreRestockRequestTest.php` (new)
+
+#### INV-3-c · Undo a restock, or say why it can't be
+**Commit:** `feat(restocks): undo a restock as a whole while the shelf still holds its units (INV-3-c)`
+
+- `App\Services\Restocks\UndoCheck`: given a restock and the current stock rows, the first variant short of what it added (products
+  by position, colours in list order, sizes in size order), or none; lines of deleted products are skipped. Read without locks for the
+  panel (`undo_refusal`), again under the locks by the Action.
+- `App\Actions\Restocks\UndoRestock`: locks the restock row, refuses an undone one, locks its non-deleted products in id order,
+  runs `UndoCheck`, takes each line's units off (a row reaching 0 is deleted, as everywhere), sets `undone_at` and `undone_by`.
+  A refusal is a `ValidationException` on `undo` with "This restock can't be undone: Denim Jacket in Indigo, size M, has 2 units on the
+  shelf, fewer than the 8 it added. Set the right count with Update stock instead."
+- `RestockController@undo` (`POST restocks/{restock}/undo`, policy `update`) → back with "Restock undone.".
+
+**Tests**
+- The 25 Oct restock undone: Denim Jacket back to 10, Denim Jeans 5-pocket back to no rows, the restock marked with who and when.
+- Refused: Indigo M at 2 after an Update stock; a colour taken off; undone twice; nothing changes on any refusal.
+- A deleted product's lines skipped, the other product's units taken back. Another workshop's restock is a 404.
+
+> [!example]- Files (6)
+> - `app/Actions/Restocks/UndoRestock.php` (new), `app/Services/Restocks/UndoCheck.php` (new)
+> - `app/Http/Controllers/RestockController.php`, `routes/web.php`
+> - `tests/Feature/Restocks/UndoRestockTest.php` (new), `tests/Unit/Restocks/UndoCheckTest.php` (new)
+
+#### INV-3-d · Restocks list, detail, New restock page, picker, grid
+**Commit:** `feat(restocks): the Restocks list and detail, the New restock page and its product picker (INV-3-d)`
+
+- `App\Services\Restocks\RestockBook`: the list (search on reference, note or a line's product name, deleted products included;
+  `product` filter; 25 a page, `restocked_on` then id, newest first), each with its first two products and their units, the count of
+  the others and who recorded it, in two queries for the page; the detail (blocks per product in position order, only the colours with
+  units, totals, who and when, `undo_refusal` through `UndoCheck`); `hasRestocks()`.
+- `RestockController@index` (`restocks`): props `restocks`, `filters` (`search`, `product`, `restock`), `product_filter`,
+  `has_restocks`, and `restock` (the detail, a closure prop that is null without `?restock=`, so the panel opens from a link and
+  reloads alone). `RestockController@create` (`restocks/create`, `?product=`): `preset` (that product's line) or null.
+- JSON (ADR-0009 rule 5, as `materials.options`): `restocks.products.options` (`search`, `limit` ≤ 50, `include`; every non-deleted
+  product, any status, A → Z, name, SKU, status) and `restocks.products.line` (`restocks/products/{product}`: the product, its sizes,
+  whether it is "One size", and its finished stock through `FinishedStock`, for "now 2").
+- Resources and the `domain.ts` types of the Contract below, in the same commit.
+
+**Tests**
+- The three example rows as in AC-2, "and 2 more", the Undone flag; search "BL-04" and the product filter; "No restocks yet" vs no
+  match (`has_restocks`); the detail of AC-5 (Black 0 · 4 · 0 · 0 = 4, Indigo 4 · 8 · 6 · 2 = 20, totals); a deleted product's block;
+  `undo_refusal` set and null.
+- The picker: draft and archived products with their status, deleted ones absent, `include` brings the chosen back. The line of the
+  Leather Tote ("One size", Camel now 4). Another workshop's product and restock are 404s; queries per page stay flat (25 restocks).
+
+> [!example]- Files (11)
+> - `app/Services/Restocks/RestockBook.php` (new), `app/Http/Controllers/RestockController.php`
+> - `app/Http/Controllers/RestockProductController.php` (new), `app/Http/Requests/Restocks/{IndexRestockRequest,RestockProductOptionsRequest}.php` (new)
+> - `app/Http/Resources/{RestockSummaryResource,RestockDetailResource,RestockLineResource,RestockProductRefResource}.php` (new)
+> - `routes/web.php`, `resources/js/types/domain.ts`
+> - `tests/Feature/Restocks/{RestocksPageTest,RestockProductsTest}.php` (new)
+
+#### INV-3-e · Barcode lookup for the scan field
+**Commit:** `feat(restocks): look up a scanned barcode's product, colour and size (INV-3-e)`
+
+- `App\Services\Restocks\RestockBarcodeLookup`: the typed text without spaces; not 13 digits → "A barcode has 13 digits. Check the
+  number."; no barcode with that number in the workshop → "No product has the barcode 2000000000992. Check the label, or enter the
+  units below."; else the non-deleted products (any status) whose name the number stands for (`barcode_names`) and whose size list has
+  its size: those with its colour are the matches, by SKU; none with it but one without → "2000000000077 is Light wash L of Denim
+  Jacket, which no longer comes in Light wash."; none whose size list has its size but one of that name → "2000000000088 is Indigo
+  XXL of Denim Jacket, which no longer comes in size XXL." (the human's answer, 2026-11-02); none at all → the "No product has the
+  barcode" message. Two queries.
+- `restocks.barcode` (`GET restocks/barcode?number=`): JSON `RestockBarcodeLookup` with the matches as `RestockLine`s, so a scan of a
+  product not yet on the restock adds its line without a second request.
+
+**Tests**
+- Dataset: Indigo M of the Denim Jacket (one match, its colour and size); a shared number with PRD-JKT-001 and PRD-JKT-002; an
+  unknown number; "12345"; Light wash taken off; the size gone after a category change; an archived product found; a deleted product not found; another workshop's number
+  unknown.
+
+> [!example]- Files (5)
+> - `app/Services/Restocks/RestockBarcodeLookup.php` (new), `app/Http/Controllers/RestockBarcodeController.php` (new)
+> - `routes/web.php`, `resources/js/types/domain.ts`
+> - `tests/Feature/Restocks/RestockBarcodeLookupTest.php` (new)
+
+#### INV-3-f · Last restock on the product page, back to it on save
+**Commit:** `feat(restocks): the product page shows its last restock; a restock started there comes back to it (INV-3-f)`
+
+- `ProductController@show`: `last_restock` (`restocked_on` and the product's units on it, from the newest restock not undone, by
+  date then id; null when none), deferred in the group `stock` with `finished_stock` and `barcodes`, rescued.
+- `RestockController@store` with `from_product` → `products.show` with "24 units of Denim Jacket restocked." when that product is the
+  only one on the restock, else the general "34 units restocked." (the human's answer, 2026-11-02).
+
+**Tests**
+- Last restock 25 Oct 2026, 24 units; an undone newer restock ignored; null when never restocked; the redirect and both toasts.
+
+> [!example]- Files (5)
+> - `app/Http/Controllers/ProductController.php`, `app/Services/Restocks/RestockBook.php`, `app/Http/Controllers/RestockController.php`
+> - `resources/js/types/domain.ts`, `tests/Feature/Restocks/LastRestockTest.php` (new)
+
+#### INV-3-g · The Restocks page and the sidebar entry
+**Commit:** `feat(restocks): the Restocks page in the sidebar (INV-3-g)`
+
+- `restocks/index`: header, **New restock**, the search and the Product filter (a combobox on `restocks.products.options`) kept in
+  the address, the table with AC-2's columns and the Undone badge, **Open** and the row click (they set `?restock=`), the empty, no
+  match, loading and error states, cut text, and the phone cards and **Filters** panel. The sidebar gains **Restocks** (package-plus)
+  after Products; breadcrumbs.
+
+**Tests**
+- Vitest: the three rows; "and 2 more"; Undone; each state's words and **Clear filters**; the filters and `restock` in the address;
+  the phone cards; the sidebar order.
+
+> [!example]- Files (6)
+> - `resources/js/pages/restocks/index.tsx` (new), `resources/js/components/restocks/{restocks-table,restocks-filters}.tsx` (new)
+> - `resources/js/components/app-sidebar.tsx`, `resources/js/pages/restocks/index.test.tsx` (new), `resources/js/test/fixtures/restocks.ts` (new)
+
+#### INV-3-h · The restock panel and Undo
+**Commit:** `feat(restocks): the restock panel and Undo restock (INV-3-h)`
+
+- A right-hand sheet (full screen on a phone) driven by `?restock=`: title, the recorded line, figures, note, product blocks (deleted
+  products without a link), footer **Undo restock** and **Close**; loading and error with **Try again** (a partial reload of
+  `restock`). The confirm with both wordings (with and without a reference), the spinner, the refusal in red from the `undo` error; the
+  disabled-with-reason state (`aria-disabled`, reachable with Tab, the reason in its name); the undone state.
+
+**Tests**
+- Vitest: AC-5's panel; the confirm's two texts; the refusal; the disabled button's name; the undone line; Close clears `restock`.
+
+> [!example]- Files (4)
+> - `resources/js/components/restocks/{restock-panel,undo-restock-dialog}.tsx` (new), `resources/js/pages/restocks/index.tsx`
+> - `resources/js/components/restocks/restock-panel.test.tsx` (new)
+
+#### INV-3-i · The New restock page
+**Commit:** `feat(restocks): the New restock page (INV-3-i)`
+
+- `restocks/create`: Details, the Products section, one card per product (its grid reusing the size fields of `finished-stock-fields`
+  with "now 2" under each; the "One size" table; sideways scroll inside the card), **Add product** (picker on
+  `restocks.products.options`, then `restocks.products.line`; a check on those already there; the 50 limit), the totals band and the
+  button's label (summed from the typed whole numbers, as Update stock's `typedTotal` does), the note, Save with the spinner, the
+  server's errors placed under their line and at the top with the focus on the first, Cancel and its confirm, the preset line and focus
+  from a product page, and the phone layout with the fixed bottom bar.
+- 1 browser golden path: New restock with two products → the list → open it → Undo restock.
+
+**Tests**
+- Vitest: AC-3's totals and button labels; each message's place; the 51st product refused; Cancel with and without units; the
+  preset's focus; the phone bar.
+
+> [!example]- Files (6)
+> - `resources/js/pages/restocks/create.tsx` (new), `resources/js/components/restocks/{restock-line,restock-product-picker}.tsx` (new)
+> - `resources/js/pages/restocks/create.test.tsx` (new), `tests/Browser/RestockGoldenPathTest.php` (new)
+> - `resources/js/components/products/finished-stock-fields.tsx` (the field without the "was" line)
+
+#### INV-3-j · Scan or type a barcode
+**Commit:** `feat(restocks): scan or type a barcode on New restock (INV-3-j)`
+
+- The scan card: the field (Enter or **Add 1** looks up `restocks.barcode`), the focus kept in it, the green result line and the
+  Denim ring on the field until the next scan, a new product's line added at the end with its unit, the shared-barcode choice (skipped
+  when one of them is already on the restock), the red lines from the server's message, and "Couldn't look up the barcode. Try again."
+  when the request fails. A scan never changes other typed units.
+
+**Tests**
+- Vitest with the lookup mocked: each AC-4 line; 7 → 8 on Indigo M; Leather Tote added at the end; the choice and the skip; focus.
+
+> [!example]- Files (4)
+> - `resources/js/components/restocks/{scan-field,use-barcode-lookup}.tsx` (new), `resources/js/pages/restocks/create.tsx`
+> - `resources/js/components/restocks/scan-field.test.tsx` (new)
+
+#### INV-3-k · Restock on the product page
+**Commit:** `feat(restocks): Restock on the product's Sizes & colours card (INV-3-k)`
+
+- Sizes & colours card: **Restock** (main) after **Update stock** (now outline), to `restocks.create?product=`; the "Last restock"
+  line and its link to `restocks.index?product=`, "Not restocked yet."; the three buttons full width on a phone, Restock first.
+
+**Tests**
+- Vitest: the buttons' order and kinds; both lines; the link's address; the phone order.
+
+> [!example]- Files (3)
+> - `resources/js/components/products/sizes-colours-card.tsx`, `resources/js/pages/products/show.tsx`
+> - `resources/js/components/products/sizes-colours-card.test.tsx`
+
+### Contract (frozen before dispatch)
+```ts
+export type RestockProductRef = { id: number; name: string; sku: string; status: ProductStatus; deleted: boolean };
+export type RestockLine = { product: RestockProductRef; sizes: Size[]; one_size: boolean; stock: FinishedStock }; // "now 2"
+export type RestockSummary = {
+    id: number; restocked_on: string; reference: string | null; units: number; // 'YYYY-MM-DD'
+    products: { name: string; units: number }[]; more_products: number;         // the first two, by position
+    recorded_by: string | null; undone: boolean;
+};
+export type RestockBlock = {
+    product: RestockProductRef; sizes: Size[]; one_size: boolean; units: number;
+    rows: { colour: Colour; units: number[]; total: number }[];                 // colours with units only, list order
+    totals: number[] | null;                                                    // per size, only with two colours or more
+};
+export type RestockDetail = RestockSummary & {
+    note: string | null; recorded_at: string; products_count: number;          // recorded_at ISO 8601
+    undone_at: string | null; undone_by: string | null;
+    blocks: RestockBlock[]; undo_refusal: string | null;
+};
+export type RestockFilters = { search: string | null; product: number | null; restock: number | null };
+export type RestocksIndexProps = { restocks: Paginated<RestockSummary>; filters: RestockFilters;
+    product_filter: RestockProductRef | null; has_restocks: boolean; restock: RestockDetail | null };
+export type RestockCreateProps = { preset: RestockLine | null };
+export type RestockBarcodeLookup =
+    | { result: 'found'; colour_id: number; size_id: number; matches: RestockLine[] } // by SKU
+    | { result: 'invalid' | 'unknown' | 'colour_gone' | 'size_gone'; message: string };
+export type NewRestockFormData = { restocked_on: string; reference: string; note: string; from_product: number | null;
+    products: { product_id: number; units: Record<number, Record<number, string>> }[] };
+// Changed
+ProductShowProps += { last_restock?: { restocked_on: string; units: number } | null }; // deferred, group 'stock', rescued
+```
+Errors: `restocked_on`, `reference`, `note`, `products`, `products.{i}`, `products.{i}.units.{colour}.{size}` (New restock) · `undo`
+(Undo). Routes: `restocks.index` GET restocks · `restocks.create` GET restocks/create · `restocks.store` POST restocks ·
+`restocks.undo` POST restocks/{restock}/undo · `restocks.products.options` GET restocks/products/options (JSON) ·
+`restocks.products.line` GET restocks/products/{product} (JSON) · `restocks.barcode` GET restocks/barcode (JSON). `{restock}` and
+`{product}` are route-model bound with the digit constraint. `RestockFormData` already names the material restock, hence
+`NewRestockFormData`.
+
+### Decisions
+- **A record per restock, lines per variant, and the stock still in `product_size_stocks`.** The shelf count stays one row per
+  variant, read by `FinishedStock` as today; the restock tables are history, not a second count. Rejected: a stock ledger summed on
+  read (Update stock writes no history, so a ledger could never add up).
+- **The total is stored on the restock.** A restock is never edited, so `units` never goes stale, and the list needs no sum per row.
+- **Every writer locks the products first, in id order** (Record, Undo, Update stock, Delete product), so a restock and an Update
+  stock on the same product run one after the other and the later one wins, as the card says.
+- **Undo is a flag, not a delete**, and is checked twice: without locks for the panel's reason, under the locks for the write.
+- **Whole units as PHP integers**, as `FinishedStock` and Update stock already do: finished units are counts, never money or
+  material quantities, so they don't go through `BigDecimal` or `App\Domain\Costing`.
+- **Picker, grid and barcode lookup are JSON routes** (ADR-0009 rule 5), as the material and client pickers.
+- **The page adds the typed numbers for "Adding 24 units"**, as Update stock does today; the server re-checks everything on save.
+- **The human's answers, 2026-11-02:** a restock started on a product page with other products added comes back to that page with the
+  general toast; "By" (list and detail) shows "—" when the person who recorded or undid it has deleted their account; a scanned
+  barcode whose size the product no longer has gets its own message, like a colour taken off.
+
+### Order
+Wave 1 (backend, one after another, they share `routes/web.php`, the controller and `domain.ts`): INV-3-a → INV-3-b → INV-3-c →
+INV-3-d → INV-3-e → INV-3-f. Wave 2 (frontend, after wave 1's types land): INV-3-g → INV-3-h (same page), then INV-3-i → INV-3-j
+(same page), INV-3-k in parallel with either pair (disjoint files). Merge order is the step order.
+
+### Risks
+- **A restock and Update stock on one product at once** → both take the product row lock; the race test in INV-3-b proves the order.
+- **Two restocks touching the same products in a different order** → products are always locked in id order, so no deadlock.
+- **A colour taken off or a category changed after a restock** → the stock is then 0 (both need it), so Undo is refused with the
+  card's reason; the lines keep their colour and size ids (`restrictOnDelete`; colours and sizes are never deleted).
+- **CHECKs and composite keys only on PostgreSQL** → the Actions enforce the same rules; the parity suite proves the database side.
+- **The scan field and the grid share the typed state** → INV-3-j runs after INV-3-i, on the same page, with its own tests.

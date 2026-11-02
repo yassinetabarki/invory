@@ -6,7 +6,7 @@
 
 > [!history] Last Cleaned: 2026-11-02
 > - **INV-4 Done, with INV-12** (accepted 2026-11-02 by the human; on `PI-DEV`: `4ed7e4d`, `0e6fcec`, `f4f9fd8`, `ab5bb22`, `2448e70`, `d8b2ccb`, `a2c2a05`, `5966a39`, `7102486`, `d2bf98f`; card `ccd4fe4`, Technical work `7528910`, delivered `64f463c`). INV-12's New order Client card was built within INV-4 (D-22), so INV-12 is done too. Both left the open list.
-> - **D-23 (2026-11-02, human):** `INV-3` comes next, ahead of `INV-9`. INV-3's development card is approved (`Ready`, 2026-11-02; size L, kept as one card by the human's choice); its Technical work comes next.
+> - **D-23 (2026-11-02, human):** `INV-3` comes next, ahead of `INV-9`. INV-3's development card is approved (`Ready`, 2026-11-02; size L, kept as one card by the human's choice) and its Technical work too (`Planned`, 2026-11-02: 11 steps, INV-3-a … INV-3-k).
 > - **D-22 (2026-11-02, human):** `INV-4` comes next, ahead of `INV-9` and `INV-3`. New order uses `INV-12`'s phone-first Client card instead of INV-4's switch, so `INV-12` is built within INV-4 and leaves the open list. INV-4's development card is approved (`Ready`, 2026-11-02) and its Technical work too (`Planned`, 2026-11-02: 9 steps, INV-4-a … INV-4-i).
 > - **INV-8 Done** (accepted 2026-11-01; `9f93175`, `28003cb`, `63513ef`, `4678cad`, `5704050`, `36b34a3`, `3b55319`; docs `da41e1b`), so it left the open list. INV-9 is next.
 > - **INV-2 Done** (accepted 2026-10-31; `46af1cc`, `ab313eb`, `4088200`), so it left the open list. The PostgreSQL parity suite was green before the commits (2619 tests). INV-8 is next.
@@ -67,7 +67,7 @@
 
 | ID | What it brings | Type | Status | Priority / Size |
 | :--- | :--- | :--- | :--- | :--- |
-| **INV-3** | Restock of finished products | Feature | `Ready` | Must / L |
+| **INV-3** | Restock of finished products | Feature | `Planned` | Must / L |
 | **INV-9** | Print barcode labels | Feature | `Ready` | Must / M |
 | **INV-5** | Production for the shelf: Progress page *(UI card rewritten and approved 2026-11-01)* | Feature | `UI approved` | Must |
 | **INV-13** | Refactor the order, 2 of 3: product search with stock | Feature | `UI approved` | Must |
@@ -90,7 +90,7 @@
   - Adds `Settings › Labels`. Runs after `INV-8`.
 
 #### `INV-3` · Restock finished products
-- **Type:** Feature | **Priority:** Must / L | **Status:** `Ready` *(2026-11-02)*
+- **Type:** Feature | **Priority:** Must / L | **Status:** `Planned` *(Technical work approved 2026-11-02: 11 steps, INV-3-a … INV-3-k)*
 - **Cards:** [Development Card](stories/INV-3-restock-finished-products.md) · [UI Card](stories/INV-3-restock-finished-products-ui.md)
 - **Details:** 
   - Adds Restocks page in sidebar + New restock page (colour × size grid up to 50 products, scanning support).
