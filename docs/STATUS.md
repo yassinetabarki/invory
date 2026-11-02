@@ -32,16 +32,11 @@ colour and size" is `Done`** (accepted 2026-11-01 after the designer's review, o
 `28003cb`, `63513ef`, `4678cad`, `5704050`, `36b34a3`, `3b55319`, closing docs `da41e1b`, on `main`, not pushed yet): the Sizes & colours
 card has two tabs, Stock by colour and Barcodes; every colour and size gets its own EAN-13 barcode, made by Invory in the workshop's own
 range, all or nothing; products with the same name share barcodes; a renamed product keeps them, or the rename is refused when it
-would give one colour and size two numbers. **Next: INV-9** (labels), then INV-3 to INV-5, then **INV-12 to INV-14** "Refactor the order"
-(UI cards, see below) and INV-7. **INV-3 "Restock finished products" is `UI
-approved`** (you validated its UI card on 2026-10-25; it amended INV-2's Sizes & colours card); its development card comes when you
-ask for it. **INV-4 "Clients as an entity" is `UI approved`** (you validated its UI card on 2026-10-30, after its revision
-and your six answers); its development card comes when you ask for it. **INV-5 "Progress" was `UI approved`** (you
-validated its UI card on 2026-10-30, with the QR work tickets); **on 2026-11-01 you reopened it**: finished products are not tied
-to an order, so Progress is redrawn as production for the shelf. **You validated the rewritten INV-5 card (batches, Put in stock) and the
-redrawn INV-14 card on 2026-11-01, so INV-5, INV-12, INV-13 and INV-14 are all `UI approved`.** **INV-12 "Refactor the order" was split into INV-12, INV-13 and
-INV-14; INV-12 and INV-13 are `UI approved` (2026-11-01), INV-14 is `UI draft`.** **All five UI cards are approved.** Nothing is in flight: orders per
-colour and size is still to be discussed, and the development cards of INV-2 to INV-5 come when you ask for them.
+would give one colour and size two numbers. **INV-4 "Clients as an entity" is `Done`** (accepted 2026-11-02; INV-12's phone-first
+Client card was built within it, see §4). **D-23 (2026-11-02):** `INV-3` now comes next, ahead of `INV-9`. **Next: INV-3**
+"Restock finished products" — its development card is `Ready` (approved 2026-11-02, size L, kept as one card); its Technical work comes next — then **INV-9** "Print barcode labels"
+(card `Ready`), then INV-5, INV-13 and INV-14 "Refactor the order" (all `UI approved`) and INV-7. Nothing is in flight: orders per
+colour and size is still to be discussed before INV-5's development card.
 **Phase 5: Customer orders** (started 2026-10-15, D-12; on hold since 2026-10-24). **Done:** S-48 (accepted 2026-10-15), and **F-41, S-49
 and S-53** (accepted 2026-10-21 after your one click-through; built in one build and landed on `main` together, `e99615e` … `8ab9df8`,
 closing docs `f803cb1`), **S-50** (accepted 2026-10-22; `ba0a0cd`, `74f05a8`, `a23a5d7`, merged in `0270014`), **S-58**
@@ -63,6 +58,11 @@ Phases 6, 7 and 8 are on hold too (D-20).
 ---
 
 ## 2. Decisions needed from you
+
+**Decided on 2026-11-02: INV-4 accepted; D-23 reorders the backlog.** You accepted **INV-4** "Clients as an entity" (AC-1 to AC-7,
+with INV-12's Client card built within it); it is `Done`. You then said to start **INV-3**: it now comes ahead of **INV-9**. New
+order: `INV-3` → `INV-9` → `INV-5` → `INV-13` → `INV-14` → `INV-7`. You approved INV-3's development card the same day (`Ready`; size L,
+kept as one card).
 
 **Decided on 2026-11-01: Progress for the shelf and the order tracker, your answers and approvals** (all the recommended options).
 You validated the rewritten **INV-5** UI card (it replaces the one of 2026-10-30), the redrawn **INV-14** UI card, and a one-line
@@ -280,7 +280,7 @@ a PostgreSQL parity suite (last green: 2 604 of 2 604 on 2026-10-31, during INV-
 | **Colour × size variants** | INV-10 the PostgreSQL check runs to the end, on the right PHP (tech) | 2026-10-31 (card `1f854bf`; `76b1770`: `composer.json` and `docs/SETUP.md`; on `main`) | ✅ Done 2026-10-31. The time limit on `composer test:pgsql` is removed (proven by a 61-minute run) and `docs/SETUP.md` says which PHP runs the gates; the developer's PHP 8.3 run passed 2 604 of 2 604. **Pending:** the tech-lead's own green run of `composer test:pgsql`, to be confirmed when Docker is up |
 | **Colour × size variants** | INV-2 stock per colour and size | 2026-10-31 (`46af1cc`, `ab313eb`, `4088200`; on `main`) | ✅ Done, accepted 2026-10-31. PostgreSQL parity green before the commits (2 619 tests) |
 | **Colour × size variants** | INV-8 barcodes for every colour and size (L, 8 steps) | 2026-11-01 (INV-8-a `9f93175`, -b `28003cb`, -c `63513ef`, -d `4678cad`, -e `5704050`, -f/g `36b34a3`, -h `3b55319`; docs `da41e1b`; on `main`) | ✅ Done, accepted 2026-11-01 (AC-1 to AC-5) after the designer's review and one fix round (visible focus, 44 px phone tabs, the "N missing" badge on a phone, tablet cards up to 1023 px, the "Barcodes changed. Check the list." toast, the Delete sentence as its own paragraph). Tech-lead APPROVED, all 8 steps. Gates quoted from the tech-lead's delivery report, 2026-11-01: screen tests, lint and format, type check and build green. `composer test`, the PostgreSQL parity suite and the browser golden path are red only because of your own uncommitted edit to the size-list migration (Apparel gets XS, XXL and XXXL; 38 tests still expect S to XL, the same on both databases); you are handling that edit, and it is not an INV-8 gap. Follow-ups: INV-11 (small barcode clean-ups, minor tech debt) and the parked idea "Barcodes tab polish", planned with INV-9 |
-| **Colour × size variants** | INV-4 clients, found by phone on New order, with INV-12's Client card (L, 9 steps; D-22) | 2026-11-02 (card `ccd4fe4`, Technical work `7528910`; INV-4-a `4ed7e4d`, -b `0e6fcec`, -c `f4f9fd8`, -d `ab5bb22`, test fix `2448e70`, -e `d8b2ccb`, -f `a2c2a05`, -g `5966a39`, -h `7102486`, -i `d2bf98f`; delivered `64f463c`; on branch `PI-DEV`, not merged to `main`, not pushed) | ✅ Done, accepted by the human 2026-11-02 (AC-1 to AC-7). INV-12 is done with it. Built in this session without the separate agents (the human's choice). Gates on this machine: `composer test` green except the tests that need PHP's GD extension (not installed here); Pint and PHPStan clean; screen tests (1 416), lint, type check and build green. **Not run here:** the PostgreSQL parity suite (Docker not running), the browser golden path and the GD tests: run them before merging to `main`. The orders recorded before INV-4 are put away by its migration (`php artisan migrate` on the dev database removes them, as decided). Changes during the build: the client's details load only on the order page (query budget); on a phone the Orders list shows Status and Client in the filter bar rather than a Filters panel |
+| **Colour × size variants** | INV-4 clients, found by phone on New order, with INV-12's Client card (L, 9 steps; D-22) | 2026-11-02 (card `ccd4fe4`, Technical work `7528910`; INV-4-a `4ed7e4d`, -b `0e6fcec`, -c `f4f9fd8`, -d `ab5bb22`, test fix `2448e70`, chore `66acaf9`, -e `d8b2ccb`, -f `a2c2a05`, -g `5966a39`, -h `7102486`, -i `d2bf98f`; delivered `64f463c`; on branch `PI-DEV`, not merged to `main`, not pushed) | ✅ Done, accepted by the human 2026-11-02 (AC-1 to AC-7). INV-12 is done with it. Built in this session without the separate agents (the human's choice). Gates on this machine: `composer test` green except the tests that need PHP's GD extension (not installed here); Pint and PHPStan clean; screen tests (1 416), lint, type check and build green. **Not run here:** the PostgreSQL parity suite (Docker not running), the browser golden path and the GD tests: run them before merging to `main`. The orders recorded before INV-4 are put away by its migration (`php artisan migrate` on the dev database removes them, as decided). Changes during the build: the client's details load only on the order page (query budget); on a phone the Orders list shows Status and Client in the filter bar rather than a Filters panel |
 
 All phase branches (`phase/1-materials`, `phase/2-ui-first-preview`, `phase/3-performance-spa-data`, `fix/rl-02-product-show-loading`,
 `worktree-fix-hover-prefetch-bug`) are fully merged into `main`. They and the worktree under `.claude/worktrees/` can be deleted (human decision D-6).
@@ -329,11 +329,12 @@ All phase branches (`phase/1-materials`, `phase/2-ui-first-preview`, `phase/3-pe
    `76b1770`. Done 2026-10-31: INV-2 stock per colour and size accepted and committed (`46af1cc`, `ab313eb`, `4088200`; PostgreSQL parity
    green before the commits). Done 2026-11-01: INV-8 barcodes accepted and committed (`9f93175` … `3b55319`).
    Done 2026-11-02: the sizes XS to XXXL through a new migration (`1ea9c7c`), and INV-4 clients (with INV-12) accepted, on branch
-   `PI-DEV` (`4ed7e4d` … `64f463c`). **Next: INV-9** (labels). Human: run the PostgreSQL parity suite, the browser golden path and the GD
-   tests on `PI-DEV`, then merge it to `main`.
+   `PI-DEV` (`4ed7e4d` … `64f463c`). **D-23 (2026-11-02): `INV-3` now comes next, ahead of `INV-9`.** Human: run the PostgreSQL parity
+   suite, the browser golden path and the GD tests on `PI-DEV`, then merge it to `main`.
 3. Human: discuss orders per colour and size (INV-5's "to be discussed" part); it is decided before INV-5's development card.
 4. Done 2026-10-31: INV-2's development card (stock per colour and size) was built and accepted, with the rule "a colour with stock
-   can't be taken off a product". INV-8 was built and accepted on 2026-11-01. INV-9 (card `Ready`) follows, then INV-3 to INV-5, INV-12 and INV-7 in order.
+   can't be taken off a product". INV-8 was built and accepted on 2026-11-01. **INV-3's development card is written** (`Draft`, this
+   hand-off), waiting for your approval; INV-9 (card `Ready`) follows, then INV-5, INV-13, INV-14 and INV-7 in order (D-23).
 5. Product-owner, at the next grooming: INV-7 (bigger tap targets on the Settings pages, a Could) gets its card when you ask.
 6. Done 2026-10-24: the process documents describe the new way of working (UI card, then development card, INV IDs; `e2be378`).
 7. Product-owner: before any on-hold story resumes, check its card against the new product model (R-21).
