@@ -662,12 +662,23 @@ function barcodesMigration(): Migration
 
 /**
  * The clients migration object (INV-4-a): the `clients` table and `orders.client_id`, which point at the workshops, the users and the
- * orders table. It is the newest of the hand-kept list (F-60): a test that rolls back any older migration it depends on (the workshop
- * columns, the orders table) rolls this one back first, and brings it back up last.
+ * orders table. It is in the hand-kept list (F-60): a test that rolls back any older migration it depends on (the workshop columns, the
+ * orders table) rolls this one back first, and brings it back up last.
  */
 function clientsMigration(): Migration
 {
     return require database_path('migrations/2026_11_02_200000_create_clients_table.php');
+}
+
+/**
+ * The restocks migration object (INV-3-a): `product_restocks` and `product_restock_lines`, whose lines point at the products, the colours
+ * and the sizes (and, on PostgreSQL, at the products' `unique(workshop_id, id)`). It is the newest of the hand-kept list (F-60): a test that
+ * rolls back any older migration they depend on (the workshop columns, the colours, the size lists or the products table) rolls this one
+ * back first, and brings it back up last.
+ */
+function productRestocksMigration(): Migration
+{
+    return require database_path('migrations/2026_11_03_100000_create_product_restocks_tables.php');
 }
 
 /**
