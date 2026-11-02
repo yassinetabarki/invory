@@ -14,6 +14,7 @@ use App\Http\Controllers\ProductBarcodeController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductStockController;
 use App\Http\Controllers\RestockController;
+use App\Http\Controllers\RestockProductController;
 use App\Http\Controllers\RestockUndoController;
 use App\Http\Controllers\SaleController;
 use Illuminate\Support\Facades\Route;
@@ -47,8 +48,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->where('product', '[0-9]{1,18}')
         ->name('products.barcodes.store');
 
+    // New restock's product picker and a product's line (INV-3-d): JSON, read-only. Registered before the resource.
+    Route::get('restocks/products/options', [RestockProductController::class, 'index'])->name('restocks.products.options');
+    Route::get('restocks/products/{product}', [RestockProductController::class, 'show'])
+        ->where('product', '[0-9]{1,18}')
+        ->name('restocks.products.line');
+
     // Restocks of finished products (INV-3): never edited or deleted.
-    Route::resource('restocks', RestockController::class)->only(['index', 'store']);
+    Route::resource('restocks', RestockController::class)->only(['index', 'create', 'store']);
 
     // Undo restock (INV-3-c). {restock} is route-model bound (an unknown or other workshop's restock is a 404).
     Route::post('restocks/{restock}/undo', [RestockUndoController::class, 'store'])

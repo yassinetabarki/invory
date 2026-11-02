@@ -557,6 +557,92 @@ export type OrderEditProps = {
 };
 export type OrderShowProps = { order: Order };
 
+// ---------------------------------------------------------------------------
+// Restocks of finished products (INV-3, ADR-0022). Whole units only.
+// ---------------------------------------------------------------------------
+
+/** A product as the restock pages name it; `deleted` → "Denim Jacket (deleted)", with no link. */
+export type RestockProductRef = {
+    id: number;
+    name: string;
+    sku: string;
+    status: ProductStatus;
+    deleted: boolean;
+};
+/** One product's card on New restock: its sizes and what each colour and size has on the shelf ("now 2"). */
+export type RestockLine = {
+    product: RestockProductRef;
+    sizes: Size[]; // the product's list, in order
+    one_size: boolean; // a "One size" product: one field per colour
+    stock: FinishedStock;
+};
+/** A row of the Restocks list. */
+export type RestockSummary = {
+    id: number;
+    restocked_on: string; // 'YYYY-MM-DD'
+    reference: string | null;
+    units: number; // the restock's total
+    products: { name: string; units: number }[]; // the first two, in the order added
+    more_products: number; // "and 2 more"
+    recorded_by: string | null; // null once that account is deleted ("—")
+    undone: boolean;
+};
+/** One product of the restock panel: only the colours that got units, in list order, and every size of the list. */
+export type RestockBlock = {
+    product: RestockProductRef;
+    sizes: Size[];
+    one_size: boolean;
+    units: number;
+    rows: { colour: Colour; units: number[]; total: number }[]; // `units` follows `sizes`
+    totals: number[] | null; // per size; only with two colours or more
+};
+/** The restock panel. Times are the workshop's wall-clock time: "2026-10-25T14:32". */
+export type RestockDetail = RestockSummary & {
+    note: string | null;
+    recorded_at: string;
+    products_count: number;
+    undone_at: string | null;
+    undone_by: string | null; // null while not undone, or once that account is deleted
+    blocks: RestockBlock[];
+    undo_refusal: string | null; // why Undo restock can't be pressed; null when it can (or is undone)
+};
+/** The Restocks page's address: the filters and the open panel. */
+export type RestockFilters = {
+    search: string | null;
+    product: number | null;
+    restock: number | null;
+};
+export type RestocksIndexProps = {
+    restocks: Paginated<RestockSummary>; // 25 a page, newest first
+    filters: RestockFilters;
+    product_filter: RestockProductRef | null; // the product chosen in the Product filter
+    has_restocks: boolean; // tells "No restocks yet" from "No restock matches"
+    restock: RestockDetail | null; // the open panel (`?restock=`); reload it alone with `only: ['restock']`
+};
+export type RestockCreateProps = {
+    preset: RestockLine | null; // from a product page (`?product=`): that product's line, already there
+};
+/** `GET restocks/products/options` (the picker and the Product filter): `search`, `limit` ≤ 50, `include`. Returns `RestockProductRef[]`. */
+export type RestockProductOptionsQuery = {
+    search?: string;
+    limit?: number;
+    include?: number[];
+};
+/**
+ * New restock posts this to `restocks.store`. Errors: restocked_on, reference, note, products (nothing typed, a 51st product),
+ * products.{i} (a line: nothing typed, deleted, changed), products.{i}.units.{colourId}.{sizeId} (a field).
+ */
+export type NewRestockFormData = {
+    restocked_on: string; // 'YYYY-MM-DD'
+    reference: string;
+    note: string;
+    from_product: number | null; // started from that product's page: saving comes back to it
+    products: {
+        product_id: number;
+        units: Record<number, Record<number, string>>;
+    }[]; // every colour × size, '' when not typed
+};
+
 /**
  * start_cutting: to_start → in_cutting · mark_ready: in_cutting → ready_to_ship · ship: ready_to_ship → shipped ·
  * back_to_start: in_cutting → to_start · back_to_cutting: ready_to_ship → in_cutting · back_to_ready: shipped → ready_to_ship
