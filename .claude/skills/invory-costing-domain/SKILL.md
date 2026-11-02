@@ -35,6 +35,9 @@ If a rule here is wrong or incomplete, stop and ask the tech-lead to update it (
 | Stage counts | How many units of an order line are To start, In cutting, Ready to ship and Shipped; they always add up to the line's quantity. To start = quantity − the other three (S-49) | `in_cutting`, `ready_to_ship`, `shipped` (`to_start` derived) |
 | Open order | An order with at least one line not fully shipped (`shipped < quantity`). Once every line is fully shipped the order is "Shipped". One rule drives the Orders list's "Open orders" filter, its count and its totals (S-50) | `Order::open()` / `Order::shipped()` scopes, `OrderStatusFilter` enum |
 | Cut | One "Start cutting" of N units of an order line, remembering per material the exact amount per unit and the amount taken. A move back to To start returns from the latest cut first (S-53) | `OrderLineCut` / `order_line_cuts` |
+| Production phase | One of the workshop's own phases between In cutting and Put in stock (0 to 6, in order, a name of up to 24 characters, unique ignoring capitals). In cutting and Put in stock are always there and have no row. A phase that holds units keeps its place and can't be removed (INV-5, ADR-0023) | `ProductionPhase` / `production_phases` |
+| Batch | Units of one product in one colour and one size, made together for the shelf, numbered per workshop ("B-0147", never reused). In production it is In cutting or in one phase, since a day; it moves one phase at a time, and moving part of it splits off a new batch. Put in stock (all its units) or Undo batch (only In cutting) ends it. Never tied to an order (INV-5, ADR-0023) | `ProductionBatch` / `production_batches`, `ProductionBatchStatus` |
+| Production cut | What one Start batch took out of stock for all its batches, per material, like a Cut of an order line; Undo batch gives back from it (INV-5, ADR-0023) | `ProductionCut` / `production_cuts` |
 | Order line size | One size of an order line: the units ordered in that size and its stage counts (In cutting, Ready to ship, Shipped; To start derived). Only sizes ordered have one. The line's quantity and stage counts are the sums of its sizes. A line recorded before sizes holds one "One size" row (S-60, S-61, ADR-0016) | `OrderLineSize` / `order_line_sizes`, `OrderLineSizeMode` |
 | Size list | The fixed sizes of a product category, in order, with the name the screens show: "S, M, L, XL" (Apparel), "36 to 46" (Footwear), "One size" (every other category). Installation-wide; no screen edits them (S-58, ADR-0015) | `SizeList` / `size_lists` |
 | Size | One size of a size list ("S", "36", "One size"). A product has every size of its category; later stories count orders, production and finished stock by size id | `Size` / `sizes` |
@@ -199,6 +202,30 @@ button, ⌊660 / 8⌋), and the inventory value from TND 10,544.300 to 9,936.680
 200.5 m, can produce 87); if the jacket needs 10 buttons by then, still 40 pc. After cutting 30 at 8 buttons and then 10 at 10
 buttons, moving 5 back returns 50 pc (the latest cut first). With the button at 100 pc, cutting 20 is refused (needs
 160 pc, short by 60 pc, at most 12); cutting 12 leaves 4 pc. With the button at 7 pc, at most 0.
+
+### Start batch and Undo batch (added 2026-11-02, INV-5, ADR-0023)
+
+```
+start_batch(P, grid):                                     grid = units per colour and size of P, whole, 0 … 1,000,000 each
+    N = Σ grid                                            N ≥ 1
+    requires: P is not deleted                            (active, draft and archived products can be started)
+    requires: BOM empty  or  N ≤ max_producible(P)        the same check, plan and history as start_cutting(·, N), made once for N
+    writes:   one production cut c (units N) remembering per material per_unit and taken = needed(m, N)
+              one batch per colour and size with units > 0, In cutting since today, numbered from the workshop's production counter, + 1 each
+undo_batch(b):                                            only while b is In cutting; k = units(b)
+    r = c.units − c.units_returned                        c = b's production cut (shared by every batch of that start)
+    returned(m) = held(c, m, r) − held(c, m, r − k)       ADR-0014's formula; every batch of a start undone = exactly `taken`
+    nothing back for a material deleted since, or whose unit changed since the start
+put_in_stock(b, k):                                       1 ≤ k ≤ units(b); P not deleted; a restock "From production"
+    finished_stock(P, colour, size) += k                  never above 1,000,000; materials and costing unchanged
+```
+- Moves between phases never touch materials or the shelf. Undoing the restock of a Put in stock takes the units off the shelf; the
+  batch doesn't come back and its materials stay used.
+- Batches and order cuts take from the same stock under the same locks until INV-14 removes cutting from orders.
+
+Worked example (Denim Jacket, 900 buttons): Indigo M 6 and Indigo L 10 = 16 units take 31.68 m Denim 12oz Indigo, 128 pc Metal shank
+button 17mm, 2,016 m Polyester thread and 16 pc Woven brand label as one production cut; B-0153 (6) and B-0154 (10) start In cutting;
+"Can produce now" goes from 112 to 96 (⌊772 / 8⌋). Undoing a 4-unit batch In cutting gives back 7.92 m, 32 pc, 504 m and 4 pc.
 
 ### Orders list: open orders and their totals (added 2026-10-21, S-50)
 

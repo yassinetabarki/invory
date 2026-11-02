@@ -8,12 +8,16 @@ use App\Models\Order;
 use App\Models\OrderLine;
 use App\Models\Product;
 use App\Models\ProductCategory;
+use App\Models\ProductionBatch;
+use App\Models\ProductionCounter;
+use App\Models\ProductionPhase;
 use App\Models\ProductSizeStock;
 use App\Models\Sale;
 use App\Models\Size;
 use App\Models\SizeList;
 use App\Models\StockMovement;
 use App\Models\User;
+use App\Services\Workshops\CurrentWorkshop;
 use Carbon\CarbonImmutable;
 use Database\Seeders\DemoCatalogSeeder;
 use Database\Seeders\DemoSalesSeeder;
@@ -682,6 +686,16 @@ function productRestocksMigration(): Migration
 }
 
 /**
+ * The production migration object (INV-5-a): phases, production cuts, batches and their moves, and `workshops.last_batch_number`. Its
+ * batches point at the products, colours, sizes, materials and restocks. It is the newest of the hand-kept list (F-60): a test that rolls
+ * back any older migration they depend on rolls this one back first, and brings it back up last.
+ */
+function productionMigration(): Migration
+{
+    return require database_path('migrations/2026_11_04_100000_create_production_tables.php');
+}
+
+/**
  * Puts the finished stock of a product on the shelf, per colour (INV-2-a): `setFinishedStock($jacket, ['Black' => [1, 0, 2, 1], 'Indigo' => [2, 0, 3, 1]])`
  * is each colour's NAME → units per size in the order of the product's size list. It replaces every row of the product, links each
  * named colour to the product when it isn't (a colour at 0 is linked too, with no row), and leaves the product's other colours alone.
@@ -974,4 +988,45 @@ function restockLine(Product $product, array $typed): array
 function restockBody(array $lines, array $overrides = []): array
 {
     return ['restocked_on' => now()->toDateString(), 'reference' => '', 'note' => '', 'from_product' => null, 'products' => $lines, ...$overrides];
+}
+
+/**
+ * INV-5's Progress example on top of INV-3's catalogue, on 30 Oct 2026: the phases Sewing and Finishing and the seven batches of the
+ * card (26 units: In cutting 7 · Sewing 15 · Finishing 4), with the Denim Jeans 5-pocket's shelf Indigo 0 · 5 · 2 · 0. The batches
+ * are factory-made: their production cuts remember no material. The counter stands at 154 (B-0153 and B-0154 are the card's Start
+ * batch example), so the next batch is B-0155.
+ *
+ * @return array{user: User, jacket: Product, jeans: Product, tote: Product, sewing: ProductionPhase, finishing: ProductionPhase, batches: array<string, ProductionBatch>}
+ */
+function progressExample(TestCase $test): array
+{
+    $user = prepareDemo($test);
+    ['jacket' => $jacket, 'jeans' => $jeans, 'tote' => $tote] = restockCatalogue();
+    setShelf($jeans, ['Indigo' => ['M' => 5, 'L' => 2]]);
+    $test->travelTo(CarbonImmutable::parse('2026-10-30 12:00:00'));
+
+    $sewing = ProductionPhase::factory()->create(['name' => 'Sewing', 'position' => 1]);
+    $finishing = ProductionPhase::factory()->create(['name' => 'Finishing', 'position' => 2]);
+
+    $batches = [];
+
+    foreach ([
+        [146, $jeans, 'IND', 'S', 5, $sewing, '2026-10-26'],
+        [147, $jacket, 'IND', 'S', 4, $sewing, '2026-10-27'],
+        [149, $jacket, 'IND', 'M', 6, $sewing, '2026-10-28'],
+        [148, $jacket, 'IND', 'M', 4, $finishing, '2026-10-29'],
+        [150, $jacket, 'IND', 'M', 4, null, '2026-10-25'],
+        [151, $jacket, 'LWH', 'L', 2, null, '2026-10-29'],
+        [152, $jacket, 'LWH', 'XL', 1, null, '2026-10-29'],
+    ] as [$number, $product, $colour, $size, $units, $phase, $since]) {
+        $batches[ProductionBatch::labelOf($number)] = ProductionBatch::factory()->create([
+            'number' => $number, 'product_id' => $product->id, 'colour_id' => demoColour($colour)->id,
+            'size_id' => array_key_first(sizeIds([$size => 0])), 'units' => $units, 'phase_id' => $phase?->id,
+            'phase_since' => $since, 'started_on' => $phase === null ? $since : '2026-10-23',
+        ]);
+    }
+
+    CurrentWorkshop::run($user->workshop_id, fn () => ProductionCounter::lock()->forceFill(['last_batch_number' => 154])->save());
+
+    return ['user' => $user, 'jacket' => $jacket, 'jeans' => $jeans, 'tote' => $tote, 'sewing' => $sewing, 'finishing' => $finishing, 'batches' => $batches];
 }

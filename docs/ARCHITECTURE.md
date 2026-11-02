@@ -393,6 +393,25 @@ Index `(order_line_id, id)`. A return walks the line's open cuts newest first an
 (r − k))` per material, so a cut returned in pieces gives back exactly what it took. Lock order for every writer: order row → line →
 cuts → materials in ascending id.
 
+### Production: `production_phases`, `production_cuts`, `production_batches` (INV-5, [ADR-0023](adr/0023-production-batches-for-the-shelf.md))
+
+| Table · column                                   | Type                           | Rules                                                                                    |
+| ------------------------------------------------ | ------------------------------ | ---------------------------------------------------------------------------------------- |
+| `production_phases`.name, position               | string(24), unsigned tinyint   | unique (workshop, `lower(name)`); positions 1…n, at most 6 (CHECK on PostgreSQL)         |
+| `production_cuts`.product_id, units              | FK → products, unsigned int    | one Start batch; `units_returned` ≤ units; `user_id` `nullOnDelete`                      |
+| `production_cut_materials`                       | as `order_line_cut_materials`  | per cut and material: unit at the cut, `quantity_per_unit` (20,8), `quantity_taken` (14,4) |
+| `production_batches`.number                      | unsigned integer               | unique (workshop, number), from `production_counters.last_batch_number`                  |
+| `production_batches`.product, colour, size       | FK, `restrictOnDelete`         | one variant; products are soft-deleted                                                   |
+| `production_batches`.production_cut_id           | FK → production_cuts           | the start whose materials it holds; `split_from_id` → the batch it was split from        |
+| `production_batches`.units, status               | unsigned int, string(16)       | 1 … 1,000,000; `in_production` · `in_stock` · `undone` (CHECKs on PostgreSQL)            |
+| `production_batches`.phase_id, phase_since       | FK → production_phases, date   | null = In cutting while in production, null again once it leaves Progress                |
+| `production_batches`.product_restock_id          | FK → product_restocks nullable | the restock its last Put in stock wrote                                                  |
+| `production_batch_moves`                         | kind, units, from/to labels    | start · forward · back · stock · undo, with the phase names as text                      |
+
+PostgreSQL only: `unique(workshop_id, id)` on phases, cuts and batches, and composite keys on (`workshop_id`, …) for every parent.
+`production_counters` holds one row per workshop (made on first use): the batch counter and the production lock. Every production
+writer locks it first, then batch → cut, product → materials in ascending id, or the phases.
+
 ### `stock_movements` (S-16-BE, material history)
 | Column | Type | Rules |
 |---|---|---|
