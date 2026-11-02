@@ -13,6 +13,7 @@ use App\Http\Controllers\OrderLineMovePreviewController;
 use App\Http\Controllers\ProductBarcodeController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductStockController;
+use App\Http\Controllers\RestockController;
 use App\Http\Controllers\SaleController;
 use Illuminate\Support\Facades\Route;
 
@@ -44,6 +45,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('products/{product}/barcodes', [ProductBarcodeController::class, 'store'])
         ->where('product', '[0-9]{1,18}')
         ->name('products.barcodes.store');
+
+    // Restocks of finished products (INV-3): never edited or deleted.
+    Route::resource('restocks', RestockController::class)->only(['index', 'store']);
 
     // New order's Client card (INV-4-b): the client with this phone, or with this name. JSON, read-only (ADR-0009 rule 5).
     Route::get('clients/lookup', [ClientLookupController::class, 'show'])->name('clients.lookup');

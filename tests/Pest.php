@@ -875,3 +875,92 @@ function demoClientsWithOrders(): array
 
     return $clients;
 }
+
+/**
+ * INV-3's catalogue on top of the demo data: the Denim Jacket in Black, Indigo and Light wash with the card's shelf (Black 1 · 0 · 2 ·
+ * 1, Indigo 2 · 0 · 3 · 1: 10 units), the Denim Jeans 5-pocket in Indigo with nothing on the shelf, and the Leather Tote ("One size")
+ * in Camel (4 on the shelf) and Black. Returns the three products.
+ *
+ * @return array{jacket: Product, jeans: Product, tote: Product}
+ */
+function restockCatalogue(): array
+{
+    $colours = fn (Product $product, array $codes) => $product->colours()->sync(
+        collect($codes)->mapWithKeys(fn (string $code): array => [demoColour($code)->id => ['workshop_id' => $product->workshop_id]])->all(),
+    );
+
+    [$jacket, $jeans, $tote] = [demoProduct('PRD-JKT-001'), demoProduct('PRD-JNS-005'), demoProduct('PRD-TOT-004')];
+    ProductSizeStock::query()->whereIn('product_id', [$jacket->id, $jeans->id, $tote->id])->delete();
+    $colours($jacket, ['BLK', 'IND', 'LWH']);
+    $colours($jeans, ['IND']);
+    $colours($tote, ['CAM', 'BLK']);
+
+    setShelf($jacket, ['Black' => ['S' => 1, 'L' => 2, 'XL' => 1], 'Indigo' => ['S' => 2, 'L' => 3, 'XL' => 1]]);
+    setShelf($tote, ['Camel' => ['One size' => 4]], SizeList::ONE_SIZE);
+
+    return ['jacket' => $jacket, 'jeans' => $jeans, 'tote' => $tote];
+}
+
+/**
+ * Finished units straight in the table, colour NAME → size label → units.
+ *
+ * @param  array<string, array<string, int>>  $byColour
+ */
+function setShelf(Product $product, array $byColour, string $list = SizeList::S_TO_XL): void
+{
+    foreach ($byColour as $name => $bySize) {
+        foreach (sizeIds($bySize, $list) as $sizeId => $units) {
+            $key = ['product_id' => $product->id, 'colour_id' => Colour::query()->where('name', $name)->value('id'), 'size_id' => $sizeId];
+            $row = ProductSizeStock::query()->where($key)->first();
+            $row === null ? ProductSizeStock::factory()->create([...$key, 'units' => $units]) : $row->update(['units' => $units]);
+        }
+    }
+}
+
+/**
+ * The shelf of a product as `['Black' => ['S' => 1, 'L' => 2]]`: colours in list order, sizes in size order, only rows that exist.
+ *
+ * @return array<string, array<string, int>>
+ */
+function shelfByColour(Product $product): array
+{
+    $shelf = [];
+
+    foreach (ProductSizeStock::query()->where('product_id', $product->id)->with(['size', 'colour'])->get()
+        ->sortBy(fn (ProductSizeStock $row): array => [$row->colour->position, $row->colour->name, $row->size->position]) as $row) {
+        $shelf[$row->colour->name][$row->size->label] = $row->units;
+    }
+
+    return $shelf;
+}
+
+/**
+ * One product of New restock as the page sends it: every colour of the product × every size of its list, '' unless typed.
+ *
+ * @param  array<string, array<string, int|string>>  $typed  colour NAME → size label → what was typed
+ * @return array{product_id: int, units: array<int, array<int, int|string>>}
+ */
+function restockLine(Product $product, array $typed): array
+{
+    $sizes = $product->category()->firstOrFail()->sizeList()->firstOrFail()->sizes()->orderBy('position')->get();
+    $units = [];
+
+    foreach ($product->colours()->get() as $colour) {
+        foreach ($sizes as $size) {
+            $units[$colour->id][$size->id] = $typed[$colour->name][$size->label] ?? '';
+        }
+    }
+
+    return ['product_id' => $product->id, 'units' => $units];
+}
+
+/**
+ * A New restock body: today (the frozen demo day), no reference or note, and the lines given.
+ *
+ * @param  list<array{product_id: int, units: array<int, array<int, int|string>>}>  $lines
+ * @return array<string, mixed>
+ */
+function restockBody(array $lines, array $overrides = []): array
+{
+    return ['restocked_on' => now()->toDateString(), 'reference' => '', 'note' => '', 'from_product' => null, 'products' => $lines, ...$overrides];
+}
