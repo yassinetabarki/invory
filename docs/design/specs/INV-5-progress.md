@@ -1,4 +1,7 @@
 # INV-5 · Progress — design spec
+> **Superseded on 2026-11-01** by [INV-5-production-for-the-shelf.md](INV-5-production-for-the-shelf.md): Progress now makes batches for the shelf, not units of
+> orders (no To start, no Shipped, no Order or Client columns, tickets without a client). Kept as history of revisions 1 and 2.
+
 Status: proposal, revision 2 (decisions of 2026-10-30 written in; QR work tickets added at the human's request) · Designer ·
 2026-10-30 · Boards: [Invory App UI canvas](https://claude.ai/artifact/RJenVL3s6DDEg75AmdZ4zc), row "Progress (INV-5)":
 - "INV-5 · Progress · all phases by product, filters, empty, no match, error · desktop" (`project/Inv5Overview.dc.html`)

@@ -9,9 +9,9 @@
 > - **INV-2 Done** (accepted 2026-10-31; `46af1cc`, `ab313eb`, `4088200`), so it left the open list. The PostgreSQL parity suite was green before the commits (2619 tests). INV-8 is next.
 > - **INV-10 done** (`76b1770`; its card `1f854bf`), so it left the open list.
 > - **INV-2 Split:** INV-2's card was split into three: **INV-2** (stock, done), **INV-8** (barcodes), and **INV-9** (labels).
-> - **Added 2026-11-01:** `INV-12` (Refactor the order), an `Idea`, placed after INV-5 and before INV-7. No card yet; it waits its turn.
+> - **Added 2026-11-01:** `INV-12` (Refactor the order), placed after INV-5 and before INV-7. **Split the same day into `INV-12`, `INV-13` and `INV-14`, each with a UI card.** `INV-12`, `INV-13` and `INV-14` are `UI approved` (2026-11-01); `INV-5`'s UI card, reopened because finished products are not tied to an order, was rewritten and is `UI approved` again (2026-11-01). `INV-13`'s card got a one-line wording fix (re-approved 2026-11-01). They wait their turn for building.
 > - **Parked idea:** "Barcodes tab polish" (from the INV-8 UX review), planned with INV-9; no ID yet.
-> - **Current Order** (INV-8 done): `INV-9` → `INV-3` → `INV-4` → `INV-5` → `INV-12` → `INV-7`. Next free ID: **INV-13** (INV-11 is the tech-debt item raised in the INV-8 review, see [TECH-DEBT.md](TECH-DEBT.md)).
+> - **Current Order** (INV-8 done): `INV-9` → `INV-3` → `INV-4` → `INV-5` → `INV-12` → `INV-13` → `INV-14` → `INV-7`. Next free ID: **INV-15** (INV-11 is the tech-debt item raised in the INV-8 review, see [TECH-DEBT.md](TECH-DEBT.md)).
 > - **INV-1 Done:** "Colours as fixed values" accepted & merged (`a66f4bf`, `78a4eee`), so it left this backlog.
 > - **Added:** `INV-6` (picker-row item) and `INV-7` (Could: bigger tap targets on Settings).
 > - **Archive:** Done items leave this file and are recorded in `STATUS.md` and the archive.
@@ -31,7 +31,7 @@
 - **Size:** `S` ($\le 1$ day agent work) · `M` · `L` *(needs split)*
 - **Card:** Full story cards (story, AC with examples, visual scope, out of scope, questions) live in `docs/stories/<id>-<slug>.md`. This backlog displays the short version.
 - **IDs & History:**
-  - Everything new since **2026-10-24 (D-20, D-21)** is numbered **INV-n** (including technical items without UI cards). Next free ID: **INV-13**.
+  - Everything new since **2026-10-24 (D-20, D-21)** is numbered **INV-n** (including technical items without UI cards). Next free ID: **INV-15**.
   - `INV-1` to `INV-5`: Variant rework items (`INV-1` is done).
   - `INV-6`: Picker-row swatch edge item.
   - `INV-7`: Settings tap targets.
@@ -39,7 +39,7 @@
   - `INV-8` & `INV-9`: Barcodes (done, `9f93175` … `3b55319`) and labels (split from INV-2 on 2026-10-31).
   - `INV-10`: PostgreSQL test fix (done, `76b1770`).
   - `INV-11`: Small barcode clean-ups from the INV-8 review (MINOR tech debt, in [TECH-DEBT.md](TECH-DEBT.md); proposed for when barcodes are next touched, INV-9).
-  - `INV-12`: Refactor the order (client first, product search with availability, no cutting on orders, order tracker). Added 2026-11-01.
+  - `INV-12`, `INV-13`, `INV-14`: Refactor the order (client first · product search with stock · order tracker and no cutting on orders). Added 2026-11-01 as `INV-12`, split into three the same day.
   - Old `S-` and `F-` IDs are retained and never reused (last story ID: `S-74`).
   - Technical items register: See [TECH-DEBT.md](TECH-DEBT.md).
 
@@ -54,7 +54,7 @@
 1. **INV-1** (Colours) — `#done` *(Accepted 2026-10-31)*
 2. **INV-2** (Stock per colour and size) — `#done` *(Accepted 2026-10-31)*
 3. **INV-8** (Barcodes) — `#done` *(Accepted 2026-11-01)*
-4. **Next Sequence:** `INV-9` ➔ `INV-3` ➔ `INV-4` ➔ `INV-5` ➔ `INV-12` ➔ `INV-7`
+4. **Next Sequence:** `INV-9` ➔ `INV-3` ➔ `INV-4` ➔ `INV-5` ➔ `INV-12` ➔ `INV-13` ➔ `INV-14` ➔ `INV-7` *(the UI cards of INV-5, INV-12, INV-13 and INV-14 are all `UI approved`, 2026-11-01)*
 5. **Card Structure:** Each feature receives a UI card first (`INV-n-<slug>-ui.md`), followed by a development card (`INV-n-<slug>.md`).
 6. **Shared UI Cards:** `INV-2`, `INV-8`, and `INV-9` share the same UI card but are accepted individually.
 7. **Phase 7 Tech Allowance:** `F-43` · `F-46` · `F-52` · `F-53`
@@ -66,8 +66,10 @@
 | **INV-9** | Print barcode labels | Feature | `Ready` | Must / M |
 | **INV-3** | Restock of finished products | Feature | `UI approved` | Must |
 | **INV-4** | Clients as an entity | Feature | `UI approved` | Must |
-| **INV-5** | Production progress page | Feature | `UI approved` | Must |
-| **INV-12** | Refactor the order: client first, product search, order tracker | Feature | `Idea` | Must / L (to split) |
+| **INV-5** | Production for the shelf: Progress page *(UI card rewritten and approved 2026-11-01)* | Feature | `UI approved` | Must |
+| **INV-12** | Refactor the order, 1 of 3: client first on New order | Feature | `UI approved` | Must |
+| **INV-13** | Refactor the order, 2 of 3: product search with stock | Feature | `UI approved` | Must |
+| **INV-14** | Refactor the order, 3 of 3: order tracker, orders served from the shelf | Feature | `UI approved` | Must |
 | **INV-7** | Bigger tap targets on Settings pages | Feature | `Idea` | Could / S–M |
 
 > [!note] Technical Note on INV-6
@@ -99,21 +101,31 @@
 - **Details:** 
   - B2C buyer focus: Clients page in sidebar with Source filter, plus individual client profiles.
   - Fields: Name, Phone (unique), City (all required), and Source (optional: Instagram, Facebook, TikTok, WhatsApp, Website, Walk-in, Word of mouth, Other).
-  - Integrated into New Order flow ("Existing client · New client").
+  - Integrated into New Order flow ("Existing client · New client"); on New order this is replaced by the phone-first Client card of `INV-12` (approved 2026-11-01). Edit order, the Clients page and the Add client window stay as approved.
 
 #### `INV-5` · Production progress page
-- **Type:** Feature | **Priority:** Must | **Status:** `UI approved`
-- **Cards:** [UI Card](stories/INV-5-progress-ui.md)
+- **Type:** Feature | **Priority:** Must | **Status:** `UI approved` *(reopened and rewritten 2026-11-01; the human validated the new card the same day)*
+- **Cards:** [UI Card](stories/INV-5-progress-ui.md) *(the rewritten version replaces the one validated on 2026-10-30)* · design spec [INV-5-production-for-the-shelf](design/specs/INV-5-production-for-the-shelf.md)
 - **Details:** 
-  - Progress page in sidebar: Phase tiles, per-product colour × size table, phase-by-phase view (oldest first).
-  - Configurable phases (`Settings › Production phases`).
-  - QR work tickets per bundle cut; Scan page moves bundles forward.
-  - *Open discussion:* Counting order lines per colour and size.
+  - Progress page in sidebar: phase tiles (In cutting, the workshop's own phases), per-product colour × size table with "On the shelf now", phase-by-phase view of **batches** (one product, colour and size; oldest first).
+  - **Start batch** takes materials under S-53's rules; the path is In cutting → own phases → **Put in stock**, which adds to finished stock and writes a restock (Reference = the batch number, Note "From production"). **Undo batch** only while In cutting.
+  - Configurable phases (`Settings › Production phases`; In cutting and Put in stock are fixed).
+  - QR work tickets per batch (no client; the batch and ticket share one number); Scan page moves batches forward, and finishes them at the last phase.
+  - *Settled 2026-11-01:* order lines are counted per colour and size (built before `INV-13`).
+  - **Reopened for UI (2026-11-01, human):** finished products are not tied to an order. Progress makes products **for the shelf** and an order is served from the finished stock. The designer redrew Progress (spec revision 3, boards v69) and the card above was rewritten from it; it replaces the version validated on 2026-10-30. The human validated it on 2026-11-01, so its development card can be written when it is next in order.
 
-#### `INV-12` · Refactor the order
-- **Type:** Feature | **Priority:** Must | **Size:** L *(four parts; split when refined)* | **Status:** `Idea` *(no UI card or development card yet; waits for its turn after `INV-5`)*
-- **Cards:** None yet.
-- **Details:** The human's request, in four points:
+#### `INV-12` · `INV-13` · `INV-14` · Refactor the order
+- **Type:** Feature | **Priority:** Must | **Size:** L, split on 2026-11-01 into three, one UI card each | **Status:** `INV-12`, `INV-13` and `INV-14` all `UI approved` (2026-11-01; `INV-14` was redrawn the same day for the shelf model). Building waits for its turn after `INV-5`.
+- **Cards:** [INV-12 UI card: client first](stories/INV-12-client-first-ui.md) · [INV-13 UI card: product search with stock](stories/INV-13-order-products-ui.md) · [INV-14 UI card: order tracker, covered from the shelf](stories/INV-14-order-tracker-ui.md) · design spec [INV-12-refactor-the-order](design/specs/INV-12-refactor-the-order.md). No development cards yet.
+- **The split (own order, each validated on its own):**
+  - `INV-12` · client first on New order (point 1). Needs only `INV-4`.
+  - `INV-13` · product search with stock per colour and size, and order lines per colour and size (point 2). Needs `INV-2`, `INV-3`, and the answer on order lines per colour and size.
+  - `INV-14` · order tracker (To deliver · Delivered · Cancelled), Mark delivered taking units off the finished stock, Cancel units, no production on orders (points 3 and 4). Needs `INV-13` and a redrawn `INV-5` (Progress makes products for the shelf, so cutting has somewhere to go).
+- **Decision of 2026-11-01 (human, on Q1–Q10):** order lines are a colour × size grid, built before `INV-13`; "Not started" and "Delivered" are the words; the client is phone first; cancel only what is not delivered, no undo, no stock effect. **Also:** a finished product is not tied to an order. Progress makes products **for the shelf**; an order is covered from the finished stock (the shelf is checked, never set aside). This changes `INV-5`, see below.
+  - **Answers on the model (human, 2026-11-01):** (1) the shelf is checked, never held: no reservation, "On the shelf now" shown beside each colour × size, Mark delivered takes units off the finished stock up to what the shelf holds, its move back returns them, Cancel changes no stock. (2) An order counts **To deliver · Delivered · Cancelled · Total**; its status is Not started · In progress (partly delivered) · Delivered · Cancelled; the list filter is Open orders · Delivered · Cancelled · All orders. (3) Deleting an order is always allowed (no refusal); the confirm adds a sentence when units were delivered. (4) `INV-5`'s UI card is reopened (see `INV-5`).
+  - **Answers on Progress and the order (human, 2026-11-01, all the recommended options):** Put in stock writes a restock (Reference = the batch number, Note "From production"), undoable in Restocks, and an undone restock doesn't bring the batch back; a scan can finish a batch; Undo batch only while In cutting; no order data on Progress (a "Waiting in open orders" column could be a later card); part of a batch can be put in stock; INV-13's line now reads "(M is out of stock, so those units wait for the shelf)"; and the defaults: "In stock" in the search and "On the shelf now" on the order page and Progress, no delivery history, no "Make more" link, one number for batch and ticket, Start batch only on Progress and its product cards, and the two new Edit product locks (a colour or a category with units in production).
+  - **Order of work:** `INV-9` → `INV-3` → `INV-4` → `INV-5` (UI card rewritten and validated again on 2026-11-01; development card next) → `INV-12` → `INV-13` → `INV-14`. The order lines per colour and size are built before `INV-13`; the tech-lead says in which card. Existing orders with units in cutting, ready to ship or shipped need a mapping (Shipped → Delivered, the rest → To deliver); materials already taken by cuts on orders belong to no batch. The tech-lead says how to treat them.
+- **The request, in four points:**
   1. **Client first.** New order starts with the client and all the information we need, like the client card. New order shows the client form. The phone number is unique per client, so each new order creates the client if it doesn't exist yet (match on phone).
   2. **Products to order.** A good search that finds products and shows, per colour (and size), whether each is in stock or not.
   3. **No cutting on orders.** Remove the cutting phase and everything related to it from orders. Cutting stays only on the Progress page.
@@ -124,7 +136,8 @@
   - `S-65` (closing orders, on hold): the tracker's "delivered" and the "Ready to close" step must agree. Check S-65 against this item before it resumes.
   - `S-68` (order screen tap targets, on hold): the new order screens must meet the 44 px tap targets, so S-68 is folded in or re-checked when this item is carded.
   - `INV-3` (Restock): the stock shown in the product search (point 2) is the finished stock that INV-3 and INV-2 maintain.
-- **Today's cutting rules** (cut materials from stock, "Move back to To start", the delete refusal) are business rules; removing them from orders is a rule change the human decides when the card is written.
+- **Today's cutting rules** (cut materials from stock, "Move back to To start", the delete refusal) are business rules; removing them from orders is a rule change the human decides when the card is written. The delete refusal keeps its meaning, reworded for In progress and Ready to ship (`INV-14`).
+- **Other cards to re-check:** `S-65` (close a delivered order) and `S-57` (cancel an order) talk about "shipped" and cutting; both need rewording against the tracker before they resume. `S-68` is met by `INV-13` and `INV-14` (44 px on a phone).
 
 #### `INV-6` · Picker row swatch edge
 - **Type:** Tech | **Status:** `Idea`
@@ -135,7 +148,7 @@
 - **Details:** Increases button/field heights on phone/tablet from 32-36 px to 44 px. Related to `S-68` (order screen tap targets). Runs after `INV-12`.
 
 > [!abstract] Unscheduled Idea
-> **Production for the shelf:** A batch with no attached client moving through production phases, ending with "Put in stock". *(No ID assigned yet).*
+> **Production for the shelf:** A batch with no attached client moving through production phases, ending with "Put in stock". *(No ID assigned yet.)* Since 2026-11-01 this is no longer an idea apart: it is how Progress works, and it is now `INV-5`'s rewritten card.
 
 > [!abstract] Unscheduled Idea
 > **Barcodes tab polish (from the INV-8 UX review, 2026-11-01):** a visible focus after "Generate" lands on the table; the confirm button

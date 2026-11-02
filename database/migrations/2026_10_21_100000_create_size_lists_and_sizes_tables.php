@@ -19,7 +19,7 @@ return new class extends Migration
 {
     /** @var array<string, array{name: string, labels: list<string>}> code => name and size labels in order (the position is the index + 1). */
     private const LISTS = [
-        's_to_xl' => ['name' => 'S, M, L, XL', 'labels' => ['S', 'M', 'L', 'XL']],
+        's_to_xl' => ['name' => 'S, M, L, XL', 'labels' => ['XS','S', 'M', 'L', 'XL','XXL','XXXL']],
         'eu_36_to_46' => ['name' => '36 to 46', 'labels' => ['36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '46']],
         'one_size' => ['name' => 'One size', 'labels' => ['One size']],
     ];

@@ -32,12 +32,15 @@ colour and size" is `Done`** (accepted 2026-11-01 after the designer's review, o
 `28003cb`, `63513ef`, `4678cad`, `5704050`, `36b34a3`, `3b55319`, closing docs `da41e1b`, on `main`, not pushed yet): the Sizes & colours
 card has two tabs, Stock by colour and Barcodes; every colour and size gets its own EAN-13 barcode, made by Invory in the workshop's own
 range, all or nothing; products with the same name share barcodes; a renamed product keeps them, or the rename is refused when it
-would give one colour and size two numbers. **Next: INV-9** (labels), then INV-3 to INV-5, then **INV-12** "Refactor the order" (your
-idea, no card yet) and INV-7. **INV-3 "Restock finished products" is `UI
+would give one colour and size two numbers. **Next: INV-9** (labels), then INV-3 to INV-5, then **INV-12 to INV-14** "Refactor the order"
+(UI cards, see below) and INV-7. **INV-3 "Restock finished products" is `UI
 approved`** (you validated its UI card on 2026-10-25; it amended INV-2's Sizes & colours card); its development card comes when you
 ask for it. **INV-4 "Clients as an entity" is `UI approved`** (you validated its UI card on 2026-10-30, after its revision
-and your six answers); its development card comes when you ask for it. **INV-5 "Progress" is `UI approved`** (you
-validated its UI card on 2026-10-30, with the QR work tickets). **All five UI cards are approved.** Nothing is in flight: orders per
+and your six answers); its development card comes when you ask for it. **INV-5 "Progress" was `UI approved`** (you
+validated its UI card on 2026-10-30, with the QR work tickets); **on 2026-11-01 you reopened it**: finished products are not tied
+to an order, so Progress is redrawn as production for the shelf. **You validated the rewritten INV-5 card (batches, Put in stock) and the
+redrawn INV-14 card on 2026-11-01, so INV-5, INV-12, INV-13 and INV-14 are all `UI approved`.** **INV-12 "Refactor the order" was split into INV-12, INV-13 and
+INV-14; INV-12 and INV-13 are `UI approved` (2026-11-01), INV-14 is `UI draft`.** **All five UI cards are approved.** Nothing is in flight: orders per
 colour and size is still to be discussed, and the development cards of INV-2 to INV-5 come when you ask for them.
 **Phase 5: Customer orders** (started 2026-10-15, D-12; on hold since 2026-10-24). **Done:** S-48 (accepted 2026-10-15), and **F-41, S-49
 and S-53** (accepted 2026-10-21 after your one click-through; built in one build and landed on `main` together, `e99615e` … `8ab9df8`,
@@ -60,6 +63,37 @@ Phases 6, 7 and 8 are on hold too (D-20).
 ---
 
 ## 2. Decisions needed from you
+
+**Decided on 2026-11-01: Progress for the shelf and the order tracker, your answers and approvals** (all the recommended options).
+You validated the rewritten **INV-5** UI card (it replaces the one of 2026-10-30), the redrawn **INV-14** UI card, and a one-line
+wording fix in **INV-13** (re-approved). Your answers:
+1. **Put in stock leaves a trace in Restocks:** one restock per Put in stock, Reference = the batch number, Note "From production",
+   undoable like any restock; an undone restock does not bring the batch back, and its materials stay used.
+2. **A scan can finish a batch** (at the last phase it asks "Put 4 units in stock?").
+3. **Undo batch only while the batch is In cutting;** later phases move back first.
+4. **Progress shows no order data;** the owner decides what to make from the shelf and what is in production. A "Waiting in open
+   orders" column could be its own later card.
+5. **Part of a batch can be put in stock;** the units left keep the batch number.
+6. **INV-13's line** now reads "(M is out of stock, so those units wait for the shelf)".
+7. **Defaults kept:** "In stock" in the product search and "On the shelf now" on the order page and Progress; no delivery history on
+   the order; no "Make more" link; one number for a batch and its ticket; Start batch only on Progress and its product cards; a colour
+   or a category with units in production can't be taken off or changed on a product.
+
+**Decided on 2026-11-01: INV-12 "Refactor the order", your answers and approvals.** The request was split into three UI cards.
+You validated **INV-12 (client first on New order)** and **INV-13 (search products and see stock)**, so both are `UI approved`.
+**INV-14 (order tracker)** stays `UI draft` until its boards are redrawn. Your answers:
+1. **Order lines are a colour × size grid**, decided now and built before INV-13; old orders read as the product's first colour.
+2. **Words:** "Not started" and "Delivered" everywhere. **The client is found by phone first**, with "Find a client by name"; a known
+   phone uses the saved client unchanged, with a note; phones match by digits only. Cards go Client → Products → Details.
+3. **Cancel** only what is not delivered, no undo, no stock effect. **Out of stock never blocks** an order and gives no warning.
+4. **Finished products are not tied to an order.** Progress makes products for the shelf; an order is covered from the finished
+   stock. The shelf is checked, never held (no reservation). **Mark delivered** takes the units off the finished stock, up to what
+   the shelf holds; its move back returns them.
+5. **An order counts** To deliver · Delivered · Cancelled · Total; its status is Not started · In progress (partly delivered) ·
+   Delivered · Cancelled; the list filter is Open orders · Delivered · Cancelled · All orders.
+6. **Deleting an order is always allowed** (no refusal), and the confirm adds a sentence when units were delivered.
+7. **INV-5's UI card is reopened.** The designer redraws Progress as production for the shelf, the product-owner rewrites the card
+   and you validate it again. Order of work: INV-9 → INV-3 → INV-4 → INV-5 → INV-12 → INV-13 → INV-14.
 
 **Decided on 2026-10-31: INV-1 accepted, your answers during the build and the acceptance.** You accepted INV-1 after the
 designer's review and one fix round, and it is on `main` as `a66f4bf` (Settings › Colours, AC-1 to AC-5) and `78a4eee` (colours on

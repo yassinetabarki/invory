@@ -22,11 +22,14 @@ Work goes one item at a time, in the order below. A UI card comes first, then th
 | INV-9  | Print barcode labels                               | `Ready`       | Print a label for a variant, or a sheet    |
 | INV-3  | Restock of finished products                       | `UI approved` | Add finished units to the shelf at once    |
 | INV-4  | Clients                                            | `UI approved` | Orders belong to a client                  |
-| INV-5  | A production progress page                         | `UI approved` | See where every bundle is in production    |
-| INV-12 | Refactor the order                                 | `Idea`        | Orders start with the client               |
+| INV-5  | Production for the shelf: a progress page          | `UI approved` | See where every bundle is in production    |
+| INV-12 | Refactor the order, 1 of 3: client first           | `UI approved` | Orders start with the client               |
+| INV-13 | Refactor the order, 2 of 3: product search, stock  | `UI approved` | See what is in stock when taking an order  |
+| INV-14 | Refactor the order, 3 of 3: tracker, from shelf    | `UI approved` | See where an order stands at a glance      |
 | INV-7  | Bigger tap targets on the Settings pages (Could)   | `Idea`        | Settings are easy to use on a phone        |
 
-INV-12 comes after INV-5 and INV-7 after INV-12. INV-6 is a tech-lead item (the colour picker row's swatch edge). It has no card and is not in
+INV-5's UI card was reopened, rewritten and validated again on 2026-11-01: finished products are not tied to an order, so Progress
+makes products for the shelf and an order is served from the finished stock. INV-12 comes after INV-5, INV-13 after INV-12, INV-14 after INV-13 and INV-7 after INV-14. INV-6 is a tech-lead item (the colour picker row's swatch edge). It has no card and is not in
 the order.
 
 - D-20 (2026-10-24): the card flow is paused for this rework. Every older open story is on hold.
