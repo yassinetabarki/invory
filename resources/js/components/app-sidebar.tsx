@@ -3,6 +3,7 @@ import {
     Boxes,
     ClipboardList,
     LayoutGrid,
+    PackagePlus,
     ReceiptText,
     Shirt,
     Users,
@@ -24,6 +25,7 @@ import { index as clientsIndex } from '@/routes/clients';
 import { index as materialsIndex } from '@/routes/materials';
 import { index as ordersIndex } from '@/routes/orders';
 import { index as productsIndex } from '@/routes/products';
+import { index as restocksIndex } from '@/routes/restocks';
 import { index as salesIndex } from '@/routes/sales';
 import type { NavItem } from '@/types';
 
@@ -42,6 +44,11 @@ const mainNavItems: NavItem[] = [
         title: 'Products',
         href: productsIndex(),
         icon: Shirt,
+    },
+    {
+        title: 'Restocks',
+        href: restocksIndex(),
+        icon: PackagePlus,
     },
     {
         title: 'Orders',
