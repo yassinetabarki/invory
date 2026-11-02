@@ -165,9 +165,12 @@ describe('restocks/index page', () => {
 
     it('opens a restock from its Open button, its row or its card, keeping the filters in the address', async () => {
         const user = userEvent.setup();
+        const view = () =>
+            render(
+                <RestocksIndex {...props([bl0412, tote6], { search: 'BL' })} />,
+            );
 
-        render(<RestocksIndex {...props([bl0412, tote6], { search: 'BL' })} />);
-
+        let { unmount } = view();
         await user.click(
             within(screen.getByRole('table')).getByRole('button', {
                 name: 'Open restock of 25 Oct 2026, BL-0412',
@@ -178,7 +181,9 @@ describe('restocks/index page', () => {
             { search: 'BL', restock: 3 },
             expect.objectContaining({ only: ['restock', 'filters'] }),
         );
+        unmount();
 
+        ({ unmount } = view());
         await user.click(
             within(screen.getByRole('table')).getByText('Leather Tote 6'),
         );
@@ -187,7 +192,9 @@ describe('restocks/index page', () => {
             { search: 'BL', restock: 2 },
             expect.anything(),
         );
+        unmount();
 
+        view();
         await user.click(
             within(screen.getByRole('list', { name: 'Restocks' })).getByRole(
                 'button',

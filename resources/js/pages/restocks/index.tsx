@@ -7,6 +7,7 @@ import {
     SlidersHorizontal,
 } from 'lucide-react';
 import { useEffect, useEffectEvent, useState } from 'react';
+import { RestockPanel } from '@/components/restocks/restock-panel';
 import { RestockProductPicker } from '@/components/restocks/restock-product-picker';
 import { RestocksTable } from '@/components/restocks/restocks-table';
 import { EmptyState } from '@/components/shared/empty-state';
@@ -59,6 +60,7 @@ export default function RestocksIndex({
     filters: serverFilters,
     product_filter: productFilter,
     has_restocks: hasRestocks,
+    restock: openRestock,
 }: RestocksIndexProps) {
     const [text, setText] = useState(serverFilters.search ?? '');
     const [emitted, setEmitted] = useState(serverFilters.search);
@@ -70,6 +72,8 @@ export default function RestocksIndex({
     const [loading, setLoading] = useState(false);
     const [failed, setFailed] = useState(false);
     const [filtersOpen, setFiltersOpen] = useState(false);
+    const [pending, setPending] = useState<RestockSummary | null>(null);
+    const [panelFailed, setPanelFailed] = useState(false);
 
     // A search or product we did not ask for (back / forward button) is adopted.
     if (serverFilters.search !== seenSearch) {
@@ -111,25 +115,61 @@ export default function RestocksIndex({
         });
     }
 
+    /** The address of this page with the open restock (or none), keeping the filters and the page. */
+    function panelQuery(restock: number | null) {
+        return {
+            ...addressQuery(
+                serverFilters.search,
+                serverFilters.product,
+                restock,
+            ),
+            ...(restocks.meta.current_page > 1
+                ? { page: restocks.meta.current_page }
+                : {}),
+        };
+    }
+
     function open(restock: RestockSummary) {
-        router.get(
-            index.url(),
-            {
-                ...addressQuery(
-                    serverFilters.search,
-                    serverFilters.product,
-                    restock.id,
-                ),
-                ...(restocks.meta.current_page > 1
-                    ? { page: restocks.meta.current_page }
-                    : {}),
+        setPending(restock);
+        setPanelFailed(false);
+        router.get(index.url(), panelQuery(restock.id), {
+            only: ['restock', 'filters'],
+            preserveState: true,
+            preserveScroll: true,
+            onHttpException: () => {
+                setPanelFailed(true);
+
+                return false;
             },
-            {
-                only: ['restock', 'filters'],
-                preserveState: true,
-                preserveScroll: true,
+            onNetworkError: () => {
+                setPanelFailed(true);
+
+                return false;
             },
-        );
+        });
+    }
+
+    function close() {
+        setPending(null);
+        setPanelFailed(false);
+        router.get(index.url(), panelQuery(null), {
+            only: ['restock', 'filters'],
+            preserveState: true,
+            preserveScroll: true,
+        });
+    }
+
+    function retryPanel() {
+        const id = pending?.id ?? serverFilters.restock;
+        const row =
+            pending ?? restocks.data.find((restock) => restock.id === id);
+
+        if (row) {
+            open(row);
+        } else if (id !== null) {
+            setPanelFailed(false);
+            router.reload({ only: ['restock'] });
+        }
     }
 
     const debouncedText = useDebouncedValue(text, SEARCH_DEBOUNCE_MS);
@@ -345,6 +385,25 @@ export default function RestocksIndex({
                     </div>
                 </SheetContent>
             </Sheet>
+
+            <RestockPanel
+                restock={
+                    openRestock &&
+                    openRestock.id === (pending?.id ?? openRestock.id)
+                        ? openRestock
+                        : null
+                }
+                pending={pending}
+                open={pending !== null || serverFilters.restock !== null}
+                failed={
+                    panelFailed ||
+                    (pending === null &&
+                        serverFilters.restock !== null &&
+                        openRestock === null)
+                }
+                onClose={close}
+                onRetry={retryPanel}
+            />
         </>
     );
 }
