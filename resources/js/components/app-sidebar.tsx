@@ -2,6 +2,7 @@ import { Link } from '@inertiajs/react';
 import {
     Boxes,
     ClipboardList,
+    Factory,
     LayoutGrid,
     PackagePlus,
     ReceiptText,
@@ -25,6 +26,7 @@ import { index as clientsIndex } from '@/routes/clients';
 import { index as materialsIndex } from '@/routes/materials';
 import { index as ordersIndex } from '@/routes/orders';
 import { index as productsIndex } from '@/routes/products';
+import { index as progressIndex } from '@/routes/progress';
 import { index as restocksIndex } from '@/routes/restocks';
 import { index as salesIndex } from '@/routes/sales';
 import type { NavItem } from '@/types';
@@ -54,6 +56,11 @@ const mainNavItems: NavItem[] = [
         title: 'Orders',
         href: ordersIndex(),
         icon: ClipboardList,
+    },
+    {
+        title: 'Progress',
+        href: progressIndex(),
+        icon: Factory,
     },
     {
         title: 'Clients',

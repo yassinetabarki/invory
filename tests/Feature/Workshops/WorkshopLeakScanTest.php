@@ -5,6 +5,8 @@ use App\Models\Material;
 use App\Models\Order;
 use App\Models\OrderLine;
 use App\Models\Product;
+use App\Models\ProductionBatch;
+use App\Models\ProductionPhase;
 use App\Models\Sale;
 use App\Models\StockMovement;
 use App\Models\User;
@@ -34,7 +36,7 @@ use Illuminate\View\View;
 */
 
 /** The only parameters a walked GET route may have, each answered with the scanning user's OWN record. */
-const LEAK_SCAN_PARAMETERS = ['material', 'product', 'order', 'client'];
+const LEAK_SCAN_PARAMETERS = ['material', 'product', 'order', 'client', 'batch'];
 
 /**
  * Why a GET route behind `auth` is not walked, or null when it is. Every skip is a route that shows no workshop data.
@@ -80,7 +82,7 @@ function leakScanRoutes(): array
  * product also hold a photo, under
  * a random address that does NOT carry the marker (like a real upload): the scan looks for the address itself.
  *
- * @return array{user: User, material: Material, outOfStock: Material, product: Product, unproducible: Product, sale: Sale, order: Order, photos: list<string>}
+ * @return array{user: User, material: Material, outOfStock: Material, product: Product, unproducible: Product, sale: Sale, order: Order, photos: list<string>, batch: ProductionBatch}
  */
 function leakScanWorkshop(string $marker): array
 {
@@ -103,8 +105,11 @@ function leakScanWorkshop(string $marker): array
         $sale = Sale::factory()->create(['product_id' => $product->id, 'note' => "{$marker} walk-in"]);
         $order = Order::factory()->create(['client' => "{$marker} Boutique", 'note' => "{$marker} deliver in two boxes"]);
         OrderLine::factory()->create(['order_id' => $order->id, 'product_id' => $product->id, 'quantity' => 12]);
+        // INV-5: a batch of the product in production, in a phase named after the marker.
+        $phase = ProductionPhase::factory()->create(['name' => "{$marker} Sewing"]);
+        $batch = ProductionBatch::factory()->create(['product_id' => $product->id, 'phase_id' => $phase->id]);
 
-        return compact('user', 'material', 'outOfStock', 'product', 'unproducible', 'sale', 'order', 'photos');
+        return compact('user', 'material', 'outOfStock', 'product', 'unproducible', 'sale', 'order', 'photos', 'batch');
     });
 }
 
@@ -132,7 +137,7 @@ it('shows no record of the other workshop on any signed-in page', function (stri
     $workshops = ['ZZ-ALPHA' => leakScanWorkshop('ZZ-ALPHA'), 'ZZ-BRAVO' => leakScanWorkshop('ZZ-BRAVO')];
     [$own, $other] = [$workshops[$mine], $workshops[$theirs]];
 
-    $parameters = ['material' => $own['material']->id, 'product' => $own['product']->id, 'order' => $own['order']->id, 'client' => $own['order']->client_id];
+    $parameters = ['material' => $own['material']->id, 'product' => $own['product']->id, 'order' => $own['order']->id, 'client' => $own['order']->client_id, 'batch' => $own['batch']->id];
     // INV-4: the order's client is "<marker> Boutique", made by the order factory.
     $theirClient = $other['order']->clientRecord;
     // A prefix of the other marker: it matches that workshop's rows, and a page echoing it back still doesn't contain the marker itself.
@@ -148,6 +153,8 @@ it('shows no record of the other workshop on any signed-in page', function (stri
         'clients.options' => [['include' => [$theirClient->id]]],
         'clients.lookup' => [['phone' => $theirClient->phone], ['name' => $theirClient->name]],
         'orders.create' => [['client' => $theirClient->id]],
+        'progress.index' => [['product' => $other['product']->id], ['phase' => $own['batch']->phase_id], ['phase' => 'cutting']],
+        'progress.products.materials' => [['units' => 3]],
         'dashboard' => array_map(static fn (SalesPeriod $period): array => ['period' => $period->value], SalesPeriod::cases()),
     ];
 
@@ -193,7 +200,7 @@ it('shows no record of the other workshop on any signed-in page', function (stri
     }
 
     // The scan is not vacuous: the pages that list or show records do show the scanning workshop's own marker.
-    expect(array_keys($ownSeenOn))->toContain('dashboard', 'materials.index', 'materials.show', 'materials.edit', 'materials.options', 'products.index', 'products.show', 'products.edit', 'sales.index', 'orders.index', 'orders.create', 'orders.show', 'orders.edit', 'clients.index', 'clients.show', 'clients.options');
+    expect(array_keys($ownSeenOn))->toContain('dashboard', 'materials.index', 'materials.show', 'materials.edit', 'materials.options', 'products.index', 'products.show', 'products.edit', 'sales.index', 'orders.index', 'orders.create', 'orders.show', 'orders.edit', 'clients.index', 'clients.show', 'clients.options', 'progress.index', 'settings.production-phases.index');
     // ... and so do the photos of its own material and product, so the photo search isn't vacuous either.
     expect(array_keys($ownPhotoSeenOn))->toContain('materials.index', 'materials.show', 'products.index', 'products.show', 'sales.index');
     expect($walked)->not->toBeEmpty();

@@ -37,7 +37,7 @@ describe('<AppSidebar>', () => {
         resetInertiaMock();
     });
 
-    it('lists Dashboard, Materials, Products, Restocks, Orders, Clients and Sales in that order', () => {
+    it('lists Dashboard, Materials, Products, Restocks, Orders, Progress, Clients and Sales in that order', () => {
         renderSidebarAt('/dashboard');
 
         expect(navLinks().map((link) => link.textContent)).toEqual([
@@ -46,6 +46,7 @@ describe('<AppSidebar>', () => {
             'Products',
             'Restocks',
             'Orders',
+            'Progress',
             'Clients',
             'Sales',
         ]);
@@ -63,6 +64,7 @@ describe('<AppSidebar>', () => {
         expect(links.Products).toHaveAttribute('href', '/products');
         expect(links.Restocks).toHaveAttribute('href', '/restocks');
         expect(links.Orders).toHaveAttribute('href', '/orders');
+        expect(links.Progress).toHaveAttribute('href', '/progress');
         expect(links.Clients).toHaveAttribute('href', '/clients');
         expect(links.Sales).toHaveAttribute('href', '/sales');
     });

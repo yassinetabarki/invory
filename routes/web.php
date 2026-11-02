@@ -19,6 +19,7 @@ use App\Http\Controllers\ProductionBatchUndoController;
 use App\Http\Controllers\ProductionProductController;
 use App\Http\Controllers\ProductionProductMaterialController;
 use App\Http\Controllers\ProductStockController;
+use App\Http\Controllers\ProgressController;
 use App\Http\Controllers\RestockBarcodeController;
 use App\Http\Controllers\RestockController;
 use App\Http\Controllers\RestockProductController;
@@ -73,6 +74,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('restocks.undo');
 
     // Progress, production for the shelf (INV-5, ADR-0023). The Start batch window's grid and materials table are JSON, read-only.
+    Route::get('progress', [ProgressController::class, 'index'])->name('progress.index');
     Route::get('progress/products/{product}', [ProductionProductController::class, 'show'])
         ->where('product', '[0-9]{1,18}')
         ->name('progress.products.line');

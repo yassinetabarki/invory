@@ -948,3 +948,70 @@ export type MoveBatchFormData = {
 };
 /** `POST progress.batches.stock`. Errors: `units` (limit, deleted product, over 1,000,000 on the shelf), `moved`. */
 export type PutInStockFormData = { from_phase: PhaseRef; units: string };
+
+/** One step of the path: In cutting, then the workshop's phases in order. Put in stock ends it and is not a step. */
+export type ProgressStep = { phase: PhaseRef; name: string };
+/** A phase tile: the units in production in that step, with the filters ("Sewing 15 units"). */
+export type ProgressTile = ProgressStep & { units: number };
+/** Kept in the page address: `?phase=cutting|<id>&product=<id>&colour=<id>`. */
+export type ProgressFilters = {
+    phase: PhaseRef | null;
+    product: number | null;
+    colour: number | null;
+};
+/**
+ * One row of a product's table "Denim Jacket by phase". `size` null is a colour's subtotal row (no shelf figure); a size row is
+ * indented under its colour. A "One size" product has one row per colour, with its size set and its shelf.
+ */
+export type ProgressRow = {
+    colour: Colour;
+    size: Size | null;
+    by_phase: number[]; // in path order (In cutting first)
+    in_production: number; // the row's total
+    on_shelf: number | null; // "On the shelf now" (0 = the amber "Out"); null on a colour's subtotal row
+};
+/** A product's card on "All phases": "21 units in 6 batches" and its table. */
+export type ProgressProductCard = {
+    product: RestockProductRef;
+    units: number;
+    batches: number;
+    one_size: boolean;
+    rows: ProgressRow[]; // colours in list order, sizes in size order; only what is in production
+    total: { by_phase: number[]; in_production: number };
+};
+/** One row of a phase's table (a batch): "26 Oct 2026" · "4 days" · B-0146 · … */
+export type ProgressBatch = {
+    id: number;
+    number: string; // "B-0146"
+    product: RestockProductRef; // deleted: "Denim Jacket (deleted)", no link, no Put in stock
+    colour: Colour;
+    size: Size;
+    one_size: boolean;
+    units: number;
+    since: string; // 'YYYY-MM-DD': the day it got to this phase (In cutting: the day it started)
+    since_days: number; // 0 = "today", 1 = "1 day", 4 = "4 days"
+    on_shelf: number; // its colour and size on the shelf now (for "Indigo M goes from 0 to 4")
+};
+/** `?phase=`: the heading "15 units · 3 batches · 2 products · oldest since 26 Oct 2026" and the table "In Sewing". */
+export type ProgressPhaseView = {
+    phase: ProgressStep;
+    previous: ProgressStep | null; // "From In cutting."; null for In cutting; the target of "Move back to …"
+    next: ProgressStep | null; // "Next: Finishing."; null = the last step: its forward button is "Put in stock"
+    units: number;
+    batch_count: number;
+    product_count: number;
+    oldest_since: string | null;
+    batches: Paginated<ProgressBatch>; // oldest first, 25 a page
+};
+export type ProgressIndexProps = {
+    path: ProgressStep[];
+    tiles: ProgressTile[];
+    all_units: number; // the All phases tile, with the filters
+    total_units: number; // without filters: "Showing Indigo · 23 of 26 units"
+    filters: ProgressFilters;
+    product_filter: RestockProductRef | null;
+    colours: Colour[]; // the Colour filter, list order
+    has_batches: boolean; // false: "Nothing in production"
+    products: Paginated<ProgressProductCard> | null; // All phases (no `phase`), A → Z, 10 a page
+    phase_view: ProgressPhaseView | null; // with `phase`
+};
