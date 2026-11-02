@@ -151,7 +151,7 @@ buttons in stock) shows "Can produce now 112", bottleneck Metal shank button 17m
 
 ## Technical work
 > [!warning] Complex · CRITICAL · backend + frontend · 12 commits
-> Tech-lead (main session standing in, at the human's request) · 2026-11-02 · approved 2026-11-02
+> Tech-lead (main session standing in, at the human's request) · 2026-11-02 · approved 2026-11-02 · delivered 2026-11-02 (on PI-DEV, waiting for acceptance)
 > Why complex: five new tables and a counter, material stock taken and given back under row locks (reusing ADR-0014's maths), a
 > restock written from production, a new business rule (batches, splits, Undo only In cutting), nine new routes (three JSON) and a new
 > contract on three pages.
@@ -513,6 +513,23 @@ progress/products/{product}/materials (JSON) · `settings.production-phases.{ind
   sentence, and the production sentence once the shelf is at 0.
 - **The material history is unchanged:** a batch's cut reads "−31.68 m · 16 × Denim Jacket" (no client), its return
   "+7.92 m · 4 × Denim Jacket".
+
+### Delivered differently from the plan
+- **The batch counter and the production lock are a row of their own, `production_counters`** (one per workshop, made on first
+  use), not `workshops.last_batch_number`: Update product and Generate barcodes lock product → workshop, so the workshop row can't be
+  the first lock of a production write. Every production writer locks that row first; ADR-0023 decisions 5 and 6 say so.
+- **Phase positions are not database-unique** (a swap passes through two phases on one place); the Actions keep them 1…n.
+- **The Progress figures are deferred in one rescued group**, so the frame shows at once with placeholders and one **Try again**
+  reloads them ("Couldn't load the progress of your production." / "Couldn't load what is in Sewing.").
+- **Wording the card doesn't give, written here:** "Denim Jacket was deleted, so it can't be started." (Start batch, a product deleted
+  meanwhile); "Nothing in In cutting" · "Batches come here with Start batch." (an empty In cutting); "No material was taken out of stock
+  for it, so none is returned." (Undo batch of a product with no composition); "Couldn't load the product. Try again." (Start batch's
+  grid); a deleted product's card has its **Start batch** disabled.
+- **Tickets and Scan are left out** (INV-15): no **Scan a ticket**, **Print ticket**, **Print 2 tickets** or Scan sidebar entry.
+- **AC-7's tests are in `tests/Feature/Production/ProductionLocksTest.php`**, not in the two Products test files.
+- **No concurrency test for two Start batch at once**: the suite has no parallel runner; the production lock serialises them.
+- **The leak scan walks the new pages**: a batch and a phase per workshop, and `batch` among its parameters.
+- **Undo batch is a confirm window on every screen**, not a bottom sheet on a phone.
 
 ### Order
 Wave 1 (backend, one after another: they share `routes/web.php` and `domain.ts`): INV-5-a → INV-5-b → INV-5-c → INV-5-d → INV-5-e →
