@@ -11,6 +11,7 @@ export type AppVariant = 'header' | 'sidebar';
 export type FlashToast = {
     type: 'success' | 'info' | 'warning' | 'error';
     message: string;
+    action?: { label: string; href: string }; // a link in the toast, e.g. "See the restock" after Put in stock (INV-5)
 };
 
 export type AuthLayoutProps = {

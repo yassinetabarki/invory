@@ -13,7 +13,20 @@ export function useFlashToast(): void {
                 return;
             }
 
-            toast[data.type](data.message);
+            // INV-5: Put in stock's toast carries "See the restock", a link to it.
+            const action = data.action;
+
+            toast[data.type](
+                data.message,
+                action
+                    ? {
+                          action: {
+                              label: action.label,
+                              onClick: () => router.visit(action.href),
+                          },
+                      }
+                    : undefined,
+            );
         });
     }, []);
 }

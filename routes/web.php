@@ -14,6 +14,8 @@ use App\Http\Controllers\ProductBarcodeController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductionBatchController;
 use App\Http\Controllers\ProductionBatchMoveController;
+use App\Http\Controllers\ProductionBatchStockController;
+use App\Http\Controllers\ProductionBatchUndoController;
 use App\Http\Controllers\ProductionProductController;
 use App\Http\Controllers\ProductionProductMaterialController;
 use App\Http\Controllers\ProductStockController;
@@ -81,6 +83,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('progress/batches/{batch}/moves', [ProductionBatchMoveController::class, 'store'])
         ->where('batch', '[0-9]{1,18}')
         ->name('progress.batches.moves.store');
+    Route::post('progress/batches/{batch}/stock', [ProductionBatchStockController::class, 'store'])
+        ->where('batch', '[0-9]{1,18}')
+        ->name('progress.batches.stock');
+    Route::get('progress/batches/{batch}/undo', [ProductionBatchUndoController::class, 'show'])
+        ->where('batch', '[0-9]{1,18}')
+        ->name('progress.batches.undo-preview');
+    Route::post('progress/batches/{batch}/undo', [ProductionBatchUndoController::class, 'store'])
+        ->where('batch', '[0-9]{1,18}')
+        ->name('progress.batches.undo');
 
     // New order's Client card (INV-4-b): the client with this phone, or with this name. JSON, read-only (ADR-0009 rule 5).
     Route::get('clients/lookup', [ClientLookupController::class, 'show'])->name('clients.lookup');
