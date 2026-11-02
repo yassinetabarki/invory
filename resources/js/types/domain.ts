@@ -934,3 +934,17 @@ export type StartBatchFormData = {
     product_id: number | null;
     units: Record<number, Record<number, string>>; // colour id → size id → typed ('' = 0)
 };
+
+/** `GET progress.batches.undo-preview`: what Undo batch gives back ("7.92 m Denim 12oz Indigo, 32 pc …"), by material name. */
+export type UndoBatchPreview = {
+    rows: MaterialMoveRow[]; // `quantity` is what comes back; `not_returned` for a material deleted or whose unit changed
+    nothing_taken: boolean; // a product with no composition: nothing comes back
+};
+/** `POST progress.batches.moves.store`. Errors: `units`, `moved` ("These units have moved on since you opened this page."). */
+export type MoveBatchFormData = {
+    from_phase: PhaseRef;
+    to_phase: PhaseRef;
+    units: string;
+};
+/** `POST progress.batches.stock`. Errors: `units` (limit, deleted product, over 1,000,000 on the shelf), `moved`. */
+export type PutInStockFormData = { from_phase: PhaseRef; units: string };
