@@ -15,6 +15,7 @@ import {
 import { useAppSettings } from '@/hooks/use-app-settings';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { formatCount, formatDate } from '@/lib/format';
+import { printTickets } from '@/lib/print-tickets';
 import { show } from '@/routes/products';
 import type { ProgressBatch, ProgressPhaseView } from '@/types/domain';
 
@@ -120,10 +121,6 @@ function MoreMenu({
 }) {
     const inCutting = view.phase.phase === 'cutting';
 
-    if (view.previous === null && !inCutting) {
-        return null;
-    }
-
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -153,6 +150,9 @@ function MoreMenu({
                         Undo batch
                     </DropdownMenuItem>
                 )}
+                <DropdownMenuItem onSelect={() => printTickets([batch.id])}>
+                    Print ticket {batch.number}
+                </DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>
     );

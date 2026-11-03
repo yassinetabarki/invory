@@ -192,6 +192,12 @@ final readonly class ProductionMessages
         );
     }
 
+    /** The print action of a batch's ticket (INV-15): "Print ticket B-0155". */
+    public static function printTicket(string $batch): string
+    {
+        return "Print ticket {$batch}";
+    }
+
     public static function seeTheRestock(): string
     {
         return __('See the restock');

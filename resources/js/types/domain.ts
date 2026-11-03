@@ -923,6 +923,7 @@ export type BatchesStarted = {
     product: string;
     units: number;
     batches: {
+        id: number; // INV-15: for "Print 2 tickets"
         number: string;
         colour: string;
         size: string | null;
@@ -1017,8 +1018,26 @@ export type ProgressIndexProps = {
 };
 
 // Work tickets and scanning (INV-15, ADR-0024).
+/** A ticket's QR code: one SVG path of its dark modules, drawn in `viewBox="0 0 size size"` (the 4-module margin included). */
+export type TicketQr = { size: number; path: string };
+/** `GET progress.tickets` (`?batches[]=…`): one work ticket. No client, no phone number and no price. */
+export type WorkTicket = {
+    id: number;
+    number: string; // "B-0147"
+    product: string;
+    variant: string; // "Indigo · S"; "Camel" for a "One size" product
+    units: number; // what the batch holds now
+    started_on: string; // 'YYYY-MM-DD'
+    sku: string; // "PRD-JKT-001-IND-S"
+    split_from: string | null; // "B-0149"
+    path: string[]; // the phases as they are now, then "Put in stock"
+    current: number; // the index in `path` of the batch's step, ticked
+    printed_on: string; // 'YYYY-MM-DD', today
+    qr: TicketQr;
+};
 /** How tickets print (Settings › Labels): an A4 sheet of 8 (2 × 4) or one per 100 × 60 mm label. */
 export type TicketSize = 'a4_8' | 'label_100x60';
+export type PrintTicketsProps = { tickets: WorkTicket[]; size: TicketSize };
 /** One step of the scan confirm's path: "In cutting ✓ · Sewing (now) · **Finishing** · Put in stock". */
 export type ScanPathStep = {
     name: string;

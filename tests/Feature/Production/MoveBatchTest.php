@@ -77,6 +77,12 @@ it('splits a batch when part of it moves: the units moved get the next number, t
         ->assertInertiaFlash('toast', [
             'type' => 'success',
             'message' => '4 units of Denim Jacket · Indigo M moved to Finishing. Batch B-0149 was split: the units moved are on B-0155.',
+            // INV-15-b (AC-2): the new batch's ticket, printed in a new tab.
+            'action' => [
+                'label' => 'Print ticket B-0155',
+                'href' => route('progress.tickets', ['batches' => [ProductionBatch::query()->where('number', 155)->value('id')]], false),
+                'new_tab' => true,
+            ],
         ]);
 
     $b149 = $this->batches['B-0149']->fresh();
@@ -94,7 +100,7 @@ it('moves back one phase, and back to In cutting (AC-5)', function () {
         ->assertInertiaFlash('toast', ['type' => 'success', 'message' => '4 units of Denim Jacket · Indigo M moved to Sewing.']);
     moveBatch($this, $this->batches['B-0147'], $this->sewing, 'cutting', 1)
         ->assertSessionHasNoErrors()
-        ->assertInertiaFlash('toast', ['type' => 'success', 'message' => '1 unit of Denim Jacket · Indigo S moved to In cutting. Batch B-0147 was split: the units moved are on B-0155.']);
+        ->assertInertiaFlash('toast.message', '1 unit of Denim Jacket · Indigo S moved to In cutting. Batch B-0147 was split: the units moved are on B-0155.');
 
     expect($this->batches['B-0148']->fresh()->phase_id)->toBe($this->sewing->id)
         ->and(ProductionBatch::query()->where('number', 155)->sole()->phase_id)->toBeNull()

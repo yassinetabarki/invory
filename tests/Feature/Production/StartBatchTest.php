@@ -55,8 +55,8 @@ it('starts one batch per colour and size, takes the materials for the total and 
             'product' => 'Denim Jacket',
             'units' => 16,
             'batches' => [
-                ['number' => 'B-0001', 'colour' => 'Indigo', 'size' => 'M', 'units' => 6],
-                ['number' => 'B-0002', 'colour' => 'Indigo', 'size' => 'L', 'units' => 10],
+                ['id' => ProductionBatch::query()->where('number', 1)->value('id'), 'number' => 'B-0001', 'colour' => 'Indigo', 'size' => 'M', 'units' => 6],
+                ['id' => ProductionBatch::query()->where('number', 2)->value('id'), 'number' => 'B-0002', 'colour' => 'Indigo', 'size' => 'L', 'units' => 10],
             ],
         ]);
 
@@ -165,7 +165,7 @@ it('starts a product with no composition, taking nothing, and draft and archived
     actingAs($this->user)->post(route('progress.batches.store'), startBody($this->jeans, ['Indigo' => ['S' => 5]]))->assertSessionHasNoErrors();
     actingAs($this->user)->post(route('progress.batches.store'), startBody($this->tote, ['Camel' => ['One size' => 3]]))
         ->assertSessionHasNoErrors()
-        ->assertInertiaFlash('batches_started.batches', [['number' => 'B-0002', 'colour' => 'Camel', 'size' => null, 'units' => 3]]);
+        ->assertInertiaFlash('batches_started.batches', [['id' => ProductionBatch::query()->where('number', 2)->value('id'), 'number' => 'B-0002', 'colour' => 'Camel', 'size' => null, 'units' => 3]]);
 
     expect(ProductionBatch::query()->count())->toBe(2)
         ->and(ProductionCut::query()->where('product_id', $this->jeans->id)->sole()->materials()->count())->toBe(0);

@@ -1,5 +1,5 @@
 import { router, useHttp } from '@inertiajs/react';
-import { TriangleAlert } from 'lucide-react';
+import { Printer, TriangleAlert } from 'lucide-react';
 import { useEffect, useId, useState } from 'react';
 import type { FormEvent } from 'react';
 import { typedUnits } from '@/components/orders/order-size-fields';
@@ -21,6 +21,7 @@ import { useAppSettings } from '@/hooks/use-app-settings';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { formatCount, formatQuantity } from '@/lib/format';
+import { printTickets } from '@/lib/print-tickets';
 import { cn } from '@/lib/utils';
 import { store } from '@/routes/progress/batches';
 import {
@@ -264,6 +265,12 @@ function Started({
 }) {
     const { locale } = useAppSettings();
     const count = started.batches.length;
+    const lines = started.batches
+        .map(
+            (batch) =>
+                `${batch.number} · ${batch.size === null ? batch.colour : `${batch.colour} ${batch.size}`} · ${formatCount(batch.units, locale)} ${batch.units === 1 ? 'unit' : 'units'}`,
+        )
+        .join(', ');
 
     return (
         <div className="flex flex-col gap-3">
@@ -276,21 +283,30 @@ function Started({
                 {started.units === 1 ? 'unit' : 'units'} of {started.product}{' '}
                 started. Materials taken out of stock.
             </p>
-            <ul className="flex flex-col gap-1 text-sm">
-                {started.batches.map((batch) => (
-                    <li key={batch.number}>
-                        <span className="font-mono">{batch.number}</span> ·{' '}
-                        {batch.size === null
-                            ? batch.colour
-                            : `${batch.colour} ${batch.size}`}{' '}
-                        · {formatCount(batch.units, locale)}{' '}
-                        {batch.units === 1 ? 'unit' : 'units'}
-                    </li>
-                ))}
-            </ul>
+            <p className="text-sm">
+                {formatCount(count, locale)}{' '}
+                {count === 1 ? 'ticket' : 'tickets'} to print: {lines}
+            </p>
             <DialogFooter>
-                <Button type="button" onClick={onClose} className="max-sm:h-11">
+                <Button
+                    type="button"
+                    variant="outline"
+                    onClick={onClose}
+                    className="max-sm:h-11"
+                >
                     Done
+                </Button>
+                <Button
+                    type="button"
+                    onClick={() =>
+                        printTickets(started.batches.map((batch) => batch.id))
+                    }
+                    className="max-sm:h-11"
+                >
+                    <Printer aria-hidden="true" />
+                    {count === 1
+                        ? 'Print ticket'
+                        : `Print ${formatCount(count, locale)} tickets`}
                 </Button>
             </DialogFooter>
         </div>

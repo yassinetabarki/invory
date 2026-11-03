@@ -18,6 +18,7 @@ use App\Http\Controllers\ProductionBatchStockController;
 use App\Http\Controllers\ProductionBatchUndoController;
 use App\Http\Controllers\ProductionProductController;
 use App\Http\Controllers\ProductionProductMaterialController;
+use App\Http\Controllers\ProductionTicketController;
 use App\Http\Controllers\ProductStockController;
 use App\Http\Controllers\ProgressController;
 use App\Http\Controllers\RestockBarcodeController;
@@ -85,6 +86,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->where('product', '[0-9]{1,18}')
         ->name('progress.products.materials');
     Route::post('progress/batches', [ProductionBatchController::class, 'store'])->name('progress.batches.store');
+    // The work tickets of some batches (INV-15-b, ADR-0024): a page with no app frame that prints itself, opened in a new tab.
+    Route::get('progress/tickets', [ProductionTicketController::class, 'index'])->name('progress.tickets');
     Route::post('progress/batches/{batch}/moves', [ProductionBatchMoveController::class, 'store'])
         ->where('batch', '[0-9]{1,18}')
         ->name('progress.batches.moves.store');

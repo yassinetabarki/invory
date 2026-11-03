@@ -157,7 +157,8 @@ it('shows no record of the other workshop on any signed-in page', function (stri
         'orders.create' => [['client' => $theirClient->id]],
         'progress.index' => [['product' => $other['product']->id], ['phase' => $own['batch']->phase_id], ['phase' => 'cutting']],
         'progress.products.materials' => [['units' => 3]],
-        // INV-15: the other workshop's batch by number and by its QR link is never found.
+        // INV-15: the own batch's tickets; the other workshop's batch by number and by its QR link is never found.
+        'progress.tickets' => [['batches' => [$own['batch']->id]]],
         'scan.lookup' => [['q' => $other['batch']->label], ['q' => route('scan.ticket', $other['batch']->fresh()->ticket_code)]],
         'dashboard' => array_map(static fn (SalesPeriod $period): array => ['period' => $period->value], SalesPeriod::cases()),
     ];

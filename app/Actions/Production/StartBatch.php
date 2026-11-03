@@ -42,7 +42,7 @@ final readonly class StartBatch
 
     /**
      * @param  array<int, array<int, int>>  $grid  units by colour id then size id, 0 for an empty field
-     * @return array{product: string, units: int, batches: list<array{number: string, colour: string, size: string|null, units: int}>}
+     * @return array{product: string, units: int, batches: list<array{id: int, number: string, colour: string, size: string|null, units: int}>}
      *
      * @throws ValidationException on `product_id` (deleted) or `units` (changed colours or sizes, nothing typed, short stock)
      */
@@ -147,6 +147,7 @@ final readonly class StartBatch
                 $move->forceFill(['workshop_id' => $product->workshop_id, 'user_id' => $actor->id])->save();
 
                 $started[] = [
+                    'id' => $batch->id,
                     'number' => $batch->label,
                     'colour' => $variant['colour']->name,
                     'size' => $oneSize ? null : $variant['size']->label,

@@ -1,4 +1,31 @@
-import type { ScanConfirm } from '@/types/domain';
+import type { ScanConfirm, WorkTicket } from '@/types/domain';
+
+/** The card's B-0147: 4 Denim Jacket Indigo S in Sewing, started 23 Oct 2026, printed 30 Oct 2026 (INV-15, AC-1). */
+export const ticket0147: WorkTicket = {
+    id: 147,
+    number: 'B-0147',
+    product: 'Denim Jacket',
+    variant: 'Indigo · S',
+    units: 4,
+    started_on: '2026-10-23',
+    sku: 'PRD-JKT-001-IND-S',
+    split_from: null,
+    path: ['In cutting', 'Sewing', 'Finishing', 'Put in stock'],
+    current: 1,
+    printed_on: '2026-10-30',
+    qr: { size: 29, path: 'M4 4h7v1h-7zM4 5h1v1h-1z' },
+};
+
+/** B-0155: 4 units split from B-0149 into Finishing. */
+export const ticket0155: WorkTicket = {
+    ...ticket0147,
+    id: 155,
+    number: 'B-0155',
+    variant: 'Indigo · M',
+    sku: 'PRD-JKT-001-IND-M',
+    split_from: 'B-0149',
+    current: 2,
+};
 
 /** The scan confirm of B-0147 in Sewing: Move 4 units to Finishing (INV-15, AC-4). */
 export const confirm0147: ScanConfirm = {

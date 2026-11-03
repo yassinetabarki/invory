@@ -31,6 +31,8 @@ void createInertiaApp({
     layout: (name) => {
         switch (true) {
             case name === 'welcome':
+            // INV-15: the work tickets print on their own, with no app frame.
+            case name === 'progress/tickets':
                 return null;
             case name.startsWith('auth/'):
                 return AuthLayout;

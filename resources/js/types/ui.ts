@@ -11,7 +11,9 @@ export type AppVariant = 'header' | 'sidebar';
 export type FlashToast = {
     type: 'success' | 'info' | 'warning' | 'error';
     message: string;
-    action?: { label: string; href: string }; // a link in the toast, e.g. "See the restock" after Put in stock (INV-5)
+    // a link in the toast, e.g. "See the restock" after Put in stock (INV-5); `new_tab` opens it in a new tab, e.g. "Print ticket B-0155"
+    // after a split (INV-15)
+    action?: { label: string; href: string; new_tab?: boolean };
 };
 
 export type AuthLayoutProps = {

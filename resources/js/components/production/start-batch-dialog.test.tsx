@@ -134,12 +134,14 @@ describe('StartBatchDialog (INV-5, AC-2)', () => {
                     units: 16,
                     batches: [
                         {
+                            id: 21,
                             number: 'B-0153',
                             colour: 'Indigo',
                             size: 'M',
                             units: 6,
                         },
                         {
+                            id: 22,
                             number: 'B-0154',
                             colour: 'Indigo',
                             size: 'L',
@@ -159,6 +161,22 @@ describe('StartBatchDialog (INV-5, AC-2)', () => {
         expect(
             dialog.getByRole('button', { name: 'Done' }),
         ).toBeInTheDocument();
+
+        // INV-15 (AC-2): the tickets to print, in a new tab.
+        expect(
+            dialog.getByText(
+                '2 tickets to print: B-0153 · Indigo M · 6 units, B-0154 · Indigo L · 10 units',
+            ),
+        ).toBeInTheDocument();
+        const open = vi.spyOn(window, 'open').mockReturnValue({} as Window);
+        await user.click(
+            dialog.getByRole('button', { name: 'Print 2 tickets' }),
+        );
+        expect(decodeURIComponent(String(open.mock.calls[0][0]))).toBe(
+            '/progress/tickets?batches[]=21&batches[]=22',
+        );
+        expect(open.mock.calls[0][1]).toBe('_blank');
+        open.mockRestore();
     });
 
     it("shows the server's refusal and keeps what was typed", async () => {

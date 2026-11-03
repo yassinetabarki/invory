@@ -57,4 +57,30 @@ describe('useFlashToast', () => {
             '/restocks?restock=7',
         );
     });
+
+    it('opens "Print ticket B-0155" in a new tab after a split (INV-15)', () => {
+        const open = vi.spyOn(window, 'open').mockReturnValue({} as Window);
+        renderHook(() => useFlashToast());
+        flash({
+            type: 'success',
+            message:
+                '4 units of Denim Jacket · Indigo M moved to Finishing. Batch B-0149 was split: the units moved are on B-0155.',
+            action: {
+                label: 'Print ticket B-0155',
+                href: '/progress/tickets?batches%5B0%5D=8',
+                new_tab: true,
+            },
+        });
+
+        const [, options] = toast.success.mock.calls[0];
+        expect(options.action.label).toBe('Print ticket B-0155');
+
+        options.action.onClick();
+        expect(open).toHaveBeenCalledWith(
+            '/progress/tickets?batches%5B0%5D=8',
+            '_blank',
+        );
+        expect(inertiaMock.router.visit).not.toHaveBeenCalled();
+        open.mockRestore();
+    });
 });

@@ -335,6 +335,38 @@ describe('progress/index, one phase (INV-5, AC-4)', () => {
         );
     });
 
+    it('prints a batch\'s ticket from the "⋯" menu in every phase (INV-15, AC-2)', async () => {
+        const open = vi.spyOn(window, 'open').mockReturnValue({} as Window);
+
+        for (const [view, phase, number, id] of [
+            [cuttingView, 'cutting', 'B-0150', 150],
+            [finishingView, 12, 'B-0148', 148],
+        ] as const) {
+            const { user, unmount } = renderPage({
+                filters: { phase, product: null, colour: null },
+                products: null,
+                phase_view: view,
+            });
+
+            await user.click(
+                screen.getByRole('button', {
+                    name: `More moves for batch ${number}`,
+                }),
+            );
+            await user.click(
+                screen.getByRole('menuitem', {
+                    name: `Print ticket ${number}`,
+                }),
+            );
+            expect(decodeURIComponent(String(open.mock.lastCall?.[0]))).toBe(
+                `/progress/tickets?batches[]=${id}`,
+            );
+            unmount();
+        }
+
+        open.mockRestore();
+    });
+
     it('puts a batch in stock from the last phase, saying where the shelf goes', async () => {
         const { user } = renderPage({
             filters: { phase: 12, product: null, colour: null },

@@ -8,6 +8,7 @@ use App\Actions\Production\MoveBatch;
 use App\Http\Requests\Production\MoveBatchRequest;
 use App\Models\ProductionBatch;
 use App\Models\User;
+use App\Services\Production\ProductionMessages;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 
@@ -22,7 +23,18 @@ final class ProductionBatchMoveController extends Controller
         $user = $request->user();
         $result = $move->handle($batch, $request->fromPhase(), $request->toPhase(), $request->units(), $user instanceof User ? $user : abort(401));
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => $result['message']]);
+        $toast = ['type' => 'success', 'message' => $result['message']];
+
+        // A split (INV-15-b, AC-2): the units moved are on a new batch, with a ticket of its own to print.
+        if ($result['batch']->isNot($batch)) {
+            $toast['action'] = [
+                'label' => ProductionMessages::printTicket($result['batch']->label),
+                'href' => route('progress.tickets', ['batches' => [$result['batch']->id]], false),
+                'new_tab' => true,
+            ];
+        }
+
+        Inertia::flash('toast', $toast);
 
         return back();
     }
