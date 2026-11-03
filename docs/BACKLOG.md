@@ -5,6 +5,7 @@
 > **Phases & Goals:** [ROADMAP.md](ROADMAP.md) · **Progress:** [STATUS.md](STATUS.md)
 
 > [!history] Last Cleaned: 2026-11-03
+> - **INV-14:** development card approved (`Ready`, 2026-11-03); its Technical work comes next.
 > - **INV-13 Done** (accepted 2026-11-03 by the human; on `PI-DEV`: `39647ce`; card `f07ef4e`, Technical work `7bf05bb`). Order lines hold colour and size; Search products shows the shelf stock (no "Can produce now", the human's answer). It left the open list. **INV-14 is next.**
 > - **D-26 (2026-11-03, human):** `INV-13` then `INV-14` come next, ahead of INV-3's acceptance and `INV-9`. INV-13's development card is approved (`Ready`, 2026-11-03) and its Technical work too (`Planned`, 2026-11-03: 8 steps, INV-13-a … INV-13-h; "Can produce now" left out of the search and the order, the human's answer).
 > - **INV-15 Done** (accepted 2026-11-03 by the human; on `PI-DEV`: `967dcf4`, `d876d37`, `7af351d`, `adea45b`; card `a523494`, Technical work `ae2716d`). Its Ticket size was built with it, so `Settings › Labels` exists with Ticket size only; INV-9 adds its label settings there. It left the open list.
@@ -79,7 +80,7 @@
 | :--- | :--- | :--- | :--- | :--- |
 | **INV-3** | Restock of finished products *(built, waiting for acceptance)* | Feature | `Planned` | Must / L |
 | **INV-9** | Print barcode labels | Feature | `Ready` | Must / M |
-| **INV-14** | Refactor the order, 3 of 3: order tracker, orders served from the shelf | Feature | `UI approved` | Must |
+| **INV-14** | Refactor the order, 3 of 3: order tracker, orders served from the shelf | Feature | `Ready` | Must / L |
 | **INV-7** | Bigger tap targets on Settings pages | Feature | `Idea` | Could / S–M |
 
 > [!note] Technical Note on INV-6
@@ -114,6 +115,7 @@
   - `INV-13` · product search with stock per colour and size, and order lines per colour and size (point 2). **Done 2026-11-03** (`39647ce`).
     - **Answers on the development card (human, 2026-11-03, all the recommended options):** until INV-14 the order page's stages and buttons work per colour and size; Edit order's floor keeps today's "already in cutting, ready to ship or shipped" (INV-14 rewords it); a colour with units on open orders (not shipped) can't be removed from its product; orders recorded before read as the product's first colour; INV-13 is built on `PI-DEV`.
   - `INV-14` · order tracker (To deliver · Delivered · Cancelled), Mark delivered taking units off the finished stock, Cancel units, no production on orders (points 3 and 4). Needs `INV-13` and a redrawn `INV-5` (Progress makes products for the shelf, so cutting has somewhere to go).
+    - **Answers on the development card (human, 2026-11-03):** Ready-to-ship units of old orders go on the shelf as one restock (Reference "Orders") and become To deliver; Shipped becomes Delivered; kept as one card (L); "Denim Jacket can't be removed: 5 units are delivered or cancelled."; Edit product keeps INV-13's sentence, counting units To deliver.
 - **Decision of 2026-11-01 (human, on Q1–Q10):** order lines are a colour × size grid, built before `INV-13`; "Not started" and "Delivered" are the words; the client is phone first; cancel only what is not delivered, no undo, no stock effect. **Also:** a finished product is not tied to an order. Progress makes products **for the shelf**; an order is covered from the finished stock (the shelf is checked, never set aside). This changes `INV-5`, see below.
   - **Answers on the model (human, 2026-11-01):** (1) the shelf is checked, never held: no reservation, "On the shelf now" shown beside each colour × size, Mark delivered takes units off the finished stock up to what the shelf holds, its move back returns them, Cancel changes no stock. (2) An order counts **To deliver · Delivered · Cancelled · Total**; its status is Not started · In progress (partly delivered) · Delivered · Cancelled; the list filter is Open orders · Delivered · Cancelled · All orders. (3) Deleting an order is always allowed (no refusal); the confirm adds a sentence when units were delivered. (4) `INV-5`'s UI card is reopened (see `INV-5`).
   - **Answers on Progress and the order (human, 2026-11-01, all the recommended options):** Put in stock writes a restock (Reference = the batch number, Note "From production"), undoable in Restocks, and an undone restock doesn't bring the batch back; a scan can finish a batch; Undo batch only while In cutting; no order data on Progress (a "Waiting in open orders" column could be a later card); part of a batch can be put in stock; INV-13's line now reads "(M is out of stock, so those units wait for the shelf)"; and the defaults: "In stock" in the search and "On the shelf now" on the order page and Progress, no delivery history, no "Make more" link, one number for batch and ticket, Start batch only on Progress and its product cards, and the two new Edit product locks (a colour or a category with units in production).
