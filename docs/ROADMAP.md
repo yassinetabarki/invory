@@ -1,7 +1,7 @@
 # Invory — product roadmap
 
-> Owner: **product-owner** · Last updated: 2026-11-02 (D-24: INV-5 comes next, split into INV-5 and INV-15)
-> INV-10 is done (`76b1770`), so new cards can be added again. INV-2 is done (`46af1cc`, `ab313eb`, `4088200`). INV-8 is done (`9f93175` … `3b55319`). INV-4 is done, with INV-12 (accepted 2026-11-02, on `PI-DEV`). Next is INV-5 (D-24); INV-3 is built and waits for acceptance.
+> Owner: **product-owner** · Last updated: 2026-11-02 (INV-5 done; D-25: INV-15 comes next)
+> INV-10 is done (`76b1770`), so new cards can be added again. INV-2 is done (`46af1cc`, `ab313eb`, `4088200`). INV-8 is done (`9f93175` … `3b55319`). INV-4 is done, with INV-12 (accepted 2026-11-02, on `PI-DEV`). INV-5 is done (accepted 2026-11-02, on `PI-DEV`). Next is INV-15 (D-25); INV-3 is built and waits for acceptance.
 
 ## Product goal
 A small fashion workshop knows, at any moment, what each product costs to make, how many it can make from the stock
@@ -20,7 +20,7 @@ Work goes one item at a time, in the order below. A UI card comes first, then th
 | INV-2  | Product sizes × colours: stock per colour and size | `Done`        | Know the shelf stock of each variant       |
 | INV-8  | Barcodes for every colour and size                 | `Done`        | Every variant gets its own barcode         |
 | INV-4  | Clients, found by phone on New order (+ INV-12)    | `Done`        | Orders belong to a client                  |
-| INV-5  | Production for the shelf: a progress page          | `Planned`     | See where every batch is in production     |
+| INV-5  | Production for the shelf: a progress page          | `Done`        | See where every batch is in production     |
 | INV-3  | Restock of finished products                       | `Planned`     | Add finished units to the shelf at once    |
 | INV-9  | Print barcode labels                               | `Ready`       | Print a label for a variant, or a sheet    |
 | INV-15 | Work tickets and the Scan page                     | `UI approved` | Move a batch on by scanning its ticket     |
@@ -36,6 +36,7 @@ the order.
 - D-20 (2026-10-24): the card flow is paused for this rework. Every older open story is on hold.
 - D-21 (2026-10-24): the order is INV-1, INV-2, INV-3, INV-4, INV-5.
 - D-24 (2026-11-02): INV-5 comes next, ahead of INV-3's acceptance and INV-9; INV-15 (work tickets and Scan) is split from it and follows INV-9.
+- D-25 (2026-11-02): INV-15 comes next, ahead of INV-3's acceptance and INV-9; its Ticket size part waits for INV-9's Settings › Labels.
 - D-22 (2026-11-02): INV-4 comes next, before INV-9 and INV-3; New order uses INV-12's phone-first Client card, so INV-12 is built within INV-4.
 
 **Exit criteria:** to be set with the card of each item.
@@ -51,5 +52,5 @@ the order.
 - A REST API and a mobile app
 
 ## Done
-Phases 1 to 3 and the first Phase 5 work, plus INV-1, INV-2, INV-8, INV-10 and INV-4 (with INV-12). See [STATUS.md §4](STATUS.md#4-delivery-history) and the
+Phases 1 to 3 and the first Phase 5 work, plus INV-1, INV-2, INV-8, INV-10, INV-4 (with INV-12) and INV-5. See [STATUS.md §4](STATUS.md#4-delivery-history) and the
 [backlog archive](archive/backlog-2026-10-14.md).

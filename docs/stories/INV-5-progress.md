@@ -5,7 +5,7 @@ type: feature
 phase: Colour × size variants
 priority: Must
 size: L
-status: Planned
+status: Done
 created: 2026-11-02
 tags:
   - story
@@ -56,7 +56,7 @@ The shelf (S · M · L · XL): Denim Jacket Indigo 2 · 0 · 3 · 1, Light wash 
 Denim Jacket (per unit: 1.98 m Denim 12oz Indigo, 8 pc Metal shank button 17mm, 126 m Polyester thread, 1 pc Woven brand label; 900
 buttons in stock) shows "Can produce now 112", bottleneck Metal shank button 17mm.
 
-- [ ] **AC-1 · Production phases.** The Settings menu has a group **Production** with **Production phases**: "The phases a batch goes
+- [x] **AC-1 · Production phases.** The Settings menu has a group **Production** with **Production phases**: "The phases a batch goes
   through between cutting and putting it in stock. In cutting and Put in stock are always there." and **Add phase**. The list shows
   the whole path: **In cutting** (grey, lock icon, "Always there. Start batch puts a batch here and takes the materials."), the
   workshop's phases in order (here **Sewing** "Holds 15 units", **Finishing** "Holds 4 units", each with **Move up**, **Move down**,
@@ -72,7 +72,7 @@ buttons in stock) shows "Can produce now 112", bottleneck Metal shank button 17m
   - With no phase of its own: "No phase of your own. Batches go from In cutting straight to Put in stock." · **Add phase**.
   - Toasts: "Phase added." · "Phase updated." · "Phase removed." · "Phases reordered." Each workshop has its own phases; a new workshop
     has none.
-- [ ] **AC-2 · Start batch.** **Start batch** opens from the Progress header and from each product card on Progress (product already
+- [x] **AC-2 · Start batch.** **Start batch** opens from the Progress header and from each product card on Progress (product already
   chosen, named "Start a batch of Denim Jacket"). The window **Start batch**, "Make products for your shelf. Materials are taken out of
   stock now.", has **Product** (searchable, showing "Can produce now 112") and "How many units of each colour and size?": a row per
   colour in the order of Settings › Colours, a field per size, the shelf under each ("Shelf 2" or the amber "Shelf Out").
@@ -90,7 +90,7 @@ buttons in stock) shows "Can produce now 112", bottleneck Metal shank button 17m
   - Other refusals, keeping everything typed: "Choose a product." · "Enter at least one unit to start." · "Indigo M: Enter a whole number
     from 0 to 1,000,000." · "The colours or sizes of Denim Jacket have changed. Enter the units again." · "Couldn't start the batch. Try
     again." The button shows a spinner while saving.
-- [ ] **AC-3 · Progress, all phases.** The sidebar reads Dashboard, Materials, Products, Restocks, Orders, **Progress** (factory icon),
+- [x] **AC-3 · Progress, all phases.** The sidebar reads Dashboard, Materials, Products, Restocks, Orders, **Progress** (factory icon),
   Clients, Sales. The page **Progress**, "The batches you are making for your shelf, phase by phase, in their colour and size.", has
   **Production phases** and **Start batch**, then the tiles "Phases": **All phases** 26 · **In cutting** 7 · **Sewing** 15 · **Finishing**
   4 units (the chosen tile is marked by more than its colour and announced as the current page; a tile at 0 still opens).
@@ -105,7 +105,7 @@ buttons in stock) shows "Can produce now 112", bottleneck Metal shank button 17m
     put them in stock." · **Start batch** (tiles at 0); "No batch matches these filters." · "Try another product or colour, or clear the
     filters." · **Clear filters**; loading placeholders for the tile counts and two cards; "Couldn't load the progress of your
     production." · **Try again**. Progress never mentions an order or a client.
-- [ ] **AC-4 · One phase.** A tile opens "Progress › Sewing": the heading **Sewing**, "15 units · 3 batches · 2 products · oldest since
+- [x] **AC-4 · One phase.** A tile opens "Progress › Sewing": the heading **Sewing**, "15 units · 3 batches · 2 products · oldest since
   26 Oct 2026", "From In cutting. Next: Finishing.", the filters kept, and the table "In Sewing", one row per batch, oldest first, 25 a
   page: **Since** ("26 Oct 2026" / "4 days"; "1 day"; "today") · **Batch** · **Product** (a link, SKU in grey) · **Colour · size** ·
   **Units**, then **Move to Finishing** (named "Move batch B-0146 Denim Jeans 5-pocket Indigo S to Finishing") and the menu "More moves
@@ -116,7 +116,7 @@ buttons in stock) shows "Can produce now 112", bottleneck Metal shank button 17m
     deleted, so it can't be put in stock. Move the batch back to In cutting and undo it to return its materials."
   - States: "Nothing in Sewing" · "Batches come here from In cutting with Move to Sewing." · **Show all phases**; "Nothing in Sewing
     matches these filters." · **Clear filters**; five placeholder rows while loading; "Couldn't load what is in Sewing." · **Try again**.
-- [ ] **AC-5 · Moving a batch, and splitting it.** **Move to Finishing** on B-0149 opens "Move to Finishing · Denim Jacket", "B-0149 ·
+- [x] **AC-5 · Moving a batch, and splitting it.** **Move to Finishing** on B-0149 opens "Move to Finishing · Denim Jacket", "B-0149 ·
   Indigo M · in Sewing: 6 units", "How many units?" ("Up to 6", empty, focused) and **Move units**. A batch moves one phase at a time;
   **Move back to …** uses the same window. Moves never touch materials or the shelf, and each move remembers its day.
   - Moving all 6: "6 units of Denim Jacket · Indigo M moved to Finishing." B-0149 keeps its number.
@@ -124,7 +124,7 @@ buttons in stock) shows "Can produce now 112", bottleneck Metal shank button 17m
     day. Toast: "4 units of Denim Jacket · Indigo M moved to Finishing. Batch B-0149 was split: the units moved are on B-0155."
   - Refusals: "You can move at most 6 units of this batch." · "Enter at least one unit to move." · "Enter a whole number of units." If
     someone moved the batch meanwhile: "These units have moved on since you opened this page." and **Close**; nothing moves.
-- [ ] **AC-6 · Put in stock and Undo batch.** **Put in stock** on B-0148 opens "Put in stock · Denim Jacket", "B-0148 · Indigo M · in
+- [x] **AC-6 · Put in stock and Undo batch.** **Put in stock** on B-0148 opens "Put in stock · Denim Jacket", "B-0148 · Indigo M · in
   Finishing: 4 units", "How many units?" ("Up to 4") and "Adds to your finished stock: Indigo M goes from 0 to 4. Recorded as a restock
   "From production"." Confirming adds 4 to the Denim Jacket's Indigo M shelf (0 → 4), the batch leaves Progress, and Restocks lists a
   restock dated today, by whoever pressed it, Reference "B-0148", Note "From production". Toast: "4 units of Denim Jacket · Indigo M
@@ -141,7 +141,7 @@ buttons in stock) shows "Can produce now 112", bottleneck Metal shank button 17m
     was taken at the cut, nothing for a material deleted or whose unit changed since. If the batch moved on meanwhile: "B-0150 has moved
     on since you opened this page, so it can't be undone. Move it back to In cutting first." Otherwise: "Couldn't undo the batch. Try
     again."
-- [ ] **AC-7 · Edit product while units are in production.** Taking Light wash off the Denim Jacket (B-0151 and B-0152 hold 3 units) is
+- [x] **AC-7 · Edit product while units are in production.** Taking Light wash off the Denim Jacket (B-0151 and B-0152 hold 3 units) is
   refused: "Light wash has 3 units in production, so it can't be removed from Denim Jacket." (1 unit: "has 1 unit in production").
   Moving the Denim Jacket to a category with other sizes is refused: "Denim Jacket has units in production, so its category can't change
   to one with other sizes. Keep a category with sizes S, M, L, XL." The existing refusals (units on the shelf, on orders) stay as they
@@ -151,7 +151,7 @@ buttons in stock) shows "Can produce now 112", bottleneck Metal shank button 17m
 
 ## Technical work
 > [!warning] Complex · CRITICAL · backend + frontend · 12 commits
-> Tech-lead (main session standing in, at the human's request) · 2026-11-02 · approved 2026-11-02 · delivered 2026-11-02 (on PI-DEV, waiting for acceptance)
+> Tech-lead (main session standing in, at the human's request) · 2026-11-02 · approved 2026-11-02 · delivered 2026-11-02 · accepted by the human 2026-11-02 (on PI-DEV)
 > Why complex: five new tables and a counter, material stock taken and given back under row locks (reusing ADR-0014's maths), a
 > restock written from production, a new business rule (batches, splits, Undo only In cutting), nine new routes (three JSON) and a new
 > contract on three pages.
