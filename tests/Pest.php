@@ -687,12 +687,21 @@ function productRestocksMigration(): Migration
 
 /**
  * The production migration object (INV-5-a): phases, production cuts, batches and their moves, and `workshops.last_batch_number`. Its
- * batches point at the products, colours, sizes, materials and restocks. It is the newest of the hand-kept list (F-60): a test that rolls
- * back any older migration they depend on rolls this one back first, and brings it back up last.
+ * batches point at the products, colours, sizes, materials and restocks. It was the newest of the hand-kept list (F-60) until INV-15's ticket codes: a
+ * test that rolls back any older migration they depend on rolls this one back first, and brings it back up last.
  */
 function productionMigration(): Migration
 {
     return require database_path('migrations/2026_11_04_100000_create_production_tables.php');
+}
+/**
+ * The ticket codes migration object (INV-15-a): `ticket_code` on `production_batches` and `scanned` on `production_batch_moves`. It is the
+ * newest of the hand-kept list (F-60): a test that rolls the production migration back (or anything below it) rolls this one back first,
+ * and brings it back up after the production one.
+ */
+function ticketCodesMigration(): Migration
+{
+    return require database_path('migrations/2026_11_05_100000_add_ticket_codes_to_production_batches.php');
 }
 
 /**

@@ -37,6 +37,7 @@ it('keeps a batch in its workshop, numbered once, with 1 to 1,000,000 units', fu
         'workshop_id' => $batch->workshop_id, 'number' => 99, 'product_id' => $batch->product_id, 'colour_id' => $batch->colour_id,
         'size_id' => $batch->size_id, 'production_cut_id' => $batch->production_cut_id, 'units' => 5, 'status' => 'in_production',
         'phase_since' => now()->toDateString(), 'started_on' => now()->toDateString(), 'created_at' => now(), 'updated_at' => now(),
+        'ticket_code' => ProductionBatch::newTicketCode(),
     ], $override));
 
     expect(fn () => DB::transaction(fn () => $write($insert, $batch, $theirs)))
@@ -75,6 +76,16 @@ it('keeps a batch in its workshop, numbered once, with 1 to 1,000,000 units', fu
     'a batch with an unknown status' => [
         fn (Closure $insert) => $insert(['status' => 'lost']),
         'production_batches_status_check',
+        null,
+    ],
+    'a batch with another batch\'s ticket code (INV-15-a)' => [
+        fn (Closure $insert, ProductionBatch $batch) => $insert(['ticket_code' => $batch->ticket_code]),
+        'production_batches_ticket_code_unique',
+        'production_batches.ticket_code',
+    ],
+    'a batch without a ticket code (INV-15-a)' => [
+        fn (Closure $insert) => $insert(['ticket_code' => null]),
+        'ticket_code',
         null,
     ],
 ]);

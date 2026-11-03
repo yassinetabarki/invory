@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Actions\Production\MoveBatch;
 use App\Enums\ProductionBatchStatus;
 use App\Models\Concerns\BelongsToWorkshop;
 use Carbon\CarbonInterface;
@@ -16,6 +17,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 /**
  * A production batch (INV-5, ADR-0023): units of one product in one colour and one size, made together for the shelf, numbered per
@@ -25,6 +27,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int $id
  * @property int $workshop_id Never mass-assignable.
  * @property int $number At least 1, once per workshop, never reused. Shown as {@see self::$label}.
+ * @property string $ticket_code 32 random letters and digits in its work ticket's QR code (INV-15, ADR-0024). Made on create, never
+ *                               mass-assignable, never sent to a page.
  * @property int $product_id
  * @property int $colour_id
  * @property int $size_id
@@ -51,6 +55,32 @@ class ProductionBatch extends Model
     use BelongsToWorkshop, HasFactory;
 
     public const MAX_UNITS = 1000000;
+
+    /** The length of a ticket code (INV-15, ADR-0024). */
+    public const TICKET_CODE_LENGTH = 32;
+
+    /** @var list<string> */
+    protected $hidden = ['ticket_code'];
+
+    /**
+     * Every batch gets its own ticket code when it is made: by Start batch, by a split and by the factories. A split is a replicate of
+     * its parent, so {@see MoveBatch} leaves the parent's code out of it.
+     */
+    protected static function booted(): void
+    {
+        static::creating(static function (ProductionBatch $batch): void {
+            // Read raw: before the first save the code may not be set yet.
+            if (! filled($batch->getAttribute('ticket_code'))) {
+                $batch->ticket_code = self::newTicketCode();
+            }
+        });
+    }
+
+    /** 62^32 possible codes make a clash next to impossible; the unique key on `ticket_code` is the last word. */
+    public static function newTicketCode(): string
+    {
+        return Str::random(self::TICKET_CODE_LENGTH);
+    }
 
     /** "B-0147": the number padded to four digits; B-10000 and on keep all of theirs. */
     public static function labelOf(int $number): string

@@ -61,7 +61,7 @@ final readonly class MoveBatch
             } else {
                 $locked->update(['units' => $locked->units - $units]);
 
-                $moved = $locked->replicate(['number', 'units', 'phase_id', 'phase_since', 'split_from_id', 'created_at', 'updated_at']);
+                $moved = $locked->replicate(['number', 'ticket_code', 'units', 'phase_id', 'phase_since', 'split_from_id', 'created_at', 'updated_at']);
                 $moved->fill([
                     'number' => $counter->next(),
                     'units' => $units,

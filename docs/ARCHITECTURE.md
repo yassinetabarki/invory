@@ -407,6 +407,9 @@ cuts → materials in ascending id.
 | `production_batches`.phase_id, phase_since       | FK → production_phases, date   | null = In cutting while in production, null again once it leaves Progress                |
 | `production_batches`.product_restock_id          | FK → product_restocks nullable | the restock its last Put in stock wrote                                                  |
 | `production_batch_moves`                         | kind, units, from/to labels    | start · forward · back · stock · undo, with the phase names as text                      |
+| `production_batches`.ticket_code                 | string(32)                     | unique, random, in the work ticket's QR (INV-15, [ADR-0024](adr/0024-work-tickets-and-scanning.md)); never sent to a page |
+| `production_batch_moves`.scanned                 | boolean                        | the move was made from the Scan page ("Your scans today")                              |
+| `workshop_label_settings`.ticket_size            | string(16)                     | one row per workshop, made on first save; `a4_8` (default) · `label_100x60` (INV-15)    |
 
 PostgreSQL only: `unique(workshop_id, id)` on phases, cuts and batches, and composite keys on (`workshop_id`, …) for every parent.
 `production_counters` holds one row per workshop (made on first use): the batch counter and the production lock. Every production
@@ -527,6 +530,12 @@ tests/
 | GET | /restocks/products/options | restocks.products.options | RestockProductController@index | JSON `RestockProductRef[]` (`search`, `limit` ≤ 50, `include`), every non-deleted product by name |
 | GET | /restocks/products/{product} | restocks.products.line | RestockProductController@show | JSON `RestockLine` (sizes, "One size", finished stock) |
 | GET | /restocks/barcode | restocks.barcode | RestockBarcodeController@show | JSON `RestockBarcodeLookup` (`number`; ADR-0020, ADR-0022) |
+| GET | /progress/tickets | progress.tickets | ProductionTicketController@index | `progress/tickets` (INV-15: `batches[]` 1 to 50 ids; the work tickets, printed by the page) |
+| GET | /scan | scan.index | ScanController@index | `scan/index` (INV-15: "Your scans today") |
+| GET | /scan/t/{code} | scan.ticket | ScanController@show | `scan/index` with that ticket's confirm or refusal (the QR link; guests sign in and come back) |
+| GET | /scan/lookup | scan.lookup | ScanLookupController@show | JSON `ScanLookupResult` (`q`: a number or a scanned link; ADR-0024) |
+| POST | /scan/batches/{batch} | scan.batches.store | ScanBatchController@store | redirect → `scan.index` with the toast; refusals on `moved`, `phases` |
+| GET/PUT | /settings/labels | settings.labels.edit / settings.labels.update | Settings\LabelSettingsController | `settings/labels` (INV-15: Ticket size; INV-9 adds the label settings) |
 | GET | /sales | sales.index | SaleController@index | `sales/index` (log, totals, record / edit panel) |
 | POST | /sales | sales.store | @store | redirect back |
 | PUT | /sales/{sale} | sales.update | @update | redirect back |
