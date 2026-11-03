@@ -355,20 +355,21 @@ product's barcodes, and those of a colour taken off, come back on any product of
 writer (`GenerateBarcodes`, the rename in `UpdateProduct`) takes the product's row lock, then the workshop's. The product page gets
 them as `barcodes`, deferred in the group `stock` with `finished_stock`, rescued.
 
-### `order_line_sizes` (S-60, [ADR-0016](adr/0016-order-lines-count-by-size.md))
+### `order_line_sizes` (S-60, [ADR-0016](adr/0016-order-lines-count-by-size.md); per colour since INV-13, [ADR-0025](adr/0025-order-lines-per-colour-and-size.md))
 
 | Column                             | Type                        | Rules                                                                          |
 | ---------------------------------- | --------------------------- | ------------------------------------------------------------------------------ |
 | id                                 | bigint PK                   |                                                                                |
 | workshop_id                        | FK → workshops              | the line's workshop (composite FK to `order_lines` on PostgreSQL)              |
 | order_line_id                      | FK → order_lines            | `cascadeOnDelete`                                                              |
+| colour_id                          | FK → colours                | `restrictOnDelete`, indexed, NOT NULL; INV-13: the colour ordered              |
 | size_id                            | FK → sizes                  | `restrictOnDelete`, indexed; a size of the line's `size_list_id`               |
 | quantity                           | unsigned integer            | units ordered in this size, 1 … 1 000 000 (CHECK on PostgreSQL)                |
 | in_cutting, ready_to_ship, shipped | unsigned integer, default 0 | stage counts per size; To start derived as on the line (`HasStageCounts`)      |
 | timestamps                         |                             |                                                                                |
 
-Constraints: `unique(order_line_id, size_id)`. PostgreSQL only: CHECKs that the counts are ≥ 0 and add up to at most `quantity`. Only
-sizes ordered have a row. The line's `quantity` and its three counts are the **sums of its size rows**, written only by
+Constraints: `unique(order_line_id, colour_id, size_id)` (INV-13; rows recorded before took their product's first colour). PostgreSQL only: CHECKs that the counts are ≥ 0 and add up to at most `quantity`. Only
+colours and sizes ordered have a row; they are read by colour (list order), then size. The line's `quantity` and its three counts are the **sums of its size rows**, written only by
 `SyncOrderLines` and `MoveOrderLineUnits`, in the same transaction, under the order row lock (lock order: order row → products of
 the lines when saving, or the line and its size rows when moving → cuts → materials in ascending id). The Orders list, its filter and
 totals, the statuses and the delete refusal keep reading the line. Lines recorded before S-60 got the `one_size` list and one size row

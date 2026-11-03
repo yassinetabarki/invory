@@ -10,9 +10,9 @@ import { formatCount } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 // The table and the button rows under it share one column template and one cell padding, so a
-// button ends where the figures above it end. Four stage columns; the Size column is 6rem wide.
-const SIZE_COLUMN = 'w-24';
-const ROW_COLUMNS = 'grid-cols-[6rem_repeat(4,minmax(0,1fr))]';
+// button ends where the figures above it end. Four stage columns; the colour and size column is 9rem wide (INV-13: "Light wash XXXL").
+const SIZE_COLUMN = 'w-36';
+const ROW_COLUMNS = 'grid-cols-[9rem_repeat(4,minmax(0,1fr))]';
 const CELL_X = 'px-3';
 // A figure is in the number font like the size chips; a 0 is in the column headings' grey.
 const FIGURE = 'text-right font-mono tabular-nums';
@@ -33,7 +33,8 @@ export type SizeStagesColumn = {
 };
 
 export type SizeStagesRow = {
-    id: number;
+    /** INV-13: `${colourId}.${sizeId}`. */
+    id: string;
     label: string;
     /** The server's whole-unit figures by column key; shown as they are. */
     figures: Record<string, number>;
@@ -68,7 +69,7 @@ export function SizeStagesTable({
             <div className="hidden overflow-hidden rounded-lg border lg:block">
                 <table className="w-full table-fixed text-sm">
                     <caption className="sr-only">
-                        {productName}: units by size and stage
+                        {productName}: units by colour, size and stage
                     </caption>
                     <colgroup>
                         <col className={SIZE_COLUMN} />
@@ -82,7 +83,7 @@ export function SizeStagesTable({
                                 scope="col"
                                 className={cn(CELL_X, 'py-2 font-medium')}
                             >
-                                Size
+                                Colour and size
                             </th>
                             {columns.map(({ key, caption, captionId }) => (
                                 <th
@@ -106,7 +107,7 @@ export function SizeStagesTable({
                                     scope="row"
                                     className={cn(
                                         CELL_X,
-                                        'py-2 text-left font-semibold',
+                                        'py-2 text-left font-semibold [overflow-wrap:anywhere]',
                                     )}
                                 >
                                     {label}
@@ -185,7 +186,10 @@ export function SizeStagesTable({
                         />
                     ))}
                 </ol>
-                <ul aria-label="Sizes" className="flex flex-col gap-2">
+                <ul
+                    aria-label="Colours and sizes"
+                    className="flex flex-col gap-2"
+                >
                     {rows.map(({ id, label, figures }) => (
                         <li
                             key={id}

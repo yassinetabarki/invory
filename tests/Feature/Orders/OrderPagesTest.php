@@ -24,47 +24,42 @@ beforeEach(function () {
     CurrentWorkshop::run(Workshop::factory()->create(), fn () => Product::factory()->create(['sku' => 'ZZ-FOR-001', 'name' => 'Foreign Tote']));
 });
 
-it('offers only the active products of the workshop on New order, by name', function () {
+it('sends no product list to New order: "Search products" asks the search route (INV-13 AC-1)', function () {
     $response = actingAs($this->user)->get(route('orders.create'))->assertOk();
 
-    expect(pageProp($response, 'products.*.name'))->toBe([
-        'Canvas Low Sneaker', 'Classic White T-shirt', 'Denim Jacket', 'Denim Jeans 5-pocket', 'Leather Belt', 'Leather Tote',
-    ])
-        ->and(pageProp($response, 'products.2'))->toBe(['id' => pid(1), 'sku' => 'PRD-JKT-001', 'name' => 'Denim Jacket', 'status' => 'active', 'deleted' => false, 'size_list_code' => 's_to_xl']);
+    expect(pageProp($response, 'products'))->toBeNull()
+        ->and(pageProp($response, 'size_lists'))->toBeNull();
 });
 
-it('sends the three size lists by code, once each, and the code of each product\'s list, on New order and Edit order (S-60)', function () {
+it('sends Edit order each line\'s product with its sizes and shelf stock, in line order, whatever its status (INV-13 AC-2, AC-4)', function () {
     $order = bookOrder();
-
-    foreach ([route('orders.create'), route('orders.edit', $order)] as $uri) {
-        $response = actingAs($this->user)->get($uri)->assertOk();
-
-        expect(array_keys(pageProp($response, 'size_lists')))->toBe(['s_to_xl', 'eu_36_to_46', 'one_size'])
-            ->and(pageProp($response, 'size_lists.s_to_xl.name'))->toBe('XS to XXXL')
-            ->and(pageProp($response, 'size_lists.s_to_xl.sizes.*.label'))->toBe(['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'])
-            ->and(pageProp($response, 'size_lists.eu_36_to_46.name'))->toBe('36 to 46')
-            ->and(pageProp($response, 'size_lists.eu_36_to_46.sizes'))->toHaveCount(11)
-            ->and(pageProp($response, 'size_lists.one_size'))->toMatchArray(['code' => 'one_size', 'name' => 'One size'])
-            ->and(array_column(pageProp($response, 'products'), 'size_list_code', 'name'))->toMatchArray([
-                'Denim Jacket' => 's_to_xl', 'Canvas Low Sneaker' => 'eu_36_to_46', 'Leather Tote' => 'one_size',
-            ]);
-    }
-});
-
-it('offers on Edit order the active products plus every product already on the order, whatever its status', function () {
-    $order = bookOrder();
+    setFinishedStock(demoProduct('PRD-JNS-005'), ['Indigo' => [0, 0, 5, 2, 0, 0, 0]]);
     demoProduct('PRD-JKT-001')->update(['status' => ProductStatus::Archived]);
     demoProduct('PRD-JNS-005')->delete();
 
     $response = actingAs($this->user)->get(route('orders.edit', $order))->assertOk();
 
-    // The archived and the deleted products of the order stay on offer; the draft, the archived and deleted ones of no order and the
-    // foreign one don't.
-    expect(array_map(fn (array $product): array => [$product['name'], $product['status'], $product['deleted']], pageProp($response, 'products')))->toBe([
-        ['Canvas Low Sneaker', 'active', false], ['Classic White T-shirt', 'active', false], ['Denim Jacket', 'archived', false],
-        ['Denim Jeans 5-pocket', 'active', true], ['Leather Belt', 'active', false], ['Leather Tote', 'active', false],
-    ])
+    expect(pageProp($response, 'products'))->toBeNull()
+        ->and(array_map(fn (array $line): array => [$line['product']['name'], $line['product']['status'], $line['product']['deleted']], pageProp($response, 'line_products')))->toBe([
+            ['Denim Jacket', 'archived', false], ['Denim Jeans 5-pocket', 'active', true],
+        ])
+        // Both lines were recorded before sizes: they count by "One size", whatever their product's sizes.
+        ->and(pageProp($response, 'line_products.0.one_size'))->toBeTrue()
+        ->and(pageProp($response, 'line_products.0.sizes.*.label'))->toBe(['One size'])
+        ->and(pageProp($response, 'line_products.0.product'))->toHaveKey('photo_url')
+        ->and(pageProp($response, 'line_products.1.stock.units'))->toBe(7)
+        ->and(pageProp($response, 'line_products.1.stock.colours.*.colour.name'))->toBe(['White', 'Indigo'])
         ->and(pageProp($response, 'order'))->toMatchArray(['id' => $order->id, 'client' => 'Boutique Lina', 'ordered_on' => '2026-10-15', 'units' => 80])
         ->and(pageProp($response, 'order.lines.*.quantity'))->toBe([50, 30])
         ->and(pageProp($response, 'order.lines.*.product.name'))->toBe(['Denim Jacket', 'Denim Jeans 5-pocket']);
+});
+
+it('sends a line counted by size its product\'s own sizes on Edit order (INV-13 AC-4)', function () {
+    $order = bookSizedOrder();
+
+    $response = actingAs($this->user)->get(route('orders.edit', $order))->assertOk();
+
+    expect(pageProp($response, 'line_products.0.one_size'))->toBeFalse()
+        ->and(pageProp($response, 'line_products.0.sizes.*.label'))->toBe(['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'])
+        ->and(pageProp($response, 'order.lines.0.sizes.0.colour'))->toBe(['id' => demoColour('WHT')->id, 'code' => 'WHT', 'name' => 'White', 'swatch' => '#FFFFFF']);
 });

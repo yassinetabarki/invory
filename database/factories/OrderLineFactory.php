@@ -59,6 +59,8 @@ class OrderLineFactory extends Factory
                 )]);
 
             foreach ($rows as $row) {
+                // INV-13: a row without a colour takes the product's first one.
+                $row->colour_id ??= OrderLineSizeFactory::firstColourOf($line->product_id);
                 $row->forceFill(['workshop_id' => $line->workshop_id, 'order_line_id' => $line->id])->save();
             }
 

@@ -1,106 +1,110 @@
-import { Plus } from 'lucide-react';
 import { useEffect, useId, useRef } from 'react';
+import { ProductSearch } from '@/components/orders/product-search';
 import {
-    countingFor,
-    newOrderLine,
-    OrderLineRowFields,
-} from '@/components/orders/order-line-row';
-import type {
-    LineCounting,
-    OrderLineRow,
-    StartedLine,
-} from '@/components/orders/order-line-row';
-import { Button } from '@/components/ui/button';
-import type {
-    OrderFormProduct,
-    OrderLineSizeMode,
-    SizeList,
-} from '@/types/domain';
+    gridColours,
+    lineTotal,
+    orderFieldId,
+    QuantityGrid,
+} from '@/components/orders/quantity-grid';
+import { formatUnits } from '@/components/orders/stage-figure';
+import { useAppSettings } from '@/hooks/use-app-settings';
+import { formatCount } from '@/lib/format';
+import type { Colour, OrderStockProduct } from '@/types/domain';
 
-/** An order holds up to this many lines (the server enforces it too). */
+/** An order holds up to this many products (the server enforces it too). */
 export const MAX_ORDER_LINES = 50;
 
-type OrderLinesEditorProps = {
-    rows: OrderLineRow[];
-    products: readonly OrderFormProduct[];
-    /** The size lists by code: a product's list says how its line counts. */
-    sizeLists: Readonly<Record<string, SizeList>>;
-    /** How the saved order's lines count, by product id (Edit order): a product already on it keeps that way. */
-    savedModes?: ReadonlyMap<number, OrderLineSizeMode>;
-    /**
-     * The form's errors by key: `lines` for the list as a whole and
-     * `lines.N.product_id` / `lines.N.quantity` for a line (`N` counts from 0);
-     * `lines.N.sizes` for the sizes of a line and `lines.N.sizes.<size id>` for one size.
-     */
-    errors: Record<string, string | undefined>;
-    /** Saved lines that have started, by row `uid`: their product is fixed and they can't be removed. */
-    started?: ReadonlyMap<string, StartedLine>;
-    onChange: (rows: OrderLineRow[]) => void;
+/**
+ * A product on the order in the form: what the grid shows and what was typed,
+ * with a client-only `uid` so React keeps a line's values when another goes.
+ */
+export type OrderLineEntry = {
+    uid: string;
+    product: OrderStockProduct;
+    /** Colour id → size id → as typed. */
+    units: Record<number, Record<number, string>>;
+    /** Edit order: colours the saved line holds, units started per cell and on the whole line. */
+    heldColours?: Colour[];
+    floors?: Record<string, number>;
+    started?: number;
 };
 
-/**
- * The server's messages for line `index`, each under a field that is on screen.
- * A message whose field isn't shown (the product's sizes changed since the form
- * was built: a quantity on a line now counted by size, sizes on a "Quantity"
- * line, a size that is gone) moves under "Total" or "Quantity", so none is lost.
- */
-function lineErrors(
-    errors: Record<string, string | undefined>,
-    index: number,
-    counting: LineCounting,
-) {
-    const key = (name: string) => `lines.${index}.${name}`;
-    const product_id = errors[key('product_id')];
-    const sizeKeys = Object.keys(errors).filter(
-        (name) => name.startsWith(key('sizes.')) && errors[name],
+let lineCounter = 0;
+
+/** A new line for this product, with a key that is unique on the page. */
+export function newOrderLine(
+    product: OrderStockProduct,
+    fields: Partial<Omit<OrderLineEntry, 'uid' | 'product'>> = {},
+): OrderLineEntry {
+    lineCounter += 1;
+
+    return { uid: `line-${lineCounter}`, product, units: {}, ...fields };
+}
+
+/** "22 units · 2 products". */
+export function orderSummary(
+    units: number,
+    products: number,
+    locale: string,
+): string {
+    return `${formatUnits(units, locale)} · ${formatCount(products, locale)} ${products === 1 ? 'product' : 'products'}`;
+}
+
+/** The units typed on every line. */
+export function orderUnits(entries: readonly OrderLineEntry[]): number {
+    return entries.reduce(
+        (sum, entry) =>
+            sum +
+            lineTotal(
+                gridColours(entry.product, entry.heldColours),
+                entry.product.sizes,
+                entry.units,
+            ),
+        0,
     );
+}
 
-    if (counting.kind === 'quantity') {
-        const lost = [key('sizes'), ...sizeKeys].find((name) => errors[name]);
+/** The server's messages for line `index`: the line's own (`lines.N.units`, `lines.N.product_id`) and one per field. */
+function lineErrors(errors: Record<string, string | undefined>, index: number) {
+    const prefix = `lines.${index}.units.`;
+    const cells: Record<string, string> = {};
 
-        return {
-            product_id,
-            quantity: errors[key('quantity')] ?? (lost && errors[lost]),
-        };
+    for (const [key, message] of Object.entries(errors)) {
+        if (message && key.startsWith(prefix)) {
+            cells[key.slice(prefix.length)] = message;
+        }
     }
 
-    const shown = new Set(
-        counting.sizes.map((size) => key(`sizes.${size.id}`)),
-    );
-    const lost = sizeKeys.find((name) => !shown.has(name));
-
     return {
-        product_id,
-        sizes:
-            errors[key('sizes')] ??
-            errors[key('quantity')] ??
-            (lost && errors[lost]),
-        bySize: Object.fromEntries(
-            counting.sizes.map((size) => [
-                size.id,
-                errors[key(`sizes.${size.id}`)],
-            ]),
-        ),
+        line:
+            errors[`lines.${index}.units`] ??
+            errors[`lines.${index}.product_id`],
+        cells,
     };
 }
 
+type OrderLinesEditorProps = {
+    entries: OrderLineEntry[];
+    /** The form's errors: `lines`, `lines.N.product_id`, `lines.N.units`, `lines.N.units.<colour id>.<size id>`. */
+    errors: Record<string, string | undefined>;
+    onChange: (entries: OrderLineEntry[]) => void;
+};
+
 /**
- * The "Products" section of the order form: one line per product with its
- * quantity. Nothing is checked here (duplicates, quantities): the server's
- * messages come back under the field they belong to.
+ * The Products card of New order and Edit order (INV-13, AC-1, AC-2): Search
+ * products, then "On this order" with a quantity grid per product, and the
+ * band "Total on this order · 22 units · 2 products". Nothing is checked here:
+ * the server's messages come back under the field they belong to.
  */
 export function OrderLinesEditor({
-    rows,
-    products,
-    sizeLists,
-    savedModes,
+    entries,
     errors,
-    started,
     onChange,
 }: OrderLinesEditorProps) {
-    const idPrefix = useId();
+    const { locale } = useAppSettings();
+    const id = useId();
     const containerRef = useRef<HTMLElement>(null);
-    // Where focus goes after the next render (an added or removed line moves it).
+    // Where focus goes after the next render (an added or removed product moves it).
     const pendingFocus = useRef<string | null>(null);
 
     useEffect(() => {
@@ -114,34 +118,63 @@ export function OrderLinesEditor({
         containerRef.current?.querySelector<HTMLElement>(selector)?.focus();
     });
 
-    function addLine() {
-        const line = newOrderLine();
+    const onOrder = new Set(entries.map((entry) => entry.product.product.id));
+    const full = entries.length >= MAX_ORDER_LINES;
 
-        pendingFocus.current = `[data-line-uid="${line.uid}"] [data-action="product"]`;
-        onChange([...rows, line]);
+    function firstField(product: OrderStockProduct, held?: Colour[]): string {
+        const colour = gridColours(product, held)[0];
+        const size = product.sizes[0];
+
+        return colour && size
+            ? `#${orderFieldId(product.product.id, colour.id, size.id)}`
+            : `[data-order-product="${product.product.id}"]`;
     }
 
-    function removeLine(index: number) {
-        const neighbour = rows[index + 1] ?? rows[index - 1];
+    function add(product: OrderStockProduct) {
+        if (onOrder.has(product.product.id) || full) {
+            return;
+        }
 
-        pendingFocus.current = neighbour
-            ? `[data-line-uid="${neighbour.uid}"] [data-action="product"]`
-            : '[data-action="add-line"]';
-        onChange(rows.filter((_, position) => position !== index));
+        pendingFocus.current = firstField(product);
+        onChange([...entries, newOrderLine(product)]);
     }
 
-    const full = rows.length >= MAX_ORDER_LINES;
-    const hintId = `${idPrefix}-limit`;
+    function showLine(productId: number) {
+        const entry = entries.find(
+            (line) => line.product.product.id === productId,
+        );
+
+        if (entry) {
+            containerRef.current
+                ?.querySelector<HTMLElement>(
+                    firstField(entry.product, entry.heldColours),
+                )
+                ?.focus();
+        }
+    }
+
+    function remove(index: number) {
+        pendingFocus.current = '[data-action="product"]';
+        onChange(entries.filter((_, position) => position !== index));
+    }
+
+    const units = orderUnits(entries);
 
     return (
         <section
             ref={containerRef}
-            aria-labelledby={`${idPrefix}-title`}
+            aria-labelledby={`${id}-title`}
             className="flex flex-col gap-4 rounded-xl border bg-card p-5 text-card-foreground"
         >
-            <h2 id={`${idPrefix}-title`} className="text-base font-bold">
-                Products
-            </h2>
+            <div className="flex flex-col gap-1">
+                <h2 id={`${id}-title`} className="text-base font-bold">
+                    Products
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                    Search what the client wants, check what is in stock, then
+                    add it.
+                </p>
+            </div>
 
             {errors.lines && (
                 <p role="alert" className="text-sm text-destructive-foreground">
@@ -149,65 +182,70 @@ export function OrderLinesEditor({
                 </p>
             )}
 
-            {rows.length === 0 ? (
-                <p className="rounded-lg border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">
-                    No products yet. Add the products the client ordered.
-                </p>
+            <ProductSearch
+                onOrder={onOrder}
+                full={full}
+                onAdd={add}
+                onShowLine={showLine}
+            />
+
+            {entries.length === 0 ? (
+                <div className="rounded-lg border border-dashed px-4 py-6 text-center text-sm">
+                    <p className="font-medium">No products on this order yet</p>
+                    <p className="text-muted-foreground">
+                        Search for a product above and add what the client
+                        ordered.
+                    </p>
+                </div>
             ) : (
                 <div className="flex flex-col gap-3">
-                    {rows.map((row, index) => {
-                        const counting = countingFor(
-                            row,
-                            products,
-                            sizeLists,
-                            savedModes,
-                        );
+                    <h3 className="text-sm font-semibold">
+                        On this order · {formatCount(entries.length, locale)}{' '}
+                        {entries.length === 1 ? 'product' : 'products'}
+                    </h3>
+                    {entries.map((entry, index) => {
+                        const lineError = lineErrors(errors, index);
 
                         return (
-                            <OrderLineRowFields
-                                key={row.uid}
-                                row={row}
-                                number={index + 1}
-                                idPrefix={idPrefix}
-                                products={products}
-                                counting={counting}
-                                errors={lineErrors(errors, index, counting)}
-                                started={started?.get(row.uid)}
-                                onChange={(patch) =>
+                            <QuantityGrid
+                                key={entry.uid}
+                                product={entry.product}
+                                heldColours={entry.heldColours}
+                                values={entry.units}
+                                floors={entry.floors}
+                                started={entry.started}
+                                lineError={lineError.line}
+                                cellErrors={lineError.cells}
+                                onRemove={() => remove(index)}
+                                onChange={(colourId, sizeId, value) =>
                                     onChange(
-                                        rows.map((other) =>
-                                            other.uid === row.uid
-                                                ? { ...other, ...patch }
+                                        entries.map((other) =>
+                                            other.uid === entry.uid
+                                                ? {
+                                                      ...other,
+                                                      units: {
+                                                          ...other.units,
+                                                          [colourId]: {
+                                                              ...other.units[
+                                                                  colourId
+                                                              ],
+                                                              [sizeId]: value,
+                                                          },
+                                                      },
+                                                  }
                                                 : other,
                                         ),
                                     )
                                 }
-                                onRemove={() => removeLine(index)}
                             />
                         );
                     })}
+                    <p className="rounded-lg bg-muted px-4 py-3 text-sm font-medium">
+                        Total on this order ·{' '}
+                        {orderSummary(units, entries.length, locale)}
+                    </p>
                 </div>
             )}
-
-            <div className="flex flex-wrap items-center gap-3">
-                <Button
-                    type="button"
-                    variant="outline"
-                    data-action="add-line"
-                    className="border-dashed text-primary"
-                    disabled={full}
-                    aria-describedby={full ? hintId : undefined}
-                    onClick={addLine}
-                >
-                    <Plus aria-hidden="true" />
-                    Add product
-                </Button>
-                {full && (
-                    <p id={hintId} className="text-xs text-muted-foreground">
-                        An order can hold up to {MAX_ORDER_LINES} products.
-                    </p>
-                )}
-            </div>
         </section>
     );
 }

@@ -28,21 +28,21 @@ final readonly class SyncOrderLines
      * listed are deleted, and `position` follows the submitted order. Matching by product means swapping two products between
      * lines never meets the `unique(order_id, product_id)` index.
      *
-     * A line counts by size (ADR-0016): a row per size ordered (a size left empty or 0 has none) and the line's `quantity` is the sum
-     * of its rows. A line that counts as one size (a "One size" product, or recorded before sizes) holds its `quantity` in the one row
-     * of its list. The products of the lines are locked first (ascending id, F-64), and how each line counts is worked out again
-     * under that lock: a product moved to other sizes after the request was checked refuses the save.
+     * A line counts per colour and size (ADR-0016, ADR-0025): a row per colour and size ordered (a cell left empty or 0 has none) and
+     * the line's `quantity` is the sum of its rows. A "One size" line, or one recorded before sizes, has the only size of its list in
+     * each colour. The products of the lines are locked first (ascending id, F-64), and the colours and sizes typed are checked again
+     * under that lock: a product given other colours or sizes after the request was checked refuses the save.
      *
      * A product listed twice is not merged: the second line is inserted and the database's unique index rejects it, which rolls the
      * whole sync back (the form request refuses it earlier).
      *
-     * A size that has started (S-49, S-61) keeps its product and at least its started units; so does a single-field line. The counts
-     * are read here, inside the transaction, after the caller took the order's row lock, so they are the saved ones: this check is the
-     * one that counts. Rows that have started are never removed or lowered, so the line's three counts stay the sums of its rows.
+     * A colour and size that has started (S-49, S-61) keeps at least its started units, and a started line its product. The counts are
+     * read here, inside the transaction, after the caller took the order's row lock, so they are the saved ones: this check is the one
+     * that counts. Rows that have started are never removed or lowered, so the line's three counts stay the sums of its rows.
      *
-     * @param  array<int|string, array{product_id: int|string, quantity?: int|string|null, sizes?: array<int|string, int|string|null>|null}>  $lines  validated input, in display order (`position` is the index in the order given; a key only names a line in an error message)
+     * @param  array<int|string, array{product_id: int|string, units?: array<int|string, array<int|string, int|string|null>|null>|null}>  $lines  validated input, in display order (`position` is the index in the order given; a key only names a line in an error message)
      *
-     * @throws ValidationException a started line was removed or given fewer units than started, or a product's sizes changed
+     * @throws ValidationException a started line was removed or given fewer units than started, or a product's colours or sizes changed
      */
     public function handle(Order $order, array $lines): void
     {
@@ -50,9 +50,9 @@ final readonly class SyncOrderLines
             $products = $this->lockProducts($lines);
 
             /** @var Collection<int, OrderLine> $stale lines still to be matched, by product id */
-            $stale = $order->lines()->with(['product', 'sizes'])->get()->keyBy('product_id');
+            $stale = $order->lines()->with(['product', 'sizes.colour', 'sizes.size'])->get()->keyBy('product_id');
 
-            $units = $this->unitsBySize($lines, $stale, $products);
+            $units = $this->typedUnits($lines, $stale, $products);
             $refusals = $this->refusals($stale, $lines);
 
             if ($refusals !== []) {
@@ -77,7 +77,7 @@ final readonly class SyncOrderLines
                     $this->writeRows($new, $units[$key]['rows'], new Collection);
                 } else {
                     $existing->update(['quantity' => $quantity, 'position' => $position]);
-                    $this->writeRows($existing, $units[$key]['rows'], $existing->sizes->keyBy('size_id'));
+                    $this->writeRows($existing, $units[$key]['rows'], $existing->sizes->keyBy(fn (OrderLineSize $row): string => self::cell($row->colour_id, $row->size_id)));
                 }
 
                 $position++;
@@ -107,14 +107,31 @@ final readonly class SyncOrderLines
     }
 
     /**
-     * What a submitted list of lines may not do to the lines that have started: remove one (a swap of its product reads as a removal,
-     * since lines are matched by product), lower a size below its started units, or lower a single-field line's quantity below them.
-     * Lines that haven't started, and new lines, are free. The form request runs this on unlocked data for early messages;
-     * `handle()` runs it under the order lock.
+     * The colours a line of this product may hold (INV-13): the product's own, and on Edit order the colours its saved line already
+     * holds (a row in a colour since taken off the product keeps its units). Colour id → name, in no particular order.
      *
-     * @param  Collection<int, OrderLine>  $current  the order's saved lines, by product id, with `product` and `sizes` loaded
+     * @param  OrderLine|null  $saved  the order's saved line of this product, with its `sizes` loaded; null for a new line
+     * @return array<int, string>
+     */
+    public function allowedColours(Product $product, ?OrderLine $saved): array
+    {
+        $colours = $product->colours()->pluck('colours.name', 'colours.id')->all();
+
+        foreach ($saved === null ? [] : $saved->sizes as $row) {
+            $colours[$row->colour_id] ??= $row->colour->name;
+        }
+
+        return $colours;
+    }
+
+    /**
+     * What a submitted list of lines may not do to the lines that have started: remove one (a swap of its product reads as a removal,
+     * since lines are matched by product), or lower a colour and size below its started units. Lines that haven't started, and new
+     * lines, are free. The form request runs this on unlocked data for early messages; `handle()` runs it under the order lock.
+     *
+     * @param  Collection<int, OrderLine>  $current  the order's saved lines, by product id, with `product` and `sizes` (each with its `colour` and `size`) loaded
      * @param  array<int|string, mixed>  $lines  as submitted (the request has validated their shape; anything else is skipped)
-     * @return array<string, list<string>> messages by error key: `lines` (a started line is missing), `lines.<key>.quantity` and `lines.<key>.sizes.<size id>`
+     * @return array<string, list<string>> messages by error key: `lines` (a started line is missing) and `lines.<key>.units.<colour id>.<size id>`
      */
     public function refusals(Collection $current, array $lines): array
     {
@@ -141,21 +158,15 @@ final readonly class SyncOrderLines
             }
 
             [$key, $line] = $submitted[$productId];
-
-            if ($this->sizing->forLine($saved) !== OrderLineSizeMode::BySize) {
-                if ((int) ($line['quantity'] ?? 0) < $saved->started) {
-                    $refusals["lines.{$key}.quantity"][] = OrderMessages::quantityBelowStarted($saved->started);
-                }
-
-                continue;
-            }
-
-            $typed = is_array($line['sizes'] ?? null) ? $line['sizes'] : [];
-            $labels = $this->lists->list((int) $saved->size_list_id)->sizes->pluck('label', 'id');
+            $typed = is_array($line['units'] ?? null) ? $line['units'] : [];
+            $oneSize = $this->lists->list((int) $saved->size_list_id)->code === SizeList::ONE_SIZE;
 
             foreach ($saved->sizes as $row) {
-                if ($row->started > 0 && (int) ($typed[$row->size_id] ?? 0) < $row->started) {
-                    $refusals["lines.{$key}.sizes.{$row->size_id}"][] = OrderMessages::sizeBelowStarted((string) $labels->get($row->size_id), $row->started);
+                $value = is_array($typed[$row->colour_id] ?? null) ? ($typed[$row->colour_id][$row->size_id] ?? 0) : 0;
+
+                if ($row->started > 0 && (int) $value < $row->started) {
+                    $variant = OrderMessages::variant($row->colour->name, $row->size->label, $oneSize);
+                    $refusals["lines.{$key}.units.{$row->colour_id}.{$row->size_id}"][] = OrderMessages::sizeBelowStarted($variant, $row->started);
                 }
             }
         }
@@ -178,17 +189,17 @@ final readonly class SyncOrderLines
     }
 
     /**
-     * For every submitted line, the list it counts by and its units by size id (only sizes of 1 unit or more), worked out under the
-     * product locks. A shape that no longer fits the product's sizes refuses the whole save.
+     * For every submitted line, the list it counts by and its units by cell ("colour id:size id", only cells of 1 unit or more),
+     * worked out under the product locks. Colours or sizes that no longer fit the product refuse the whole save.
      *
      * @param  array<int|string, array<string, mixed>>  $lines
      * @param  Collection<int, OrderLine>  $stale
      * @param  Collection<int, Product>  $products
-     * @return array<int|string, array{list: SizeList, rows: array<int, int>}>
+     * @return array<int|string, array{list: SizeList, rows: array<string, int>}>
      *
      * @throws ValidationException
      */
-    private function unitsBySize(array $lines, Collection $stale, Collection $products): array
+    private function typedUnits(array $lines, Collection $stale, Collection $products): array
     {
         $plans = [];
         $refusals = [];
@@ -196,15 +207,14 @@ final readonly class SyncOrderLines
         foreach ($lines as $key => $line) {
             $productId = (int) $line['product_id'];
             $product = $products->get($productId) ?? throw (new ModelNotFoundException)->setModel(Product::class, [$productId]);
-            [$mode, $list] = $this->counting($product, $stale->get($productId));
-            $rows = $mode === OrderLineSizeMode::BySize ? $this->typedSizes($line, $list) : $this->typedQuantity($line, $list);
+            $saved = $stale->get($productId);
+            [, $list] = $this->counting($product, $saved);
+            $rows = $this->typedCells($line, $list, $this->allowedColours($product, $saved));
 
             if ($rows === null) {
-                // The field that was submitted: sizes for a line counted by size, else the single quantity.
-                $field = $mode === OrderLineSizeMode::BySize && ! array_key_exists('sizes', $line) ? 'quantity' : 'sizes';
-                $refusals["lines.{$key}.{$field}"][] = OrderMessages::orderSizesChanged($product->name);
+                $refusals["lines.{$key}.units"][] = OrderMessages::orderSizesChanged($product->name);
             } elseif ($rows === []) {
-                $refusals["lines.{$key}.sizes"][] = OrderMessages::atLeastOneUnit($product->name);
+                $refusals["lines.{$key}.units"][] = OrderMessages::atLeastOneUnit($product->name);
             }
 
             $plans[$key] = ['list' => $list, 'rows' => $rows ?? []];
@@ -218,27 +228,34 @@ final readonly class SyncOrderLines
     }
 
     /**
-     * The units typed per size, or null when `sizes` is missing or names a size that is not of the list.
+     * The units typed per cell, or null when `units` is missing or names a colour the line may not hold or a size not of the list.
      *
      * @param  array<string, mixed>  $line
-     * @return array<int, int>|null
+     * @param  array<int, string>  $colours  colour id → name
+     * @return array<string, int>|null
      */
-    private function typedSizes(array $line, SizeList $list): ?array
+    private function typedCells(array $line, SizeList $list, array $colours): ?array
     {
-        if (! is_array($line['sizes'] ?? null)) {
+        if (! is_array($line['units'] ?? null)) {
             return null;
         }
 
-        $ids = $list->sizes->pluck('id')->all();
+        $sizeIds = $list->sizes->pluck('id')->all();
         $rows = [];
 
-        foreach ($line['sizes'] as $id => $value) {
-            if (! in_array($id, $ids, true)) {
+        foreach ($line['units'] as $colourId => $sizes) {
+            if (! isset($colours[$colourId]) || ! is_array($sizes)) {
                 return null;
             }
 
-            if ((int) $value > 0) {
-                $rows[$id] = (int) $value;
+            foreach ($sizes as $sizeId => $value) {
+                if (! in_array($sizeId, $sizeIds, true)) {
+                    return null;
+                }
+
+                if ((int) $value > 0) {
+                    $rows[self::cell((int) $colourId, (int) $sizeId)] = (int) $value;
+                }
             }
         }
 
@@ -246,44 +263,29 @@ final readonly class SyncOrderLines
     }
 
     /**
-     * The single quantity, on the only size of the list; null when the line was submitted without one.
+     * Make the rows of a line equal to `$rows`: new cells inserted, changed ones updated, the others removed (none of them has started).
      *
-     * @param  array<string, mixed>  $line
-     * @return array<int, int>|null
-     */
-    private function typedQuantity(array $line, SizeList $list): ?array
-    {
-        if (! isset($line['quantity'])) {
-            return null;
-        }
-
-        return (int) $line['quantity'] > 0 ? [$list->sizes->firstOrFail()->id => (int) $line['quantity']] : [];
-    }
-
-    /**
-     * Make the size rows of a line equal to `$rows`: new sizes inserted, changed ones updated, the others removed (none of them has started).
-     *
-     * @param  array<int, int>  $rows  units by size id
-     * @param  Collection<int, OrderLineSize>  $saved  the line's saved rows by size id
+     * @param  array<string, int>  $rows  units by cell
+     * @param  Collection<string, OrderLineSize>  $saved  the line's saved rows by cell
      */
     private function writeRows(OrderLine $line, array $rows, Collection $saved): void
     {
         $new = [];
 
-        foreach ($rows as $sizeId => $units) {
-            $row = $saved->get($sizeId);
+        foreach ($rows as $cell => $units) {
+            $row = $saved->get($cell);
 
             if ($row === null) {
+                [$colourId, $sizeId] = array_map(intval(...), explode(':', $cell));
                 $new[] = [
-                    'workshop_id' => $line->workshop_id, 'order_line_id' => $line->id, 'size_id' => $sizeId, 'quantity' => $units,
-                    'created_at' => now(), 'updated_at' => now(),
+                    'workshop_id' => $line->workshop_id, 'order_line_id' => $line->id, 'colour_id' => $colourId, 'size_id' => $sizeId,
+                    'quantity' => $units, 'created_at' => now(), 'updated_at' => now(),
                 ];
             } elseif ($row->quantity !== $units) {
                 $row->update(['quantity' => $units]);
             }
         }
 
-        // By size id, not by key: an Eloquent collection's `except()` filters by the models' own keys.
         $gone = array_diff_key($saved->all(), $rows);
 
         if ($gone !== []) {
@@ -293,5 +295,11 @@ final readonly class SyncOrderLines
         if ($new !== []) {
             OrderLineSize::query()->insert($new);
         }
+    }
+
+    /** The key of a cell: "colour id:size id". */
+    private static function cell(int $colourId, int $sizeId): string
+    {
+        return "{$colourId}:{$sizeId}";
     }
 }

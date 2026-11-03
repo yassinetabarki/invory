@@ -32,17 +32,17 @@ final readonly class TakeMaterialsForCut
      * moved, written on every history entry of the cut: a list of `{size_id, label, units}` in size order, or null for a line that counts as
      * one size.
      *
-     * @param  list<array{size_id: int, label: string, units: int}>|null  $sizes
+     * @param  list<array{size_id: int, colour_id?: int, label: string, units: int}>|null  $sizes
      *
-     * @throws ValidationException with the same text as the preview, when the stock saved now is too short: under `sizes` for a line
-     *                             counted by size (`$sizes` given), under `units` otherwise
+     * @throws ValidationException with the same text as the preview, when the stock saved now is too short: under `cells` for a window by
+     *                             cell (`$sizes` given), under `units` otherwise
      */
     public function handle(OrderLine $line, int $units, User $actor, ?array $sizes = null): CutPlan
     {
         ['plan' => $plan, 'materials' => $materials] = $this->preview->plan($line->product()->firstOrFail(), $units, lock: true);
 
         if (! $plan->allowed) {
-            throw ValidationException::withMessages([$sizes === null ? 'units' : 'sizes' => OrderMessages::notEnoughStock($plan)]);
+            throw ValidationException::withMessages([$sizes === null ? 'units' : 'cells' => OrderMessages::notEnoughStock($plan)]);
         }
 
         // Never mass-assignable: the workshop comes from the line, and who started the cut from the actor.

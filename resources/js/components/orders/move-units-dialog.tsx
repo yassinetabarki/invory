@@ -21,12 +21,14 @@ import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
 import { useAppSettings } from '@/hooks/use-app-settings';
 import { formatCount } from '@/lib/format';
+import { linePerCell, orderCellName } from '@/lib/sizes';
 import { store } from '@/routes/orders/lines/moves';
 import type {
     MoveUnitsFormData,
     Order,
     OrderLine,
     OrderLineMove,
+    OrderLineSize,
     OrderStage,
 } from '@/types/domain';
 
@@ -81,42 +83,50 @@ function MoveUnitsForm({ order, line, move, onClose }: MoveUnitsFormProps) {
     const uid = useId();
     const { locale } = useAppSettings();
     const fieldsRef = useRef<HTMLDivElement>(null);
-    // A line counted by size asks a number per size; the others keep the single "How many units?" field.
-    const bySize = line.size_mode === 'by_size';
+    // A line counted by size, or holding several colours, asks a number per colour and size (INV-13-e); the others keep the single
+    // "How many units?" field.
+    const byCell = linePerCell(line);
     const from = MOVES[move].from;
-    // Only the sizes whose stage holds units have a field.
-    const sizeRows = bySize
+    // Only the cells whose stage holds units have a field; each is shown under its own index, named "Indigo M".
+    const cellRows = byCell
         ? line.sizes.filter((entry) => entry[from] > 0)
         : [];
+    const fieldSizes = cellRows.map((entry, index) => ({
+        id: index,
+        label: orderCellName(entry, line.size_mode !== 'by_size'),
+    }));
     const form = useForm<MoveUnitsFormData>({
         move,
         units: '',
-        ...(bySize ? { sizes: {} } : {}),
+        ...(byCell ? { cells: {} } : {}),
     });
     const { errors, processing } = form;
-    const typedSizes = form.data.sizes ?? {};
-    // The total typed across the sizes: what the materials table is asked for (a 0 counts as empty).
-    const typedTotal = sizeRows.reduce(
-        (sum, entry) => sum + typedUnits(typedSizes[entry.size.id]),
+    const typedCells = form.data.cells ?? {};
+    const typedOf = (entry: OrderLineSize) =>
+        typedCells[entry.colour.id]?.[entry.size.id];
+    // The total typed across the cells: what the materials table is asked for (a 0 counts as empty).
+    const typedTotal = cellRows.reduce(
+        (sum, entry) => sum + typedUnits(typedOf(entry)),
         0,
     );
-    const nothingTyped = bySize && typedTotal === 0;
-    // A message for a size that has no field now (its stage holds 0 after a concurrent move) has no place
+    const nothingTyped = byCell && typedTotal === 0;
+    const allErrors = errors as Record<string, string | undefined>;
+    // A message for a cell that has no field now (its stage holds 0 after a concurrent move) has no place
     // of its own: it shows under all the fields, like the messages about the move as a whole.
-    const shown = new Set(sizeRows.map((entry) => `sizes.${entry.size.id}`));
-    const fieldless = Object.entries(errors).find(
-        ([key, text]) => key.startsWith('sizes.') && !shown.has(key) && text,
+    const shown = new Set(
+        cellRows.map((entry) => `cells.${entry.colour.id}.${entry.size.id}`),
+    );
+    const fieldless = Object.entries(allErrors).find(
+        ([key, text]) => key.startsWith('cells.') && !shown.has(key) && text,
     )?.[1];
-    // `sizes` is the move as a whole, `sizes.<size id>` one size; single-field lines keep `units`.
-    const refusal = bySize
-        ? (errors.sizes ?? errors.move ?? fieldless)
+    // `cells` is the move as a whole, `cells.<colour id>.<size id>` one cell; single-field lines keep `units`.
+    const refusal = byCell
+        ? (allErrors.cells ?? errors.move ?? fieldless)
         : (errors.units ?? errors.move);
     const sizeErrors = Object.fromEntries(
-        sizeRows.map((entry) => [
-            entry.size.id,
-            (errors as Record<string, string | undefined>)[
-                `sizes.${entry.size.id}`
-            ],
+        cellRows.map((entry, index) => [
+            index,
+            allErrors[`cells.${entry.colour.id}.${entry.size.id}`],
         ]),
     );
     // Start cutting and Move back to To start show the materials of the number typed.
@@ -125,15 +135,15 @@ function MoveUnitsForm({ order, line, move, onClose }: MoveUnitsFormProps) {
         order: order.id,
         line: line.id,
         move,
-        units: bySize
+        units: byCell
             ? typedTotal > 0
                 ? String(typedTotal)
                 : ''
             : form.data.units,
     });
-    // On a line counted by size the limit is per size, and the server answers it on Move units: the
+    // On a line by cell the limit is per cell, and the server answers it on Move units: the
     // total passing the stage is no message here and no reason to disable the button.
-    const overStage = bySize && asked.status === 'invalid';
+    const overStage = byCell && asked.status === 'invalid';
     // Nothing typed in any size is not a number to ask about: Move units gets the server's own word.
     const preview = nothingTyped || overStage ? NOTHING_TYPED : asked;
     // The server's word on the number typed (preview) or on the move itself (refusal): the same place.
@@ -190,23 +200,33 @@ function MoveUnitsForm({ order, line, move, onClose }: MoveUnitsFormProps) {
             {/* The middle scrolls; the title and the buttons stay on screen. */}
             <div className="-mx-1 flex min-h-0 flex-col gap-4 overflow-y-auto px-1">
                 <div ref={fieldsRef} className="min-w-0">
-                    {bySize ? (
+                    {byCell ? (
                         <OrderSizeFields
                             idPrefix={`${uid}-sizes`}
                             legend="How many units of each size?"
                             showLegend
-                            sizes={sizeRows.map((entry) => entry.size)}
-                            values={typedSizes}
-                            onChange={(sizeId, value) =>
-                                form.setData('sizes', {
-                                    ...typedSizes,
-                                    [sizeId]: value,
-                                })
-                            }
+                            sizes={fieldSizes}
+                            values={Object.fromEntries(
+                                cellRows.map((entry, index) => [
+                                    index,
+                                    typedOf(entry),
+                                ]),
+                            )}
+                            onChange={(index, value) => {
+                                const entry = cellRows[index];
+
+                                form.setData('cells', {
+                                    ...typedCells,
+                                    [entry.colour.id]: {
+                                        ...typedCells[entry.colour.id],
+                                        [entry.size.id]: value,
+                                    },
+                                });
+                            }}
                             errors={sizeErrors}
                             hints={Object.fromEntries(
-                                sizeRows.map((entry) => [
-                                    entry.size.id,
+                                cellRows.map((entry, index) => [
+                                    index,
                                     `Up to ${formatCount(entry[from], locale)}`,
                                 ]),
                             )}

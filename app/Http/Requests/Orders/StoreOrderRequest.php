@@ -6,14 +6,13 @@ namespace App\Http\Requests\Orders;
 
 use App\Actions\Orders\SyncOrderLines;
 use App\Domain\Clients\PhoneNumber;
-use App\Enums\OrderLineSizeMode;
 use App\Enums\ProductStatus;
 use App\Models\Client;
 use App\Models\Order;
 use App\Models\OrderLine;
 use App\Models\Product;
+use App\Models\SizeList;
 use App\Services\Orders\OrderMessages;
-use App\Services\Products\SizeNames;
 use App\Validation\ClientFieldRules;
 use Closure;
 use Illuminate\Auth\Access\Response;
@@ -62,10 +61,11 @@ class StoreOrderRequest extends FormRequest
             'note' => ['nullable', 'string', 'max:1000'],
             'lines' => ['bail', 'required', 'array', 'min:1', 'max:'.self::MAX_LINES],
             'lines.*.product_id' => ['bail', 'required', $this->orderableProduct()],
-            // The values of a line depend on how it counts, so `after()` checks them. These rules only keep the fields in `validated()`.
-            'lines.*.quantity' => ['nullable'],
-            'lines.*.sizes' => ['nullable'],
-            'lines.*.sizes.*' => ['nullable'],
+            // INV-13: the units of a line per colour and size (colour id → size id → as typed); `after()` checks them against the
+            // product's colours and sizes. These rules only keep the fields in `validated()`.
+            'lines.*.units' => ['nullable'],
+            'lines.*.units.*' => ['nullable'],
+            'lines.*.units.*.*' => ['nullable'],
         ];
     }
 
@@ -82,16 +82,15 @@ class StoreOrderRequest extends FormRequest
             'client.array' => __("Enter the client's phone."),
             ...ClientFieldRules::messages('client.'),
             'ordered_on.before_or_equal' => __("The order date can't be in the future."),
-            'lines.required' => __('Add at least one product.'),
-            'lines.min' => __('Add at least one product.'),
+            'lines.required' => OrderMessages::noProduct(),
+            'lines.min' => OrderMessages::noProduct(),
             'lines.max' => __('An order can hold up to :max products.', ['max' => self::MAX_LINES]),
             'lines.*.product_id.required' => __('Choose a product.'),
         ];
     }
 
     /**
-     * The quantity of every line, once the lines are known: a single `quantity` for a line that counts as one size, a quantity per size
-     * (`sizes`, size id → units) for a line counted by size. The other key of a line is ignored.
+     * The units of every line, once the lines are known (INV-13): `units`, colour id → size id → as typed.
      *
      * @return list<callable(Validator): void>
      */
@@ -120,7 +119,8 @@ class StoreOrderRequest extends FormRequest
     }
 
     /**
-     * The order's saved line of this product, with its `product` loaded: it decides how the line counts. None for a new order.
+     * The order's saved line of this product, with its `product` and `sizes` loaded: it decides how the line counts and which colours
+     * it may keep. None for a new order.
      */
     protected function savedLine(int $productId): ?OrderLine
     {
@@ -205,48 +205,53 @@ class StoreOrderRequest extends FormRequest
     }
 
     /**
-     * The units of one line. A line that counts as one size (a "One size" product, or recorded before sizes) needs its `quantity`. A
-     * line counted by size needs `sizes`: every size of its list empty or a whole number from 0 to 1,000,000, a size of another list
-     * refused (the form was built for other sizes), then the line's total from 1 to 1,000,000.
+     * The units of one line (INV-13): `units`, colour id → size id → as typed. Every colour must be one of the product's (or, on Edit
+     * order, one the line already holds) and every size one of the line's list, else the form was built for other colours or sizes and
+     * the line is refused as a whole. Each cell is empty or a whole number from 0 to 1,000,000 ("Indigo M: Enter a whole number from 0
+     * to 1,000,000."), then the line's total runs from 1 to 1,000,000.
      *
      * @param  array<string, mixed>  $line
      */
     private function checkUnits(Validator $validator, string $field, array $line, Product $product): void
     {
-        [$mode, $list] = app(SyncOrderLines::class)->counting($product, $this->savedLine($product->id));
-
-        if ($mode !== OrderLineSizeMode::BySize) {
-            if (! self::wholeNumber($line['quantity'] ?? null, 1)) {
-                $validator->errors()->add("{$field}.quantity", __('The quantity must be a whole number from 1 to 1,000,000.'));
-            }
-
-            return;
-        }
-
+        $saved = $this->savedLine($product->id);
+        [, $list] = app(SyncOrderLines::class)->counting($product, $saved);
+        $colours = app(SyncOrderLines::class)->allowedColours($product, $saved);
+        $oneSize = $list->code === SizeList::ONE_SIZE;
         $labels = $list->sizes->pluck('label', 'id')->all();
+        $units = $line['units'] ?? null;
         $total = 0;
-        $foreign = false;
+        $foreign = ! is_array($units);
         $failed = false;
 
-        foreach (is_array($line['sizes'] ?? null) ? $line['sizes'] : [] as $id => $units) {
-            if (! array_key_exists($id, $labels)) {
+        foreach (is_array($units) ? $units : [] as $colourId => $sizes) {
+            if (! isset($colours[$colourId]) || ! is_array($sizes)) {
                 $foreign = true;
-            } elseif ($units !== null && $units !== '') {
-                if (self::wholeNumber($units, 0)) {
-                    $total += (int) $units;
-                } else {
-                    $failed = true;
-                    $validator->errors()->add("{$field}.sizes.{$id}", SizeNames::prefixed($labels[$id], OrderMessages::sizeQuantity()));
+
+                continue;
+            }
+
+            foreach ($sizes as $sizeId => $value) {
+                if (! array_key_exists($sizeId, $labels)) {
+                    $foreign = true;
+                } elseif ($value !== null && $value !== '') {
+                    if (self::wholeNumber($value, 0)) {
+                        $total += (int) $value;
+                    } else {
+                        $failed = true;
+                        $variant = OrderMessages::variant($colours[$colourId], $labels[$sizeId], $oneSize);
+                        $validator->errors()->add("{$field}.units.{$colourId}.{$sizeId}", "{$variant}: ".OrderMessages::sizeQuantity());
+                    }
                 }
             }
         }
 
         if ($foreign) {
-            $validator->errors()->add("{$field}.sizes", OrderMessages::orderSizesChanged($product->name));
+            $validator->errors()->add("{$field}.units", OrderMessages::orderSizesChanged($product->name));
         } elseif (! $failed && $total < 1) {
-            $validator->errors()->add("{$field}.sizes", OrderMessages::atLeastOneUnit($product->name));
+            $validator->errors()->add("{$field}.units", OrderMessages::atLeastOneUnit($product->name));
         } elseif (! $failed && $total > self::MAX_UNITS) {
-            $validator->errors()->add("{$field}.sizes", OrderMessages::lineTooBig());
+            $validator->errors()->add("{$field}.units", OrderMessages::lineTooBig());
         }
     }
 

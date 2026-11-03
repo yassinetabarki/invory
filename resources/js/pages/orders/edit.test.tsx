@@ -3,10 +3,13 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import OrdersEdit from '@/pages/orders/edit';
 import {
-    formProduct,
+    indigo,
+    jacketStock,
+    jeansStock,
     sizedJacketLine,
     sizeIds,
-    sizeLists,
+    stockProduct,
+    white,
     withOneSize,
 } from '@/test/fixtures';
 import { act } from '@testing-library/react';
@@ -83,8 +86,32 @@ const props: OrderEditProps = {
             source_other: null,
         },
     },
-    products: [formProduct(jacket), formProduct(jeans)],
-    size_lists: sizeLists,
+    // Both lines were recorded before sizes: their grid is "One size", one field per colour.
+    line_products: [
+        {
+            ...stockProduct(
+                1,
+                'Denim Jacket',
+                'PRD-JKT-001',
+                [
+                    [white, [3]],
+                    [indigo, [6]],
+                ],
+                true,
+            ),
+            product: { ...jacket, photo_url: null },
+        },
+        {
+            ...jeansStock,
+            ...stockProduct(
+                5,
+                'Denim Jeans 5-pocket',
+                'PRD-JNS-005',
+                [[white, [0]]],
+                true,
+            ),
+        },
+    ],
     cities: ['Tunis'],
     client_sources: [],
 };
@@ -94,7 +121,7 @@ describe('orders/edit page', () => {
         resetInertiaMock();
     });
 
-    it('opens "Edit order" with the order filled in and a deleted product still editable', async () => {
+    it('opens "Edit order" with each line\'s grid filled in, a deleted product still on it (INV-13 AC-4)', async () => {
         const user = userEvent.setup();
 
         render(<OrdersEdit {...props} />);
@@ -102,151 +129,145 @@ describe('orders/edit page', () => {
         expect(
             screen.getByRole('heading', { level: 1, name: 'Edit order' }),
         ).toBeInTheDocument();
-        // Edit order shows the order's client and keeps it (INV-4-d gives it a picker).
-        expect(screen.getByText('Boutique Lina')).toBeInTheDocument();
-        expect(screen.queryByLabelText('Phone')).not.toBeInTheDocument();
-        expect(screen.getByLabelText('Order date')).toHaveValue('2026-10-15');
-        expect(screen.getByLabelText('Note (optional)')).toHaveValue('');
-
-        const first = within(screen.getByRole('group', { name: 'Line 1' }));
-        const second = within(screen.getByRole('group', { name: 'Line 2' }));
-
         expect(
-            first.getByRole('combobox', { name: 'Product' }),
-        ).toHaveTextContent('Denim Jacket');
-        expect(first.getByLabelText('Quantity')).toHaveValue('50');
-        expect(
-            second.getByRole('combobox', { name: 'Product' }),
-        ).toHaveTextContent('Denim Jeans 5-pocket');
+            screen.getByRole('heading', {
+                level: 3,
+                name: 'On this order · 2 products',
+            }),
+        ).toBeInTheDocument();
 
-        await user.clear(first.getByLabelText('Quantity'));
-        await user.type(first.getByLabelText('Quantity'), '60');
+        const jacketBlock = within(
+            screen.getByRole('region', { name: 'Denim Jacket' }),
+        );
+
+        // White holds the 50 units of before INV-13; Indigo is empty; the shelf is under each field.
+        expect(jacketBlock.getByLabelText('White')).toHaveValue('50');
+        expect(jacketBlock.getByLabelText('White')).toHaveAccessibleDescription(
+            'In stock 3',
+        );
+        expect(jacketBlock.getByLabelText('Indigo')).toHaveValue('');
+        expect(jacketBlock.getByText('Total 50 units')).toBeInTheDocument();
+        expect(
+            screen.getAllByText('Total on this order · 80 units · 2 products'),
+        ).toHaveLength(1);
+
+        await user.clear(jacketBlock.getByLabelText('White'));
+        await user.type(jacketBlock.getByLabelText('White'), '40');
+        await user.type(jacketBlock.getByLabelText('Indigo'), '6');
         await user.click(screen.getByRole('button', { name: 'Save order' }));
 
-        expect(inertiaMock.submissions).toHaveLength(1);
-        expect(inertiaMock.submissions[0]).toMatchObject({
+        expect(inertiaMock.submissions.at(-1)).toMatchObject({
             action: '/orders/7',
             method: 'put',
             data: {
-                client_id: 3,
-                ordered_on: '2026-10-15',
-                note: '',
                 lines: [
-                    { product_id: 1, quantity: '60' },
-                    { product_id: 5, quantity: '30' },
+                    {
+                        product_id: 1,
+                        units: {
+                            [white.id]: { [sizeIds.oneSize]: '40' },
+                            [indigo.id]: { [sizeIds.oneSize]: '6' },
+                        },
+                    },
+                    {
+                        product_id: 5,
+                        units: { [white.id]: { [sizeIds.oneSize]: '30' } },
+                    },
                 ],
             },
         });
-        expect(screen.getByRole('link', { name: 'Cancel' })).toHaveAttribute(
-            'href',
-            '/orders',
-        );
     });
 
-    it('fills each size with its saved quantity, and keeps "Quantity" with a hint for a line recorded before sizes (S-60 AC-4, AC-5)', async () => {
-        const user = userEvent.setup();
-
-        render(
-            <OrdersEdit
-                {...props}
-                order={{
-                    ...props.order,
-                    lines: [sizedJacketLine, props.order.lines[1]],
-                }}
-            />,
-        );
-
-        const first = within(screen.getByRole('group', { name: 'Line 1' }));
-        const second = within(screen.getByRole('group', { name: 'Line 2' }));
-
-        expect(first.queryByLabelText('Quantity')).not.toBeInTheDocument();
-        expect(
-            ['S', 'M', 'L', 'XL'].map(
-                (label) =>
-                    (first.getByLabelText(label) as HTMLInputElement).value,
-            ),
-        ).toEqual(['10', '20', '15', '5']);
-        expect(first.getByText('Total 50 units')).toBeInTheDocument();
-
-        expect(second.getByLabelText('Quantity')).toHaveValue('30');
-        expect(second.getByLabelText('Quantity')).toHaveAccessibleDescription(
-            'Recorded before sizes.',
-        );
-
-        // Changing M from 20 to 25 is posted by size id; the total follows.
-        await user.clear(first.getByLabelText('M'));
-        await user.type(first.getByLabelText('M'), '25');
-        expect(first.getByText('Total 55 units')).toBeInTheDocument();
-
-        // Removed and added back in the same visit, the line is still counted as before.
-        await user.click(
-            screen.getByRole('button', { name: 'Remove Denim Jeans 5-pocket' }),
-        );
-        await user.click(screen.getByRole('button', { name: 'Add product' }));
-        await user.click(
-            within(screen.getByRole('group', { name: 'Line 2' })).getByRole(
-                'combobox',
-                { name: 'Product' },
-            ),
-        );
-        await user.click(
-            screen.getByRole('option', {
-                name: 'Denim Jeans 5-pocket · PRD-JNS-005',
-            }),
-        );
-
-        const back = within(screen.getByRole('group', { name: 'Line 2' }));
-
-        expect(back.getByLabelText('Quantity')).toHaveAccessibleDescription(
-            'Recorded before sizes.',
-        );
-        await user.type(back.getByLabelText('Quantity'), '30');
-        await user.click(screen.getByRole('button', { name: 'Save order' }));
-
-        expect(inertiaMock.submissions[0].data.lines).toEqual([
-            {
-                product_id: 1,
-                sizes: {
-                    [sizeIds.S]: '10',
-                    [sizeIds.M]: '25',
-                    [sizeIds.L]: '15',
-                    [sizeIds.XL]: '5',
+    it('fills a line counted by size per colour and size, and shows a colour since taken off the product (INV-13 AC-4)', () => {
+        const line: OrderLine = {
+            ...sizedJacketLine,
+            sizes: [
+                ...sizedJacketLine.sizes.slice(0, 2),
+                {
+                    ...sizedJacketLine.sizes[1],
+                    colour: indigo,
+                    quantity: 7,
+                    to_start: 7,
                 },
-            },
-            { product_id: 5, quantity: '30' },
-        ]);
-    });
-
-    it('locks the product and Remove of a line that has started (AC-6)', () => {
-        const started: OrderLine = {
-            ...notStarted(70, jacket, 50),
-            to_start: 20,
-            in_cutting: 30,
-            started: 30,
-            status: 'in_progress',
-            status_label: 'In progress',
+            ],
         };
 
         render(
             <OrdersEdit
                 {...props}
-                order={{
-                    ...props.order,
-                    lines: [started, props.order.lines[1]],
-                }}
+                order={{ ...props.order, lines: [line] }}
+                // The jacket no longer has White: its row still shows, with nothing on the shelf.
+                line_products={[
+                    {
+                        ...jacketStock,
+                        stock: {
+                            ...jacketStock.stock,
+                            colours: jacketStock.stock.colours.filter(
+                                (entry) => entry.colour.id !== white.id,
+                            ),
+                        },
+                    },
+                ]}
             />,
         );
 
-        const first = within(screen.getByRole('group', { name: 'Line 1' }));
-        const second = within(screen.getByRole('group', { name: 'Line 2' }));
-
-        expect(first.getByRole('combobox', { name: 'Product' })).toBeDisabled();
-        expect(
-            first.getByRole('button', { name: 'Remove Denim Jacket' }),
-        ).toHaveAccessibleDescription(
-            "Denim Jacket can't be removed: 30 units have started.",
+        const block = within(
+            screen.getByRole('region', { name: 'Denim Jacket' }),
         );
-        expect(second.getByRole('combobox', { name: 'Product' })).toBeEnabled();
+
+        expect(block.getByLabelText('White S')).toHaveValue('10');
+        expect(block.getByLabelText('White S')).toHaveAccessibleDescription(
+            'Out of stock',
+        );
+        expect(block.getByLabelText('White M')).toHaveValue('20');
+        expect(block.getByLabelText('Indigo M')).toHaveValue('7');
+        expect(block.getByLabelText('Indigo S')).toHaveAccessibleDescription(
+            'In stock 2',
+        );
+    });
+
+    it('shows a started cell its minimum and locks Remove on a started line (INV-13 AC-4)', () => {
+        const started: OrderLine = {
+            ...sizedJacketLine,
+            in_cutting: 10,
+            to_start: 40,
+            started: 10,
+            sizes: sizedJacketLine.sizes.map((row) =>
+                row.size.id === sizeIds.M
+                    ? { ...row, in_cutting: 10, to_start: 10, started: 10 }
+                    : row,
+            ),
+        };
+
+        render(
+            <OrdersEdit
+                {...props}
+                order={{ ...props.order, lines: [started] }}
+                line_products={[jacketStock]}
+            />,
+        );
+
+        const block = within(
+            screen.getByRole('region', { name: 'Denim Jacket' }),
+        );
+
+        expect(block.getByLabelText('White M')).toHaveAccessibleDescription(
+            'Out of stock At least 10',
+        );
+        expect(block.getByLabelText('White S')).toHaveAccessibleDescription(
+            'Out of stock',
+        );
+        expect(
+            block.getByRole('button', {
+                name: 'Remove Denim Jacket from this order',
+            }),
+        ).toBeDisabled();
+        expect(
+            block.getByRole('button', {
+                name: 'Remove Denim Jacket from this order',
+            }),
+        ).toHaveAccessibleDescription(
+            "Denim Jacket can't be removed: 10 units have started.",
+        );
     });
 
     it("shows the order's client in the picker with her grey line, and moves the order to another client (INV-4 AC-6)", async () => {

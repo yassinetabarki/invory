@@ -3,6 +3,7 @@
 use App\Models\Material;
 use App\Models\Order;
 use App\Models\OrderLineCut;
+use App\Models\SizeList;
 use App\Models\StockMovement;
 use Illuminate\Testing\TestResponse;
 use Tests\Support\DemoHistory;
@@ -67,7 +68,8 @@ it('leaves every material, its history and the cuts alone (AC-6)', function (arr
         'Move back to Ready to ship' => [$started, fn (Order $order) => acceptedMove($order, 'back_to_ready', 2)],
         'editing the order\'s quantities' => [$started, function (Order $order): void {
             actingAs(test()->user)->put(route('orders.update', $order), validOrderPayload(['lines' => [
-                ['product_id' => pid(1), 'quantity' => '60'], ['product_id' => pid(5), 'quantity' => '35'],
+                ['product_id' => pid(1), 'units' => orderUnits(pid(1), ['One size' => '60'], list: SizeList::ONE_SIZE)],
+                ['product_id' => pid(5), 'units' => orderUnits(pid(5), ['One size' => '35'], list: SizeList::ONE_SIZE)],
             ]]))->assertSessionHasNoErrors();
         }],
         'recording a sale' => [$started, function (): void {

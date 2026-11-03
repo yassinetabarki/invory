@@ -1,7 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import OrdersCreate from '@/pages/orders/create';
-import { formProduct, sizeLists } from '@/test/fixtures';
 import { resetInertiaMock } from '@/test/inertia';
 import type { OrderCreateProps } from '@/types/domain';
 
@@ -14,16 +13,6 @@ vi.mock('@inertiajs/react', async (importOriginal) => {
 });
 
 const props: OrderCreateProps = {
-    products: [
-        formProduct({
-            id: 1,
-            name: 'Denim Jacket',
-            sku: 'PRD-JKT-001',
-            status: 'active',
-            deleted: false,
-        }),
-    ],
-    size_lists: sizeLists,
     cities: [],
     client_sources: [],
     client_preset: null,
@@ -34,7 +23,7 @@ describe('orders/create page', () => {
         resetInertiaMock();
     });
 
-    it('opens "New order" with Details, Products and one empty line', () => {
+    it('opens "New order" with Details, and Products with its search and no product yet (INV-13)', () => {
         render(<OrdersCreate {...props} />);
 
         expect(
@@ -48,9 +37,19 @@ describe('orders/create page', () => {
         ).toBeInTheDocument();
         expect(screen.getByLabelText('Order date')).toHaveValue('2026-10-08');
         expect(
-            screen.getByRole('combobox', { name: 'Product' }),
-        ).toHaveTextContent('Choose a product…');
-        expect(screen.getByLabelText('Quantity')).toHaveValue('');
+            screen.getByRole('searchbox', { name: 'Search products' }),
+        ).toHaveValue('');
+        expect(
+            screen.getByText(
+                'Search what the client wants, check what is in stock, then add it.',
+            ),
+        ).toBeVisible();
+        expect(screen.getByText('No products on this order yet')).toBeVisible();
+        expect(
+            screen.getByText(
+                'Search for a product above and add what the client ordered.',
+            ),
+        ).toBeVisible();
         expect(screen.getByRole('link', { name: 'Cancel' })).toHaveAttribute(
             'href',
             '/orders',

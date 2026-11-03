@@ -142,10 +142,28 @@ final readonly class OrderMessages
         return __('Enter a whole number from 0 to 1,000,000.');
     }
 
-    /** Every size of a line is empty or 0 (S-60 AC-2). */
+    /** Every colour and size of a line is empty or 0 (S-60 AC-2; INV-13 AC-3). */
     public static function atLeastOneUnit(string $product): string
     {
-        return __('Enter at least one unit of :product.', ['product' => $product]);
+        return __('Enter at least one unit of :product, or remove it from this order.', ['product' => $product]);
+    }
+
+    /** An order with no product (INV-13 AC-3). */
+    public static function noProduct(): string
+    {
+        return __('Add at least one product to this order.');
+    }
+
+    /**
+     * A colour and size in a sentence (INV-13): "Indigo M", "Black, size 38", or the colour alone for a "One size" line ("Camel").
+     */
+    public static function variant(string $colour, string $sizeLabel, bool $oneSize): string
+    {
+        return match (true) {
+            $oneSize => $colour,
+            ctype_digit($sizeLabel) => "{$colour}, size {$sizeLabel}",
+            default => "{$colour} {$sizeLabel}",
+        };
     }
 
     /** The sizes of a line add up to more than a line can hold (S-60 AC-2). */
@@ -160,7 +178,7 @@ final readonly class OrderMessages
      */
     public static function orderSizesChanged(string $product): string
     {
-        return __('The sizes of :product have changed. Enter its quantities again.', ['product' => $product]);
+        return __('The colours or sizes of :product have changed. Enter its quantities again.', ['product' => $product]);
     }
 
     /** The sizes of the line changed after the move window was built (S-61 F3): nothing moves. Shown under `sizes`, the whole window. */

@@ -78,14 +78,18 @@ class OrderLine extends Model
     }
 
     /**
-     * The sizes of this line, in the size list's order. The order is a subselect on the size's position, not a join: the rows keep their
-     * columns (strict models), it runs the same on SQLite and PostgreSQL, and it survives eager loading.
+     * The colour and size rows of this line, by colour in list order (position, name, id; INV-13), then in the size list's order. The
+     * order is made of subselects, not joins: the rows keep their columns (strict models), it runs the same on SQLite and PostgreSQL,
+     * and it survives eager loading.
      *
      * @return HasMany<OrderLineSize, $this>
      */
     public function sizes(): HasMany
     {
         return $this->hasMany(OrderLineSize::class)
+            ->orderBy(Colour::query()->select('position')->whereColumn('colours.id', 'order_line_sizes.colour_id'))
+            ->orderBy(Colour::query()->select('name')->whereColumn('colours.id', 'order_line_sizes.colour_id'))
+            ->orderBy('order_line_sizes.colour_id')
             ->orderBy(Size::query()->select('position')->whereColumn('sizes.id', 'order_line_sizes.size_id'));
     }
 

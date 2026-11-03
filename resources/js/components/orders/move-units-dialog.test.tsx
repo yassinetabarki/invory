@@ -11,7 +11,13 @@ import {
 import { MoveUnitsDialog } from '@/components/orders/move-units-dialog';
 import type { MoveTarget } from '@/components/orders/move-units-dialog';
 import { PREVIEW_DEBOUNCE_MS } from '@/components/orders/use-move-preview';
-import { sizedJacketLine, sizeIds, withOneSize } from '@/test/fixtures';
+import {
+    indigo,
+    sizedJacketLine,
+    sizeIds,
+    white,
+    withOneSize,
+} from '@/test/fixtures';
 import { inertiaMock, resetInertiaMock, setFormState } from '@/test/inertia';
 import type {
     MaterialMoveRow,
@@ -643,6 +649,7 @@ describe('<MoveUnitsDialog> materials table (S-53)', () => {
             >,
         ): OrderLineSize {
             return {
+                colour: white,
                 size: { id, label },
                 quantity:
                     figures.to_start +
@@ -700,7 +707,8 @@ describe('<MoveUnitsDialog> materials table (S-53)', () => {
             );
 
             return {
-                size: (label: string) => screen.getByLabelText(label),
+                size: (label: string) =>
+                    screen.getByLabelText(`White ${label}`),
                 moveUnits: () =>
                     screen.getByRole('button', { name: 'Move units' }),
             };
@@ -762,7 +770,9 @@ describe('<MoveUnitsDialog> materials table (S-53)', () => {
                 data: {
                     move: 'start_cutting',
                     units: '',
-                    sizes: { [sizeIds.S]: '4', [sizeIds.M]: '10' },
+                    cells: {
+                        [white.id]: { [sizeIds.S]: '4', [sizeIds.M]: '10' },
+                    },
                 },
             });
         });
@@ -833,20 +843,28 @@ describe('<MoveUnitsDialog> materials table (S-53)', () => {
 
                 for (const [label, hint] of fields) {
                     expect(
-                        screen.getByLabelText(label),
+                        screen.getByLabelText(`White ${label}`),
                     ).toHaveAccessibleDescription(hint);
                 }
             },
         );
 
         it.each([
-            ['the window', 'sizes', 'Enter at least one unit to move.'],
-            ['M', `sizes.${sizeIds.M}`, 'You can move at most 20 units of M.'],
-            ['M', `sizes.${sizeIds.M}`, 'M: Enter a whole number of units.'],
+            ['the window', 'cells', 'Enter at least one unit to move.'],
+            [
+                'M',
+                `cells.${white.id}.${sizeIds.M}`,
+                'You can move at most 20 units of M.',
+            ],
+            [
+                'M',
+                `cells.${white.id}.${sizeIds.M}`,
+                'M: Enter a whole number of units.',
+            ],
             // L holds 0 in cutting: it has no field, so its message goes under all the fields.
             [
                 'the window',
-                `sizes.${sizeIds.L}`,
+                `cells.${white.id}.${sizeIds.L}`,
                 'You can move at most 0 units of L.',
             ],
         ])(
@@ -952,7 +970,7 @@ describe('<MoveUnitsDialog> materials table (S-53)', () => {
 
             await answer(0, cutting20Short);
             fireEvent.click(moveUnits());
-            setFormState({ errors: { sizes: shortMessage } });
+            setFormState({ errors: { cells: shortMessage } });
 
             expect(screen.getAllByText(shortMessage)).toHaveLength(1);
             expect(size('S')).toBeInvalid();
@@ -977,7 +995,7 @@ describe('<MoveUnitsDialog> materials table (S-53)', () => {
                 />,
             );
 
-            type(screen.getByLabelText('S'), '2');
+            type(screen.getByLabelText('White S'), '2');
             fireEvent.click(screen.getByRole('button', { name: 'Move units' }));
             expect(inertiaMock.submissions).toHaveLength(1);
 
@@ -993,14 +1011,14 @@ describe('<MoveUnitsDialog> materials table (S-53)', () => {
                 />,
             );
 
-            setFormState({ errors: { sizes: changed } });
+            setFormState({ errors: { cells: changed } });
 
-            expect(screen.queryByLabelText('S')).not.toBeInTheDocument();
-            expect(screen.getByLabelText('M')).toHaveFocus();
-            expect(screen.getByLabelText('M')).toBeInvalid();
-            expect(screen.getByLabelText('M')).toHaveAccessibleDescription(
-                `Up to 3 ${changed}`,
-            );
+            expect(screen.queryByLabelText('White S')).not.toBeInTheDocument();
+            expect(screen.getByLabelText('White M')).toHaveFocus();
+            expect(screen.getByLabelText('White M')).toBeInvalid();
+            expect(
+                screen.getByLabelText('White M'),
+            ).toHaveAccessibleDescription(`Up to 3 ${changed}`);
             expect(screen.getAllByText(changed)).toHaveLength(1);
             expect(inertiaMock.submissions).toHaveLength(1);
         });
@@ -1035,7 +1053,7 @@ describe('<MoveUnitsDialog> materials table (S-53)', () => {
 
             setFormState({
                 errors: {
-                    [`sizes.${sizeIds.XL}`]:
+                    [`cells.${white.id}.${sizeIds.XL}`]:
                         'You can move at most 5 units of XL.',
                 },
             });
@@ -1046,6 +1064,35 @@ describe('<MoveUnitsDialog> materials table (S-53)', () => {
                 'Up to 5 You can move at most 5 units of XL.',
             );
             expect(size('M')).not.toBeInvalid();
+        });
+
+        it('asks a number per colour and size on a line in two colours and posts them by colour (INV-13 AC-5)', async () => {
+            const twoColours = {
+                ...sizedJacketLine,
+                sizes: [
+                    sizedJacketLine.sizes[0],
+                    { ...sizedJacketLine.sizes[1], colour: indigo },
+                ],
+            };
+            const { moveUnits } = setupSized('start_cutting', twoColours);
+
+            expect(screen.getAllByRole('textbox')).toHaveLength(2);
+            type(screen.getByLabelText('White S'), '2');
+            type(screen.getByLabelText('Indigo M'), '3');
+            expect(screen.getByText('Total 5 units')).toBeVisible();
+            await rest();
+            await answer(0, cutting14);
+            fireEvent.click(moveUnits());
+
+            expect(inertiaMock.submissions[0]).toMatchObject({
+                data: {
+                    move: 'start_cutting',
+                    cells: {
+                        [white.id]: { [sizeIds.S]: '2' },
+                        [indigo.id]: { [sizeIds.M]: '3' },
+                    },
+                },
+            });
         });
 
         it('wraps the fields, each with its label (AC-7)', () => {

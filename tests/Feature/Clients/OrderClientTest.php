@@ -22,7 +22,7 @@ function editWithClient(Order $order, mixed $clientId): array
         'client_id' => $clientId,
         'ordered_on' => '2026-10-08',
         'note' => '',
-        'lines' => [['product_id' => pid(4), 'quantity' => '2']],
+        'lines' => [['product_id' => pid(4), 'units' => orderUnits(pid(4), ['One size' => '2'])]],
     ];
 }
 

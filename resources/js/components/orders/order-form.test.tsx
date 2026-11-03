@@ -1,14 +1,25 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
-import { OrderForm } from '@/components/orders/order-form';
-import { inertiaMock, resetInertiaMock, setFormState } from '@/test/inertia';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import {
-    formProduct,
-    sizedJacketLine,
+    afterEach,
+    beforeEach,
+    describe,
+    expect,
+    it,
+    vi,
+} from 'vite-plus/test';
+import { OrderForm } from '@/components/orders/order-form';
+import { ORDER_SEARCH_DEBOUNCE_MS } from '@/components/orders/use-product-search';
+import {
+    black,
+    indigo,
+    jacketStock,
+    jeansStock,
+    lightWash,
     sizeIds,
-    sizeLists,
+    toteStock,
 } from '@/test/fixtures';
+import { inertiaMock, resetInertiaMock, setFormState } from '@/test/inertia';
+import type { OrderStockProduct } from '@/types/domain';
 
 vi.mock('@inertiajs/react', async (importOriginal) => {
     const { createInertiaModule } = await import('@/test/inertia');
@@ -18,392 +29,305 @@ vi.mock('@inertiajs/react', async (importOriginal) => {
     );
 });
 
-function product(
-    id: number,
-    name: string,
-    sku: string,
-    sizeListCode = 's_to_xl',
-) {
-    return formProduct(
-        { id, name, sku, status: 'active', deleted: false },
-        sizeListCode,
-    );
-}
+const device = vi.hoisted(() => ({ mobile: false }));
 
-const products = [
-    product(1, 'Denim Jacket', 'PRD-JKT-001'),
-    product(2, 'Leather Tote', 'PRD-TOT-002', 'one_size'),
-    product(3, 'Leather Belt', 'PRD-BLT-003', 'one_size'),
-];
+vi.mock('@/hooks/use-mobile', () => ({ useIsMobile: () => device.mobile }));
 
 function renderForm() {
-    const user = userEvent.setup();
-
     render(
         <OrderForm
             title="New order"
-            products={products}
-            sizeLists={sizeLists}
             action={{ url: '/orders', method: 'post' }}
             cancelHref="/orders"
         />,
     );
-
-    return user;
 }
 
-type User = ReturnType<typeof userEvent.setup>;
-
-/** The nth line's group (1-based). */
-function lineGroup(number: number) {
-    return within(screen.getByRole('group', { name: `Line ${number}` }));
+/** Searches, answers with these products, and presses Add to order on `name`. */
+async function addProduct(name: string, found: OrderStockProduct[]) {
+    fireEvent.change(
+        screen.getByRole('searchbox', { name: 'Search products' }),
+        { target: { value: name } },
+    );
+    await act(async () => {
+        await vi.advanceTimersByTimeAsync(ORDER_SEARCH_DEBOUNCE_MS);
+    });
+    await act(async () =>
+        inertiaMock.http.requests
+            .at(-1)
+            ?.resolve({ total: found.length, products: found }),
+    );
+    fireEvent.click(
+        screen.getByRole('button', { name: `Add ${name} to this order` }),
+    );
 }
 
-async function fillLine(
-    user: User,
-    number: number,
-    option: string,
-    quantity: string,
-) {
-    const line = lineGroup(number);
-
-    await user.click(line.getByRole('combobox', { name: 'Product' }));
-    await user.click(screen.getByRole('option', { name: option }));
-    await user.type(line.getByLabelText('Quantity'), quantity);
+function block(name: string) {
+    return within(screen.getByRole('region', { name }));
 }
 
-describe('<OrderForm>', () => {
+function type(field: HTMLElement, value: string) {
+    fireEvent.change(field, { target: { value } });
+}
+
+describe('<OrderForm> Products (INV-13)', () => {
     beforeEach(() => {
         resetInertiaMock();
+        device.mobile = false;
+        vi.useFakeTimers({ shouldAdvanceTime: true });
     });
 
-    it('records an order with two one-size products (AC-2)', async () => {
-        const user = renderForm();
+    afterEach(() => {
+        vi.useRealTimers();
+    });
 
-        expect(screen.getByLabelText('Phone')).toHaveValue('');
-        expect(screen.getByLabelText('Order date')).toHaveValue('2026-10-08');
-        expect(screen.getByLabelText('Note (optional)')).toHaveAttribute(
-            'placeholder',
-            'Delivery date, packing, anything the client asked for',
+    it('adds the Jacket and the Jeans, takes quantities per colour and size with the shelf under each, and adds them up (AC-2)', async () => {
+        renderForm();
+
+        expect(screen.getByText('No products on this order yet')).toBeVisible();
+
+        await addProduct('Denim Jacket', [jacketStock, jeansStock]);
+
+        // The focus goes to the first quantity field of the product added.
+        expect(block('Denim Jacket').getByLabelText('Black S')).toHaveFocus();
+        expect(
+            screen.getByRole('heading', {
+                level: 3,
+                name: 'On this order · 1 product',
+            }),
+        ).toBeInTheDocument();
+        expect(
+            screen.getByRole('button', { name: 'On this order' }),
+        ).toBeInTheDocument();
+        expect(
+            screen.getByRole('table', {
+                name: 'Quantity per colour and size · Denim Jacket',
+            }),
+        ).toBeInTheDocument();
+
+        const jacket = block('Denim Jacket');
+
+        expect(jacket.getByLabelText('Indigo S')).toHaveAccessibleDescription(
+            'In stock 2',
         );
-        expect(screen.getAllByRole('group', { name: /^Line / })).toHaveLength(
-            1,
+        expect(jacket.getByLabelText('Indigo M')).toHaveAccessibleDescription(
+            'Out of stock',
         );
         expect(
-            lineGroup(1).getByRole('combobox', { name: 'Product' }),
-        ).toHaveTextContent('Choose a product…');
+            jacket.getByText('Out of stock', {
+                selector: `#order-p1-c${indigo.id}-s${sizeIds.M}-stock`,
+            }),
+        ).toHaveClass('font-bold');
+        expect(
+            jacket.getByLabelText('Light wash XL'),
+        ).toHaveAccessibleDescription('Out of stock');
 
-        await user.type(screen.getByLabelText('Phone'), '71 234 567');
-        await user.type(screen.getByLabelText('Name'), 'Boutique Lina');
-        await user.type(screen.getByLabelText('City'), 'Tunis');
-        fireEvent.change(screen.getByLabelText('Order date'), {
-            target: { value: '2026-10-15' },
-        });
-        await user.click(screen.getByLabelText('Note (optional)'));
-        await user.paste('Deliver before 30 Oct, in 2 boxes');
+        type(jacket.getByLabelText('Indigo S'), '4');
+        type(jacket.getByLabelText('Indigo M'), '8');
 
-        await fillLine(user, 1, 'Leather Tote · PRD-TOT-002', '50');
-        await user.click(screen.getByRole('button', { name: 'Add product' }));
-        await fillLine(user, 2, 'Leather Belt · PRD-BLT-003', '30');
+        fireEvent.click(
+            screen.getByRole('button', {
+                name: 'Add Denim Jeans 5-pocket to this order',
+            }),
+        );
+        type(block('Denim Jeans 5-pocket').getByLabelText('Indigo M'), '10');
 
-        expect(inertiaMock.submissions).toHaveLength(0);
+        expect(jacket.getByText('Total 12 units')).toBeVisible();
+        expect(
+            block('Denim Jeans 5-pocket').getByText('Total 10 units'),
+        ).toBeVisible();
+        expect(
+            screen.getByText('Total on this order · 22 units · 2 products'),
+        ).toBeVisible();
+        // Beside Save order and Cancel.
+        expect(screen.getByText('22 units · 2 products')).toBeVisible();
+        expect(
+            screen.getByRole('heading', {
+                level: 3,
+                name: 'On this order · 2 products',
+            }),
+        ).toBeInTheDocument();
+        // No warning when a number is above the stock: Out of stock never blocks.
+        expect(screen.queryByRole('alert')).not.toBeInTheDocument();
 
-        await user.click(screen.getByRole('button', { name: 'Save order' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Save order' }));
 
-        expect(inertiaMock.submissions).toHaveLength(1);
-        expect(inertiaMock.submissions[0]).toMatchObject({
+        const sent = inertiaMock.submissions.at(-1)?.data as {
+            lines: {
+                product_id: number;
+                units: Record<number, Record<number, string>>;
+            }[];
+        };
+
+        expect(inertiaMock.submissions.at(-1)).toMatchObject({
             action: '/orders',
             method: 'post',
-            data: {
-                client: {
-                    phone: '71 234 567',
-                    name: 'Boutique Lina',
-                    city: 'Tunis',
-                    source: '',
-                    source_other: '',
-                },
-                ordered_on: '2026-10-15',
-                note: 'Deliver before 30 Oct, in 2 boxes',
-                lines: [
-                    { product_id: 2, quantity: '50' },
-                    { product_id: 3, quantity: '30' },
-                ],
-            },
         });
-        // The client-only line keys are never sent.
-        expect(inertiaMock.submissions[0].data.lines).toEqual([
-            { product_id: 2, quantity: '50' },
-            { product_id: 3, quantity: '30' },
-        ]);
-        expect(screen.getByRole('link', { name: 'Cancel' })).toHaveAttribute(
-            'href',
-            '/orders',
-        );
-    });
-
-    it("shows the server's messages under their fields and keeps what was typed (AC-4)", async () => {
-        const user = renderForm();
-
-        await user.type(screen.getByLabelText('Name'), 'Boutique Lina');
-        await fillLine(user, 1, 'Leather Tote · PRD-TOT-002', '0');
-        await user.click(screen.getByRole('button', { name: 'Add product' }));
-
-        setFormState({
-            errors: {
-                'client.name': 'Keep the name to 100 characters or fewer.',
-                ordered_on: "The order date can't be in the future.",
-                note: 'The note field must not be greater than 1000 characters.',
-                lines: 'An order can hold up to 50 products.',
-                'lines.1.product_id': 'Denim Jacket is already on this order.',
-                'lines.0.quantity':
-                    'The quantity must be a whole number from 1 to 1,000,000.',
-            },
+        expect(sent.lines.map((line) => line.product_id)).toEqual([1, 5]);
+        // Every cell of the grid goes, an untouched one as ''.
+        expect(sent.lines[0].units[indigo.id]).toEqual({
+            [sizeIds.S]: '4',
+            [sizeIds.M]: '8',
+            [sizeIds.L]: '',
+            [sizeIds.XL]: '',
         });
-
-        for (const [field, message] of [
-            [
-                screen.getByLabelText('Name'),
-                // After the field's hint (INV-4: "The person or the shop, as you call them.").
-                /Keep the name to 100 characters or fewer\.$/,
-            ],
-            [
-                screen.getByLabelText('Order date'),
-                "The order date can't be in the future.",
-            ],
-            [
-                screen.getByLabelText('Note (optional)'),
-                'The note field must not be greater than 1000 characters.',
-            ],
-            [
-                lineGroup(1).getByLabelText('Quantity'),
-                'The quantity must be a whole number from 1 to 1,000,000.',
-            ],
-            [
-                lineGroup(2).getByRole('combobox', { name: 'Product' }),
-                'Denim Jacket is already on this order.',
-            ],
-        ] as const) {
-            expect(field).toBeInvalid();
-            expect(field).toHaveAccessibleDescription(message);
-        }
-
-        expect(
-            within(screen.getByRole('region', { name: 'Products' })).getByRole(
-                'alert',
-            ),
-        ).toHaveTextContent('An order can hold up to 50 products.');
-        // Under the second line only.
-        expect(
-            lineGroup(1).queryByText('Denim Jacket is already on this order.'),
-        ).not.toBeInTheDocument();
-        expect(
-            lineGroup(1).getByRole('combobox', { name: 'Product' }),
-        ).toBeValid();
-
-        // Nothing typed was lost.
-        expect(screen.getByLabelText('Name')).toHaveValue('Boutique Lina');
-        expect(lineGroup(1).getByLabelText('Quantity')).toHaveValue('0');
-        expect(
-            lineGroup(1).getByRole('combobox', { name: 'Product' }),
-        ).toHaveTextContent('Leather Tote · PRD-TOT-002');
-    });
-
-    it('asks a quantity per size for a product with sizes and posts them by size id (S-60 AC-1)', async () => {
-        const user = renderForm();
-        const line = lineGroup(1);
-
-        await user.type(screen.getByLabelText('Name'), 'Boutique Lina');
-        await user.click(line.getByRole('combobox', { name: 'Product' }));
-        await user.click(
-            screen.getByRole('option', { name: 'Denim Jacket · PRD-JKT-001' }),
-        );
-
-        // The group has a visible name (S-60 F4), not a screen-reader-only one.
-        expect(
-            line.getByRole('group', { name: 'Quantity per size' }),
-        ).toBeInTheDocument();
-        expect(line.getByText('Quantity per size')).not.toHaveClass('sr-only');
-
-        // One field per size, in the list's order, in place of "Quantity".
-        const fields = line.getAllByRole('textbox');
-
-        expect(fields).toHaveLength(4);
-        ['S', 'M', 'L', 'XL'].forEach((label, index) =>
-            expect(fields[index]).toHaveAccessibleName(label),
-        );
-        expect(line.queryByLabelText('Quantity')).not.toBeInTheDocument();
-        expect(line.getByText('Total 0 units')).toBeInTheDocument();
-
-        // XL is left empty at first: it counts 0.
-        await user.type(line.getByLabelText('S'), '10');
-        await user.type(line.getByLabelText('M'), '20');
-        await user.type(line.getByLabelText('L'), '15');
-        expect(line.getByText('Total 45 units')).toBeInTheDocument();
-        await user.type(line.getByLabelText('XL'), '5');
-        expect(line.getByText('Total 50 units')).toBeInTheDocument();
-
-        await user.click(screen.getByRole('button', { name: 'Add product' }));
-        await user.click(
-            lineGroup(2).getByRole('combobox', { name: 'Product' }),
-        );
-        await user.click(
-            screen.getByRole('option', { name: 'Leather Tote · PRD-TOT-002' }),
-        );
-        expect(lineGroup(2).getByLabelText('Quantity')).toBeInTheDocument();
-        expect(lineGroup(2).queryByText(/^Total/)).not.toBeInTheDocument();
-        await user.type(lineGroup(2).getByLabelText('Quantity'), '12');
-
-        await user.click(screen.getByRole('button', { name: 'Save order' }));
-
-        expect(inertiaMock.submissions).toHaveLength(1);
-        expect(inertiaMock.submissions[0].data.lines).toEqual([
-            {
-                product_id: 1,
-                sizes: {
-                    [sizeIds.S]: '10',
-                    [sizeIds.M]: '20',
-                    [sizeIds.L]: '15',
-                    [sizeIds.XL]: '5',
-                },
-            },
-            { product_id: 2, quantity: '12' },
+        expect(Object.keys(sent.lines[0].units).map(Number)).toEqual([
+            black.id,
+            indigo.id,
+            lightWash.id,
         ]);
+        expect(sent.lines[1].units[indigo.id][sizeIds.M]).toBe('10');
     });
 
-    it("shows a product's new sizes and the refusal under Total after its sizes changed, without a second post (S-60 F3)", async () => {
-        const user = userEvent.setup();
-        const props = {
-            title: 'New order',
-            sizeLists,
-            action: { url: '/orders', method: 'post' as const },
-            cancelHref: '/orders',
-        };
-        const { rerender } = render(
-            <OrderForm {...props} products={products} />,
-        );
-        const line = lineGroup(1);
+    it('removes a product and goes back to the search; an empty cell or 0 counts nothing', async () => {
+        renderForm();
+        await addProduct('Denim Jacket', [jacketStock]);
 
-        await user.type(screen.getByLabelText('Name'), 'Boutique Lina');
-        await user.click(line.getByRole('combobox', { name: 'Product' }));
-        await user.click(
-            screen.getByRole('option', { name: 'Denim Jacket · PRD-JKT-001' }),
-        );
-        await user.type(line.getByLabelText('S'), '10');
-        await user.click(screen.getByRole('button', { name: 'Save order' }));
-        expect(inertiaMock.submissions).toHaveLength(1);
+        type(block('Denim Jacket').getByLabelText('Black S'), '0');
+        type(block('Denim Jacket').getByLabelText('Black M'), 'abc');
+        expect(block('Denim Jacket').getByText('Total 0 units')).toBeVisible();
 
-        // The server refuses: the product moved to the 36 to 46 list meanwhile.
-        const message =
-            'The sizes of Denim Jacket have changed. Enter its quantities again.';
-
-        rerender(
-            <OrderForm
-                {...props}
-                products={[
-                    product(1, 'Denim Jacket', 'PRD-JKT-001', 'eu_36_to_46'),
-                    ...products.slice(1),
-                ]}
-            />,
-        );
-
-        // The page's new props and the refusal arrive together.
-        setFormState({ errors: { 'lines.0.sizes': message } });
-
-        const sizes = line.getAllByRole('textbox');
-
-        expect(sizes).toHaveLength(11);
-        expect(sizes[0]).toHaveAccessibleName('36');
-        expect(sizes[10]).toHaveAccessibleName('46');
-        expect(line.queryByLabelText('XL')).not.toBeInTheDocument();
-        expect(
-            line.getByText('Total 0 units').nextElementSibling,
-        ).toHaveTextContent(message);
-        expect(sizes[0]).toHaveFocus();
-        expect(inertiaMock.submissions).toHaveLength(1);
-    });
-
-    it('shows a started size its minimum before anything is typed, and only that size (S-70 AC-6)', async () => {
-        const user = userEvent.setup();
-        // M has 4 in cutting, 3 ready to ship and 3 shipped: 10 started. The line is 50 units.
-        const line = {
-            ...sizedJacketLine,
-            in_cutting: 4,
-            ready_to_ship: 3,
-            shipped: 3,
-            started: 10,
-            to_start: 40,
-            sizes: sizedJacketLine.sizes.map((entry) =>
-                entry.size.id === sizeIds.M
-                    ? {
-                          ...entry,
-                          to_start: 10,
-                          in_cutting: 4,
-                          ready_to_ship: 3,
-                          shipped: 3,
-                          started: 10,
-                      }
-                    : entry,
-            ),
-        };
-
-        render(
-            <OrderForm
-                title="Edit order"
-                order={{
-                    id: 7,
-                    client: 'Boutique Lina',
-                    ordered_on: '2026-10-20',
-                    note: null,
-                    lines: [line],
-                    units: 50,
-                    to_start: 40,
-                    in_cutting: 4,
-                    ready_to_ship: 3,
-                    shipped: 3,
-                    status: 'in_progress',
-                    status_label: 'In progress',
-                    delete_refusal: null,
-                    client_id: 3,
-                    client_details: null,
-                }}
-                products={[
-                    ...products,
-                    product(
-                        4,
-                        'Canvas Low Sneaker',
-                        'PRD-SNK-004',
-                        'eu_36_to_46',
-                    ),
-                ]}
-                sizeLists={sizeLists}
-                action={{ url: '/orders/7', method: 'put' }}
-                cancelHref="/orders/7"
-            />,
-        );
-
-        const first = lineGroup(1);
-
-        expect(first.getByLabelText('M')).toHaveAccessibleDescription(
-            'At least 10',
-        );
-
-        for (const label of ['S', 'L', 'XL']) {
-            expect(
-                first.getByLabelText(label),
-            ).not.toHaveAccessibleDescription();
-        }
-
-        // A line added now has nothing started.
-        await user.click(screen.getByRole('button', { name: 'Add product' }));
-        const added = lineGroup(2);
-
-        await user.click(added.getByRole('combobox', { name: 'Product' }));
-        await user.click(
-            screen.getByRole('option', {
-                name: 'Canvas Low Sneaker · PRD-SNK-004',
+        fireEvent.click(
+            screen.getByRole('button', {
+                name: 'Remove Denim Jacket from this order',
             }),
         );
 
-        expect(added.getByLabelText('36')).not.toHaveAccessibleDescription();
+        expect(
+            screen.queryByRole('region', { name: 'Denim Jacket' }),
+        ).not.toBeInTheDocument();
+        expect(screen.getByText('No products on this order yet')).toBeVisible();
+        expect(
+            screen.getByRole('searchbox', { name: 'Search products' }),
+        ).toHaveFocus();
+        expect(
+            screen.getByRole('button', {
+                name: 'Add Denim Jacket to this order',
+            }),
+        ).toBeEnabled();
+    });
+
+    it('gives a "One size" product the columns Colour · Quantity', async () => {
+        renderForm();
+        await addProduct('Leather Tote', [toteStock]);
+
+        const table = screen.getByRole('table', {
+            name: 'Quantity per colour and size · Leather Tote',
+        });
+
+        expect(
+            within(table)
+                .getAllByRole('columnheader')
+                .map((header) => header.textContent),
+        ).toEqual(['Colour', 'Quantity']);
+        expect(
+            block('Leather Tote').getByLabelText('Camel'),
+        ).toHaveAccessibleDescription('In stock 4');
+    });
+
+    it("shows the server's messages under their field and the line, the focus on the first (AC-3)", async () => {
+        renderForm();
+        await addProduct('Denim Jacket', [jacketStock, jeansStock]);
+        fireEvent.click(
+            screen.getByRole('button', {
+                name: 'Add Denim Jeans 5-pocket to this order',
+            }),
+        );
+        type(block('Denim Jacket').getByLabelText('Indigo M'), '2.5');
+
+        setFormState({
+            errors: {
+                [`lines.0.units.${indigo.id}.${sizeIds.M}`]:
+                    'Indigo M: Enter a whole number from 0 to 1,000,000.',
+                'lines.1.units':
+                    'Enter at least one unit of Denim Jeans 5-pocket, or remove it from this order.',
+            },
+        });
+
+        const field = block('Denim Jacket').getByLabelText('Indigo M');
+
+        expect(field).toBeInvalid();
+        expect(field).toHaveFocus();
+        expect(field).toHaveAccessibleDescription(
+            'Out of stock Indigo M: Enter a whole number from 0 to 1,000,000.',
+        );
+        expect(field).toHaveValue('2.5');
+        expect(
+            block('Denim Jeans 5-pocket').getByText(
+                'Enter at least one unit of Denim Jeans 5-pocket, or remove it from this order.',
+            ),
+        ).toBeVisible();
+        expect(
+            block('Denim Jeans 5-pocket').getByLabelText('Indigo M'),
+        ).toBeInvalid();
+    });
+
+    it('says "Add at least one product to this order." with no product', () => {
+        renderForm();
+
+        setFormState({
+            errors: { lines: 'Add at least one product to this order.' },
+        });
+
+        expect(screen.getByRole('alert')).toHaveTextContent(
+            'Add at least one product to this order.',
+        );
+    });
+
+    it('keeps everything typed and says so when the save fails (AC-3)', async () => {
+        renderForm();
+        await addProduct('Denim Jacket', [jacketStock]);
+        type(block('Denim Jacket').getByLabelText('Indigo S'), '4');
+
+        fireEvent.click(screen.getByRole('button', { name: 'Save order' }));
+        const options = inertiaMock.submissions.at(-1)?.options as {
+            onNetworkError: () => boolean;
+        };
+
+        act(() => {
+            options.onNetworkError();
+        });
+
+        expect(screen.getByRole('alert')).toHaveTextContent(
+            "Couldn't save the order. Try again.",
+        );
+        expect(block('Denim Jacket').getByLabelText('Indigo S')).toHaveValue(
+            '4',
+        );
+    });
+
+    it('shows a spinner on Save order while saving, keeping its label', () => {
+        renderForm();
+        setFormState({ processing: true });
+
+        expect(
+            screen.getByRole('button', { name: /Save order/ }),
+        ).toBeDisabled();
+        expect(
+            screen.getByRole('button', { name: /Save order/ }),
+        ).toHaveTextContent('Save order');
+    });
+
+    it('reads a colour band with three sizes to a row on a phone, and Save order in a bar fixed at the bottom (AC-7)', async () => {
+        device.mobile = true;
+        renderForm();
+        await addProduct('Denim Jacket', [jacketStock]);
+
+        const indigoBand = screen.getByRole('group', { name: /Indigo/ });
+
+        expect(
+            within(indigoBand).getByLabelText('S'),
+        ).toHaveAccessibleDescription('In stock 2');
+        expect(
+            within(indigoBand).getByLabelText('S').closest('.grid-cols-3'),
+        ).not.toBeNull();
+        expect(
+            screen.getByRole('button', {
+                name: 'Remove Denim Jacket from this order',
+            }),
+        ).toHaveClass('max-sm:size-11');
+        expect(
+            screen.getByRole('button', { name: 'Save order' }).parentElement,
+        ).toHaveClass('max-md:fixed');
     });
 });

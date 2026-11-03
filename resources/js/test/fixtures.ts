@@ -3,6 +3,7 @@
  * API Resources send them.
  */
 import type {
+    Colour,
     Material,
     MaterialFilters,
     MaterialRef,
@@ -10,6 +11,7 @@ import type {
     OrderLine,
     OrderLineSizeMode,
     OrderProduct,
+    OrderStockProduct,
     Paginated,
     Size,
     SizeList,
@@ -26,6 +28,26 @@ export const sizeIds = {
 } as const;
 
 const size = (id: number, label: string): Size => ({ id, label });
+
+/** The first default colour of every workshop (INV-1): order lines recorded before INV-13 hold it (INV-13-a). */
+export const white: Colour = {
+    id: 1,
+    code: 'WHT',
+    name: 'White',
+    swatch: '#FFFFFF',
+};
+export const indigo: Colour = {
+    id: 10,
+    code: 'IND',
+    name: 'Indigo',
+    swatch: '#3E4C7E',
+};
+export const black: Colour = {
+    id: 8,
+    code: 'BLK',
+    name: 'Black',
+    swatch: '#1F1F23',
+};
 
 export const sizeLists: Record<string, SizeList> = {
     s_to_xl: {
@@ -52,6 +74,86 @@ export const sizeLists: Record<string, SizeList> = {
     },
 };
 
+export const lightWash: Colour = {
+    id: 11,
+    code: 'LWH',
+    name: 'Light wash',
+    swatch: '#9DB3D1',
+};
+
+/**
+ * A product as "Search products" and the order's grid show it (INV-13): the card's shelf, S · M · L · XL per colour, in list order.
+ * `stock` is [colour, units per size][]; the totals are added up here as the server would send them.
+ */
+export function stockProduct(
+    id: number,
+    name: string,
+    sku: string,
+    stock: [Colour, number[]][],
+    oneSize = false,
+): OrderStockProduct {
+    const sizes = oneSize ? sizeLists.one_size.sizes : sizeLists.s_to_xl.sizes;
+    const colours = stock.map(([colour, units]) => ({
+        colour,
+        units: units.reduce((sum, count) => sum + count, 0),
+        sizes: (oneSize
+            ? [units.reduce((sum, count) => sum + count, 0)]
+            : units
+        ).map((count, index) => ({ size: sizes[index], units: count })),
+    }));
+
+    return {
+        product: {
+            id,
+            name,
+            sku,
+            status: 'active',
+            deleted: false,
+            photo_url: null,
+        },
+        sizes,
+        one_size: oneSize,
+        stock: {
+            units: colours.reduce((sum, entry) => sum + entry.units, 0),
+            sizes: sizes.map((size, index) => ({
+                size,
+                units: colours.reduce(
+                    (sum, entry) => sum + (entry.sizes[index]?.units ?? 0),
+                    0,
+                ),
+            })),
+            colours,
+        },
+    };
+}
+
+/** The card's Denim Jacket: Black 1 · 0 · 2 · 1, Indigo 2 · 0 · 3 · 1, Light wash nothing: In stock 10 units. */
+export const jacketStock = stockProduct(1, 'Denim Jacket', 'PRD-JKT-001', [
+    [black, [1, 0, 2, 1]],
+    [indigo, [2, 0, 3, 1]],
+    [lightWash, [0, 0, 0, 0]],
+]);
+
+/** The card's Denim Jeans 5-pocket: Indigo 0 · 5 · 2 · 0, Black 1 · 2 · 0 · 0. */
+export const jeansStock = stockProduct(
+    5,
+    'Denim Jeans 5-pocket',
+    'PRD-JNS-005',
+    [
+        [indigo, [0, 5, 2, 0]],
+        [black, [1, 2, 0, 0]],
+    ],
+);
+
+/** A "One size" product in Camel (4 on the shelf). */
+export const toteStock = stockProduct(
+    4,
+    'Leather Tote',
+    'PRD-TOT-004',
+    [[{ id: 4, code: 'CAM', name: 'Camel', swatch: '#B98A57' }, [4]]],
+    true,
+);
+
 /** An order product as the order forms offer it (S-60): Apparel products use the S to XL list. */
 export function formProduct(
     product: OrderProduct,
@@ -75,6 +177,7 @@ export function withOneSize(
         size_mode,
         sizes: [
             {
+                colour: white,
                 size: size(sizeIds.oneSize, 'One size'),
                 quantity: line.quantity,
                 to_start: line.to_start,
@@ -110,6 +213,7 @@ export const sizedJacketLine: OrderLine = {
         [sizeIds.L, 'L', 15],
         [sizeIds.XL, 'XL', 5],
     ].map(([id, label, quantity]) => ({
+        colour: white,
         size: size(Number(id), String(label)),
         quantity: Number(quantity),
         to_start: Number(quantity),

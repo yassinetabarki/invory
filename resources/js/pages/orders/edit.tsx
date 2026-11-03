@@ -5,8 +5,7 @@ import type { OrderEditProps } from '@/types/domain';
 
 export default function OrdersEdit({
     order,
-    products,
-    size_lists,
+    line_products,
     cities,
     client_sources,
 }: OrderEditProps) {
@@ -20,8 +19,7 @@ export default function OrdersEdit({
                     key={order.id}
                     order={order}
                     title="Edit order"
-                    products={products}
-                    sizeLists={size_lists}
+                    lineProducts={line_products}
                     action={update(order.id)}
                     cancelHref={index.url()}
                     cities={cities}

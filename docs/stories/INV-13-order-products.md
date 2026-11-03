@@ -115,7 +115,7 @@ Indigo, Light wash in that order.
 
 ## Technical work
 > [!warning] Complex · CRITICAL · backend + frontend · 8 commits
-> Tech-lead · 2026-11-03 · approved 2026-11-03
+> Tech-lead · 2026-11-03 · approved 2026-11-03 · delivered 2026-11-03
 > Why complex: a migration of every order line, a changed contract (the order form, the order page's moves, a new search route), a
 > new business rule (a colour on open orders can't be removed) and the order page's cutting moving to colour and size.
 
@@ -341,3 +341,37 @@ land): INV-13-f → INV-13-g, in parallel with INV-13-h. Merge order is the step
 - **Variant SKU and barcode matching** reuse INV-8's rules, so a label read out in a message finds the same product as the scan field.
 - **The cutting per colour is thrown away by INV-14** → its change is kept to the request keys, the row lookup and the snapshot.
 - **Size:** about 2,400 lines over 8 steps, more than an M; the steps are small enough to review one at a time.
+
+### Delivered differently from the plan
+- **The move window sends `cells`, not `units` by colour and size**: `units` stays the single field of a line with one row. A line counted
+  by size, or holding several colours (a "One size" line in two colours too), sends `cells` (colour id → size id → units); errors come
+  back under `cells` and `cells.<colour id>.<size id>`, "You can move at most 4 units of Indigo M.", "Indigo M: Enter a whole number of
+  units.". The cut's history entries carry `colour_id` and the label "Indigo M".
+- **Every line names its colours on the Orders list and the client page**, also a line that counts as one size: "12 × Leather Tote
+  (Camel 12)", and a line recorded before sizes "50 × Denim Jacket (White 50)" (its first colour, AC-6). The order page's chips read
+  "Indigo M 20" (or "Camel 12").
+- **Edit order reads its lines once**: the order and `line_products` come from the same loaded lines, and `SizeLists` now builds the
+  categories' lists from its own cached lists (two queries fewer on every page that reads both), so Edit order stays within 10 queries.
+  `FinishedStock::ofMany()` reads the shelf of several products in one query (the search and Edit order).
+- **`OrderFormProductResource`, the `products` and `size_lists` props of the order forms, and the old line row are gone.**
+- **Tests send the new shapes** through two helpers in `tests/Pest.php`: `orderUnits()` (a line's `units`) and `cellUnits()` /
+  `whiteCells()` (a move); `colourFigures()` reads a line's rows by "Indigo M".
+- **Wording the card doesn't give, written here:** the order page's table heads its first column **Colour and size** (was "Size") and is
+  named "Denim Jacket: units by colour, size and stage"; its phone list is "Colours and sizes". "1 product found" for one result. The
+  quantity grid's **Remove** shows its word on a laptop and is a 44 px icon on a phone.
+
+### Delivery report (2026-11-03)
+Gates on this machine, final tree: `composer test` green (Pint, PHPStan, 3,079 Pest tests: 3,003 green, 76 skipped); `npx vp test`
+green (129 files, 1,513 tests); `npm run check`, `npm run types:check` and `npm run build` green; `composer test:pgsql` 3,079 of
+3,079. Not run: the browser golden path (Playwright is outdated on this machine, see INV-3).
+
+| AC | Evidence |
+| --- | --- |
+| AC-1 · Search products | `OrderProductSearchTest` (name, SKU, variant SKU, colour, barcode; drafts, archived and deleted left out; 6 of 14; empty and no match; one size; another workshop; guests; one stock query); `product-search.test.tsx` (box, hint, Searching…, results and tables, Out, On this order, 50 products, no match, Try again, Clear search, phone chips) |
+| AC-2 · Quantities | `order-form.test.tsx` (Add to order focus, In stock / Out of stock under each field, Total 12 units, band and "22 units · 2 products", Remove, 0 and empty, one size, phone layout) |
+| AC-3 · Saving | `OrderSizesWriteTest` (the card's order, no stock, material or sale touched, every refusal and its key, colours or sizes changed, the old shape refused); `OrderWriteTest` ("Add at least one product to this order.", 51 products, one size); `order-form.test.tsx` (messages under fields and focus, Couldn't save, spinner) |
+| AC-4 · Edit order | `EditStartedOrderTest`, `OrderSizesWriteTest` (started cells "White M can't be less than…", started line kept, colour moved, a colour since taken off kept, under the lock); `OrderPagesTest` (`line_products`); `edit.test.tsx` (grid filled, At least 10, locked Remove) |
+| AC-5 · Lines with colour | `orders-table.test.tsx` ("Black M 1 · Indigo S 1 · M 2"); `order-line-card.test.tsx`; `MoveSizesTest` (Indigo M 4 cut, its limit, a colour not on the line, a one-size line in two colours); `move-units-dialog.test.tsx` (cells per colour) |
+| AC-6 · Colours on orders | `OrderLineColoursMigrationTest` (first colour, deleted product, no colour, counts kept, `down()`, keys); `ProductColourLockTest` (12 units / 1 unit refused, shipped and deleted orders allowed, shelf sentence first, other products ignored) |
+| AC-7 · Phone and keyboard | `product-search.test.tsx` (chips, full-width Add), `order-form.test.tsx` (band, three to a row, 44 px Remove, fixed Save bar); the 320 px and keyboard checks are in the click-through |
+

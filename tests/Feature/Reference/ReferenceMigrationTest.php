@@ -32,6 +32,11 @@ function referenceMigration(): Migration
     // The S-60-a order line sizes migration points at the size lists, the sizes and order lines, so it goes before all of them.
     // The INV-1-e product colours migration points at products (on PostgreSQL through `unique(workshop_id, id)`), so it is the very first to go.
     // The INV-8-a barcodes migration points at the workshops, colours and sizes, so it goes before everything it depends on.
+    // The INV-13-a colour on the order line sizes points at colours and order lines, so it goes first.
+    if (Schema::hasColumn('order_line_sizes', 'colour_id')) {
+        orderLineColoursMigration()->down();
+    }
+
     if (Schema::hasTable('barcodes')) {
         labelSettingsMigration()->down();
         ticketCodesMigration()->down();

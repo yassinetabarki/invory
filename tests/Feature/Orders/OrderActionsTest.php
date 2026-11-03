@@ -23,7 +23,7 @@ it('leaves no order, no line and no new client behind when a line fails to save'
         'client' => ['phone' => '71 234 567', 'name' => 'Boutique Lina', 'city' => 'Tunis'],
         'ordered_on' => '2026-10-15',
         'note' => null,
-        'lines' => [['product_id' => $product->id, 'quantity' => 5], ['product_id' => $product->id, 'quantity' => 7]],
+        'lines' => [['product_id' => $product->id, 'units' => orderUnits($product->id, ['One size' => 5])], ['product_id' => $product->id, 'units' => orderUnits($product->id, ['One size' => 7])]],
     ], $user))->toThrow(UniqueConstraintViolationException::class)
         ->and(Order::query()->count())->toBe(0)
         ->and(Client::query()->withoutGlobalScopes()->where('workshop_id', $user->workshop_id)->count())->toBe(0)

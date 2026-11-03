@@ -2,7 +2,14 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { OrdersTable } from '@/components/orders/orders-table';
-import { sizedJacketLine, sizeIds, withOneSize } from '@/test/fixtures';
+import {
+    sizedJacketLine,
+    sizeIds,
+    withOneSize,
+    black,
+    indigo,
+    white,
+} from '@/test/fixtures';
 import { resetInertiaMock } from '@/test/inertia';
 import type { Order, OrderLine, OrderProgress } from '@/types/domain';
 
@@ -52,6 +59,7 @@ function sizedLine(counts: [keyof typeof sizeIds, number][]): OrderLine {
         quantity,
         to_start: quantity,
         sizes: counts.map(([label, units]) => ({
+            colour: white,
             size: { id: sizeIds[label], label },
             quantity: units,
             to_start: units,
@@ -154,7 +162,10 @@ describe('<OrdersTable>', () => {
             within(cells[2])
                 .getAllByRole('listitem')
                 .map((item) => item.textContent),
-        ).toEqual(['50 × Denim Jacket', '30 × Denim Jeans 5-pocket']);
+        ).toEqual([
+            '50 × Denim Jacket (White 50)',
+            '30 × Denim Jeans 5-pocket (White 30)',
+        ]);
         expect(cells.slice(3, 8).map((cell) => cell.textContent)).toEqual([
             '80',
             '50',
@@ -204,9 +215,9 @@ describe('<OrdersTable>', () => {
                 .getAllByRole('listitem')
                 .map((item) => item.textContent),
         ).toEqual([
-            '10 × Denim Jacket',
-            '20 × Classic White T-shirt',
-            '30 × Canvas Low Sneaker',
+            '10 × Denim Jacket (White 10)',
+            '20 × Classic White T-shirt (White 20)',
+            '30 × Canvas Low Sneaker (White 30)',
             '+ 2 more',
         ]);
         expect(table().queryByText(/Leather Tote/)).not.toBeInTheDocument();
@@ -216,7 +227,7 @@ describe('<OrdersTable>', () => {
         [
             'S 10 · M 20 · L 15 · XL 5',
             sizedJacketLine,
-            '50 × Denim Jacket (S 10 · M 20 · L 15 · XL 5)',
+            '50 × Denim Jacket (White S 10 · M 20 · L 15 · XL 5)',
         ],
         [
             'a size with 0 units left out',
@@ -225,7 +236,7 @@ describe('<OrdersTable>', () => {
                 ['M', 0],
                 ['XL', 5],
             ]),
-            '15 × Denim Jacket (S 10 · XL 5)',
+            '15 × Denim Jacket (White S 10 · XL 5)',
         ],
         [
             'number sizes get a colon (S-60 F9)',
@@ -240,6 +251,7 @@ describe('<OrdersTable>', () => {
                     ['37', 6, 8],
                     ['38', 7, 0],
                 ].map(([label, id, units]) => ({
+                    colour: white,
                     size: { id: Number(id), label: String(label) },
                     quantity: Number(units),
                     to_start: Number(units),
@@ -251,17 +263,41 @@ describe('<OrdersTable>', () => {
                 quantity: 12,
                 to_start: 12,
             },
-            '12 × Canvas Low Sneaker (36: 4 · 37: 8)',
+            '12 × Canvas Low Sneaker (White 36: 4 · 37: 8)',
         ],
         [
             'a line counted as one size',
             { ...line(2, 'Leather Tote', 12), size_mode: 'one_size' },
-            '12 × Leather Tote',
+            '12 × Leather Tote (White 12)',
         ],
         [
             'a line recorded before sizes',
             line(1, 'Denim Jacket', 50),
-            '50 × Denim Jacket',
+            '50 × Denim Jacket (White 50)',
+        ],
+        [
+            'two colours, each named once before its sizes (INV-13 AC-5)',
+            {
+                ...sizedLine([['M', 1]]),
+                quantity: 4,
+                sizes: (
+                    [
+                        [black, 'M', 1],
+                        [indigo, 'S', 1],
+                        [indigo, 'M', 2],
+                    ] as const
+                ).map(([colour, label, units]) => ({
+                    colour,
+                    size: { id: sizeIds[label], label },
+                    quantity: units,
+                    to_start: units,
+                    in_cutting: 0,
+                    ready_to_ship: 0,
+                    shipped: 0,
+                    started: 0,
+                })),
+            },
+            '4 × Denim Jacket (Black M 1 · Indigo S 1 · M 2)',
         ],
     ])('lists the products with their sizes: %s', (_case, orderLine, text) => {
         renderTable([{ ...lina, lines: [orderLine] }]);
@@ -306,8 +342,8 @@ describe('<OrdersTable>', () => {
             card.getAllByRole('listitem').map((item) => item.textContent),
         ).toEqual(
             expect.arrayContaining([
-                '50 × Denim Jacket',
-                '30 × Denim Jeans 5-pocket',
+                '50 × Denim Jacket (White 50)',
+                '30 × Denim Jeans 5-pocket (White 30)',
             ]),
         );
         expect(

@@ -19,6 +19,7 @@ use App\Models\StockMovement;
 use App\Models\User;
 use App\Services\Workshops\CurrentWorkshop;
 use Carbon\CarbonImmutable;
+use Database\Factories\OrderLineSizeFactory;
 use Database\Seeders\DemoCatalogSeeder;
 use Database\Seeders\DemoSalesSeeder;
 use Illuminate\Database\Migrations\Migration;
@@ -322,11 +323,89 @@ function validOrderPayload(array $overrides = []): array
         'ordered_on' => now()->toDateString(),
         'note' => 'Deliver before 30 Oct, in 2 boxes',
         'lines' => [
-            ['product_id' => pid(1), 'quantity' => '50', 'sizes' => sizeIds(['S' => '10', 'M' => '20', 'L' => '15', 'XL' => '5'])],
-            ['product_id' => pid(5), 'quantity' => '30', 'sizes' => sizeIds(['M' => '30'])],
+            ['product_id' => pid(1), 'units' => orderUnits(pid(1), ['S' => '10', 'M' => '20', 'L' => '15', 'XL' => '5'])],
+            ['product_id' => pid(5), 'units' => orderUnits(pid(5), ['M' => '30'])],
         ],
         ...$overrides,
     ];
+}
+
+/**
+ * The units of an order line as the form posts them (INV-13): colour id → size id → as typed, from size labels of the product's own
+ * list (`'One size'` for a one-size product), or of the list with code `$list`. The colour is the one with code `$colour` (made a colour of the product when it isn't),
+ * or the product's first colour. A product the workshop can't see (another workshop's, or none) gets the first colour of the current
+ * workshop and the Apparel sizes, so the payload still has a shape.
+ *
+ * @param  array<string, int|string|null>  $byLabel
+ * @return array<int, array<int, int|string|null>>
+ */
+function orderUnits(?int $productId, array $byLabel, ?string $colour = null, ?string $list = null): array
+{
+    $product = $productId === null ? null : Product::withTrashed()->find($productId);
+
+    if ($product === null) {
+        return [(int) Colour::query()->ordered()->value('id') => sizeIds($byLabel)];
+    }
+
+    if ($colour !== null) {
+        $colourId = Colour::query()->where('code', $colour)->firstOrFail()->id;
+        $product->colours()->syncWithoutDetaching([$colourId => ['workshop_id' => $product->workshop_id]]);
+    } else {
+        $colourId = OrderLineSizeFactory::firstColourOf($product->id);
+    }
+
+    // `$list` (a list code) for a line that counts by another list than its product's: "One size" for one recorded before sizes.
+    $listId = $list === null
+        ? ProductCategory::query()->whereKey($product->category_id)->value('size_list_id')
+        : SizeList::query()->where('code', $list)->value('id');
+    $ids = Size::query()->where('size_list_id', $listId)->pluck('id', 'label');
+    $sizes = [];
+
+    foreach ($byLabel as $label => $units) {
+        $sizes[$ids->get((string) $label) ?? throw new InvalidArgumentException("No size {$label} for {$product->name}.")] = $units;
+    }
+
+    return [$colourId => $sizes];
+}
+
+/** A move window's `cells` in the default first colour, White (INV-13-e): `[White's id => [size id => units]]`. */
+function whiteCells(array $bySizeId): array
+{
+    return [demoColour('WHT')->id => $bySizeId];
+}
+
+/**
+ * What `MoveOrderLineUnits` takes (INV-13-e): "<colour id>:<size id>" → units, from size ids, in White unless `$colourId` says another.
+ *
+ * @param  array<int, int>  $bySizeId
+ * @return array<string, int>
+ */
+function cellUnits(array $bySizeId, ?int $colourId = null): array
+{
+    $colourId ??= demoColour('WHT')->id;
+    $cells = [];
+
+    foreach ($bySizeId as $sizeId => $units) {
+        $cells["{$colourId}:{$sizeId}"] = $units;
+    }
+
+    return $cells;
+}
+
+/** The only cell of a line with a single row, with these units (INV-13-e). */
+function firstCell(OrderLine $line, int $units): array
+{
+    $row = $line->sizes()->firstOrFail();
+
+    return ["{$row->colour_id}:{$row->size_id}" => $units];
+}
+
+/** The error key of one cell of an order line (INV-13): `lines.<line>.units.<colour id>.<size id>`. */
+function unitsKey(int $line, array $units): string
+{
+    $colourId = array_key_first($units);
+
+    return "lines.{$line}.units.{$colourId}.".array_key_first($units[$colourId]);
 }
 
 /**
@@ -365,6 +444,30 @@ function sizedFigures(Order $order): array
             ->and($line->in_cutting)->toBe($rows->sum(fn (array $row): int => $row[1]))
             ->and($line->ready_to_ship)->toBe($rows->sum(fn (array $row): int => $row[2]))
             ->and($line->shipped)->toBe($rows->sum(fn (array $row): int => $row[3]));
+
+        $figures[$line->product_id] = $rows->all();
+    }
+
+    return $figures;
+}
+
+/**
+ * Like `sizedFigures()`, keyed by colour and size (INV-13): product id → "Indigo M" (or the colour alone for a "One size" row) →
+ * `[quantity, in cutting, ready to ship, shipped]`, rows in the line's order (colour list order, then size). Checks the sums too.
+ *
+ * @return array<int, array<string, array{int, int, int, int}>>
+ */
+function colourFigures(Order $order): array
+{
+    $figures = [];
+
+    foreach ($order->lines()->with(['sizes.size', 'sizes.colour'])->get() as $line) {
+        $rows = $line->sizes->mapWithKeys(fn ($row): array => [
+            ($row->size->label === 'One size' ? $row->colour->name : "{$row->colour->name} {$row->size->label}") => [$row->quantity, $row->in_cutting, $row->ready_to_ship, $row->shipped],
+        ]);
+
+        expect($line->quantity)->toBe($rows->sum(fn (array $row): int => $row[0]))
+            ->and($line->in_cutting + $line->ready_to_ship + $line->shipped)->toBe($rows->sum(fn (array $row): int => $row[1] + $row[2] + $row[3]));
 
         $figures[$line->product_id] = $rows->all();
     }
@@ -711,6 +814,16 @@ function ticketCodesMigration(): Migration
 function labelSettingsMigration(): Migration
 {
     return require database_path('migrations/2026_11_05_200000_create_workshop_label_settings_table.php');
+}
+
+/**
+ * The order line colours migration object (INV-13-a): `colour_id` on `order_line_sizes`, filled with each line's product's first colour.
+ * It is the newest of the hand-kept list (F-60): a test that rolls back the order line sizes, the colours or the product colours (or
+ * anything below them) rolls this one back first, and brings it back up last.
+ */
+function orderLineColoursMigration(): Migration
+{
+    return require database_path('migrations/2026_11_06_100000_add_colour_to_order_line_sizes.php');
 }
 
 /**

@@ -2,6 +2,9 @@
 
 use App\Actions\Products\UpdateProduct;
 use App\Models\Colour;
+use App\Models\Order;
+use App\Models\OrderLine;
+use App\Models\OrderLineSize;
 use App\Models\Product;
 use App\Models\ProductComponent;
 use App\Services\Products\FinishedStock;
@@ -134,4 +137,61 @@ it('checks again under the product\'s lock when stock was added after the reques
         'colours.removed.'.demoColour('IND')->id => ['Indigo has 3 units in stock, so it can\'t be removed from Denim Jacket. Set its stock to 0 first.'],
     ]));
     expect(jacketState($this->jacket))->toBe($before);
+});
+
+/*
+| INV-13-b (AC-6): a colour that open orders still hold, units ordered and not shipped yet, can't come off either.
+*/
+
+/** An order of the jacket in Indigo: one row per size label → [quantity, shipped]. */
+function orderJacketInIndigo(Product $jacket, array $rows, bool $deleted = false): void
+{
+    $order = Order::factory()->create();
+    $line = OrderLine::factory()->sized(array_map(fn (array $row): int => $row[0], $rows), array_map(fn (array $row): array => [0, 0, $row[1]], $rows))
+        ->create(['order_id' => $order->id, 'product_id' => $jacket->id]);
+    OrderLineSize::query()->where('order_line_id', $line->id)->update(['colour_id' => demoColour('IND')->id]);
+
+    if ($deleted) {
+        $order->delete();
+    }
+}
+
+it('refuses to take off a colour that open orders still hold, and saves nothing (INV-13 AC-6)', function (array $rows, string $expected) {
+    orderJacketInIndigo($this->jacket, $rows);
+    $before = jacketState($this->jacket);
+    $indigo = demoColour('IND')->id;
+
+    saveJacketColours($this, ['White', 'Black', 'Light wash'])
+        ->assertRedirect(route('products.edit', $this->jacket))
+        ->assertSessionHasErrors(["colours.removed.{$indigo}" => $expected]);
+
+    expect(jacketState($this->jacket))->toBe($before);
+})->with([
+    '12 units, none shipped' => [['S' => [4, 0], 'M' => [8, 0]], 'Indigo has 12 units on open orders, so it can\'t be removed from Denim Jacket.'],
+    '1 unit left to ship' => [['S' => [4, 3]], 'Indigo has 1 unit on open orders, so it can\'t be removed from Denim Jacket.'],
+]);
+
+it('lets a colour come off once its ordered units are all shipped, or when its order was deleted (INV-13 AC-6)', function (bool $deleted, array $rows) {
+    orderJacketInIndigo($this->jacket, $rows, $deleted);
+
+    saveJacketColours($this, ['White', 'Black', 'Light wash'])->assertSessionHasNoErrors();
+
+    expect($this->jacket->colours()->pluck('colours.code')->all())->not->toContain('IND');
+})->with([
+    'all shipped' => [false, ['S' => [4, 4]]],
+    'deleted order' => [true, ['S' => [4, 0]]],
+]);
+
+it('shows the shelf sentence alone when a colour is both on the shelf and on open orders (INV-13 AC-6)', function () {
+    setFinishedStock($this->jacket, ['Indigo' => [0, 6, 0, 0]]);
+    orderJacketInIndigo($this->jacket, ['S' => [4, 0]]);
+
+    saveJacketColours($this, ['White', 'Black', 'Light wash'])
+        ->assertSessionHasErrors(['colours.removed.'.demoColour('IND')->id => INDIGO_LOCKED]);
+});
+
+it('counts only the orders of this product (INV-13 AC-6)', function () {
+    orderJacketInIndigo(demoProduct('PRD-JNS-005'), ['M' => [10, 0]]);
+
+    saveJacketColours($this, ['White', 'Black', 'Light wash'])->assertSessionHasNoErrors();
 });

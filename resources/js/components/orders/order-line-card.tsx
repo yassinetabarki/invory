@@ -12,7 +12,7 @@ import {
 import { SizeChips } from '@/components/shared/size-chips';
 import { useAppSettings } from '@/hooks/use-app-settings';
 import { formatCount } from '@/lib/format';
-import { orderLineSizeCounts } from '@/lib/sizes';
+import { linePerCell, orderCellName } from '@/lib/sizes';
 import { show } from '@/routes/products';
 import type { OrderLine, OrderLineMove, OrderStage } from '@/types/domain';
 
@@ -120,9 +120,18 @@ export function OrderLineCard({ line, onMove }: OrderLineCardProps) {
                         </span>{' '}
                         · {formatUnits(line.quantity, locale)}
                     </h3>
-                    {/* Chips of a counted-by-size line; one "One size 50" chip on a line recorded before sizes; none for a one-size product. */}
-                    {line.size_mode !== 'one_size' && (
-                        <SizeChips sizes={orderLineSizeCounts(line.sizes)} />
+                    {/* INV-13: a chip per colour and size ("Indigo M 20"), or per colour on a line that counts as one size; none for a one-size line in one colour. */}
+                    {(line.size_mode !== 'one_size' ||
+                        line.sizes.length > 1) && (
+                        <SizeChips
+                            sizes={line.sizes.map((row) => ({
+                                label: orderCellName(
+                                    row,
+                                    line.size_mode !== 'by_size',
+                                ),
+                                units: row.quantity,
+                            }))}
+                        />
                     )}
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
@@ -137,7 +146,7 @@ export function OrderLineCard({ line, onMove }: OrderLineCardProps) {
                 </div>
             </div>
 
-            {line.size_mode === 'by_size' ? (
+            {linePerCell(line) ? (
                 <SizeStagesTable
                     productName={product.name}
                     columns={STAGES.map((spec) => ({
@@ -148,8 +157,11 @@ export function OrderLineCard({ line, onMove }: OrderLineCardProps) {
                         back: backOf(spec, columnId(spec.stage)),
                     }))}
                     rows={line.sizes.map((size) => ({
-                        id: size.size.id,
-                        label: size.size.label,
+                        id: `${size.colour.id}.${size.size.id}`,
+                        label: orderCellName(
+                            size,
+                            line.size_mode !== 'by_size',
+                        ),
                         figures: figuresOf(size),
                     }))}
                     total={figuresOf(line)}

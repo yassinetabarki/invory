@@ -4,40 +4,42 @@ import type { FormEvent } from 'react';
 import { ClientCard } from '@/components/clients/client-card';
 import { EMPTY_CLIENT } from '@/components/clients/client-fields';
 import { EditClientField } from '@/components/clients/edit-client-field';
-import { countingFor, newOrderLine } from '@/components/orders/order-line-row';
-import type {
-    OrderLineRow,
-    StartedLine,
-} from '@/components/orders/order-line-row';
-import { OrderLinesEditor } from '@/components/orders/order-lines-editor';
+import {
+    newOrderLine,
+    OrderLinesEditor,
+    orderSummary,
+    orderUnits,
+} from '@/components/orders/order-lines-editor';
+import type { OrderLineEntry } from '@/components/orders/order-lines-editor';
+import { gridColours } from '@/components/orders/quantity-grid';
 import { FormField } from '@/components/products/form-field';
 import { PageHeader } from '@/components/shared/page-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
+import { useAppSettings } from '@/hooks/use-app-settings';
 import type {
     ClientSource,
     ClientSummary,
     Option,
+    Colour,
     Order,
     OrderFormData,
-    OrderFormProduct,
-    OrderLineSizeMode,
-    SizeList,
+    OrderStockProduct,
 } from '@/types/domain';
 
-/** The form's state: the submitted fields, with a client-only key on each line. */
-type OrderFormState = Omit<OrderFormData, 'lines'> & { lines: OrderLineRow[] };
+/** The form's state: the submitted fields, each line with its product's grid data and a client-only key. */
+type OrderFormState = Omit<OrderFormData, 'lines'> & {
+    lines: OrderLineEntry[];
+};
 
 type OrderFormProps = {
     /** The order being edited; leave out to record a new one. */
     order?: Order;
     title: string;
-    /** Every product the picker offers (the server decides which). */
-    products: OrderFormProduct[];
-    /** The size lists by code: a product's list says how its line counts (S-60). */
-    sizeLists: Record<string, SizeList>;
+    /** Edit order: each line's product with its sizes and shelf stock, in line order (INV-13). */
+    lineProducts?: OrderStockProduct[];
     /** Where to send the form (Wayfinder in the page). */
     action: { url: string; method: 'post' | 'put' };
     cancelHref: string;
@@ -47,18 +49,19 @@ type OrderFormProps = {
     clientPreset?: ClientSummary | null;
 };
 
-/** Starting values: today and one empty line, or the order's own details and lines. */
+/** Starting values: today and no product yet, or the order's own details and lines. */
 function toFormState(
     order: Order | undefined,
     today: string,
     preset: ClientSummary | null,
+    lineProducts: readonly OrderStockProduct[],
 ): OrderFormState {
     if (!order) {
         return {
             client: { ...EMPTY_CLIENT, phone: preset?.phone ?? '' },
             ordered_on: today,
             note: '',
-            lines: [newOrderLine()],
+            lines: [],
         };
     }
 
@@ -67,49 +70,42 @@ function toFormState(
         client_id: order.client_id ?? '',
         ordered_on: order.ordered_on,
         note: order.note ?? '',
-        lines: order.lines.map((line) =>
-            newOrderLine({
-                product_id: line.product.id,
-                quantity: String(line.quantity),
-                // A line counted by size starts from each size's saved quantity.
-                ...(line.size_mode === 'by_size' && {
-                    sizes: Object.fromEntries(
-                        line.sizes.map(({ size, quantity }) => [
-                            size.id,
-                            String(quantity),
-                        ]),
-                    ),
+        lines: order.lines.flatMap((line) => {
+            const product = lineProducts.find(
+                (entry) => entry.product.id === line.product.id,
+            );
+
+            if (!product) {
+                return [];
+            }
+
+            const units: Record<number, Record<number, string>> = {};
+            const floors: Record<string, number> = {};
+            const held = new Map<number, Colour>();
+
+            for (const row of line.sizes) {
+                units[row.colour.id] = {
+                    ...units[row.colour.id],
+                    [row.size.id]: String(row.quantity),
+                };
+                held.set(row.colour.id, row.colour);
+
+                // A cell already started can't go below what has started (S-61, INV-13 AC-4).
+                if (row.started >= 1) {
+                    floors[`${row.colour.id}.${row.size.id}`] = row.started;
+                }
+            }
+
+            return [
+                newOrderLine(product, {
+                    units,
+                    floors,
+                    heldColours: [...held.values()],
+                    started: line.started,
                 }),
-            }),
-        ),
+            ];
+        }),
     };
-}
-
-/** The rows of lines with units started, by `uid`; `rows` are the ones `toFormState` made from `order.lines`. */
-function startedLines(
-    order: Order | undefined,
-    rows: OrderLineRow[],
-): Map<string, StartedLine> {
-    const map = new Map<string, StartedLine>();
-
-    order?.lines.forEach((line, index) => {
-        if (line.started > 0) {
-            map.set(rows[index].uid, {
-                name: line.product.name,
-                count: line.started,
-                // A size already started can't go below what has started (S-61, S-70 AC-6).
-                ...(line.size_mode === 'by_size' && {
-                    sizes: Object.fromEntries(
-                        line.sizes
-                            .filter((entry) => entry.started >= 1)
-                            .map((entry) => [entry.size.id, entry.started]),
-                    ),
-                }),
-            });
-        }
-    });
-
-    return map;
 }
 
 /**
@@ -120,8 +116,7 @@ function startedLines(
 export function OrderForm({
     order,
     title,
-    products,
-    sizeLists,
+    lineProducts = [],
     action,
     cancelHref,
     cities,
@@ -131,18 +126,13 @@ export function OrderForm({
     const uid = useId();
     const { today } = usePage().props.app;
     const formRef = useRef<HTMLFormElement>(null);
+    const { locale } = useAppSettings();
     // Only seeds the form; computed once so the lines keep their keys.
-    const [initial] = useState(() => toFormState(order, today, clientPreset));
-    const form = useForm<OrderFormState>(initial);
-    // The saved lines with work started, by row key (a new line is never one).
-    const [started] = useState(() => startedLines(order, initial.lines));
-    // How the saved order's lines count, by product (the server matches lines by product).
-    const [savedModes] = useState<ReadonlyMap<number, OrderLineSizeMode>>(
-        () =>
-            new Map(
-                order?.lines.map((line) => [line.product.id, line.size_mode]),
-            ),
+    const [initial] = useState(() =>
+        toFormState(order, today, clientPreset, lineProducts),
     );
+    const form = useForm<OrderFormState>(initial);
+    const [saveFailed, setSaveFailed] = useState(false);
     const { errors, processing } = form;
     const client = form.data.client;
     const clientErrors = {
@@ -181,32 +171,41 @@ export function OrderForm({
     function handleSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
 
-        // The client-only keys never leave the browser. A line counted by size
-        // sends its sizes by id (an untouched size as ''), any other its quantity.
+        // Only the product and its units leave the browser: every colour and size of the grid, an untouched one as ''.
         form.transform((data) => ({
             ...data,
-            lines: data.lines.map((row) => {
-                const counting = countingFor(
-                    row,
-                    products,
-                    sizeLists,
-                    savedModes,
-                );
-
-                return counting.kind === 'sizes'
-                    ? {
-                          product_id: row.product_id,
-                          sizes: Object.fromEntries(
-                              counting.sizes.map((size) => [
-                                  size.id,
-                                  row.sizes?.[size.id] ?? '',
-                              ]),
-                          ),
-                      }
-                    : { product_id: row.product_id, quantity: row.quantity };
-            }),
+            lines: data.lines.map((entry) => ({
+                product_id: entry.product.product.id,
+                units: Object.fromEntries(
+                    gridColours(entry.product, entry.heldColours).map(
+                        (colour) => [
+                            colour.id,
+                            Object.fromEntries(
+                                entry.product.sizes.map((size) => [
+                                    size.id,
+                                    entry.units[colour.id]?.[size.id] ?? '',
+                                ]),
+                            ),
+                        ],
+                    ),
+                ),
+            })),
         }));
-        form.submit(action, { preserveScroll: 'errors' });
+        setSaveFailed(false);
+        form.submit(action, {
+            preserveScroll: 'errors',
+            // A server or network failure keeps everything typed (INV-13 AC-3).
+            onHttpException: () => {
+                setSaveFailed(true);
+
+                return false;
+            },
+            onNetworkError: () => {
+                setSaveFailed(true);
+
+                return false;
+            },
+        });
     }
 
     const details = (
@@ -273,12 +272,8 @@ export function OrderForm({
 
     const lines = (
         <OrderLinesEditor
-            rows={form.data.lines}
-            products={products}
-            sizeLists={sizeLists}
-            savedModes={savedModes}
+            entries={form.data.lines}
             errors={errors}
-            started={started}
             onChange={(lines) => form.setData('lines', lines)}
         />
     );
@@ -287,7 +282,8 @@ export function OrderForm({
         <form
             ref={formRef}
             noValidate
-            className="flex flex-col gap-6"
+            // On a phone, room under the fields for the fixed Save bar, and a focused field always scrolls clear of it.
+            className="flex flex-col gap-6 max-md:pb-32 max-md:[&_input]:scroll-mb-36 max-md:[&_textarea]:scroll-mb-36"
             onSubmit={handleSubmit}
         >
             <PageHeader title={title} />
@@ -312,12 +308,31 @@ export function OrderForm({
                 </>
             )}
 
-            <div className="flex flex-wrap items-center gap-2">
-                <Button type="submit" disabled={processing}>
+            {saveFailed && (
+                <p role="alert" className="text-sm text-destructive-foreground">
+                    Couldn't save the order. Try again.
+                </p>
+            )}
+
+            <div className="flex flex-wrap items-center gap-2 max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-20 max-md:border-t max-md:bg-background max-md:p-3">
+                {form.data.lines.length > 0 && (
+                    <p className="text-sm text-muted-foreground tabular-nums max-md:w-full md:order-last">
+                        {orderSummary(
+                            orderUnits(form.data.lines),
+                            form.data.lines.length,
+                            locale,
+                        )}
+                    </p>
+                )}
+                <Button
+                    type="submit"
+                    disabled={processing}
+                    className="max-md:h-11 max-md:flex-1"
+                >
                     {processing && <Spinner />}
                     Save order
                 </Button>
-                <Button asChild variant="outline">
+                <Button asChild variant="outline" className="max-md:h-11">
                     <Link href={cancelHref}>Cancel</Link>
                 </Button>
             </div>

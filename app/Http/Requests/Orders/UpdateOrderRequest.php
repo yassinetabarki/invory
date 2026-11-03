@@ -16,9 +16,9 @@ use Illuminate\Validation\Validator;
 
 /**
  * Edit an order (S-48-c): the rules of {@see StoreOrderRequest}, and a product already on the order stays valid even once it is no
- * longer active or was deleted, and a line keeps the way it counts (S-60): a line recorded before sizes keeps its single quantity, also
- * when its product is removed and added back in the same visit. A line that has started (S-49) keeps its product and, per size, at
- * least its started units.
+ * longer active or was deleted, and a line keeps the way it counts (S-60): a line recorded before sizes keeps its single size, also
+ * when its product is removed and added back in the same visit, and the colours it holds (INV-13). A line that has started (S-49) keeps
+ * its product and, per colour and size, at least its started units.
  */
 class UpdateOrderRequest extends StoreOrderRequest
 {
@@ -97,7 +97,7 @@ class UpdateOrderRequest extends StoreOrderRequest
         $order = $this->route('order');
 
         return $this->currentLines ??= $order instanceof Order
-            ? OrderLine::query()->where('order_id', $order->id)->with(['product', 'sizes'])->get()->keyBy('product_id')
+            ? OrderLine::query()->where('order_id', $order->id)->with(['product', 'sizes.colour', 'sizes.size'])->get()->keyBy('product_id')
             : new Collection;
     }
 }

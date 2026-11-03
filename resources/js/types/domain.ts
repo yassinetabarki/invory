@@ -372,8 +372,9 @@ export type OrderLineSizeMode =
     | 'one_size' // a "One size" product: one "Quantity" field and one "How many units?" field, as before
     | 'before_sizes'; // recorded before sizes: kept as "One size" whatever the product's sizes (S-60 AC-5)
 
-/** One size of an order line (S-60, S-61). Only sizes ordered (quantity ≥ 1); its four stages add up to its quantity. */
+/** One colour and size of an order line (S-60, S-61, INV-13). Only cells ordered (quantity ≥ 1); its four stages add up to its quantity. */
 export type OrderLineSize = {
+    colour: Colour; // INV-13: rows come by colour (list order), then size
     size: Size;
     quantity: number;
     to_start: number; // computed server-side
@@ -393,7 +394,7 @@ export type OrderLine = {
     shipped: number;
     started: number; // in_cutting + ready_to_ship + shipped, computed server-side
     size_mode: OrderLineSizeMode;
-    sizes: OrderLineSize[]; // in size order, at least one; the line's own figures are their sums (server-side)
+    sizes: OrderLineSize[]; // by colour (list order), then size order, at least one; the line's own figures are their sums (server-side)
     status: OrderProgress;
     status_label: string; // "Not started", "In progress", "Shipped"
 };
@@ -435,11 +436,10 @@ export type OpenOrderTotals = {
 };
 
 export type OrderLineFormRow = {
-    product_id: number | '';
-    quantity: string;
-    // by_size lines: size id → the quantity typed ('' counts 0); single-field lines send `quantity` as before.
-    // Errors: lines.N.sizes (the line) and lines.N.sizes.<size id> (a size); single-field lines keep lines.N.quantity.
-    sizes?: Record<number, string>;
+    product_id: number;
+    // INV-13: colour id → size id → the quantity typed ('' counts 0). A "One size" line (or one recorded before sizes) has its one size id.
+    // Errors: lines.N.units (the line) and lines.N.units.<colour id>.<size id> (a cell).
+    units: Record<number, Record<number, string>>;
 };
 
 /** Where a client found the workshop (INV-4): a fixed list, in this order. */
@@ -519,8 +519,8 @@ export type ClientFields = {
 };
 
 /**
- * Fields the order form submits. Errors come back as client.phone, client.name, client.city, client.source_other (New order), ordered_on, note, lines, lines.N.product_id, lines.N.quantity (single-field
- * lines), lines.N.sizes (a by_size line) and lines.N.sizes.<size id> (one size).
+ * Fields the order form submits. Errors come back as client.phone, client.name, client.city, client.source_other (New order), ordered_on, note, lines, lines.N.product_id,
+ * lines.N.units (the line) and lines.N.units.<colour id>.<size id> (a cell; INV-13).
  */
 export type OrderFormData = {
     client?: ClientFields; // New order only (INV-4): the server finds the client by the phone's digits, or adds her
@@ -538,20 +538,26 @@ export type OrdersIndexProps = {
     has_orders: boolean; // any order at all in the workshop, whatever its status
     client_filter: ClientRef | null; // INV-4: the client chosen in the Client filter
 };
-/** A product the order forms offer (S-60): an OrderProduct and the code of its size list in `size_lists`. */
-export type OrderFormProduct = OrderProduct & { size_list_code: string };
-
+/** A product as the order forms' search and quantity grid show it (INV-13): its sizes and its shelf stock per colour and size. */
+export type OrderStockProduct = {
+    product: OrderProduct & { photo_url: string | null };
+    sizes: Size[]; // the product's list, in order
+    one_size: boolean; // a "One size" product: one column per colour (Colour · Stock / Colour · Quantity)
+    stock: FinishedStock; // every colour of the product, in list order, 0 included
+};
+/** `GET orders/products/search?q=` (INV-13): at most 6 active products, by name; `total` counts every match ("Showing 6 of 14"). */
+export type OrderProductSearch = {
+    total: number;
+    products: OrderStockProduct[];
+};
 export type OrderCreateProps = {
-    products: OrderFormProduct[];
-    size_lists: Record<string, SizeList>; // the size lists by code, each once
     cities: string[]; // the workshop's clients' cities, A → Z, each once (City suggests them)
     client_sources: Option<ClientSource>[]; // the eight sources, in order, with their words
     client_preset: ClientSummary | null; // from a client page (`?client=<id>`): her, shown as Existing client
 };
 export type OrderEditProps = {
     order: Order;
-    products: OrderFormProduct[];
-    size_lists: Record<string, SizeList>;
+    line_products: OrderStockProduct[]; // INV-13: each line's product with its sizes and shelf stock, in line order
     cities?: string[]; // INV-4: for the Add client window over the order; an optional prop, asked for (`only: ['cities']`) when it opens
     client_sources: Option<ClientSource>[];
 };
@@ -675,8 +681,11 @@ export type OrderLineMove =
 export type MoveUnitsFormData = {
     move: OrderLineMove;
     units: string;
-    /** by_size lines: size id → the units typed ('' counts 0); single-field lines send `units` as before. Errors: sizes (the move) and sizes.<size id> (a size); single-field lines keep units. */
-    sizes?: Record<number, string>;
+    /**
+     * INV-13-e: a line counted by size, or holding several colours: colour id → size id → the units typed ('' counts 0). A line with a
+     * single row sends `units` as before. Errors: cells (the move) and cells.<colour id>.<size id> (a cell); single-row lines keep units.
+     */
+    cells?: Record<number, Record<number, string>>;
 };
 
 /** One row of the move window's materials table (S-53), worked out by the server: the screen never computes. */
@@ -719,7 +728,16 @@ export type StockMovement = {
     reference: string | null; // restock: PO or delivery note
     note: string | null; // correction: reason
     units: number | null; // cutting / cutting_return: the units of the order line
-    sizes: { size_id: number; label: string; units: number }[] | null; // cutting / cutting_return of a by_size line: the sizes moved (units ≥ 1), in size order; null otherwise
+    // cutting / cutting_return of a by_size or several-colour line: the cells moved (units ≥ 1), in the line's order; null otherwise.
+    // INV-13-e: `colour_id` and a label with the colour ("Indigo M", "Camel"); entries written before INV-13 have neither.
+    sizes:
+        | {
+              size_id: number;
+              colour_id?: number;
+              label: string;
+              units: number;
+          }[]
+        | null;
     order: { id: number; client: string } | null; // cutting / cutting_return (soft-deleted orders included)
     product_name: string | null; // cutting / cutting_return (soft-deleted products included)
     user_name: string | null; // who did it

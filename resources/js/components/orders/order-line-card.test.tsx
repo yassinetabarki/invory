@@ -2,7 +2,7 @@ import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { OrderLineCard } from '@/components/orders/order-line-card';
-import { sizeIds, sizedJacketLine, withOneSize } from '@/test/fixtures';
+import { sizeIds, sizedJacketLine, white, withOneSize } from '@/test/fixtures';
 import { resetInertiaMock } from '@/test/inertia';
 import type { OrderLine, OrderLineSize, OrderProduct } from '@/types/domain';
 
@@ -143,6 +143,7 @@ describe('<OrderLineCard>', () => {
             quantity: number,
             figures: Partial<OrderLineSize> = {},
         ): OrderLineSize => ({
+            colour: white,
             size: { id, label },
             quantity,
             to_start: quantity,
@@ -226,27 +227,27 @@ describe('<OrderLineCard>', () => {
                 'four chips and the sizes spoken once',
                 sizedJacketLine,
                 [
-                    ['S', '10'],
-                    ['M', '20'],
-                    ['L', '15'],
-                    ['XL', '5'],
+                    ['White S', '10'],
+                    ['White M', '20'],
+                    ['White L', '15'],
+                    ['White XL', '5'],
                 ],
-                'S 10, M 20, L 15, XL 5',
+                'White S 10, White M 20, White L 15, White XL 5',
             ],
             [
                 'no chip for a size at 0',
                 sOnlyAndXl,
                 [
-                    ['S', '10'],
-                    ['XL', '5'],
+                    ['White S', '10'],
+                    ['White XL', '5'],
                 ],
-                'S 10, XL 5',
+                'White S 10, White XL 5',
             ],
             [
                 'one chip on a line recorded before sizes',
                 jacketLine(),
-                [['One size', '50']],
-                'One size 50',
+                [['White', '50']],
+                'White 50',
             ],
             ['no chip for a "One size" product', tote, [], null],
         ])('AC-1: %s', (_name, line, chips, spoken) => {
@@ -292,7 +293,7 @@ describe('<OrderLineCard>', () => {
 
             // From 1024 px (lg) a table, named after the product; below it the cards (F2, F7).
             const table = screen.getByRole('table', {
-                name: 'Denim Jacket: units by size and stage',
+                name: 'Denim Jacket: units by colour, size and stage',
             });
             const wide = table.parentElement as HTMLElement;
 
@@ -302,7 +303,7 @@ describe('<OrderLineCard>', () => {
                     .getAllByRole('columnheader')
                     .map((header) => header.textContent),
             ).toEqual([
-                'Size',
+                'Colour and size',
                 'To start',
                 'In cutting',
                 'Ready to ship',
@@ -319,10 +320,10 @@ describe('<OrderLineCard>', () => {
                     ].map((cell) => cell.textContent),
                 ),
             ).toEqual([
-                ['S', '10', '0', '0', '0'],
-                ['M', '20', '0', '0', '0'],
-                ['L', '15', '0', '0', '0'],
-                ['XL', '5', '0', '0', '0'],
+                ['White S', '10', '0', '0', '0'],
+                ['White M', '20', '0', '0', '0'],
+                ['White L', '15', '0', '0', '0'],
+                ['White XL', '5', '0', '0', '0'],
                 ['Total', '50', '0', '0', '0'],
             ]);
             expect(within(table).queryByRole('button')).toBeNull();
@@ -503,7 +504,7 @@ describe('<OrderLineCard>', () => {
                 within(screen.getByRole('table'))
                     .getAllByRole('rowheader')
                     .map((header) => header.textContent),
-            ).toEqual(['S', 'XL', 'Total']);
+            ).toEqual(['White S', 'White XL', 'Total']);
         });
 
         it("takes the status and the shipped count from the line's own figures", () => {
@@ -527,7 +528,9 @@ describe('<OrderLineCard>', () => {
             renderCard(underway);
 
             const total = screen.getByRole('list', { name: 'Total' });
-            const sizes = screen.getByRole('list', { name: 'Sizes' });
+            const sizes = screen.getByRole('list', {
+                name: 'Colours and sizes',
+            });
 
             expect(total.closest('.lg\\:hidden')).not.toBeNull();
             expect(

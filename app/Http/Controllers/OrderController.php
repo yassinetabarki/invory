@@ -15,17 +15,14 @@ use App\Http\Requests\Orders\StoreOrderRequest;
 use App\Http\Requests\Orders\UpdateOrderRequest;
 use App\Http\Resources\ClientRefResource;
 use App\Http\Resources\ClientSummaryResource;
-use App\Http\Resources\OrderFormProductResource;
 use App\Http\Resources\OrderResource;
-use App\Http\Resources\SizeListResource;
+use App\Http\Resources\OrderStockProductResource;
 use App\Models\Order;
-use App\Models\SizeList;
 use App\Models\User;
 use App\Services\Clients\ClientBook;
 use App\Services\Clients\ClientMessages;
 use App\Services\Orders\OrderBook;
-use App\Services\Products\SizeLists;
-use ArrayObject;
+use App\Services\Orders\OrderProductSearch;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -63,7 +60,7 @@ final class OrderController extends Controller
         ]);
     }
 
-    public function create(Request $request, OrderBook $book, SizeLists $sizes, ClientBook $clients): Response
+    public function create(Request $request, ClientBook $clients): Response
     {
         Gate::authorize('create', Order::class);
 
@@ -72,8 +69,7 @@ final class OrderController extends Controller
         $presetId = is_string($preset) && preg_match('/^[0-9]{1,18}$/', $preset) === 1 ? (int) $preset : null;
 
         return Inertia::render('orders/create', [
-            'products' => fn (): AnonymousResourceCollection => OrderFormProductResource::collection($book->newOrderProducts()),
-            'size_lists' => fn (): ArrayObject => $this->sizeLists($sizes),
+            // INV-13: no product list; "Search products" asks `orders.products.search`.
             'cities' => fn (): array => $clients->cities(),
             'client_sources' => fn (): array => ClientSource::options(),
             'client_preset' => function () use ($clients, $presetId): ?array {
@@ -105,14 +101,21 @@ final class OrderController extends Controller
         return to_route('orders.show', $order);
     }
 
-    public function edit(Order $order, OrderBook $book, SizeLists $sizes, ClientBook $clients): Response
+    public function edit(Order $order, OrderBook $book, OrderProductSearch $search, ClientBook $clients): Response
     {
         Gate::authorize('update', $order);
 
+        // Loaded once: the order and Edit order's products read the same lines (INV-13).
+        $loaded = $book->load($order);
+
         return Inertia::render('orders/edit', [
-            'order' => fn (): OrderResource => new OrderResource($book->load($order)),
-            'products' => fn (): AnonymousResourceCollection => OrderFormProductResource::collection($book->editOrderProducts($order)),
-            'size_lists' => fn (): ArrayObject => $this->sizeLists($sizes),
+            'order' => fn (): OrderResource => new OrderResource($loaded),
+            // INV-13: each line's product with its sizes and shelf stock, in line order, as a search result shows it.
+            'line_products' => function () use ($book, $search, $loaded): array {
+                $lines = $book->lineProducts($loaded);
+
+                return array_map(fn (array $line): array => (new OrderStockProductResource($line))->resolve(), $search->lines($lines['products'], $lines['lists']));
+            },
             // INV-4: the Add client window over the order asks for the cities when it opens (a partial reload), not on every visit.
             'cities' => Inertia::optional(fn (): array => $clients->cities()),
             'client_sources' => fn (): array => ClientSource::options(),
@@ -146,16 +149,6 @@ final class OrderController extends Controller
         $sentFromItsPage = parse_url(url()->previous(), PHP_URL_PATH) === route('orders.show', $order, false);
 
         return $sentFromItsPage ? to_route('orders.index') : back();
-    }
-
-    /**
-     * `size_lists`: the size lists by code, each once however many products use it. Always a JSON object (never `[]`).
-     *
-     * @return ArrayObject<string, array<mixed>>
-     */
-    private function sizeLists(SizeLists $sizes): ArrayObject
-    {
-        return new ArrayObject(array_map(fn (SizeList $list): array => (new SizeListResource($list))->resolve(), $sizes->lists()));
     }
 
     /** The signed-in user, for `orders.user_id`. The `auth` middleware and the request authorization guarantee one. */

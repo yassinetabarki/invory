@@ -32,7 +32,7 @@ final readonly class ReturnMaterialsFromCuts
      * (S-61-a). `$sizes` is the snapshot of the sizes moved, written on every history entry: a list of `{size_id, label, units}` in size
      * order, or null for a line that counts as one size.
      *
-     * @param  list<array{size_id: int, label: string, units: int}>|null  $sizes
+     * @param  list<array{size_id: int, colour_id?: int, label: string, units: int}>|null  $sizes
      */
     public function handle(OrderLine $line, int $units, User $actor, ?array $sizes = null): ReturnPlan
     {

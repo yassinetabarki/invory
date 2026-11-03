@@ -13,7 +13,7 @@ import {
 import { useAppSettings } from '@/hooks/use-app-settings';
 import { ProgressStatus } from '@/components/orders/progress-status';
 import { formatCount, formatDate } from '@/lib/format';
-import { formatSizes, orderLineSizeCounts } from '@/lib/sizes';
+import { formatOrderLineCells } from '@/lib/sizes';
 import { edit, show as showOrder } from '@/routes/orders';
 import { show } from '@/routes/products';
 import type { Order } from '@/types/domain';
@@ -45,8 +45,8 @@ type RowActionsProps = {
 };
 
 /**
- * One "50 × Denim Jacket" line per product; a deleted product has no link. A
- * line counted by size adds its sizes: "50 × Denim Jacket (S 10 · M 20 · L 15 · XL 5)".
+ * One "50 × Denim Jacket" line per product; a deleted product has no link. Each
+ * line adds its colours and sizes (INV-13): "50 × Denim Jacket (Indigo S 10 · M 20 · L 15 · XL 5)".
  */
 function ProductLines({ order }: { order: Order }) {
     const { locale } = useAppSettings();
@@ -55,10 +55,8 @@ function ProductLines({ order }: { order: Order }) {
     return (
         <ul className="space-y-0.5">
             {order.lines.slice(0, VISIBLE_LINES).map((line) => {
-                const sizes =
-                    line.size_mode === 'by_size'
-                        ? formatSizes(orderLineSizeCounts(line.sizes), locale)
-                        : '';
+                // INV-13: every line names its colours, "(Indigo S 10 · M 20)", "(Camel 10)".
+                const sizes = formatOrderLineCells(line, locale);
 
                 return (
                     <li key={line.id} className="break-words">

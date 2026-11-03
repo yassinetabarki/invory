@@ -305,7 +305,7 @@ it('rolls back everything when writing the third return fails (AC-5)', function 
 
     $line = $order->lines()->get()[0];
 
-    expect(fn () => app(MoveOrderLineUnits::class)->handle($line, OrderLineMove::BackToStart, [$line->sizes()->value('size_id') => 5], $this->user))
+    expect(fn () => app(MoveOrderLineUnits::class)->handle($line, OrderLineMove::BackToStart, firstCell($line, 5), $this->user))
         ->toThrow(RuntimeException::class, 'The third return failed.')
         ->and($written)->toBe(3)
         ->and($snapshot())->toBe($before)

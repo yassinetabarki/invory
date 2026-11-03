@@ -20,33 +20,69 @@ final class FinishedStock
 
     public function of(Product $product): FinishedStockLevel
     {
-        $sizes = $this->sizeLists->category($product->category_id)->sizeList->sizes;
+        return $this->ofMany([$product])[$product->id];
+    }
 
-        /** @var array<int, Colour> $colours in list order (position, name, id) */
-        $colours = [];
+    /**
+     * The finished stock of several products in ONE query (INV-13: the order search and Edit order), by product id.
+     *
+     * @param  iterable<Product>  $products
+     * @return array<int, FinishedStockLevel>
+     */
+    public function ofMany(iterable $products): array
+    {
+        $byId = [];
 
-        /** @var array<int, array<int, int>> $units colour id → size id → units */
+        foreach ($products as $product) {
+            $byId[$product->id] = $product;
+        }
+
+        if ($byId === []) {
+            return [];
+        }
+
+        /** @var array<int, array<int, Colour>> $colours product id → colour id → colour, in list order (position, name, id) */
+        $colours = array_fill_keys(array_keys($byId), []);
+
+        /** @var array<int, array<int, array<int, int>>> $units product id → colour id → size id → units */
         $units = [];
 
-        // The colours of the product LEFT JOIN its stock rows: a row per colour and size with units, one row for a colour with none.
+        // The colours of the products LEFT JOIN their stock rows: a row per colour and size with units, one row for a colour with none.
         $rows = Colour::query()
             ->join('product_colours', 'product_colours.colour_id', '=', 'colours.id')
             ->leftJoin('product_size_stocks', fn (JoinClause $join) => $join
                 ->on('product_size_stocks.colour_id', '=', 'colours.id')
                 ->on('product_size_stocks.product_id', '=', 'product_colours.product_id'))
-            ->where('product_colours.product_id', $product->id)
+            ->whereIn('product_colours.product_id', array_keys($byId))
             ->orderBy('colours.position')->orderBy('colours.name')->orderBy('colours.id')
-            ->get(['colours.*', 'product_size_stocks.size_id as stock_size_id', 'product_size_stocks.units as stock_units']);
+            ->get(['colours.*', 'product_colours.product_id as stock_product_id', 'product_size_stocks.size_id as stock_size_id', 'product_size_stocks.units as stock_units']);
 
         foreach ($rows as $row) {
-            $colours[$row->id] ??= $row;
+            $productId = (int) $row->getAttribute('stock_product_id');
+            $colours[$productId][$row->id] ??= (new Colour)->setRawAttributes(array_diff_key($row->getAttributes(), array_flip(['stock_product_id', 'stock_size_id', 'stock_units'])), true);
             $sizeId = $row->getAttribute('stock_size_id');
 
             if ($sizeId !== null) {
-                $units[$row->id][(int) $sizeId] = (int) $row->getAttribute('stock_units');
+                $units[$productId][$row->id][(int) $sizeId] = (int) $row->getAttribute('stock_units');
             }
         }
 
+        $levels = [];
+
+        foreach ($byId as $productId => $product) {
+            $levels[$productId] = $this->level($product, $colours[$productId], $units[$productId] ?? []);
+        }
+
+        return $levels;
+    }
+
+    /**
+     * @param  array<int, Colour>  $colours  in list order
+     * @param  array<int, array<int, int>>  $units  colour id → size id → units
+     */
+    private function level(Product $product, array $colours, array $units): FinishedStockLevel
+    {
+        $sizes = $this->sizeLists->category($product->category_id)->sizeList->sizes;
         $perSize = array_fill_keys($sizes->map(fn (Size $size): int => $size->id)->all(), 0);
 
         $byColour = [];

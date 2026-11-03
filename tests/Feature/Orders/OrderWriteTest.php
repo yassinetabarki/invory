@@ -28,7 +28,7 @@ beforeEach(function () {
  * `jeans` (Denim Jeans 5-pocket), `tshirt` (Classic White T-shirt), `draft` (Canvas Chore Jacket), `tote` (Leather Tote, a "One size"
  * product), `archived` (a new archived bag), `new` (a new active bag), `foreign` (a product of another workshop), `missing` (an id
  * nobody has) or `null` (nothing chosen). Datasets are built before the app boots, so they name products instead of holding ids.
- * A line posts its quantity as `quantity` and as M of `sizes` (S-60): the server uses the one that fits the product, ignoring the other.
+ * A line posts its quantity as `units` (INV-13): on M in the product's first colour, or on "One size" for a one-size product.
  *
  * @param  array<string, mixed>  $overrides
  * @return array<string, mixed>
@@ -38,8 +38,8 @@ function orderBody(array $overrides = []): array
     $overrides += ['ordered_on' => '2026-10-15'];
 
     if (isset($overrides['lines'])) {
-        $overrides['lines'] = array_map(static fn (array $line): array => [
-            'product_id' => match ($line['product']) {
+        $overrides['lines'] = array_map(static function (array $line): array {
+            $productId = match ($line['product']) {
                 null => null,
                 'jacket' => pid(1),
                 'tshirt' => pid(2),
@@ -50,10 +50,17 @@ function orderBody(array $overrides = []): array
                 'new' => Product::factory()->create(['category' => 'bag'])->id,
                 'foreign' => CurrentWorkshop::run(Workshop::factory()->create(), fn () => Product::factory()->create()->id),
                 'missing' => NO_SUCH_ID,
-            },
-            'quantity' => $line['quantity'],
-            'sizes' => sizeIds(['M' => $line['quantity']]),
-        ], $overrides['lines']);
+            };
+            // INV-13: the quantity goes on M in the product's first colour, or on "One size" for a one-size product or for a line the
+            // order holds from before sizes (`'before_sizes' => true`).
+            $beforeSizes = $line['before_sizes'] ?? false;
+            $oneSize = $beforeSizes || in_array($line['product'], ['tote', 'archived', 'new'], true);
+
+            return [
+                'product_id' => $productId,
+                'units' => orderUnits($productId, [($oneSize ? 'One size' : 'M') => $line['quantity']], list: $beforeSizes ? SizeList::ONE_SIZE : null),
+            ];
+        }, $overrides['lines']);
     }
 
     return validOrderPayload($overrides);
@@ -115,6 +122,9 @@ it('refuses a mistake with the card\'s message under its field and saves nothing
         ->assertRedirect(route('orders.create'))
         ->assertInertiaFlashMissing('toast');
 
+    // 'tote cell' is the one cell of the Leather Tote: its first colour, "One size".
+    $field = $field === 'tote cell' ? unitsKey(0, orderUnits(pid(4), ['One size' => 0])) : $field;
+
     // Only the field of the case is flagged: the first line of a repeated product stays clean.
     expect(session('errors')->keys())->toBe([$field])
         ->and(session('errors')->get($field))->toBe([$message])
@@ -131,12 +141,12 @@ it('refuses a mistake with the card\'s message under its field and saves nothing
     'order date empty' => [['ordered_on' => ''], 'ordered_on', 'The order date field is required.'],
     'order date tomorrow' => [['ordered_on' => '2026-10-16'], 'ordered_on', 'The order date can\'t be in the future.'],
     'note of 1001 characters' => [['note' => str_repeat('a', 1001)], 'note', 'The note field must not be greater than 1000 characters.'],
-    'no lines' => [['lines' => []], 'lines', 'Add at least one product.'],
+    'no lines' => [['lines' => []], 'lines', 'Add at least one product to this order.'],
     'a line without a product' => [['lines' => [['product' => null, 'quantity' => '5']]], 'lines.0.product_id', 'Choose a product.'],
-    'quantity empty, on a "One size" product' => [['lines' => [['product' => 'tote', 'quantity' => '']]], 'lines.0.quantity', 'The quantity must be a whole number from 1 to 1,000,000.'],
-    'quantity 0, on a "One size" product' => [['lines' => [['product' => 'tote', 'quantity' => '0']]], 'lines.0.quantity', 'The quantity must be a whole number from 1 to 1,000,000.'],
-    'quantity 2.5, on a "One size" product' => [['lines' => [['product' => 'tote', 'quantity' => '2.5']]], 'lines.0.quantity', 'The quantity must be a whole number from 1 to 1,000,000.'],
-    'quantity 1,000,001, on a "One size" product' => [['lines' => [['product' => 'tote', 'quantity' => '1000001']]], 'lines.0.quantity', 'The quantity must be a whole number from 1 to 1,000,000.'],
+    'quantity empty, on a "One size" product' => [['lines' => [['product' => 'tote', 'quantity' => '']]], 'lines.0.units', 'Enter at least one unit of Leather Tote, or remove it from this order.'],
+    'quantity 0, on a "One size" product' => [['lines' => [['product' => 'tote', 'quantity' => '0']]], 'lines.0.units', 'Enter at least one unit of Leather Tote, or remove it from this order.'],
+    'quantity 2.5, on a "One size" product' => [['lines' => [['product' => 'tote', 'quantity' => '2.5']]], 'tote cell', 'White: Enter a whole number from 0 to 1,000,000.'],
+    'quantity 1,000,001, on a "One size" product' => [['lines' => [['product' => 'tote', 'quantity' => '1000001']]], 'tote cell', 'White: Enter a whole number from 0 to 1,000,000.'],
     'Denim Jacket twice, flagged on the second line' => [
         ['lines' => [['product' => 'jacket', 'quantity' => '5'], ['product' => 'jacket', 'quantity' => '7']]],
         'lines.1.product_id', 'Denim Jacket is already on this order.',
@@ -153,7 +163,8 @@ it('changes Denim Jeans to 40, adds 20 T-shirts, keeps the Jeans line and lands 
     $jeansLine = $order->lines()->where('product_id', pid(5))->firstOrFail();
 
     actingAs($this->user)->put(route('orders.update', $order), orderBody(['lines' => [
-        ['product' => 'jacket', 'quantity' => '50'], ['product' => 'jeans', 'quantity' => '40'], ['product' => 'tshirt', 'quantity' => '20'],
+        ['product' => 'jacket', 'quantity' => '50', 'before_sizes' => true], ['product' => 'jeans', 'quantity' => '40', 'before_sizes' => true],
+        ['product' => 'tshirt', 'quantity' => '20'],
     ]]))->assertRedirect(route('orders.show', $order))
         ->assertSessionHasNoErrors()
         ->assertInertiaFlash('toast', ['type' => 'success', 'message' => 'Order updated.']);
@@ -173,7 +184,7 @@ it('saves two products swapped between lines and drops a product that is no long
     $jacketLine = $order->lines()->where('product_id', pid(1))->firstOrFail();
 
     actingAs($this->user)->put(route('orders.update', $order), orderBody(['lines' => [
-        ['product' => 'jeans', 'quantity' => '30'], ['product' => 'jacket', 'quantity' => '50'],
+        ['product' => 'jeans', 'quantity' => '30', 'before_sizes' => true], ['product' => 'jacket', 'quantity' => '50', 'before_sizes' => true],
     ]]))->assertSessionHasNoErrors();
 
     expect($order->lines()->get()->map(fn (OrderLine $line): array => $line->only(['product_id', 'position']))->all())
@@ -193,8 +204,8 @@ it('keeps a product that is no longer active on the order that has it, and nowhe
     $jacket = demoProduct('PRD-JKT-001');
 
     // Both bodies are built first: a deleted product can no longer be looked up by its SKU.
-    $keep = orderBody(['lines' => [['product' => 'jacket', 'quantity' => '60'], ['product' => 'jeans', 'quantity' => '30']]]);
-    $elsewhere = orderBody(['lines' => [['product' => 'tshirt', 'quantity' => '5'], ['product' => 'jacket', 'quantity' => '1']]]);
+    $keep = orderBody(['lines' => [['product' => 'jacket', 'quantity' => '60', 'before_sizes' => true], ['product' => 'jeans', 'quantity' => '30', 'before_sizes' => true]]]);
+    $elsewhere = orderBody(['lines' => [['product' => 'tshirt', 'quantity' => '5', 'before_sizes' => true], ['product' => 'jacket', 'quantity' => '1']]]);
 
     match ($state) {
         'archived' => $jacket->update(['status' => ProductStatus::Archived]),

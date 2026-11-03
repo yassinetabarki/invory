@@ -57,6 +57,8 @@ it('shows Boutique Lina\'s order with its lines in the order entered, nothing st
                 // Recorded before sizes (the factory default): the Denim Jacket has several sizes, the line counts as "One size" (S-60 AC-5).
                 ->where('size_mode', 'before_sizes')
                 ->where('sizes', [[
+                    // INV-13-a: the rows of before INV-13 hold their product's first colour.
+                    'colour' => ['id' => demoColour('WHT')->id, 'code' => 'WHT', 'name' => 'White', 'swatch' => '#FFFFFF'],
                     'size' => ['id' => Size::query()->where('label', 'One size')->value('id'), 'label' => 'One size'],
                     'quantity' => 50, 'to_start' => 50, 'in_cutting' => 0, 'ready_to_ship' => 0, 'shipped' => 0, 'started' => 0,
                 ]])

@@ -8,23 +8,25 @@ use App\Enums\OrderLineMove;
 use App\Enums\OrderLineSizeMode;
 use App\Models\Order;
 use App\Models\OrderLine;
+use App\Models\OrderLineSize;
+use App\Models\SizeList;
 use App\Services\Orders\OrderLineSizing;
 use App\Services\Orders\OrderMessages;
 use App\Services\Products\SizeLists;
-use App\Services\Products\SizeNames;
 use Illuminate\Auth\Access\Response;
 use Illuminate\Contracts\Validation\Validator;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 
 /**
- * Move units of an order line (S-49-b, S-61-a). The stage limit is not checked here: it needs the count saved under the lock, so the
- * Action checks it.
+ * Move units of an order line (S-49-b, S-61-a, INV-13-e). The stage limit is not checked here: it needs the count saved under the lock,
+ * so the Action checks it.
  *
- * A line counted by size sends `sizes` (size id → a whole number, or empty; 0 counts as empty). A size that is not one of the line's
- * rows is refused under `sizes`, the whole window, with "The sizes ordered for <product> have changed…" (a stale or forged window). A line that counts as
- * one size sends `units`, as before.
+ * A line counted by size, or holding several colours, sends `cells` (colour id → size id → a whole number, or empty; 0 counts as
+ * empty). A cell that is not one of the line's rows is refused under `cells`, the whole window, with "The sizes ordered for <product>
+ * have changed…" (a stale or forged window). A line with a single cell sends `units`, as before.
  */
 final class MoveOrderLineUnitsRequest extends FormRequest
 {
@@ -43,11 +45,12 @@ final class MoveOrderLineUnitsRequest extends FormRequest
     /** @return array<string, mixed> */
     public function rules(): array
     {
-        if ($this->bySize()) {
+        if ($this->byCell()) {
             return [
                 'move' => ['required', Rule::enum(OrderLineMove::class)],
-                'sizes' => ['nullable', 'array'],
-                'sizes.*' => ['nullable', 'integer', 'min:0'],
+                'cells' => ['nullable', 'array'],
+                'cells.*' => ['nullable', 'array'],
+                'cells.*.*' => ['nullable', 'integer', 'min:0'],
             ];
         }
 
@@ -61,90 +64,99 @@ final class MoveOrderLineUnitsRequest extends FormRequest
     public function messages(): array
     {
         $units = __('Enter a whole number of units, at least 1.');
-        $size = OrderMessages::wholeUnits();
+        $whole = OrderMessages::wholeUnits();
         $messages = [];
 
-        // A size of the line's list names itself (S-70-a). They come first: the validator takes the first message that matches, and
-        // `sizes.*` also matches these keys. A key that is not a size of the line keeps the bare message.
-        foreach ($this->sizeLabels() as $id => $label) {
-            $messages["sizes.{$id}.integer"] = $messages["sizes.{$id}.min"] = SizeNames::prefixed($label, $size);
+        // A cell of the line names itself ("Indigo M: …"). They come first: the validator takes the first message that matches, and
+        // `cells.*.*` also matches these keys. A key that is not a cell of the line keeps the bare message.
+        foreach ($this->cellNames() as $key => $name) {
+            $messages["cells.{$key}.integer"] = $messages["cells.{$key}.min"] = "{$name}: {$whole}";
         }
 
         return $messages + [
             'units.required' => $units,
             'units.integer' => $units,
             'units.min' => $units,
-            'sizes.array' => OrderMessages::atLeastOneToMove(),
-            'sizes.*.integer' => $size,
-            'sizes.*.min' => $size,
+            'cells.array' => OrderMessages::atLeastOneToMove(),
+            'cells.*.array' => OrderMessages::atLeastOneToMove(),
+            'cells.*.*.integer' => $whole,
+            'cells.*.*.min' => $whole,
         ];
     }
 
     /**
-     * The labels of the line's size list by size id; none for a line that counts as one size. The list is the request's own cached one.
+     * The name of each row of the line in a sentence ("Indigo M", "Black, size 38", "Camel"), keyed "<colour id>.<size id>".
      *
-     * @return array<int, string>
+     * @return array<string, string>
      */
-    private function sizeLabels(): array
+    public function cellNames(): array
     {
-        $line = $this->orderLine();
+        if (! $this->byCell()) {
+            return [];
+        }
 
-        return $this->bySize() && $line->size_list_id !== null
-            ? app(SizeLists::class)->list($line->size_list_id)->sizes->pluck('label', 'id')->all()
-            : [];
+        $line = $this->orderLine();
+        $oneSize = app(SizeLists::class)->list((int) $line->size_list_id)->code === SizeList::ONE_SIZE;
+        $names = [];
+
+        foreach ($this->rows() as $row) {
+            $names["{$row->colour_id}.{$row->size_id}"] = OrderMessages::variant($row->colour->name, $row->size->label, $oneSize);
+        }
+
+        return $names;
     }
 
     /**
-     * A line counted by size must name only its own sizes, and move at least one unit.
+     * A window by cell must name only the line's own rows, and move at least one unit.
      *
      * @return array<int, callable(Validator): void>
      */
     public function after(): array
     {
         return [function (Validator $validator): void {
-            if (! $this->bySize() || $validator->errors()->isNotEmpty()) {
+            if (! $this->byCell() || $validator->errors()->isNotEmpty()) {
                 return;
             }
 
             $line = $this->orderLine();
-            $rows = $line->sizes()->pluck('size_id')->all();
+            $known = $this->cellNames();
 
             foreach ($this->typed() as $key => $units) {
-                if ($units >= 1 && ! in_array($key, $rows, true)) {
-                    $validator->errors()->add('sizes', OrderMessages::moveSizesChanged($line->product->name));
+                if ($units >= 1 && ! isset($known[$key])) {
+                    $validator->errors()->add('cells', OrderMessages::moveSizesChanged($line->product->name));
 
                     break;
                 }
             }
 
-            if ($validator->errors()->isEmpty() && $this->sizeUnits() === []) {
-                $validator->errors()->add('sizes', OrderMessages::atLeastOneToMove());
+            if ($validator->errors()->isEmpty() && $this->cellUnits() === []) {
+                $validator->errors()->add('cells', OrderMessages::atLeastOneToMove());
             }
         }];
     }
 
-    /** Whether the line counts its units by size, so the window sends `sizes` and not `units`. */
-    public function bySize(): bool
+    /** Whether the window sends `cells`: the line counts by size, or holds more than one colour (INV-13). */
+    public function byCell(): bool
     {
         $line = $this->orderLine();
         $line->loadMissing('product');
 
-        return app(OrderLineSizing::class)->forLine($line) === OrderLineSizeMode::BySize;
+        return app(OrderLineSizing::class)->forLine($line) === OrderLineSizeMode::BySize || $this->rows()->count() > 1;
     }
 
     /**
-     * What a line counted by size moves: size id → units, only the sizes with 1 or more. Call it once the request has passed (every key
-     * is then one of the line's sizes).
+     * What a window by cell moves: "<colour id>:<size id>" → units, only the cells with 1 or more. Call it once the request has passed
+     * (every key is then one of the line's rows).
      *
-     * @return array<int, int>
+     * @return array<string, int>
      */
-    public function sizeUnits(): array
+    public function cellUnits(): array
     {
         $units = [];
 
         foreach ($this->typed() as $key => $value) {
             if ($value >= 1) {
-                $units[(int) $key] = $value;
+                $units[str_replace('.', ':', $key)] = $value;
             }
         }
 
@@ -152,15 +164,34 @@ final class MoveOrderLineUnitsRequest extends FormRequest
     }
 
     /**
-     * The `sizes` input as whole numbers (an empty field is 0), keyed as sent.
+     * The `cells` input as whole numbers (an empty field is 0), keyed "<colour id>.<size id>" as sent.
      *
-     * @return array<int|string, int>
+     * @return array<string, int>
      */
     private function typed(): array
     {
-        $sizes = $this->input('sizes');
+        $cells = $this->input('cells');
+        $typed = [];
 
-        return array_map(static fn (mixed $value): int => is_scalar($value) ? (int) $value : 0, is_array($sizes) ? $sizes : []);
+        foreach (is_array($cells) ? $cells : [] as $colourId => $sizes) {
+            foreach (is_array($sizes) ? $sizes : [] as $sizeId => $value) {
+                $typed["{$colourId}.{$sizeId}"] = is_scalar($value) ? (int) $value : 0;
+            }
+        }
+
+        return $typed;
+    }
+
+    /** @return Collection<int, OrderLineSize> the line's rows with their colour and size, read once */
+    private function rows(): Collection
+    {
+        $line = $this->orderLine();
+
+        if (! $line->relationLoaded('sizes')) {
+            $line->setRelation('sizes', $line->sizes()->with(['colour', 'size'])->get());
+        }
+
+        return $line->sizes;
     }
 
     private function orderLine(): OrderLine

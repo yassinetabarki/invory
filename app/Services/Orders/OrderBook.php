@@ -5,26 +5,28 @@ declare(strict_types=1);
 namespace App\Services\Orders;
 
 use App\Enums\OrderStatusFilter;
-use App\Enums\ProductStatus;
+use App\Models\Colour;
 use App\Models\Order;
 use App\Models\OrderLine;
 use App\Models\Product;
 use App\Models\ProductCategory;
 use App\Models\Size;
 use App\Models\SizeList;
+use App\Services\Products\SizeLists;
 use Closure;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\Relation;
 
 /**
- * The Eloquent side of the Orders pages (S-48): the list query with its search, and the products the order forms offer.
+ * The Eloquent side of the Orders pages (S-48): the list query with its search, and the products of Edit order's lines (INV-13).
  * Nothing here reads or writes materials, stock history or sales, and nothing does maths: the units of an order are an integer SQL sum.
  */
 final readonly class OrderBook
 {
-    /** The columns of a product the order resources read (`status` and `deleted_at` included, strict models); `category_id` for its sizes. */
-    private const PRODUCT_COLUMNS = ['id', 'sku', 'name', 'status', 'deleted_at', 'category_id'];
+    public function __construct(private SizeLists $sizeLists) {}
+
+    /** The columns of a product the order resources read (`status` and `deleted_at` included, strict models); `category_id` for its sizes; `photo_path` for Edit order's photos (INV-13). */
+    private const PRODUCT_COLUMNS = ['id', 'sku', 'name', 'status', 'deleted_at', 'category_id', 'photo_path'];
 
     /**
      * The list: orders of that status (and of that client, when given) matching the search (client, note, or a line's product name or
@@ -100,44 +102,34 @@ final readonly class OrderBook
             'lines' => fn (Relation $lines) => $lines->addSelect([OrderLineSizing::SIZES_IN_LIST => Size::query()->selectRaw('count(*)')->whereColumn('sizes.size_list_id', 'order_lines.size_list_id')]),
             'lines.product' => fn (Relation $products) => $products->select(self::PRODUCT_COLUMNS)
                 ->addSelect([OrderLineSizing::SIZES_IN_LIST => Size::query()->selectRaw('count(*)')->whereIn('size_list_id', $this->productListId())]),
-            'lines.sizes' => fn (Relation $sizes) => $sizes->addSelect(['size_label' => Size::query()->select('label')->whereColumn('sizes.id', 'order_line_sizes.size_id')]),
+            // INV-13-a: the colour's code, name and swatch are subselects too (`colour_code`, `colour_name`, `colour_swatch`), not a query.
+            'lines.sizes' => fn (Relation $sizes) => $sizes->addSelect([
+                'size_label' => Size::query()->select('label')->whereColumn('sizes.id', 'order_line_sizes.size_id'),
+                'colour_code' => Colour::query()->select('code')->whereColumn('colours.id', 'order_line_sizes.colour_id'),
+                'colour_name' => Colour::query()->select('name')->whereColumn('colours.id', 'order_line_sizes.colour_id'),
+                'colour_swatch' => Colour::query()->select('swatch')->whereColumn('colours.id', 'order_line_sizes.colour_id'),
+            ]),
         ];
     }
 
     /**
-     * "New order" offers the workshop's active, non-deleted products, by name.
+     * Edit order's products (INV-13): the product of each line of an order loaded by `load()`, in line order, deleted ones included,
+     * each with the list the line counts by (a line recorded before sizes keeps its "One size" list), for `OrderProductSearch::lines()`.
+     * No query: the lines and their products are already loaded.
      *
-     * @return Collection<int, Product>
+     * @return array{products: list<Product>, lists: array<int, SizeList>}
      */
-    public function newOrderProducts(): Collection
+    public function lineProducts(Order $order): array
     {
-        return $this->formProducts(Product::query()->where('status', ProductStatus::Active->value))->get();
-    }
+        $products = [];
+        $lists = [];
 
-    /**
-     * "Edit order" offers the active products plus every product already on the order, whatever its status, deleted ones included.
-     *
-     * @return Collection<int, Product>
-     */
-    public function editOrderProducts(Order $order): Collection
-    {
-        return $this->formProducts(Product::query()->withTrashed()
-            ->where(fn (Builder $offered) => $offered
-                ->where(fn (Builder $active) => $active->where('status', ProductStatus::Active->value)->whereNull('deleted_at'))
-                ->orWhereIn('id', OrderLine::query()->where('order_id', $order->id)->select('product_id'))))
-            ->get();
-    }
+        foreach ($order->lines as $line) {
+            $products[] = $line->product;
+            $lists[$line->product_id] = $this->sizeLists->list((int) $line->size_list_id);
+        }
 
-    /**
-     * The products an order form offers, by name, each with the code of its size list (a subselect, so no query per product).
-     *
-     * @param  Builder<Product>  $products
-     * @return Builder<Product>
-     */
-    private function formProducts(Builder $products): Builder
-    {
-        return $products->byName()->select(self::PRODUCT_COLUMNS)
-            ->addSelect(['size_list_code' => SizeList::query()->select('code')->whereIn('id', $this->productListId())]);
+        return ['products' => $products, 'lists' => $lists];
     }
 
     /**

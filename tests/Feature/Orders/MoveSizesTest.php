@@ -35,7 +35,7 @@ beforeEach(fn () => $this->user = prepareDemo($this));
 function sizedMove(Order $order, string $move, array $byLabel, array $footwear = []): TestResponse
 {
     return actingAs(test()->user)->from(route('orders.show', $order))
-        ->post(route('orders.lines.moves.store', [$order, $order->lines()->firstOrFail()]), ['move' => $move, 'sizes' => sizeIds($byLabel) + sizeIds($footwear, SizeList::EU_36_TO_46)]);
+        ->post(route('orders.lines.moves.store', [$order, $order->lines()->firstOrFail()]), ['move' => $move, 'cells' => whiteCells(sizeIds($byLabel) + sizeIds($footwear, SizeList::EU_36_TO_46))]);
 }
 
 /**
@@ -97,7 +97,7 @@ it('refuses what a size can\'t move or the form can\'t read, and changes nothing
     $order = bookSizedOrder();
     $before = sizedSnapshot($order);
 
-    $key = $field === 'sizes' ? 'sizes' : 'sizes.'.array_key_first($footwear === [] ? sizeIds([$field => 1]) : sizeIds([$field => 1], SizeList::EU_36_TO_46));
+    $key = $field === 'cells' ? 'cells' : 'cells.'.demoColour('WHT')->id.'.'.array_key_first($footwear === [] ? sizeIds([$field => 1]) : sizeIds([$field => 1], SizeList::EU_36_TO_46));
 
     sizedMove($order, 'start_cutting', $byLabel, $footwear)
         ->assertRedirect(route('orders.show', $order))
@@ -105,17 +105,17 @@ it('refuses what a size can\'t move or the form can\'t read, and changes nothing
 
     expect(sizedSnapshot($order))->toBe($before);
 })->with(function () {
-    $whole = 'M: Enter a whole number of units.';
+    $whole = 'White M: Enter a whole number of units.';
 
     return [
-        'every size empty' => [['S' => '', 'M' => ''], 'sizes', 'Enter at least one unit to move.', []],
-        'every size 0' => [['S' => '0', 'M' => '0'], 'sizes', 'Enter at least one unit to move.', []],
+        'every size empty' => [['S' => '', 'M' => ''], 'cells', 'Enter at least one unit to move.', []],
+        'every size 0' => [['S' => '0', 'M' => '0'], 'cells', 'Enter at least one unit to move.', []],
         'a decimal' => [['S' => '4', 'M' => '2.5'], 'M', $whole, []],
         'a negative number' => [['S' => '4', 'M' => '-1'], 'M', $whole, []],
         'text' => [['S' => '4', 'M' => 'abc'], 'M', $whole, []],
-        'more than the stage holds, and the size that was fine stays put' => [['S' => '4', 'M' => '25'], 'M', 'You can move at most 20 units of M.', []],
-        'a size beyond the stock of the others, the total being fine' => [['S' => '10', 'M' => '20', 'L' => '15', 'XL' => '6'], 'XL', 'You can move at most 5 units of XL.', []],
-        'a size of another list' => [['S' => '4'], 'sizes', 'The sizes ordered for Denim Jacket have changed. Enter the units again.', ['36' => '3']],
+        'more than the stage holds, and the size that was fine stays put' => [['S' => '4', 'M' => '25'], 'M', 'You can move at most 20 units of White M.', []],
+        'a size beyond the stock of the others, the total being fine' => [['S' => '10', 'M' => '20', 'L' => '15', 'XL' => '6'], 'XL', 'You can move at most 5 units of White XL.', []],
+        'a size of another list' => [['S' => '4'], 'cells', 'The sizes ordered for Denim Jacket have changed. Enter the units again.', ['36' => '3']],
     ];
 });
 
@@ -127,14 +127,14 @@ it('moves nothing when a size is not on the line, and the order page still shows
     $refusal = null;
 
     try {
-        app(MoveOrderLineUnits::class)->handle($order->lines()->firstOrFail(), OrderLineMove::StartCutting, sizeIds(['S' => 4]) + sizeIds(['36' => 3], SizeList::EU_36_TO_46), $this->user);
+        app(MoveOrderLineUnits::class)->handle($order->lines()->firstOrFail(), OrderLineMove::StartCutting, cellUnits(sizeIds(['S' => 4]) + sizeIds(['36' => 3], SizeList::EU_36_TO_46)), $this->user);
     } catch (ValidationException $e) {
         $refusal = $e->errors();
     }
 
     $page = pageProp(actingAs($this->user)->get(route('orders.show', $order))->assertOk(), 'order.lines.0.sizes');
 
-    expect($refusal)->toBe(['sizes' => ['The sizes ordered for Denim Jacket have changed. Enter the units again.']])
+    expect($refusal)->toBe(['cells' => ['The sizes ordered for Denim Jacket have changed. Enter the units again.']])
         ->and(sizedSnapshot($order))->toBe($before)
         ->and(array_combine(array_column(array_column($page, 'size'), 'label'), array_column($page, 'quantity')))->toBe(['S' => 10, 'M' => 20, 'L' => 15, 'XL' => 5]);
 });
@@ -144,15 +144,16 @@ it('names a size of digits "size 36" in the limit (F9)', function () {
     OrderLine::factory()->sized(['36' => 10, '37' => 8])->create(['order_id' => $order->id, 'product_id' => demoProduct('PRD-SNK-003')->id, 'position' => 0]);
     $before = sizedSnapshot($order);
     $size = array_key_first(sizeIds(['36' => 0], SizeList::EU_36_TO_46));
+    $white = demoColour('WHT')->id;
 
     actingAs($this->user)->from(route('orders.show', $order))
-        ->post(route('orders.lines.moves.store', [$order, $order->lines()->firstOrFail()]), ['move' => 'start_cutting', 'sizes' => [$size => 11]])
-        ->assertSessionHasErrors(["sizes.{$size}" => 'You can move at most 10 units of size 36.']);
+        ->post(route('orders.lines.moves.store', [$order, $order->lines()->firstOrFail()]), ['move' => 'start_cutting', 'cells' => whiteCells([$size => 11])])
+        ->assertSessionHasErrors(["cells.{$white}.{$size}" => 'You can move at most 10 units of White, size 36.']);
 
     // A size that is not a number names itself too, as "Size 36" at the start of its message (S-70-a).
     actingAs($this->user)->from(route('orders.show', $order))
-        ->post(route('orders.lines.moves.store', [$order, $order->lines()->firstOrFail()]), ['move' => 'start_cutting', 'sizes' => [$size => '-1']])
-        ->assertSessionHasErrors(["sizes.{$size}" => 'Size 36: Enter a whole number of units.']);
+        ->post(route('orders.lines.moves.store', [$order, $order->lines()->firstOrFail()]), ['move' => 'start_cutting', 'cells' => whiteCells([$size => '-1'])])
+        ->assertSessionHasErrors(["cells.{$white}.{$size}" => 'White, size 36: Enter a whole number of units.']);
 
     expect(sizedSnapshot($order))->toBe($before);
 });
@@ -169,7 +170,7 @@ it('moves a line ordered as M 20 only through the per-size payload (AC-2)', func
     // The single field of a line that counts as one size is not read: this line needs its sizes.
     actingAs($this->user)->from(route('orders.show', $order))
         ->post(route('orders.lines.moves.store', [$order, $order->lines()->firstOrFail()]), ['move' => 'mark_ready', 'units' => 2])
-        ->assertSessionHasErrors(['sizes' => 'Enter at least one unit to move.']);
+        ->assertSessionHasErrors(['cells' => 'Enter at least one unit to move.']);
 
     expect(jacketSizes($order))->toBe(['M' => [20, 5, 0, 0]]);
 });
@@ -204,7 +205,7 @@ it('rolls everything back when writing a size row fails (AC-2)', function () {
     $order = bookSizedOrder();
     $line = $order->lines()->firstOrFail();
     $before = sizedSnapshot($order);
-    $sizes = sizeIds(['S' => 4, 'M' => 10]);
+    $sizes = cellUnits(sizeIds(['S' => 4, 'M' => 10]));
 
     OrderLineSize::saving(function (): void {
         throw new RuntimeException('The size rows failed.');
@@ -214,4 +215,79 @@ it('rolls everything back when writing a size row fails (AC-2)', function () {
     expect(fn () => app(MoveOrderLineUnits::class)->handle($line, OrderLineMove::StartCutting, $sizes, $this->user))
         ->toThrow(RuntimeException::class, 'The size rows failed.')
         ->and(sizedSnapshot($order))->toBe($before);
+});
+
+/*
+| INV-13-e (AC-5): until INV-14, the order page's moves work per colour and size.
+*/
+
+/** Boutique Lina's jacket in two colours: White S 10, Indigo S 4 and Indigo M 8. */
+function bookTwoColourJacket(): Order
+{
+    $order = bookSizedOrder(['S' => 10]);
+    $line = $order->lines()->firstOrFail();
+    $indigo = demoColour('IND')->id;
+    demoProduct('PRD-JKT-001')->colours()->syncWithoutDetaching([$indigo => ['workshop_id' => $line->workshop_id]]);
+
+    foreach (sizeIds(['S' => 4, 'M' => 8]) as $sizeId => $quantity) {
+        (new OrderLineSize(['colour_id' => $indigo, 'size_id' => $sizeId, 'quantity' => $quantity]))
+            ->forceFill(['workshop_id' => $line->workshop_id, 'order_line_id' => $line->id])->save();
+    }
+
+    $line->update(['quantity' => 22]);
+
+    return $order;
+}
+
+it('starts cutting Indigo M 4 on that colour and size only, and writes the colour on the history (INV-13 AC-5)', function () {
+    $order = bookTwoColourJacket();
+    $indigo = demoColour('IND')->id;
+
+    actingAs($this->user)->from(route('orders.show', $order))
+        ->post(route('orders.lines.moves.store', [$order, $order->lines()->firstOrFail()]), ['move' => 'start_cutting', 'cells' => [$indigo => sizeIds(['M' => 4])]])
+        ->assertSessionHasNoErrors()
+        ->assertInertiaFlash('toast', ['type' => 'success', 'message' => '4 units of Denim Jacket moved to In cutting. Materials taken out of stock.']);
+
+    expect(colourFigures($order)[pid(1)])->toBe(['White S' => [10, 0, 0, 0], 'Indigo S' => [4, 0, 0, 0], 'Indigo M' => [8, 4, 0, 0]])
+        ->and(StockMovement::query()->latest('id')->firstOrFail()->sizes)->toBe([
+            ['size_id' => array_key_first(sizeIds(['M' => 0])), 'colour_id' => $indigo, 'label' => 'Indigo M', 'units' => 4],
+        ]);
+
+    // Indigo M holds 4 in cutting: 5 is refused under that cell, with its colour in the sentence.
+    actingAs($this->user)->from(route('orders.show', $order))
+        ->post(route('orders.lines.moves.store', [$order, $order->lines()->firstOrFail()]), ['move' => 'mark_ready', 'cells' => [$indigo => sizeIds(['M' => 5])]])
+        ->assertSessionHasErrors(['cells.'.$indigo.'.'.array_key_first(sizeIds(['M' => 0])) => 'You can move at most 4 units of Indigo M.']);
+});
+
+it('refuses a colour the line doesn\'t hold (INV-13 AC-5)', function () {
+    $order = bookTwoColourJacket();
+
+    actingAs($this->user)->from(route('orders.show', $order))
+        ->post(route('orders.lines.moves.store', [$order, $order->lines()->firstOrFail()]), ['move' => 'start_cutting', 'cells' => [demoColour('BLK')->id => sizeIds(['S' => 1])]])
+        ->assertSessionHasErrors(['cells' => 'The sizes ordered for Denim Jacket have changed. Enter the units again.']);
+
+    expect(colourFigures($order)[pid(1)]['White S'])->toBe([10, 0, 0, 0]);
+});
+
+it('moves a "One size" line holding two colours by colour, and a single-colour one by its single field (INV-13 AC-5)', function () {
+    $order = Order::factory()->create();
+    $tote = demoProduct('PRD-TOT-004');
+    $line = OrderLine::factory()->create(['order_id' => $order->id, 'product_id' => $tote->id, 'quantity' => 6, 'position' => 0]);
+    $camel = demoColour('CAM')->id;
+    $tote->colours()->syncWithoutDetaching([$camel => ['workshop_id' => $tote->workshop_id]]);
+
+    // A single cell: the window sends `units`, as before.
+    actingAs($this->user)->from(route('orders.show', $order))
+        ->post(route('orders.lines.moves.store', [$order, $line]), ['move' => 'mark_ready', 'units' => 0])
+        ->assertSessionHasErrors(['units']);
+
+    (new OrderLineSize(['colour_id' => $camel, 'size_id' => $line->sizes()->value('size_id'), 'quantity' => 3]))
+        ->forceFill(['workshop_id' => $line->workshop_id, 'order_line_id' => $line->id])->save();
+    $line->update(['quantity' => 9]);
+
+    actingAs($this->user)->from(route('orders.show', $order))
+        ->post(route('orders.lines.moves.store', [$order, $line]), ['move' => 'start_cutting', 'cells' => [$camel => [$line->sizes()->value('size_id') => 2]]])
+        ->assertSessionHasNoErrors();
+
+    expect(colourFigures($order)[$tote->id])->toBe(['White' => [6, 0, 0, 0], 'Camel' => [3, 2, 0, 0]]);
 });

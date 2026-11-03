@@ -4,8 +4,6 @@ import { create, index, store } from '@/routes/orders';
 import type { OrderCreateProps } from '@/types/domain';
 
 export default function OrdersCreate({
-    products,
-    size_lists,
     cities,
     client_sources,
     client_preset,
@@ -17,8 +15,6 @@ export default function OrdersCreate({
             <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
                 <OrderForm
                     title="New order"
-                    products={products}
-                    sizeLists={size_lists}
                     action={store()}
                     cancelHref={index.url()}
                     cities={cities}

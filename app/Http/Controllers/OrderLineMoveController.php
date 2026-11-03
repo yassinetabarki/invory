@@ -23,8 +23,9 @@ final class OrderLineMoveController extends Controller
     {
         $user = $request->user();
 
-        // A line that counts as one size has one size row: its `units` are the units of that size.
-        $units = $request->bySize() ? $request->sizeUnits() : [$line->sizes()->firstOrFail()->size_id => $request->integer('units')];
+        // A line with a single cell sends `units`: they are the units of that cell (INV-13: its colour and size).
+        $single = $request->byCell() ? null : $line->sizes()->firstOrFail();
+        $units = $single === null ? $request->cellUnits() : ["{$single->colour_id}:{$single->size_id}" => $request->integer('units')];
 
         $result = $moveUnits->handle(
             $line,

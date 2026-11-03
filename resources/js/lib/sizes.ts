@@ -1,5 +1,5 @@
 import { formatCount } from '@/lib/format';
-import type { OrderLineSize } from '@/types/domain';
+import type { OrderLine, OrderLineSize } from '@/types/domain';
 
 /** One size and how many units were counted on it. */
 export type SizeCount = { label: string; units: number };
@@ -42,4 +42,54 @@ export function orderLineSizeCounts(sizes: OrderLineSize[]): SizeCount[] {
         label: size.label,
         units: quantity,
     }));
+}
+
+/** Whether an order line is read per colour and size on the order page: counted by size, or holding several colours (INV-13). */
+export function linePerCell(line: OrderLine): boolean {
+    return line.size_mode === 'by_size' || line.sizes.length > 1;
+}
+
+/**
+ * An order line's row as one name (INV-13): "Indigo M", "Black, size 38", or the colour alone on a line that counts as one size
+ * ("Camel"). The server names a row the same way in its messages.
+ */
+export function orderCellName(row: OrderLineSize, oneField: boolean): string {
+    if (oneField) {
+        return row.colour.name;
+    }
+
+    return /^\d+$/.test(row.size.label)
+        ? `${row.colour.name}, size ${row.size.label}`
+        : `${row.colour.name} ${row.size.label}`;
+}
+
+/**
+ * An order line's units per colour and size, as the Orders list and the client page write them (INV-13, AC-5): each colour named
+ * once before its sizes, "Indigo S 10 · M 20 · L 15 · XL 5"; two colours "Black M 1 · Indigo S 1 · M 2"; a line that counts as one
+ * size by colour, "Camel 10". The rows come in the server's order (colour list order, then size); nothing is added up here.
+ */
+export function formatOrderLineCells(line: OrderLine, locale: string): string {
+    const oneField = line.size_mode !== 'by_size';
+    const groups: { name: string; parts: string[] }[] = [];
+
+    for (const row of line.sizes) {
+        if (row.quantity <= 0) {
+            continue;
+        }
+
+        const part = oneField
+            ? formatCount(row.quantity, locale)
+            : `${sizeLabelInText(row.size.label)} ${formatCount(row.quantity, locale)}`;
+        const last = groups.at(-1);
+
+        if (last && last.name === row.colour.name) {
+            last.parts.push(part);
+        } else {
+            groups.push({ name: row.colour.name, parts: [part] });
+        }
+    }
+
+    return groups
+        .map(({ name, parts }) => `${name} ${parts.join(' · ')}`)
+        .join(' · ');
 }

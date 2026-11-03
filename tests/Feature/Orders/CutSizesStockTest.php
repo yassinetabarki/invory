@@ -33,7 +33,7 @@ beforeEach(function () {
 function cutBySize(Order $order, string $move, array $byLabel): TestResponse
 {
     return actingAs(test()->user)->from(route('orders.show', $order))
-        ->post(route('orders.lines.moves.store', [$order, $order->lines()->firstOrFail()]), ['move' => $move, 'sizes' => sizeIds($byLabel)]);
+        ->post(route('orders.lines.moves.store', [$order, $order->lines()->firstOrFail()]), ['move' => $move, 'cells' => whiteCells(sizeIds($byLabel))]);
 }
 
 /** The stock saved now of the four jacket materials, by SKU. */
@@ -60,7 +60,8 @@ function movedSizes(array $byLabel): array
     $ids = sizeIds(array_map(fn (): int => 1, $byLabel));
 
     return array_values(array_map(
-        fn (string $label, int $id, int $units): array => ['size_id' => $id, 'label' => $label, 'units' => $units],
+        // INV-13-e: the colour is on every entry, and in its label ("White M").
+        fn (string $label, int $id, int $units): array => ['size_id' => $id, 'colour_id' => demoColour('WHT')->id, 'label' => "White {$label}", 'units' => $units],
         array_keys($byLabel),
         array_keys($ids),
         $byLabel,
@@ -95,7 +96,7 @@ it('counts every size together against the stock: the button at 100 pc refuses S
 
     cutBySize($order, 'start_cutting', ['S' => 10, 'M' => 10])
         ->assertRedirect(route('orders.show', $order))
-        ->assertSessionHasErrors(['sizes' => 'Not enough stock to cut 20 units. You can cut at most 12 now: Metal shank button 17mm runs short. Restock it first, or cut 12 or fewer.']);
+        ->assertSessionHasErrors(['cells' => 'Not enough stock to cut 20 units. You can cut at most 12 now: Metal shank button 17mm runs short. Restock it first, or cut 12 or fewer.']);
 
     expect([jacketMaterials(), StockMovement::query()->orderBy('id')->get()->toArray(), OrderLineCut::query()->count(), sizedFigures($order)])->toBe($before);
 });

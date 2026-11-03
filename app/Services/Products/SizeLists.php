@@ -86,7 +86,11 @@ final class SizeLists
         $attributes = request()->attributes;
 
         if (! $attributes->has(self::CATEGORIES_ATTRIBUTE)) {
-            $attributes->set(self::CATEGORIES_ATTRIBUTE, app(ReferenceData::class)->productCategories()->loadMissing('sizeList.sizes'));
+            // The lists come from `allLists()`, so a page that reads both the categories and the lists loads the lists once (INV-13).
+            $lists = $this->allLists();
+            $categories = app(ReferenceData::class)->productCategories()
+                ->each(fn (ProductCategory $category) => $category->relationLoaded('sizeList') || $category->setRelation('sizeList', $lists->get($category->size_list_id)));
+            $attributes->set(self::CATEGORIES_ATTRIBUTE, $categories);
         }
 
         /** @var Collection<int, ProductCategory> */

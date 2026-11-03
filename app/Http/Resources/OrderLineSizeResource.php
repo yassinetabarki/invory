@@ -9,8 +9,9 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * `OrderLineSize` in resources/js/types/domain.ts: one size of an order line with its quantity and four stages (S-60, S-61). The row
- * must carry `size_label`, the label of its size (not a column: the order pages' queries add it, see `OrderBook`).
+ * `OrderLineSize` in resources/js/types/domain.ts: one colour and size of an order line with its quantity and four stages (S-60, S-61,
+ * INV-13). The row must carry `size_label` and `colour_code`, `colour_name`, `colour_swatch` (not columns: the order pages' queries add
+ * them, see `OrderBook`).
  *
  * @mixin OrderLineSize
  */
@@ -20,6 +21,12 @@ final class OrderLineSizeResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
+            'colour' => [
+                'id' => $this->colour_id,
+                'code' => $this->getAttribute('colour_code'),
+                'name' => $this->getAttribute('colour_name'),
+                'swatch' => $this->getAttribute('colour_swatch'),
+            ],
             'size' => ['id' => $this->size_id, 'label' => $this->getAttribute('size_label')],
             'quantity' => $this->quantity,
             'to_start' => $this->to_start,

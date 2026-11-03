@@ -10,10 +10,12 @@ use App\Enums\OrderStage;
 use App\Models\Order;
 use App\Models\OrderLine;
 use App\Models\OrderLineSize;
+use App\Models\SizeList;
 use App\Models\User;
 use App\Services\Orders\MoveResult;
 use App\Services\Orders\OrderLineSizing;
 use App\Services\Orders\OrderMessages;
+use App\Services\Products\SizeLists;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
@@ -24,50 +26,60 @@ final readonly class MoveOrderLineUnits
         private TakeMaterialsForCut $takeMaterials,
         private ReturnMaterialsFromCuts $returnMaterials,
         private OrderLineSizing $sizing,
+        private SizeLists $lists,
     ) {}
 
     /**
-     * Moves units of an order line from one stage to the next or the previous one, per size (S-61-a, ADR-0016): `$unitsBySize` is size
-     * id → units (1 or more), and every size moves or none does. The limit of each size is the count saved now: the order row is locked
-     * first (the same lock "Edit order" takes), then the line, then its size rows, and the counts are read under those locks, never from
-     * the model the route handed in (ADR-0014 §7). Start cutting takes the materials of the total out of stock in one cut, and Move back
-     * to To start returns what the total took, latest cut first, both inside this transaction (S-53); every other move reads and writes
-     * only the order, the line and its sizes, so Mark ready, Ship and their moves back can't touch materials, stock history or sales.
-     * Afterwards each size row holds its new counts and the line's three counts are the sums of its rows.
+     * Moves units of an order line from one stage to the next or the previous one, per colour and size (S-61-a, ADR-0016, ADR-0025):
+     * `$unitsByCell` is "<colour id>:<size id>" → units (1 or more), and every cell moves or none does. The limit of each cell is the
+     * count saved now: the order row is locked first (the same lock "Edit order" takes), then the line, then its rows, and the counts
+     * are read under those locks, never from the model the route handed in (ADR-0014 §7). Start cutting takes the materials of the
+     * total out of stock in one cut, and Move back to To start returns what the total took, latest cut first, both inside this
+     * transaction (S-53); every other move reads and writes only the order, the line and its rows, so Mark ready, Ship and their moves
+     * back can't touch materials, stock history or sales. Afterwards each row holds its new counts and the line's three counts are the
+     * sums of its rows.
      *
-     * A line counted by size reports its refusals under `sizes.<size id>` (a limit) or `sizes` (a product deleted, too little stock); a
-     * line that counts as one size has one row and reports them under `units`, as before.
+     * A window by cell (a line counted by size, or holding several colours) reports its refusals under `cells.<colour id>.<size id>` (a
+     * limit) or `cells` (a product deleted, too little stock); a line with a single cell has one row and reports them under `units`.
      *
-     * @param  array<int, int>  $unitsBySize
+     * @param  array<string, int>  $unitsByCell
      *
-     * @throws ValidationException more than a size's stage holds, a size that is not on the line, Start cutting on a deleted product, or
+     * @throws ValidationException more than a cell's stage holds, a cell that is not on the line, Start cutting on a deleted product, or
      *                             too little stock to cut
      */
-    public function handle(OrderLine $line, OrderLineMove $move, array $unitsBySize, User $actor): MoveResult
+    public function handle(OrderLine $line, OrderLineMove $move, array $unitsByCell, User $actor): MoveResult
     {
-        $unitsBySize = array_filter($unitsBySize, static fn (int $units): bool => $units >= 1);
+        $unitsByCell = array_filter($unitsByCell, static fn (int $units): bool => $units >= 1);
 
-        if ($unitsBySize === []) {
+        if ($unitsByCell === []) {
             throw new InvalidArgumentException('A move needs at least one unit.');
         }
 
-        return DB::transaction(function () use ($line, $move, $unitsBySize, $actor): MoveResult {
+        return DB::transaction(function () use ($line, $move, $unitsByCell, $actor): MoveResult {
             // An order deleted in the meantime is not found.
             Order::query()->whereKey($line->order_id)->lockForUpdate()->firstOrFail();
 
             $locked = OrderLine::query()->lockForUpdate()->findOrFail($line->id);
             $product = $locked->product()->firstOrFail();
-            $rows = $locked->sizes()->with('size')->lockForUpdate()->get();
-            $bySize = $this->sizing->forLine($locked->setRelation('product', $product)) === OrderLineSizeMode::BySize;
+            $rows = $locked->sizes()->with(['size', 'colour'])->lockForUpdate()->get();
+            $byCell = $this->sizing->forLine($locked->setRelation('product', $product)) === OrderLineSizeMode::BySize || $rows->count() > 1;
+            $oneSize = $this->lists->list((int) $locked->size_list_id)->code === SizeList::ONE_SIZE;
 
             if ($move === OrderLineMove::StartCutting && $product->trashed()) {
-                throw ValidationException::withMessages([$bySize ? 'sizes' : 'units' => OrderMessages::productDeleted($product->name)]);
+                throw ValidationException::withMessages([$byCell ? 'cells' : 'units' => OrderMessages::productDeleted($product->name)]);
             }
 
-            $moved = $this->checked($rows->keyBy('size_id')->all(), $unitsBySize, $move->fromStage(), $bySize, $product->name);
-            $total = array_sum($unitsBySize);
-            $snapshot = $bySize ? array_map(
-                static fn (OrderLineSize $row): array => ['size_id' => $row->size_id, 'label' => $row->size->label, 'units' => $unitsBySize[$row->size_id]],
+            $keyed = $rows->keyBy(fn (OrderLineSize $row): string => "{$row->colour_id}:{$row->size_id}")->all();
+            $moved = $this->checked($keyed, $unitsByCell, $move->fromStage(), $byCell, $oneSize, $product->name);
+            $total = array_sum($unitsByCell);
+            $snapshot = $byCell ? array_map(
+                static fn (OrderLineSize $row): array => [
+                    'size_id' => $row->size_id,
+                    'colour_id' => $row->colour_id,
+                    // INV-13: the colour is part of the label the history shows ("Indigo M 4").
+                    'label' => OrderMessages::variant($row->colour->name, $row->size->label, $oneSize),
+                    'units' => $unitsByCell["{$row->colour_id}:{$row->size_id}"],
+                ],
                 $moved,
             ) : null;
 
@@ -76,7 +88,9 @@ final readonly class MoveOrderLineUnits
 
             // To start has no column: it is whatever the three counters leave of the quantity.
             foreach ($moved as $row) {
-                foreach ([[$move->fromStage(), -$unitsBySize[$row->size_id]], [$move->toStage(), $unitsBySize[$row->size_id]]] as [$stage, $change]) {
+                $units = $unitsByCell["{$row->colour_id}:{$row->size_id}"];
+
+                foreach ([[$move->fromStage(), -$units], [$move->toStage(), $units]] as [$stage, $change]) {
                     if ($stage !== OrderStage::ToStart) {
                         $row->setAttribute($stage->value, $this->held($row, $stage) + $change);
                     }
@@ -107,27 +121,27 @@ final readonly class MoveOrderLineUnits
     }
 
     /**
-     * The rows that move, in size order, once every size is checked against what its stage holds now. Every refusal is reported, not
-     * only the first one.
+     * The rows that move, in the line's order, once every cell is checked against what its stage holds now. Every refusal is reported,
+     * not only the first one.
      *
-     * @param  array<int, OrderLineSize>  $rows  the locked rows by size id, in size order, each with its size
-     * @param  array<int, int>  $unitsBySize
+     * @param  array<string, OrderLineSize>  $rows  the locked rows by cell, in the line's order, each with its size and colour
+     * @param  array<string, int>  $unitsByCell
      * @return list<OrderLineSize>
      *
      * @throws ValidationException
      */
-    private function checked(array $rows, array $unitsBySize, OrderStage $from, bool $bySize, string $product): array
+    private function checked(array $rows, array $unitsByCell, OrderStage $from, bool $byCell, bool $oneSize, string $product): array
     {
         $errors = [];
 
-        foreach ($unitsBySize as $sizeId => $units) {
-            $row = $rows[$sizeId] ?? null;
+        foreach ($unitsByCell as $cell => $units) {
+            $row = $rows[$cell] ?? null;
 
             if ($row === null) {
-                $errors['sizes'] = OrderMessages::moveSizesChanged($product);
+                $errors['cells'] = OrderMessages::moveSizesChanged($product);
             } elseif ($units > ($held = $this->held($row, $from))) {
-                $errors[$bySize ? "sizes.{$sizeId}" : 'units'] = $bySize
-                    ? OrderMessages::sizeMoveLimit($row->size->label, $held)
+                $errors[$byCell ? 'cells.'.str_replace(':', '.', $cell) : 'units'] = $byCell
+                    ? OrderMessages::sizeMoveLimit(OrderMessages::variant($row->colour->name, $row->size->label, $oneSize), $held)
                     : OrderMessages::moveLimit($held);
             }
         }
@@ -136,10 +150,10 @@ final readonly class MoveOrderLineUnits
             throw ValidationException::withMessages($errors);
         }
 
-        return array_values(array_filter($rows, static fn (OrderLineSize $row): bool => isset($unitsBySize[$row->size_id])));
+        return array_values(array_filter($rows, static fn (OrderLineSize $row): bool => isset($unitsByCell["{$row->colour_id}:{$row->size_id}"])));
     }
 
-    /** The units the stage holds on a locked line or size row. */
+    /** The units the stage holds on a locked line or row. */
     private function held(OrderLine|OrderLineSize $model, OrderStage $stage): int
     {
         return $stage === OrderStage::ToStart ? $model->to_start : (int) $model->getAttribute($stage->value);

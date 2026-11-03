@@ -3,6 +3,7 @@
 use App\Models\Material;
 use App\Models\Order;
 use App\Models\Sale;
+use App\Models\SizeList;
 use App\Models\User;
 use App\Policies\MaterialPolicy;
 use Illuminate\Auth\Access\Response;
@@ -114,6 +115,11 @@ function routePayload(string $kind): array
         'product' => validProductPayload(),
         'sale' => validSalePayload(),
         'order' => validOrderPayload(),
+        // INV-13: Boutique Lina's booked lines were recorded before sizes, so their units go on "One size" in their first colour.
+        'order edit' => validOrderPayload(['lines' => [
+            ['product_id' => pid(1), 'units' => orderUnits(pid(1), ['One size' => '50'], list: SizeList::ONE_SIZE)],
+            ['product_id' => pid(5), 'units' => orderUnits(pid(5), ['One size' => '30'], list: SizeList::ONE_SIZE)],
+        ]]),
         'move' => ['move' => 'start_cutting', 'units' => '5'],
         default => [],
     };
@@ -217,7 +223,7 @@ it('redirects valid writes to the page the contract names', function (string $me
     'sales.update goes back' => ['put', 'sales.update', 'sale', 'sale', null, []],
     'sales.destroy goes back' => ['delete', 'sales.destroy', 'sale', 'none', null, []],
     'orders.store goes to the order\'s page' => ['post', 'orders.store', null, 'order', 'orders.show', ['order']],
-    'orders.update goes to the order\'s page' => ['put', 'orders.update', 'order', 'order', 'orders.show', ['order']],
+    'orders.update goes to the order\'s page' => ['put', 'orders.update', 'order', 'order edit', 'orders.show', ['order']],
     'orders.destroy goes back' => ['delete', 'orders.destroy', 'order', 'none', null, []],
     'orders.lines.moves.store goes to the order\'s page' => ['post', 'orders.lines.moves.store', 'order line', 'move', 'orders.show', ['order']],
 ]);

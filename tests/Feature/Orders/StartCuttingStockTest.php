@@ -260,7 +260,7 @@ it('rolls back everything when writing the third material fails', function () {
 
     $line = $order->lines()->get()[0];
 
-    expect(fn () => app(MoveOrderLineUnits::class)->handle($line, OrderLineMove::StartCutting, [$line->sizes()->value('size_id') => 30], $this->user))
+    expect(fn () => app(MoveOrderLineUnits::class)->handle($line, OrderLineMove::StartCutting, firstCell($line, 30), $this->user))
         ->toThrow(RuntimeException::class, 'The third material failed.')
         ->and($written)->toBe(3)
         ->and(stockAndCuts())->toBe($before);

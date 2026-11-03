@@ -5,13 +5,14 @@ declare(strict_types=1);
 namespace App\Services\Products;
 
 use App\Enums\ProductionBatchStatus;
+use App\Models\OrderLineSize;
 use App\Models\Product;
 use App\Models\ProductionBatch;
 use App\Models\ProductSizeStock;
 use Illuminate\Support\Number;
 
 /**
- * A colour with finished units in stock, or units in production (INV-5-g), can't be taken off its product (INV-2-b, ADR-0019): the rows of a colour exist only while it
+ * A colour with finished units in stock, units in production (INV-5-g) or units on open orders (INV-13-b) can't be taken off its product (INV-2-b, ADR-0019): the rows of a colour exist only while it
  * holds a unit, so "has stock" is one grouped read of the rows of the colours being taken off. A colour at 0 comes off as before, and
  * added back later it starts at 0.
  *
@@ -78,6 +79,36 @@ final class ProductColourLock
             $refusals[(int) $colour->id] = trans_choice(
                 "{1} :colour has :count unit in production, so it can't be removed from :product."
                 ."|[2,*] :colour has :count units in production, so it can't be removed from :product.",
+                $units,
+                ['colour' => $colour->name, 'product' => $product->name, 'count' => (string) Number::format($units, locale: 'en')],
+            );
+        }
+
+        // INV-13-b: a colour that open orders still hold (units ordered and not shipped yet) can't come off either. The shelf and the
+        // production sentences win: this one shows once both are at 0. A deleted order holds nothing.
+        $onOrders = OrderLineSize::query()
+            ->join('order_lines', 'order_lines.id', '=', 'order_line_sizes.order_line_id')
+            ->join('orders', 'orders.id', '=', 'order_lines.order_id')
+            ->join('colours', 'colours.id', '=', 'order_line_sizes.colour_id')
+            ->where('order_lines.product_id', $product->id)
+            ->whereNull('orders.deleted_at')
+            ->whereNotIn('order_line_sizes.colour_id', $keptColourIds)
+            ->whereColumn('order_line_sizes.shipped', '<', 'order_line_sizes.quantity')
+            ->groupBy('colours.id', 'colours.name', 'colours.position')
+            ->toBase()
+            ->selectRaw('colours.id, colours.name, colours.position, SUM(order_line_sizes.quantity - order_line_sizes.shipped) as units')
+            ->get();
+
+        foreach ($onOrders as $colour) {
+            if (isset($refusals[(int) $colour->id])) {
+                continue;
+            }
+
+            $units = (int) $colour->units;
+            $order[(int) $colour->id] = [(int) $colour->position, $colour->name, (int) $colour->id];
+            $refusals[(int) $colour->id] = trans_choice(
+                "{1} :colour has :count unit on open orders, so it can't be removed from :product."
+                ."|[2,*] :colour has :count units on open orders, so it can't be removed from :product.",
                 $units,
                 ['colour' => $colour->name, 'product' => $product->name, 'count' => (string) Number::format($units, locale: 'en')],
             );
