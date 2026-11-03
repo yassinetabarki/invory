@@ -5,7 +5,7 @@ type: feature
 phase: Colour × size variants
 priority: Must
 size: M
-status: Planned
+status: Done
 created: 2026-11-02
 tags:
   - story
@@ -51,7 +51,7 @@ Today is 30 Oct 2026. The workshop's phases are **Sewing** and **Finishing**. Th
 B-0139 (Denim Jacket · Indigo L) was put in stock on 28 Oct 2026. The Denim Jacket's SKU for Indigo S is PRD-JKT-001-IND-S. The shelf
 for Denim Jacket Indigo M reads 0. The signed-in member is named **Admin**.
 
-- [ ] **AC-1 · The work ticket.** A ticket is 105 × 74 mm, black on white, and reads from top to bottom: "Work ticket" and, large,
+- [x] **AC-1 · The work ticket.** A ticket is 105 × 74 mm, black on white, and reads from top to bottom: "Work ticket" and, large,
   **B-0147**; on the left the QR code (30 mm); on the right **Denim Jacket** (bold, at most two lines), "Indigo · S", **4 units**
   (large), "Started 23 Oct 2026" and "PRD-JKT-001-IND-S" in the number font; the path as the phases are when it is printed, the current
   one ticked (printed at Start batch: "☑ In cutting ☐ Sewing ☐ Finishing ☐ Put in stock"; B-0147 printed today ticks Sewing), and
@@ -59,7 +59,7 @@ for Denim Jacket Indigo M reads 0. The signed-in member is named **Admin**.
   another adds "Split from B-0149". No client, no phone number and no price appear on a ticket. The units are the batch's units when
   printed: after 1 of B-0148's 4 units is put in stock, a ticket printed again reads **3 units**.
 
-- [ ] **AC-2 · Printing tickets from Progress.** Tickets print only from Progress, in a new tab with the browser's print window, as
+- [x] **AC-2 · Printing tickets from Progress.** Tickets print only from Progress, in a new tab with the browser's print window, as
   INV-2's labels do; until Ticket size exists (AC-7) they print on an **A4 sheet, 8 tickets (2 × 4)**.
   - **Start batch** ends with "2 batches started" · "16 units of Denim Jacket started. Materials taken out of stock." · "2 tickets to
     print: B-0153 · Indigo M · 6 units, B-0154 · Indigo L · 10 units" · **Print 2 tickets** (main) · **Done**. One batch reads "1 ticket
@@ -71,7 +71,7 @@ for Denim Jacket Indigo M reads 0. The signed-in member is named **Admin**.
   - If the browser blocks the new tab: "Your browser blocked the tickets' tab. Allow pop-ups for Invory, then print again." Nothing is
     lost: the button can be pressed again.
 
-- [ ] **AC-3 · The Scan page.** The sidebar reads Dashboard, Materials, Products, Restocks, Orders, Progress, **Scan** (QR icon), Clients,
+- [x] **AC-3 · The Scan page.** The sidebar reads Dashboard, Materials, Products, Restocks, Orders, Progress, **Scan** (QR icon), Clients,
   Sales; the breadcrumb is "Scan". Progress's header gets **Scan a ticket** (outline) between **Production phases** and **Start batch**;
   it opens the Scan page. Any signed-in member of the workshop can scan.
   - **Phone:** the camera view with a frame and "Point the camera at the QR code on a work ticket."; under it "Or type the batch
@@ -83,7 +83,7 @@ for Denim Jacket Indigo M reads 0. The signed-in member is named **Admin**.
     "→ Finishing" (or "→ Put in stock") and the time. Empty: "No scan yet today."
   - On a phone, nothing scrolls sideways at 320 px and every control is at least 44 px.
 
-- [ ] **AC-4 · The scan confirm.** Each scan opens one confirm; it never moves anything by itself and never times out.
+- [x] **AC-4 · The scan confirm.** Each scan opens one confirm; it never moves anything by itself and never times out.
   - B-0147 (in Sewing): the title **Move to Finishing?**; "B-0147 · **4 units** · Denim Jacket · Indigo · S · started 23 Oct 2026"; the
     path "In cutting ✓ · Sewing (now) · **Finishing** · Put in stock"; **Move 4 units to Finishing** (main, full width, 56 px tall) and
     **Not now**. Pressing it moves the whole batch, exactly as **Move to Finishing** does on Progress (B-0147 keeps its number, its
@@ -97,12 +97,12 @@ for Denim Jacket Indigo M reads 0. The signed-in member is named **Admin**.
   - There is no moving back and no moving part of a batch by scan.
   - On a phone the confirm is a sheet from the bottom, its buttons one under another.
 
-- [ ] **AC-5 · Opening a ticket with a phone's camera.** The QR code holds a link to the batch in Invory with a secret code of its own;
+- [x] **AC-5 · Opening a ticket with a phone's camera.** The QR code holds a link to the batch in Invory with a secret code of its own;
   the phone's own camera app, a scanner and the Scan page all read it. Opening it while signed in shows the Scan page with that
   batch's confirm (AC-4). Not signed in: the sign-in page, then straight back to that confirm. A split batch's ticket has its own code.
   A ticket's code keeps working while the batch exists, whatever phase it is in.
 
-- [ ] **AC-6 · When a scan can't move the batch.** Nothing moves in any of these cases:
+- [x] **AC-6 · When a scan can't move the batch.** Nothing moves in any of these cases:
   - Already in stock (B-0139): "B-0139 was put in stock on 28 Oct 2026. Nothing left to do." · **Scan another**.
   - Undone (after **Undo batch** on B-0150 today): "B-0150 was undone on 30 Oct 2026: its materials went back to stock. Nothing to move." · **Scan another**.
   - A code that isn't a ticket, or another workshop's ticket: "This code isn't a work ticket of your workshop. Check the ticket, or type
@@ -119,14 +119,14 @@ for Denim Jacket Indigo M reads 0. The signed-in member is named **Admin**.
   - Couldn't move: "Couldn't move B-0147. Check the connection and try again." · **Try again**. Couldn't load: "Couldn't load ticket
     B-0147. Try again." · **Try again**.
 
-- [ ] **AC-7 · Ticket size in Settings › Labels (waits for INV-9).** Settings › Labels, the page INV-9 makes, gets the list **Ticket
+- [x] **AC-7 · Ticket size in Settings › Labels (waits for INV-9).** Settings › Labels, the page INV-9 makes, gets the list **Ticket
   size**, beside the label size: "A4 sheet, 8 tickets (2 × 4)" (the default) or "100 × 60 mm, one per label (label printer)". It is
   saved with **Save label settings** like the other label settings, for the whole workshop. Every ticket printed after that uses the
   chosen size. This criterion is built once INV-9's page exists; until then tickets print on the A4 sheet of 8.
 
 ## Technical work
-> [!warning] Complex · CRITICAL · backend + frontend · 7 commits (6 now, 1 after INV-9)
-> Tech-lead (main session standing in, at the human's request) · 2026-11-02 · approved 2026-11-02
+> [!warning] Complex · CRITICAL · backend + frontend · 7 commits (INV-15-g built now, at the human's request)
+> Tech-lead (main session standing in, at the human's request) · 2026-11-02 · approved 2026-11-02 · delivered 2026-11-03 · accepted by the human 2026-11-03 (on PI-DEV)
 > Why complex: a private ticket code on every batch (and on every split), a page reachable from a phone's camera through sign-in, a scan
 > that moves a batch or puts it in stock through INV-5's two CRITICAL Actions under their locks, a print page that sets the pattern
 > INV-9's labels will follow, and a camera reader (`barcode-detector`, the human's answer).
@@ -371,3 +371,48 @@ parallel with INV-15-e → INV-15-f. INV-15-g after INV-9. Merge order is the st
 1. The camera reads QR codes with the `barcode-detector` package (a): the browser's own reader where there is one, a WebAssembly
    reader served by Invory elsewhere, loaded only on the Scan page.
 2. `bacon/bacon-qr-code` becomes a direct dependency (yes).
+
+### Delivered differently from the plan
+- **INV-15-g is built now, not after INV-9** (the human's request, 2026-11-03). INV-15 makes `workshop_label_settings` (one row per
+  workshop, made on first save; PostgreSQL CHECK on the two sizes) and **Settings › Labels** with **Ticket size** only, in the
+  Catalogue group after Colours. Its line reads "How your work tickets print." (INV-9 widens it when it adds the label settings); a
+  size not in the list is refused with "Choose a ticket size.". AC-7 is built and tested with the rest.
+- **`zxing-wasm` is listed in `package.json` too** (3.1.6, the version `barcode-detector` uses), so Vite can bundle its `.wasm` file:
+  `public/build/assets/zxing_reader-*.wasm` (947 kB, 414 kB gzipped), loaded by the Scan page only, with the reader in its own 43 kB
+  chunk. `package-lock.json` was updated with npm 11: this machine's npm 10 fails on the project's lock ("Cannot read properties of
+  null (reading 'edgesOut')") with or without INV-15, so CI's `npm ci` reads a lock written by npm 11.
+- **`phases` comes without a flash**: on that refusal the page looks the batch up again, so the button relabels from the fresh confirm.
+- **"Couldn't move B-0147. Check the connection and try again."** stays in the confirm, and its main button is the **Try again**.
+- **The camera shows on a phone only.** A laptop shows the field with the focus, even with a webcam ("Ready, laptop").
+- **The scan field also takes `0147` and `b0147`**, besides `B-0147`, `b-0147`, `B147` and `147`.
+- **A ticket ticks its batch's step only**; the steps before it are not ticked. The confirm's done steps show a check icon announced
+  "done".
+- **Wording the card doesn't give, written here:** the print page's heading "2 work tickets" and its **Print** button; "These batches
+  have left Progress, so there is nothing to print."; "Choose a ticket size."; "someone" when the account that made the last move was
+  deleted; "just now" for a move under a second old.
+- **The workshop leak scan** walks the new pages: `code` is among its parameters (the own batch's ticket code), and the lookup is
+  probed with the other workshop's batch number and QR link.
+- **The hand-kept migration list (F-60)** gets the ticket codes and label settings migrations: every test that rolls the production
+  migration back rolls them back first and brings them back up after it.
+
+### Delivery report (2026-11-03)
+Gates on this machine, final tree: `composer test` green (Pint, PHPStan, 3,046 Pest tests: 2,970 green, 76 skipped); `npx vp test`
+green (129 files, 1,514 tests); `npm run check`, `npm run types:check` and `npm run build` green. PostgreSQL parity (`composer
+test:pgsql`'s run): 3,044 of 3,044, then `ScanTest` again after the last lookup fix, 34 of 34. Not run here: the browser golden path
+(Playwright is outdated on this machine, see INV-3).
+
+| AC | Evidence |
+| --- | --- |
+| AC-1 · the ticket | `WorkTicketsTest` (B-0147's fields, no client or price in the props, Split from, one size, 3 units after 1 put in stock, the QR path is the link's modules); `tickets.test.tsx` (every line, the ticked step, nothing about a client or a price) |
+| AC-2 · printing | `WorkTicketsTest` (order, left-out batches, 1 to 50, another workshop a 404, guests); `MoveBatchTest` (the split toast's **Print ticket B-0155**); `StartBatchTest` (ids in the flash); `start-batch-dialog.test.tsx` (**Print 2 tickets**); `progress/index.test.tsx` (the "⋯" menu in every phase); `print-tickets.test.ts` (new tab, blocked tab); `use-flash-toast.test.ts` |
+| AC-3 · the Scan page | `ScanTest` (each way of typing, scans today); `scan/index.test.tsx` (laptop and phone, Enter, the hint, scans today); `app-sidebar.test.tsx` (Scan after Progress); `progress/index.test.tsx` (**Scan a ticket**); `camera-reader.test.tsx` |
+| AC-4 · the confirm | `ScanTest` (Sewing → Finishing kept number, In cutting → Sewing, Put in stock with its restock, no phase of its own, `scanned` on the move); `scan/index.test.tsx` (titles, buttons, the shelf note, Not now, the phone sheet) |
+| AC-5 · the QR link | `TicketCodeTest` (a code per batch, a split's own, migration fill, never sent); `ScanTest` (the link from any host, the page with its confirm, a guest signs in and comes back); `ProductionSchemaTest` (unique, not null on PostgreSQL) |
+| AC-6 · refusals | `ScanTest` (in stock, undone, unknown code, number, not a number, deleted product, another workshop, moved meanwhile, part put in stock, a phase added, the 2-minute warning); `scan/index.test.tsx` (each sentence, Scan another, relabel, couldn't move, couldn't load); `camera-reader.test.tsx` (refused, none) |
+| AC-7 · Ticket size | `LabelSettingsTest` (default, saved for the workshop in one row, refused sizes, guests, PostgreSQL CHECK); `WorkTicketsTest` (the print size follows it); `labels.test.tsx`; `tickets.test.tsx` (`@page` per size); `layout.test.tsx` (Labels in the menu) |
+
+
+### Commits (on `PI-DEV`)
+`967dcf4` INV-15-a ticket codes · `d876d37` AC-7 Settings › Labels · `7af351d` AC-3 to AC-6 Scan · `adea45b` AC-1, AC-2 work tickets and
+printing. The three last were committed with `--no-verify` at the human's choice: the Talisman hook flags the list item props of React
+screens.

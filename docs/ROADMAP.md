@@ -1,7 +1,7 @@
 # Invory — product roadmap
 
-> Owner: **product-owner** · Last updated: 2026-11-02 (INV-5 done; D-25: INV-15 comes next)
-> INV-10 is done (`76b1770`), so new cards can be added again. INV-2 is done (`46af1cc`, `ab313eb`, `4088200`). INV-8 is done (`9f93175` … `3b55319`). INV-4 is done, with INV-12 (accepted 2026-11-02, on `PI-DEV`). INV-5 is done (accepted 2026-11-02, on `PI-DEV`). Next is INV-15 (D-25); INV-3 is built and waits for acceptance.
+> Owner: **product-owner** · Last updated: 2026-11-03 (INV-15 done)
+> INV-10 is done (`76b1770`), so new cards can be added again. INV-2 is done (`46af1cc`, `ab313eb`, `4088200`). INV-8 is done (`9f93175` … `3b55319`). INV-4 is done, with INV-12 (accepted 2026-11-02, on `PI-DEV`). INV-5 is done (accepted 2026-11-02, on `PI-DEV`). INV-15 is done (accepted 2026-11-03, on `PI-DEV`). Next: INV-3 is built and waits for acceptance, then INV-9.
 
 ## Product goal
 A small fashion workshop knows, at any moment, what each product costs to make, how many it can make from the stock
@@ -23,7 +23,7 @@ Work goes one item at a time, in the order below. A UI card comes first, then th
 | INV-5  | Production for the shelf: a progress page          | `Done`        | See where every batch is in production     |
 | INV-3  | Restock of finished products                       | `Planned`     | Add finished units to the shelf at once    |
 | INV-9  | Print barcode labels                               | `Ready`       | Print a label for a variant, or a sheet    |
-| INV-15 | Work tickets and the Scan page                     | `Planned`     | Move a batch on by scanning its ticket     |
+| INV-15 | Work tickets and the Scan page                     | `Done`        | Move a batch on by scanning its ticket     |
 | INV-12 | Refactor the order, 1 of 3: client first           | `Done`        | Built within INV-4                         |
 | INV-13 | Refactor the order, 2 of 3: product search, stock  | `UI approved` | See what is in stock when taking an order  |
 | INV-14 | Refactor the order, 3 of 3: tracker, from shelf    | `UI approved` | See where an order stands at a glance      |
@@ -52,5 +52,5 @@ the order.
 - A REST API and a mobile app
 
 ## Done
-Phases 1 to 3 and the first Phase 5 work, plus INV-1, INV-2, INV-8, INV-10, INV-4 (with INV-12) and INV-5. See [STATUS.md §4](STATUS.md#4-delivery-history) and the
+Phases 1 to 3 and the first Phase 5 work, plus INV-1, INV-2, INV-8, INV-10, INV-4 (with INV-12), INV-5 and INV-15. See [STATUS.md §4](STATUS.md#4-delivery-history) and the
 [backlog archive](archive/backlog-2026-10-14.md).

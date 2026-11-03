@@ -4,7 +4,8 @@
 > **Owner:** `product-owner` (order, wording, acceptance criteria) · **Technical Detail:** `tech-lead` ([TECH-DEBT.md](TECH-DEBT.md), [plans/](plans/README.md))
 > **Phases & Goals:** [ROADMAP.md](ROADMAP.md) · **Progress:** [STATUS.md](STATUS.md)
 
-> [!history] Last Cleaned: 2026-11-02
+> [!history] Last Cleaned: 2026-11-03
+> - **INV-15 Done** (accepted 2026-11-03 by the human; on `PI-DEV`: `967dcf4`, `d876d37`, `7af351d`, `adea45b`; card `a523494`, Technical work `ae2716d`). Its Ticket size was built with it, so `Settings › Labels` exists with Ticket size only; INV-9 adds its label settings there. It left the open list.
 > - **INV-5 Done** (accepted 2026-11-02 by the human, who ran the checks himself; on `PI-DEV`: `9672c68`, `9c1b08e`, `6ae913a`, `788c3d2`, `351267e`, `3ac5d2e`, `a6c121d`; card `12496f7`, Technical work `d993ce2`, delivered `41ea604`). It left the open list.
 > - **D-25 (2026-11-02, human):** `INV-15` comes next, ahead of INV-3's acceptance and `INV-9`: its development card is written now. Its **Ticket size** part needs INV-9's `Settings › Labels` and waits for it.
 > - **INV-4 Done, with INV-12** (accepted 2026-11-02 by the human; on `PI-DEV`: `4ed7e4d`, `0e6fcec`, `f4f9fd8`, `ab5bb22`, `2448e70`, `d8b2ccb`, `a2c2a05`, `5966a39`, `7102486`, `d2bf98f`; card `ccd4fe4`, Technical work `7528910`, delivered `64f463c`). INV-12's New order Client card was built within INV-4 (D-22), so INV-12 is done too. Both left the open list.
@@ -17,7 +18,7 @@
 > - **INV-2 Split:** INV-2's card was split into three: **INV-2** (stock, done), **INV-8** (barcodes), and **INV-9** (labels).
 > - **Added 2026-11-01:** `INV-12` (Refactor the order), placed after INV-5 and before INV-7. **Split the same day into `INV-12`, `INV-13` and `INV-14`, each with a UI card.** `INV-12`, `INV-13` and `INV-14` are `UI approved` (2026-11-01); `INV-5`'s UI card, reopened because finished products are not tied to an order, was rewritten and is `UI approved` again (2026-11-01). `INV-13`'s card got a one-line wording fix (re-approved 2026-11-01). They wait their turn for building.
 > - **Parked idea:** "Barcodes tab polish" (from the INV-8 UX review), planned with INV-9; no ID yet.
-> - **Current Order** (D-25): `INV-15` → `INV-3` (acceptance) → `INV-9` → `INV-13` → `INV-14` → `INV-7`. Next free ID: **INV-16** (INV-11 is the tech-debt item raised in the INV-8 review, see [TECH-DEBT.md](TECH-DEBT.md)).
+> - **Current Order** (D-25, INV-15 done): `INV-3` (acceptance) → `INV-9` → `INV-13` → `INV-14` → `INV-7`. Next free ID: **INV-16** (INV-11 is the tech-debt item raised in the INV-8 review, see [TECH-DEBT.md](TECH-DEBT.md)).
 > - **INV-1 Done:** "Colours as fixed values" accepted & merged (`a66f4bf`, `78a4eee`), so it left this backlog.
 > - **Added:** `INV-6` (picker-row item) and `INV-7` (Could: bigger tap targets on Settings).
 > - **Archive:** Done items leave this file and are recorded in `STATUS.md` and the archive.
@@ -38,7 +39,7 @@
 - **Card:** Full story cards (story, AC with examples, visual scope, out of scope, questions) live in `docs/stories/<id>-<slug>.md`. This backlog displays the short version.
 - **IDs & History:**
   - Everything new since **2026-10-24 (D-20, D-21)** is numbered **INV-n** (including technical items without UI cards). Next free ID: **INV-16**.
-  - `INV-15`: Work tickets and Scan, split from INV-5 on 2026-11-02 (D-24); shares INV-5's UI card.
+  - `INV-15`: Work tickets and Scan, split from INV-5 on 2026-11-02 (D-24); shares INV-5's UI card (done 2026-11-03).
   - `INV-1` to `INV-5`: Variant rework items (`INV-1`, `INV-2`, `INV-4` and `INV-5` are done).
   - `INV-6`: Picker-row swatch edge item.
   - `INV-7`: Settings tap targets.
@@ -63,16 +64,16 @@
 3. **INV-8** (Barcodes) — `#done` *(Accepted 2026-11-01)*
 4. **INV-4** (Clients, with INV-12's Client card) — `#done` *(Accepted 2026-11-02)*
 5. **INV-5** (Production for the shelf: Progress) — `#done` *(Accepted 2026-11-02)*
-6. **Next Sequence (D-25):** `INV-15` ➔ `INV-3` *(acceptance)* ➔ `INV-9` ➔ `INV-13` ➔ `INV-14` ➔ `INV-7` *(the UI cards of INV-5, INV-12, INV-13 and INV-14 are all `UI approved`, 2026-11-01)*
-7. **Card Structure:** Each feature receives a UI card first (`INV-n-<slug>-ui.md`), followed by a development card (`INV-n-<slug>.md`).
-8. **Shared UI Cards:** `INV-2`, `INV-8`, and `INV-9` share the same UI card but are accepted individually; so do `INV-5` and `INV-15`.
-9. **Phase 7 Tech Allowance:** `F-43` · `F-46` · `F-52` · `F-53`
+6. **INV-15** (Work tickets and the Scan page) — `#done` *(Accepted 2026-11-03)*
+7. **Next Sequence (D-25):** `INV-3` *(acceptance)* ➔ `INV-9` ➔ `INV-13` ➔ `INV-14` ➔ `INV-7` *(the UI cards of INV-5, INV-12, INV-13 and INV-14 are all `UI approved`, 2026-11-01)*
+8. **Card Structure:** Each feature receives a UI card first (`INV-n-<slug>-ui.md`), followed by a development card (`INV-n-<slug>.md`).
+9. **Shared UI Cards:** `INV-2`, `INV-8`, and `INV-9` share the same UI card but are accepted individually; so do `INV-5` and `INV-15`.
+10. **Phase 7 Tech Allowance:** `F-43` · `F-46` · `F-52` · `F-53`
 
 ### Open Backlog Table
 
 | ID | What it brings | Type | Status | Priority / Size |
 | :--- | :--- | :--- | :--- | :--- |
-| **INV-15** | Work tickets and the Scan page *(split from INV-5; next, D-25; Technical work approved 2026-11-02: 7 steps, INV-15-a … INV-15-g, g after INV-9)* | Feature | `Planned` | Must / M |
 | **INV-3** | Restock of finished products *(built, waiting for acceptance)* | Feature | `Planned` | Must / L |
 | **INV-9** | Print barcode labels | Feature | `Ready` | Must / M |
 | **INV-13** | Refactor the order, 2 of 3: product search with stock | Feature | `UI approved` | Must |
@@ -93,6 +94,7 @@
   - Adds "Print label" & "Print labels · Indigo" to Barcodes tab.
   - Supports $50 \times 30\text{ mm}$ labels or A4 sheets of 24.
   - Adds `Settings › Labels`. Runs after `INV-8`.
+  - *Since INV-15 (2026-11-03):* `Settings › Labels` already exists with **Ticket size** only (table `workshop_label_settings`). INV-9 adds its label size and the selling price to that page and row, and widens its line "How your work tickets print.".
 
 #### `INV-3` · Restock finished products
 - **Type:** Feature | **Priority:** Must / L | **Status:** `Planned` *(Technical work approved 2026-11-02: 11 steps, INV-3-a … INV-3-k)*
@@ -101,14 +103,6 @@
   - Adds Restocks page in sidebar + New restock page (colour × size grid up to 50 products, scanning support).
   - Restock adds to shelf and never touches materials; can be undone as a whole.
   - Restock serves as the main action on the product page's Sizes & colours card.
-
-#### `INV-15` · Work tickets and the Scan page
-- **Type:** Feature | **Priority:** Must | **Size:** M | **Status:** `Planned` *(split from INV-5 on 2026-11-02, D-24; next, D-25: development card approved 2026-11-02; Technical work approved 2026-11-02: 7 steps, INV-15-a … INV-15-g, g after INV-9)*
-- **Cards:** [Development Card](stories/INV-15-work-tickets-scan.md) · [UI Card](stories/INV-5-progress-ui.md) *(shared with INV-5: "Work tickets", "Scan page and the scan confirm")*
-- **Details:**
-  - A work ticket per batch (QR code, the batch number, no client or price), printed from Progress: after Start batch, from the "⋯" menu, and from a split's toast.
-  - Ticket size in `Settings › Labels` (needs INV-9's page), the **Scan** page in the sidebar, and the scan confirm that moves a batch to its next phase or puts it in stock.
-  - Needs INV-5 (batches, done 2026-11-02) and INV-9 (Settings › Labels, for Ticket size only).
 
 #### `INV-12` · `INV-13` · `INV-14` · Refactor the order
 - **Type:** Feature | **Priority:** Must | **Size:** L, split on 2026-11-01 into three, one UI card each | **Status:** `INV-12`, `INV-13` and `INV-14` all `UI approved` (2026-11-01; `INV-14` was redrawn the same day for the shelf model). Building waits for its turn after `INV-5`.
