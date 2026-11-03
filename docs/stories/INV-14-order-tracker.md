@@ -5,7 +5,7 @@ type: feature
 phase: Colour × size variants
 priority: Must
 size: L
-status: Ready
+status: Planned
 created: 2026-11-03
 tags:
   - story
@@ -141,3 +141,239 @@ to deliver.
   cuts stay as they are in the materials' history. Boutique Lina's order with 5 Jackets Indigo XL shipped and 10 Indigo S ready to
   ship reads Delivered 5 and To deliver 75, and the shelf of Indigo S grows by 10.
 
+
+---
+
+## Technical work
+> [!warning] Complex · CRITICAL · backend + frontend · 8 steps
+> Tech-lead · 2026-11-03 · approved 2026-11-03
+> Why complex: a migration that rewrites every order's counts and puts units on the shelf, a business-rule change (orders stop
+> cutting, delivering moves finished stock), new writers of the shelf, and a new contract for the order pages.
+
+### In short
+Each order row stops counting In cutting, Ready to ship and Shipped and counts **Delivered** and **Cancelled** instead; To deliver is
+what is left of the quantity. The migration turns Shipped into Delivered and, per workshop, puts the Ready-to-ship units on the shelf
+as one restock "Orders". All the cutting code leaves the orders (moves, previews, cuts, the delete refusal); the cuts already recorded
+stay in the materials' history. Three new writers — Mark delivered, its move back, Cancel units — work per colour and size under the
+same locks as restocks, and Mark delivered takes units off the shelf. The order page gets a deferred **tracker** prop (counts, rows
+per colour and size, the shelf now), and the list, the client page and the windows are redrawn.
+
+### Steps
+
+| Step         | What it does                                                   | Proves          | Lane         | Who      | Size       |
+| ------------ | -------------------------------------------------------------- | --------------- | ------------ | -------- | ---------- |
+| **INV-14-a** | Delivered and Cancelled replace the stages; old orders mapped  | AC-7            | CRITICAL     | Backend  | ~400 lines |
+| **INV-14-b** | Cutting leaves the orders; Delete order always allowed         | AC-2, AC-6      | CRITICAL     | Backend  | ~150 lines |
+| **INV-14-c** | The tracker and the lists' figures, statuses and filters       | AC-1, AC-2, AC-5 | CRITICAL    | Backend  | ~400 lines |
+| **INV-14-d** | Mark delivered, its move back and Cancel units                 | AC-3, AC-4      | CRITICAL     | Backend  | ~450 lines |
+| **INV-14-e** | Edit order's floors and the colour lock count delivered units  | AC-6            | CRITICAL     | Backend  | ~100 lines |
+| **INV-14-f** | The order page: tracker card and products by colour and size   | AC-1, AC-2      | CRITICAL     | Frontend | ~450 lines |
+| **INV-14-g** | The three windows                                              | AC-3, AC-4      | CRITICAL     | Frontend | ~350 lines |
+| **INV-14-h** | Orders list, client page, Delete order, Edit order wording     | AC-5, AC-6      | NON-CRITICAL | Frontend | ~350 lines |
+
+`composer test` stays green after every backend step; the frontend follows in wave 2 (between the waves the screens' types lag, so
+the commits are grouped at delivery). After INV-14-h the whole tree runs every gate and `composer test:pgsql`.
+
+#### INV-14-a · Delivered and Cancelled replace the stages; old orders mapped
+**Commit:** `feat(orders): orders count delivered and cancelled units (INV-14-a)`
+
+- Migration `count_delivered_and_cancelled_on_orders`, `DB::table` only: `order_lines` and `order_line_sizes` gain `delivered` and
+  `cancelled` (unsigned, default 0); `delivered = shipped`. For each workshop with Ready-to-ship rows, one `product_restocks` row
+  (restocked today, Reference "Orders", Note "Ready to ship before INV-14", `units` the sum, no user) and one line per product, colour
+  and size, then `product_size_stocks` gains those units (a row inserted when there is none; the colour linked to the product when it
+  isn't, as the PostgreSQL key needs). A variant that would pass 1,000,000 stops the migration with its product, colour and size named.
+  Then `in_cutting`, `ready_to_ship` and `shipped` go, with their PostgreSQL checks; new checks: both ≥ 0 and `delivered + cancelled ≤
+  quantity`. `down()` brings the three columns back with `shipped = delivered` (the restock stays: it is real stock now).
+- `HasStageCounts` becomes `HasDeliveryCounts`: `to_deliver = quantity − delivered − cancelled`, `settled = delivered + cancelled`.
+  `OrderProgress`: `not_started`, `in_progress`, `delivered`, `cancelled` (the card's rules, on a line and on an order).
+  `OrderStatusFilter`: `open`, `delivered`, `cancelled`, `all`; scopes `open()` (a row with something to deliver), `delivered()`,
+  `cancelled()`. `Order::units*()` become `unitsToDeliver()`, `unitsDelivered()`, `unitsCancelled()`.
+- The hand-kept migration list (F-60) gains it. The tech-lead writes ADR-0026 "Orders are served from the shelf" (supersedes the
+  order parts of ADR-0014 and ADR-0016's stages) and updates `docs/ARCHITECTURE.md`.
+
+**Tests**
+- Migration: Shipped → Delivered; To start, In cutting, Ready to ship → To deliver; the restock "Orders" per workshop with its lines and
+  the shelf grown (a new row, an existing row, a colour linked); two workshops kept apart; nothing Ready to ship → no restock; the
+  1,000,000 stop; `down()`. Statuses and filters per the card's five orders. PostgreSQL: the checks.
+
+> [!example]- Files (≈12)
+> - `database/migrations/2026_11_07_100000_count_delivered_and_cancelled_on_orders.php` (new)
+> - `app/Models/{Order,OrderLine,OrderLineSize}.php`, `app/Models/Concerns/HasDeliveryCounts.php` (replaces `HasStageCounts`)
+> - `app/Enums/{OrderProgress,OrderStatusFilter}.php`, `database/factories/{OrderLineFactory,OrderLineSizeFactory}.php`
+> - `docs/adr/0026-orders-are-served-from-the-shelf.md` (new), `docs/ARCHITECTURE.md`
+> - `tests/Feature/Orders/DeliveryCountsMigrationTest.php` (new), `tests/Pest.php`
+
+#### INV-14-b · Cutting leaves the orders; Delete order always allowed
+**Commit:** `refactor(orders): orders no longer cut or hold materials (INV-14-b)`
+
+- Removed: `MoveOrderLineUnits`, `TakeMaterialsForCut`, `ReturnMaterialsFromCuts`, `CuttingPreview`, `OrderLineMoveController`,
+  `OrderLineMovePreviewController`, their requests, `MovePreviewResource`, the enums `OrderLineMove` and `OrderStage`, the routes
+  `orders.lines.moves.*`, and their tests. The tables `order_line_cuts` and `order_line_cut_materials` and the cutting entries of the
+  stock history stay (history); `OrderLine::cuts()` stays read-only for the material history.
+- `DeleteOrder` loses its refusal and `OrderDeleteRefusedException`; `OrderResource` loses `delete_refusal` and gains `delivered`
+  (for the confirm's sentence).
+
+**Tests**
+- Deleting an order with delivered units: allowed, the shelf, materials and sales unchanged. The old move routes are 404. The
+  material history still reads a past cut "Cut for Boutique Lina".
+
+> [!example]- Files (≈−20, +4)
+> - the removed files above; `app/Actions/Orders/DeleteOrder.php`, `app/Http/Controllers/OrderController.php`, `routes/web.php`
+> - `tests/Feature/Orders/{DeleteOrderTest,…}.php`
+
+#### INV-14-c · The tracker and the lists' figures, statuses and filters
+**Commit:** `feat(orders): the order tracker with the shelf now, and the lists' new figures (INV-14-c)`
+
+- `App\Services\Orders\OrderTracker::of(Order)`: the order's counts and status; per line, its counts, status and rows by colour (list
+  order) then size, each colour with its subtotals, each size row with `to_deliver`, `delivered`, `cancelled`, `total` and `on_shelf`
+  (`FinishedStock::ofMany` for every product of the order, one query), plus what each window needs: per row the "Up to" of Mark
+  delivered (`min(to_deliver, on_shelf)`), of Move back (`delivered`) and of Cancel (`to_deliver`). Queries flat for 50 lines.
+- `orders.show`: `order` (header) as today; `tracker` deferred (`Inertia::defer`), so the card frame shows at once and a failure is
+  rescued with "Try again".
+- `OrderResource` / `OrderLineResource` / `OrderLineSizeResource`: `to_deliver`, `delivered`, `cancelled` (the stages go).
+  `OrderBook::openTotals()`: `{ open_orders, to_deliver }`. The client page's filter default stays "All orders".
+
+**Tests**
+- The card's Boutique Lina: every count, subtotal, status and shelf figure; "Up to" per row; a "One size" product; the five orders'
+  statuses and filters; totals over open orders only, whatever the filter; the query budgets of the list, the order page and the
+  deferred tracker.
+
+> [!example]- Files (≈10)
+> - `app/Services/Orders/{OrderTracker,OrderBook}.php`, `app/Http/Resources/{OrderTrackerResource,OrderResource,OrderLineResource,OrderLineSizeResource}.php`
+> - `app/Http/Controllers/OrderController.php`, `resources/js/types/domain.ts`
+> - `tests/Feature/Orders/{OrderTrackerTest,OrderPageTest,OrdersListTest}.php`, `tests/Feature/Performance/QueryBudgetTest.php`
+
+#### INV-14-d · Mark delivered, its move back and Cancel units
+**Commit:** `feat(orders): mark units delivered from the shelf, move them back, or cancel them (INV-14-d)`
+
+- Routes (POST, `update` policy, scoped bindings): `orders.lines.deliveries.store` (Mark delivered), `orders.lines.deliveries.destroy`
+  (Move back), `orders.lines.cancellations.store` (Cancel). Each takes `cells` (colour id → size id → units) like INV-13's moves; every
+  cell must be a row of the line, at least one unit in all.
+- `DeliverOrderUnits`, `ReturnDeliveredUnits`, `CancelOrderUnits`, one transaction each. Lock order (as Edit order and restocks): the
+  order row → the line's product → the line → its rows → the shelf rows. Deliver checks each cell against `to_deliver` and the shelf
+  read under the lock, takes the units off the shelf (a row at 0 is deleted, ADR-0017) and adds them to `delivered`; Move back takes
+  them off `delivered` and puts them on the shelf (refused past 1,000,000 with INV-3's sentence); Cancel adds to `cancelled` only.
+  The line's counts stay the sums of its rows. No stock history entry and no restock: the shelf is the only trace (the card).
+- `OrderMessages` gets every sentence of AC-3 and AC-4; a cell that is no longer a row, or holds nothing to deliver or move back any
+  more, refuses with "The shelf or this order changed since you opened this page." / "This order changed since you opened this
+  page." under `cells`.
+
+**Tests**
+- AC-3: Indigo S 2 and L 3 delivered: the counts, the toast, the shelf rows (0 rows deleted), the product page's stock; each refusal
+  and nothing written; the shelf emptied by a sale in between; a deleted product (its shelf is gone: refused). Move back: the counts,
+  the shelf, the 1,000,000 limit. AC-4: Indigo L 5 cancelled, no stock touched; each refusal. Another workshop's order or line: 404.
+  An undone restock check still sees the lowered shelf (INV-3's sentence).
+
+> [!example]- Files (≈10)
+> - `app/Actions/Orders/{DeliverOrderUnits,ReturnDeliveredUnits,CancelOrderUnits}.php` (new), `app/Http/Requests/Orders/OrderCellsRequest.php` (new)
+> - `app/Http/Controllers/{OrderDeliveryController,OrderCancellationController}.php` (new), `app/Services/Orders/OrderMessages.php`, `routes/web.php`
+> - `tests/Feature/Orders/{DeliverOrderUnitsTest,CancelOrderUnitsTest}.php` (new)
+
+#### INV-14-e · Edit order's floors and the colour lock count delivered units
+**Commit:** `feat(orders): Edit order keeps delivered and cancelled units (INV-14-e)`
+
+- `SyncOrderLines::refusals()` reads `settled` (delivered + cancelled) instead of `started`: "Indigo M can't be less than the 10 units
+  already delivered or cancelled." and "Denim Jacket can't be removed: 5 units are delivered or cancelled." `ProductColourLock` counts
+  `quantity − delivered − cancelled` (To deliver).
+
+**Tests**
+- The floors and the removal refusal with delivered, with cancelled, under the lock; a colour with only delivered or cancelled units
+  comes off; with units To deliver it doesn't.
+
+> [!example]- Files (≈5)
+> - `app/Actions/Orders/SyncOrderLines.php`, `app/Services/Orders/OrderMessages.php`, `app/Services/Products/ProductColourLock.php`
+> - `tests/Feature/Orders/{EditStartedOrderTest,OrderSizesWriteTest}.php`, `tests/Feature/Products/ProductColourLockTest.php`
+
+#### INV-14-f · The order page: tracker card and products by colour and size
+**Commit:** `feat(orders): the order tracker and each product by colour and size on the order page (INV-14-f)`
+
+- `components/orders/order-tracker.tsx`: heading, status badge, "5 of 80 units delivered · 5 cancelled", the bar (aria-hidden; Cancelled
+  hatched), the list "Units of this order" with the four tiles, the grey line; the loading placeholders and the error with **Try again**
+  (the deferred prop's rescue).
+- `order-product-card.tsx` replaces `order-line-card.tsx`: name (link), SKU, "50 units", status, "5 of 50 delivered", the table by colour
+  and size (colour bands, size rows, Total, the gap, **On the shelf now**, the amber **Out**, a labelled region that scrolls), the three
+  buttons with their reasons, the "⋯" menu. Phone: bands and one line per size, buttons full width. `size-stages-table`,
+  `stage-figure`, `move-button`, `move-units-dialog`, `materials-move-table` and `use-move-preview` go.
+
+**Tests**
+- Vitest: the card's tracker (tiles read "To deliver, 70 units"), all delivered, all cancelled, loading, error; the Jacket's table row
+  by row; One size; the reasons of the disabled buttons; the phone lines; nothing of the old stages on the page.
+
+> [!example]- Files (≈10)
+> - `resources/js/components/orders/{order-tracker,order-product-card}.tsx` (new, + tests), `resources/js/pages/orders/show.tsx` (+ test)
+> - the removed components and their tests
+
+#### INV-14-g · The three windows
+**Commit:** `feat(orders): Mark delivered, Move back and Cancel units windows (INV-14-g)`
+
+- `components/orders/order-units-dialog.tsx`, one window in three modes (deliver · move back · cancel): title, the grey line, "How many
+  units of each colour and size?" with a field per row that has an "Up to" above 0, the "Up to" under it, the note (amber for Cancel),
+  the buttons (**Mark delivered** / **Move back** / **Cancel N units** in red, with **Cancel** / **Keep units**), the server's messages
+  under their fields, the "changed" message with **Close**, the spinner; full screen on a phone with the fields three to a row and the
+  buttons in a fixed bar.
+
+**Tests**
+- Vitest: each mode's title, line, fields and "Up to", the payload by colour and size, "Cancel 5 units" following the typing, each
+  server message, the changed message and Close, the focus in the first field, the phone layout.
+
+> [!example]- Files (≈3)
+> - `resources/js/components/orders/order-units-dialog.tsx` (new, + test), `resources/js/components/orders/order-product-card.tsx`
+
+#### INV-14-h · Orders list, client page, Delete order, Edit order wording
+**Commit:** `feat(orders): To deliver and Delivered on the Orders list and the client page (INV-14-h)`
+
+- `open-order-totals.tsx` (Open orders · To deliver), `orders-table.tsx` (Client with the date · Products · Ordered with "5 cancelled" ·
+  To deliver · Delivered · Status; the phone cards with the small bar), `orders/index.tsx` (the statuses and empty states),
+  `clients/show.tsx` (its filter and "has no delivered orders."), `delete-order-dialog.tsx` (the confirm and its sentence, no refusal),
+  Edit order's "At least 10" from `delivered + cancelled`.
+
+**Tests**
+- Vitest: the five orders' rows and statuses, the totals, each empty state, the client page's filter and empty line, the confirm with
+  and without delivered units, Edit order's floors.
+
+> [!example]- Files (≈10)
+> - `resources/js/components/orders/{open-order-totals,orders-table,delete-order-dialog}.tsx` (+ tests), `resources/js/pages/orders/index.tsx` (+ test)
+> - `resources/js/pages/clients/show.tsx` (+ test), `resources/js/components/orders/order-form.tsx`
+
+### Contract (frozen before dispatch)
+```ts
+export type OrderProgress = 'not_started' | 'in_progress' | 'delivered' | 'cancelled';
+export type OrderStatusFilter = 'open' | 'delivered' | 'cancelled' | 'all';
+// Order, OrderLine, OrderLineSize: − to_start, in_cutting, ready_to_ship, shipped, started; + to_deliver, delivered, cancelled
+// Order: − delete_refusal
+export type OpenOrderTotals = { open_orders: number; to_deliver: number };
+export type TrackerCounts = { to_deliver: number; delivered: number; cancelled: number; total: number };
+export type TrackerRow = TrackerCounts & { size: Size; on_shelf: number; can_deliver: number };  // can_deliver = min(to_deliver, on_shelf)
+export type TrackerColour = TrackerCounts & { colour: Colour; rows: TrackerRow[] };
+export type TrackerLine = TrackerCounts & { id: number; product: OrderProduct; one_size: boolean; status: OrderProgress;
+    status_label: string; colours: TrackerColour[] };
+export type OrderTracker = TrackerCounts & { status: OrderProgress; status_label: string; lines: TrackerLine[] };
+export type OrderShowProps = { order: Order; tracker?: OrderTracker };   // deferred
+export type OrderCellsFormData = { cells: Record<number, Record<number, string>> };
+```
+Routes: `orders.lines.deliveries.store` POST orders/{order}/lines/{line}/deliveries · `orders.lines.deliveries.destroy` POST
+orders/{order}/lines/{line}/deliveries/back · `orders.lines.cancellations.store` POST orders/{order}/lines/{line}/cancellations.
+Errors: `cells`, `cells.<colour id>.<size id>`. Toasts from the server's flash.
+
+### Decisions
+- **Columns, not a table of deliveries:** the card asks how many, not when or by whom; two counts per row keep the sums rule of
+  ADR-0016 and every list query as it is.
+- **No stock history entry for a delivery:** finished stock has no history today (ADR-0017); the shelf row is the trace, as the card
+  says ("The product page keeps no trail of deliveries").
+- **The Ready-to-ship units become a real restock**, so they can be undone like any restock if the human finds them wrong (the
+  human's answer 1b).
+- **The cuts stay:** they are the materials' history; nothing reads them for orders any more.
+- **The tracker is deferred:** it reads the shelf of every product of the order; the card's loading and error states are Inertia's
+  deferred prop and its rescue.
+
+### Order
+Wave 1 (backend, one after another): INV-14-a → INV-14-b → INV-14-c → INV-14-d → INV-14-e. Wave 2 (frontend, after wave 1's types
+land): INV-14-f → INV-14-g, in parallel with INV-14-h.
+
+### Risks
+- **The migration writes stock** → `DB::table` only, one restock per workshop, the 1,000,000 stop named, a test per path; it runs on
+  the dev database with `php artisan migrate` only.
+- **Two writers of the shelf meet** (a restock undo, Update stock, Put in stock, a delivery) → every writer locks the product row
+  first; the delivery re-reads the shelf under that lock.
+- **A big removal** → the removed code goes in its own step (INV-14-b) with its tests, so a reviewer sees it at once.
+- **Size L** → kept as one card (the human's answer 2); the steps keep each review small.
