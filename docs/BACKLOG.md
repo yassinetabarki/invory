@@ -5,6 +5,7 @@
 > **Phases & Goals:** [ROADMAP.md](ROADMAP.md) · **Progress:** [STATUS.md](STATUS.md)
 
 > [!history] Last Cleaned: 2026-11-03
+> - **D-26 (2026-11-03, human):** `INV-13` then `INV-14` come next, ahead of INV-3's acceptance and `INV-9`. INV-13's development card is approved (`Ready`, 2026-11-03).
 > - **INV-15 Done** (accepted 2026-11-03 by the human; on `PI-DEV`: `967dcf4`, `d876d37`, `7af351d`, `adea45b`; card `a523494`, Technical work `ae2716d`). Its Ticket size was built with it, so `Settings › Labels` exists with Ticket size only; INV-9 adds its label settings there. It left the open list.
 > - **INV-5 Done** (accepted 2026-11-02 by the human, who ran the checks himself; on `PI-DEV`: `9672c68`, `9c1b08e`, `6ae913a`, `788c3d2`, `351267e`, `3ac5d2e`, `a6c121d`; card `12496f7`, Technical work `d993ce2`, delivered `41ea604`). It left the open list.
 > - **D-25 (2026-11-02, human):** `INV-15` comes next, ahead of INV-3's acceptance and `INV-9`: its development card is written now. Its **Ticket size** part needs INV-9's `Settings › Labels` and waits for it.
@@ -18,7 +19,7 @@
 > - **INV-2 Split:** INV-2's card was split into three: **INV-2** (stock, done), **INV-8** (barcodes), and **INV-9** (labels).
 > - **Added 2026-11-01:** `INV-12` (Refactor the order), placed after INV-5 and before INV-7. **Split the same day into `INV-12`, `INV-13` and `INV-14`, each with a UI card.** `INV-12`, `INV-13` and `INV-14` are `UI approved` (2026-11-01); `INV-5`'s UI card, reopened because finished products are not tied to an order, was rewritten and is `UI approved` again (2026-11-01). `INV-13`'s card got a one-line wording fix (re-approved 2026-11-01). They wait their turn for building.
 > - **Parked idea:** "Barcodes tab polish" (from the INV-8 UX review), planned with INV-9; no ID yet.
-> - **Current Order** (D-25, INV-15 done): `INV-3` (acceptance) → `INV-9` → `INV-13` → `INV-14` → `INV-7`. Next free ID: **INV-16** (INV-11 is the tech-debt item raised in the INV-8 review, see [TECH-DEBT.md](TECH-DEBT.md)).
+> - **Current Order** (D-26): `INV-13` → `INV-14` → `INV-3` (acceptance) → `INV-9` → `INV-7`. Next free ID: **INV-16** (INV-11 is the tech-debt item raised in the INV-8 review, see [TECH-DEBT.md](TECH-DEBT.md)).
 > - **INV-1 Done:** "Colours as fixed values" accepted & merged (`a66f4bf`, `78a4eee`), so it left this backlog.
 > - **Added:** `INV-6` (picker-row item) and `INV-7` (Could: bigger tap targets on Settings).
 > - **Archive:** Done items leave this file and are recorded in `STATUS.md` and the archive.
@@ -65,7 +66,7 @@
 4. **INV-4** (Clients, with INV-12's Client card) — `#done` *(Accepted 2026-11-02)*
 5. **INV-5** (Production for the shelf: Progress) — `#done` *(Accepted 2026-11-02)*
 6. **INV-15** (Work tickets and the Scan page) — `#done` *(Accepted 2026-11-03)*
-7. **Next Sequence (D-25):** `INV-3` *(acceptance)* ➔ `INV-9` ➔ `INV-13` ➔ `INV-14` ➔ `INV-7` *(the UI cards of INV-5, INV-12, INV-13 and INV-14 are all `UI approved`, 2026-11-01)*
+7. **Next Sequence (D-26):** `INV-13` ➔ `INV-14` ➔ `INV-3` *(acceptance)* ➔ `INV-9` ➔ `INV-7` *(the UI cards of INV-5, INV-12, INV-13 and INV-14 are all `UI approved`, 2026-11-01)*
 8. **Card Structure:** Each feature receives a UI card first (`INV-n-<slug>-ui.md`), followed by a development card (`INV-n-<slug>.md`).
 9. **Shared UI Cards:** `INV-2`, `INV-8`, and `INV-9` share the same UI card but are accepted individually; so do `INV-5` and `INV-15`.
 10. **Phase 7 Tech Allowance:** `F-43` · `F-46` · `F-52` · `F-53`
@@ -76,7 +77,7 @@
 | :--- | :--- | :--- | :--- | :--- |
 | **INV-3** | Restock of finished products *(built, waiting for acceptance)* | Feature | `Planned` | Must / L |
 | **INV-9** | Print barcode labels | Feature | `Ready` | Must / M |
-| **INV-13** | Refactor the order, 2 of 3: product search with stock | Feature | `UI approved` | Must |
+| **INV-13** | Refactor the order, 2 of 3: product search with stock | Feature | `Ready` | Must / M |
 | **INV-14** | Refactor the order, 3 of 3: order tracker, orders served from the shelf | Feature | `UI approved` | Must |
 | **INV-7** | Bigger tap targets on Settings pages | Feature | `Idea` | Could / S–M |
 
@@ -106,10 +107,11 @@
 
 #### `INV-12` · `INV-13` · `INV-14` · Refactor the order
 - **Type:** Feature | **Priority:** Must | **Size:** L, split on 2026-11-01 into three, one UI card each | **Status:** `INV-12`, `INV-13` and `INV-14` all `UI approved` (2026-11-01; `INV-14` was redrawn the same day for the shelf model). Building waits for its turn after `INV-5`.
-- **Cards:** [INV-12 UI card: client first](stories/INV-12-client-first-ui.md) · [INV-13 UI card: product search with stock](stories/INV-13-order-products-ui.md) · [INV-14 UI card: order tracker, covered from the shelf](stories/INV-14-order-tracker-ui.md) · design spec [INV-12-refactor-the-order](design/specs/INV-12-refactor-the-order.md). No development cards yet.
+- **Cards:** [INV-12 UI card: client first](stories/INV-12-client-first-ui.md) · [INV-13 UI card: product search with stock](stories/INV-13-order-products-ui.md) · [INV-14 UI card: order tracker, covered from the shelf](stories/INV-14-order-tracker-ui.md) · design spec [INV-12-refactor-the-order](design/specs/INV-12-refactor-the-order.md) · [INV-13 development card](stories/INV-13-order-products.md) (`Ready`, 2026-11-03).
 - **The split (own order, each validated on its own):**
   - `INV-12` · client first on New order (point 1). **Built within `INV-4` (D-22) and done with it, 2026-11-02.**
   - `INV-13` · product search with stock per colour and size, and order lines per colour and size (point 2). Needs `INV-2`, `INV-3`, and the answer on order lines per colour and size.
+    - **Answers on the development card (human, 2026-11-03, all the recommended options):** until INV-14 the order page's stages and buttons work per colour and size; Edit order's floor keeps today's "already in cutting, ready to ship or shipped" (INV-14 rewords it); a colour with units on open orders (not shipped) can't be removed from its product; orders recorded before read as the product's first colour; INV-13 is built on `PI-DEV`.
   - `INV-14` · order tracker (To deliver · Delivered · Cancelled), Mark delivered taking units off the finished stock, Cancel units, no production on orders (points 3 and 4). Needs `INV-13` and a redrawn `INV-5` (Progress makes products for the shelf, so cutting has somewhere to go).
 - **Decision of 2026-11-01 (human, on Q1–Q10):** order lines are a colour × size grid, built before `INV-13`; "Not started" and "Delivered" are the words; the client is phone first; cancel only what is not delivered, no undo, no stock effect. **Also:** a finished product is not tied to an order. Progress makes products **for the shelf**; an order is covered from the finished stock (the shelf is checked, never set aside). This changes `INV-5`, see below.
   - **Answers on the model (human, 2026-11-01):** (1) the shelf is checked, never held: no reservation, "On the shelf now" shown beside each colour × size, Mark delivered takes units off the finished stock up to what the shelf holds, its move back returns them, Cancel changes no stock. (2) An order counts **To deliver · Delivered · Cancelled · Total**; its status is Not started · In progress (partly delivered) · Delivered · Cancelled; the list filter is Open orders · Delivered · Cancelled · All orders. (3) Deleting an order is always allowed (no refusal); the confirm adds a sentence when units were delivered. (4) `INV-5`'s UI card is reopened (see `INV-5`).
@@ -151,6 +153,7 @@
 
 > [!summary] Core Operational Rules
 > - **D-20 (2026-10-24):** Card flow paused. Open items placed on hold for variant rework (`INV-n` sequence).
+> - **D-26 (2026-11-03):** `INV-13` then `INV-14` move ahead of INV-3's acceptance and `INV-9`.
 > - **D-25 (2026-11-02):** `INV-15` moves ahead of INV-3's acceptance and `INV-9` (its development card first); its Ticket size part waits for INV-9's `Settings › Labels`.
 > - **D-24 (2026-11-02):** `INV-5` moves ahead of INV-3's acceptance and `INV-9`; it is split into `INV-5` (Progress) and `INV-15` (work tickets and Scan), sharing one UI card.
 > - **D-23 (2026-11-02):** `INV-3` moves ahead of `INV-9`.
