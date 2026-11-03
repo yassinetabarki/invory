@@ -27,13 +27,14 @@ final readonly class MoveBatch
     public function __construct(private BatchNames $names) {}
 
     /**
+     * @param  bool  $scanned  made from the Scan page (INV-15): written on the move, for "Your scans today"
      * @return array{message: string, batch: ProductionBatch} the toast, and the batch that holds the units moved
      *
      * @throws ValidationException on `moved` (stale page) or `units` (more than the batch holds)
      */
-    public function handle(ProductionBatch $batch, string|int $from, string|int $to, int $units, User $actor): array
+    public function handle(ProductionBatch $batch, string|int $from, string|int $to, int $units, User $actor, bool $scanned = false): array
     {
-        return DB::transaction(function () use ($batch, $from, $to, $units, $actor): array {
+        return DB::transaction(function () use ($batch, $from, $to, $units, $actor, $scanned): array {
             $counter = ProductionCounter::lock();
             $locked = ProductionBatch::query()->lockForUpdate()->findOrFail($batch->id);
             $path = ProductionPath::current();
@@ -78,6 +79,7 @@ final readonly class MoveBatch
                 'units' => $units,
                 'from_label' => $path->name($from),
                 'to_label' => $path->name($to),
+                'scanned' => $scanned,
             ]);
             $entry->forceFill(['workshop_id' => $moved->workshop_id, 'user_id' => $actor->id])->save();
 

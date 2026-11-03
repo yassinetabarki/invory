@@ -1019,6 +1019,49 @@ export type ProgressIndexProps = {
 // Work tickets and scanning (INV-15, ADR-0024).
 /** How tickets print (Settings › Labels): an A4 sheet of 8 (2 × 4) or one per 100 × 60 mm label. */
 export type TicketSize = 'a4_8' | 'label_100x60';
+/** One step of the scan confirm's path: "In cutting ✓ · Sewing (now) · **Finishing** · Put in stock". */
+export type ScanPathStep = {
+    name: string;
+    state: 'done' | 'now' | 'next' | 'later';
+};
+/** What a scan found: the confirm of the batch's next step. */
+export type ScanConfirm = {
+    batch_id: number;
+    number: string;
+    units: number;
+    product: string;
+    variant: string; // "Indigo · S"
+    started_on: string; // 'YYYY-MM-DD'
+    path: ScanPathStep[];
+    from: PhaseRef;
+    to: PhaseRef | 'stock'; // 'stock' at the last phase: Put in stock
+    to_name: string; // "Finishing" | "Put in stock"
+    shelf: { now: number; after: number } | null; // only when to = 'stock': "Indigo M goes from 0 to 4"
+    warning: string | null; // "B-0147 moved to Finishing 12 seconds ago (Admin). Scanning again moves it on to Put in stock."
+};
+/** `GET scan.lookup` (`?q=`): a confirm, or the reason nothing can move. */
+export type ScanLookupResult =
+    | { confirm: ScanConfirm; refusal: null }
+    | { confirm: null; refusal: string };
+/** "Your scans today": batch, product, "→ Finishing", the time (ISO). */
+export type ScanToday = {
+    number: string;
+    product: string;
+    to: string;
+    at: string;
+};
+/** `GET scan.index` and `GET scan.ticket` (a ticket's QR link opens the page with its confirm or refusal). */
+export type ScanIndexProps = {
+    scans_today: ScanToday[];
+    confirm: ScanConfirm | null;
+    refusal: string | null;
+};
+/** `POST scan.batches.store`: what the confirm showed. Errors: `moved`, `phases`, `units` (the shelf limit). */
+export type ScanBatchFormData = {
+    from: PhaseRef;
+    to: PhaseRef | 'stock';
+    units: number;
+};
 /** `GET settings.labels.edit`: Settings › Labels (INV-15-g; INV-9 adds its label settings). */
 export type LabelSettingsProps = {
     ticket_size: TicketSize;

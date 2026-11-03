@@ -72,6 +72,10 @@ describe('progress/index, all phases (INV-5, AC-3)', () => {
         expect(
             screen.getByRole('link', { name: 'Production phases' }),
         ).toHaveAttribute('href', '/settings/production-phases');
+        // INV-15 (AC-3): the Scan page.
+        expect(
+            screen.getByRole('link', { name: 'Scan a ticket' }),
+        ).toHaveAttribute('href', '/scan');
 
         const tiles = within(screen.getByRole('group', { name: 'Phases' }));
         expect(

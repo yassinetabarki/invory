@@ -25,6 +25,9 @@ use App\Http\Controllers\RestockController;
 use App\Http\Controllers\RestockProductController;
 use App\Http\Controllers\RestockUndoController;
 use App\Http\Controllers\SaleController;
+use App\Http\Controllers\ScanBatchController;
+use App\Http\Controllers\ScanController;
+use App\Http\Controllers\ScanLookupController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'welcome')->name('home');
@@ -94,6 +97,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('progress/batches/{batch}/undo', [ProductionBatchUndoController::class, 'store'])
         ->where('batch', '[0-9]{1,18}')
         ->name('progress.batches.undo');
+
+    // Scan (INV-15-c, ADR-0024): the page, a ticket's QR link (guests sign in and come back), the field's lookup (JSON, read-only) and
+    // the confirm's button.
+    Route::get('scan', [ScanController::class, 'index'])->name('scan.index');
+    Route::get('scan/t/{code}', [ScanController::class, 'show'])->where('code', '[A-Za-z0-9]{32}')->name('scan.ticket');
+    Route::get('scan/lookup', [ScanLookupController::class, 'show'])->name('scan.lookup');
+    Route::post('scan/batches/{batch}', [ScanBatchController::class, 'store'])
+        ->where('batch', '[0-9]{1,18}')
+        ->name('scan.batches.store');
 
     // New order's Client card (INV-4-b): the client with this phone, or with this name. JSON, read-only (ADR-0009 rule 5).
     Route::get('clients/lookup', [ClientLookupController::class, 'show'])->name('clients.lookup');

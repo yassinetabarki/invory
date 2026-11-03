@@ -6,6 +6,7 @@ import {
     LayoutGrid,
     PackagePlus,
     ReceiptText,
+    ScanQrCode,
     Shirt,
     Users,
 } from 'lucide-react';
@@ -29,6 +30,7 @@ import { index as productsIndex } from '@/routes/products';
 import { index as progressIndex } from '@/routes/progress';
 import { index as restocksIndex } from '@/routes/restocks';
 import { index as salesIndex } from '@/routes/sales';
+import { index as scanIndex } from '@/routes/scan';
 import type { NavItem } from '@/types';
 
 const mainNavItems: NavItem[] = [
@@ -61,6 +63,11 @@ const mainNavItems: NavItem[] = [
         title: 'Progress',
         href: progressIndex(),
         icon: Factory,
+    },
+    {
+        title: 'Scan',
+        href: scanIndex(),
+        icon: ScanQrCode,
     },
     {
         title: 'Clients',

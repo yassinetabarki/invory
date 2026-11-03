@@ -1,5 +1,5 @@
 import { Deferred, Head, Link, router } from '@inertiajs/react';
-import { Factory, Plus, SearchX, Settings } from 'lucide-react';
+import { Factory, Plus, ScanQrCode, SearchX, Settings } from 'lucide-react';
 import { useState } from 'react';
 import type { BatchAction } from '@/components/production/phase-view';
 import { PhaseView } from '@/components/production/phase-view';
@@ -22,6 +22,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useAppSettings } from '@/hooks/use-app-settings';
 import { formatCount } from '@/lib/format';
 import { index } from '@/routes/progress';
+import { index as scanIndex } from '@/routes/scan';
 import { index as phasesIndex } from '@/routes/settings/production-phases';
 import type {
     ProgressBatch,
@@ -209,6 +210,16 @@ export default function Progress({
                                 <Link href={phasesIndex()}>
                                     <Settings aria-hidden="true" />
                                     Production phases
+                                </Link>
+                            </Button>
+                            <Button
+                                asChild
+                                variant="outline"
+                                className="max-sm:h-11 max-sm:flex-1"
+                            >
+                                <Link href={scanIndex()}>
+                                    <ScanQrCode aria-hidden="true" />
+                                    Scan a ticket
                                 </Link>
                             </Button>
                             {startButton}

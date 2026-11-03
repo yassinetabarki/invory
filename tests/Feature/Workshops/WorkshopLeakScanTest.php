@@ -36,7 +36,7 @@ use Illuminate\View\View;
 */
 
 /** The only parameters a walked GET route may have, each answered with the scanning user's OWN record. */
-const LEAK_SCAN_PARAMETERS = ['material', 'product', 'order', 'client', 'batch'];
+const LEAK_SCAN_PARAMETERS = ['material', 'product', 'order', 'client', 'batch', 'code'];
 
 /**
  * Why a GET route behind `auth` is not walked, or null when it is. Every skip is a route that shows no workshop data.
@@ -137,7 +137,9 @@ it('shows no record of the other workshop on any signed-in page', function (stri
     $workshops = ['ZZ-ALPHA' => leakScanWorkshop('ZZ-ALPHA'), 'ZZ-BRAVO' => leakScanWorkshop('ZZ-BRAVO')];
     [$own, $other] = [$workshops[$mine], $workshops[$theirs]];
 
-    $parameters = ['material' => $own['material']->id, 'product' => $own['product']->id, 'order' => $own['order']->id, 'client' => $own['order']->client_id, 'batch' => $own['batch']->id];
+    $parameters = ['material' => $own['material']->id, 'product' => $own['product']->id, 'order' => $own['order']->id, 'client' => $own['order']->client_id, 'batch' => $own['batch']->id,
+        // INV-15: the own batch's ticket code (its QR link).
+        'code' => $own['batch']->fresh()->ticket_code];
     // INV-4: the order's client is "<marker> Boutique", made by the order factory.
     $theirClient = $other['order']->clientRecord;
     // A prefix of the other marker: it matches that workshop's rows, and a page echoing it back still doesn't contain the marker itself.
@@ -155,6 +157,8 @@ it('shows no record of the other workshop on any signed-in page', function (stri
         'orders.create' => [['client' => $theirClient->id]],
         'progress.index' => [['product' => $other['product']->id], ['phase' => $own['batch']->phase_id], ['phase' => 'cutting']],
         'progress.products.materials' => [['units' => 3]],
+        // INV-15: the other workshop's batch by number and by its QR link is never found.
+        'scan.lookup' => [['q' => $other['batch']->label], ['q' => route('scan.ticket', $other['batch']->fresh()->ticket_code)]],
         'dashboard' => array_map(static fn (SalesPeriod $period): array => ['period' => $period->value], SalesPeriod::cases()),
     ];
 

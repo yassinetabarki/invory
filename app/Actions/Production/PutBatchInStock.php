@@ -34,13 +34,14 @@ final readonly class PutBatchInStock
     ) {}
 
     /**
+     * @param  bool  $scanned  made from the Scan page (INV-15): written on the move, for "Your scans today"
      * @return array{message: string, restock: ProductRestock}
      *
      * @throws ValidationException on `moved` (stale page) or `units` (more than the batch holds, a deleted product, over 1,000,000)
      */
-    public function handle(ProductionBatch $batch, string|int $from, int $units, User $actor): array
+    public function handle(ProductionBatch $batch, string|int $from, int $units, User $actor, bool $scanned = false): array
     {
-        return DB::transaction(function () use ($batch, $from, $units, $actor): array {
+        return DB::transaction(function () use ($batch, $from, $units, $actor, $scanned): array {
             ProductionCounter::lock();
             $locked = ProductionBatch::query()->lockForUpdate()->findOrFail($batch->id);
             $path = ProductionPath::current();
@@ -100,6 +101,7 @@ final readonly class PutBatchInStock
                 'units' => $units,
                 'from_label' => $path->name($from),
                 'to_label' => ProductionMessages::PUT_IN_STOCK,
+                'scanned' => $scanned,
             ]);
             $entry->forceFill(['workshop_id' => $locked->workshop_id, 'user_id' => $actor->id])->save();
 
