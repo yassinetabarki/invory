@@ -23,7 +23,7 @@ Work goes one item at a time, in the order below. A UI card comes first, then th
 | INV-5  | Production for the shelf: a progress page          | `Done`        | See where every batch is in production     |
 | INV-3  | Restock of finished products                       | `Planned`     | Add finished units to the shelf at once    |
 | INV-9  | Print barcode labels                               | `Ready`       | Print a label for a variant, or a sheet    |
-| INV-15 | Work tickets and the Scan page                     | `Ready`       | Move a batch on by scanning its ticket     |
+| INV-15 | Work tickets and the Scan page                     | `Planned`     | Move a batch on by scanning its ticket     |
 | INV-12 | Refactor the order, 1 of 3: client first           | `Done`        | Built within INV-4                         |
 | INV-13 | Refactor the order, 2 of 3: product search, stock  | `UI approved` | See what is in stock when taking an order  |
 | INV-14 | Refactor the order, 3 of 3: tracker, from shelf    | `UI approved` | See where an order stands at a glance      |

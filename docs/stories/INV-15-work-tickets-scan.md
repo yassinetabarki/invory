@@ -5,7 +5,7 @@ type: feature
 phase: Colour × size variants
 priority: Must
 size: M
-status: Ready
+status: Planned
 created: 2026-11-02
 tags:
   - story
@@ -123,3 +123,251 @@ for Denim Jacket Indigo M reads 0. The signed-in member is named **Admin**.
   size**, beside the label size: "A4 sheet, 8 tickets (2 × 4)" (the default) or "100 × 60 mm, one per label (label printer)". It is
   saved with **Save label settings** like the other label settings, for the whole workshop. Every ticket printed after that uses the
   chosen size. This criterion is built once INV-9's page exists; until then tickets print on the A4 sheet of 8.
+
+## Technical work
+> [!warning] Complex · CRITICAL · backend + frontend · 7 commits (6 now, 1 after INV-9)
+> Tech-lead (main session standing in, at the human's request) · 2026-11-02 · approved 2026-11-02
+> Why complex: a private ticket code on every batch (and on every split), a page reachable from a phone's camera through sign-in, a scan
+> that moves a batch or puts it in stock through INV-5's two CRITICAL Actions under their locks, a print page that sets the pattern
+> INV-9's labels will follow, and a camera reader (`barcode-detector`, the human's answer).
+
+### In short
+Every batch gets a **ticket code** (32 random letters and digits, unique), made when the batch is made, including when a split makes
+one. The QR code on the ticket is the link `/scan/t/<code>`, drawn on the server from `bacon/bacon-qr-code` (already installed through
+Fortify) as one SVG path, so the page never injects HTML. Tickets print from a **print page** of their own (`progress/tickets`), opened
+in a new tab, which calls the browser's print window once it is drawn. The **Scan** page reads a code, a typed number or a scanned link,
+asks the server what the batch is and what its next step is, and shows one confirm. The confirm posts what it showed (from, to,
+units); a new Action **ScanBatch** locks the batch, refuses if anything changed, and then calls **MoveBatch** or **PutBatchInStock** for
+all the batch's units in the same transaction, marking the move as made by a scan. "Your scans today" reads those marked moves. Every
+sentence comes from the server; the page formats dates and counts only.
+
+### Steps
+
+| Step         | What it does                                                   | Proves          | Lane         | Who      | Size       |
+| ------------ | -------------------------------------------------------------- | --------------- | ------------ | -------- | ---------- |
+| **INV-15-a** | A ticket code on every batch, the scan mark on moves, ADR      | AC-5            | CRITICAL     | Backend  | ~200 lines |
+| **INV-15-b** | The tickets' data and their print route, the QR path           | AC-1, AC-2      | NON-CRITICAL | Backend  | ~300 lines |
+| **INV-15-c** | Scan: find a batch, the confirm, ScanBatch, scans today        | AC-3–AC-6       | CRITICAL     | Backend  | ~450 lines |
+| **INV-15-d** | The print page and the print buttons on Progress               | AC-1, AC-2      | NON-CRITICAL | Frontend | ~350 lines |
+| **INV-15-e** | The Scan page: field, confirm, refusals, scans today, sidebar  | AC-3, AC-4, AC-6 | CRITICAL    | Frontend | ~450 lines |
+| **INV-15-f** | The camera on the Scan page                                    | AC-3            | NON-CRITICAL | Frontend | ~200 lines |
+| **INV-15-g** | Ticket size in Settings › Labels (**after INV-9**)             | AC-7            | NON-CRITICAL | Both     | ~150 lines |
+
+Every step keeps `composer test`, `npx vp test`, `npm run check`, `npm run types:check` and `npm run build` green. The backend steps
+run their PostgreSQL tests; after INV-15-f the whole tree runs `composer test:pgsql`.
+
+#### INV-15-a · A ticket code on every batch, the scan mark on moves, ADR
+**Commit:** `feat(production): a secret ticket code on every batch (INV-15-a)`
+
+- Migration: `production_batches.ticket_code` (string 32), filled for the batches already there, then unique; on PostgreSQL also
+  `NOT NULL`. `production_batch_moves.scanned` (boolean, default false) and an index (`workshop_id`, `user_id`, `created_at`) for
+  "Your scans today".
+- `ProductionBatch`: a `creating` hook sets `ticket_code` (`Str::random(32)`, retried on the rare clash) when it is empty, so Start
+  batch, factories and a split all get one. `MoveBatch`'s `replicate([...])` adds `ticket_code` to what it leaves out, so a split
+  batch never shares its parent's code. `ticket_code` is hidden from every Resource; only the QR link carries it.
+- The tech-lead writes in this commit: ADR-0024 "Work tickets and scanning" (the code and why it is not the id or the number, the
+  link, the scan mark, the print page as the pattern for INV-9), `docs/ARCHITECTURE.md` (the two columns, the routes).
+
+**Tests**
+- Each new batch has a 32-character code; two batches never share one; a split gets its own code, its parent keeps its code; the
+  migration fills the batches already there. PostgreSQL: a duplicate code and a null code are refused.
+
+> [!example]- Files (≈6)
+> - `database/migrations/2026_11_05_100000_add_ticket_codes_to_production_batches.php` (new)
+> - `app/Models/{ProductionBatch,ProductionBatchMove}.php`, `app/Actions/Production/MoveBatch.php`
+> - `docs/adr/0024-work-tickets-and-scanning.md` (new), `docs/ARCHITECTURE.md`
+> - `tests/Feature/Production/TicketCodeTest.php` (new)
+
+#### INV-15-b · The tickets' data and their print route, the QR path
+**Commit:** `feat(production): the work tickets' print page data and QR codes (INV-15-b)`
+
+- `composer.json` lists `bacon/bacon-qr-code` as a direct requirement (the version already in `composer.lock`, no new package).
+- `App\Services\Production\TicketQr`: the link `route('scan.ticket', code)` encoded with bacon's `Encoder` (error correction M),
+  returned as `{ size, path }`: the module count and one SVG path `d` ("M3 3h1v1h-1z…") built from the matrix. Pure, no HTML.
+- `App\Services\Production\TicketSheet`: for the batches asked for (in production only, in the order asked), each ticket's number,
+  product name, "Indigo · S" (or "Camel" for a one-size product), units, started day, the variant SKU (`VariantSku`), "Split from
+  B-0149" when split, the path names and the index of the current step, and the QR. Printed day = today. Queries flat for 50 tickets.
+- `ProductionTicketController@index`: `GET progress/tickets?batches[]=12&batches[]=13` (1 to 50 ids, each a batch of the workshop
+  through `WorkshopRule`; another workshop's id is a 404) → Inertia page `progress/tickets` with `tickets` and `size` (`a4_8` until
+  INV-15-g).
+- The flash `batches_started` gains each batch's `id`. The split toast gains the action **Print ticket B-0155** (`href` the tickets
+  route for the new batch, `new_tab: true`).
+
+**Tests**
+- B-0147's ticket fields of AC-1 (Sewing ticked, "Printed 30 Oct 2026", SKU); a split batch's "Split from B-0149"; a one-size
+  product; 3 units after 1 of 4 is put in stock; no client, phone or price key anywhere in the props; an undone or finished batch is
+  left out; 51 ids refused; another workshop's batch a 404. `TicketQr`: the path decodes back to the link (a small decoder in the test
+  reads the matrix), the same code gives the same path. The split toast's action and the flash ids.
+
+> [!example]- Files (≈9)
+> - `composer.json`, `composer.lock` (the require line only)
+> - `app/Services/Production/{TicketQr,TicketSheet}.php` (new), `app/Http/Controllers/ProductionTicketController.php` (new),
+>   `app/Http/Requests/Production/PrintTicketsRequest.php` (new)
+> - `app/Actions/Production/StartBatch.php`, `app/Http/Controllers/ProductionBatchMoveController.php`, `routes/web.php`,
+>   `resources/js/types/{domain,ui}.ts`, `resources/js/pages/progress/tickets.tsx` (stub)
+> - `tests/Feature/Production/{TicketSheet,TicketQr}Test.php` (new)
+
+#### INV-15-c · Scan: find a batch, the confirm, ScanBatch, scans today
+**Commit:** `feat(production): scan a ticket to move its batch on or put it in stock (INV-15-c)`
+
+- `App\Services\Production\ScanLookup`: reads what was typed or scanned, trimmed: a ticket link (anything ending in `/scan/t/<code>`,
+  from any host) → the code; `b-0147`, `B-0147`, `B147`, `0147` or `147` (any capitals, the dash and zeros optional, 1 to 9 digits) → the
+  number; anything else → "A batch number looks like B-0142. Check what you typed.". It then finds the batch in the workshop (the
+  global scope does it: another workshop's code is simply not found) and returns either a **confirm** or a **refusal**:
+  - confirm: batch id, number, units, product, "Indigo · S", started day, the path with the current and next steps, `to` (the next
+    phase id, or `stock` when it is the last step), the shelf now and after for a Put in stock, and the warning "B-0147 moved to
+    Finishing 12 seconds ago (Admin). Scanning again moves it on to Put in stock." when the batch's last forward or back move is less
+    than 2 minutes old;
+  - refusals: put in stock ("… was put in stock on 28 Oct 2026. Nothing left to do."), undone ("… was undone on 30 Oct 2026: its
+    materials went back to stock. Nothing to move."), unknown code ("This code isn't a work ticket of your workshop. Check the ticket,
+    or type its number."), unknown number ("No batch B-0999 in your workshop. Check the number on the ticket."), a deleted product at
+    the last step ("Denim Jacket was deleted, so B-0148 can't be put in stock.").
+- `App\Actions\Production\ScanBatch`: takes the batch and what the confirm showed (`from`, `to`, `units`). In one transaction: the
+  production lock, the batch locked; refuses with "B-0147 has moved since you scanned it: it is now in Finishing. Scan it again to move
+  it on." (`moved`) when it left `from` or holds other units, and with "The phases have changed since you scanned. B-0147 now goes to
+  Quality check." (`phases`, with the fresh confirm in the error bag's companion flash) when its next step is no longer `to`. Then it
+  calls `MoveBatch` (to a phase) or `PutBatchInStock` (`stock`) for all its units with `scanned: true`. Both Actions gain that last
+  parameter (default false) and write it on their move; nothing else in them changes.
+- `ScanController`: `GET scan` (page `scan/index`: `scans_today`, `confirm` null, `refusal` null) · `GET scan/t/{code}` (the same page
+  with that ticket's confirm or refusal; inside `auth`, so a guest goes to sign in and comes back here through Laravel's intended
+  URL) · `GET scan/lookup?q=` (JSON, ADR-0009 rule 5: `{ confirm }` or `{ refusal }`) · `POST scan/batches/{batch}` → redirect to
+  `scan.index` (never back to `scan/t/…`, which would show the next confirm at once) with the toast "4 units of Denim Jacket · Indigo S
+  moved to Finishing." or "… put in stock.".
+- "Your scans today": this member's moves with `scanned = true` since today 00:00, newest first, at most 50: number, product,
+  `to_label`, the time (ISO; the page shows it as a time).
+- `App\Services\Production\ScanMessages`: every sentence of the Scan page.
+
+**Tests**
+- Each way of typing B-0147, a link from another host, a bad entry, an unknown number, another workshop's code and number (the same
+  refusal as unknown, nothing about the other workshop in the response), finished and undone batches with their days.
+- AC-4: B-0147 Sewing → Finishing (number kept, since today, `scanned` on the move), B-0150 → Sewing, B-0148 put in stock (shelf 0 →
+  4, the restock with "B-0148" and "From production"), no own phase: In cutting → put in stock. Refused, nothing written: moved
+  meanwhile, units changed (part put in stock elsewhere), a phase added after it, the product deleted. The 2-minute warning at 1:59 and
+  not at 2:01 (frozen time). Scans today: only this member, only scans, only today. A guest on `scan/t/<code>` → login → back on it.
+
+> [!example]- Files (≈10)
+> - `app/Services/Production/{ScanLookup,ScanMessages}.php` (new), `app/Actions/Production/ScanBatch.php` (new),
+>   `app/Actions/Production/{MoveBatch,PutBatchInStock}.php`
+> - `app/Http/Controllers/{ScanController,ScanLookupController,ScanBatchController}.php` (new),
+>   `app/Http/Requests/Production/ScanBatchRequest.php` (new), `routes/web.php`, `resources/js/types/domain.ts`,
+>   `resources/js/pages/scan/index.tsx` (stub)
+> - `tests/Feature/Production/{ScanLookup,ScanBatch,ScanPage}Test.php` (new)
+
+#### INV-15-d · The print page and the print buttons on Progress
+**Commit:** `feat(production): print work tickets from Progress (INV-15-d)`
+
+- Page `progress/tickets` with no app frame: the tickets at 105 × 74 mm, 2 × 4 on an A4 sheet (`@page { size: A4; margin: 0 }`),
+  black on white, the QR as `<svg viewBox="0 0 size size"><path d=…/></svg>` at 30 mm, the fields of AC-1; it calls `window.print()`
+  once drawn. On screen it shows the sheet with a **Print** button for a second try.
+- `resources/js/lib/print-tickets.ts`: opens the tickets route in a new tab from the click itself; when the browser returns no tab it
+  shows "Your browser blocked the tickets' tab. Allow pop-ups for Invory, then print again." (an error toast; the button stays).
+- Start batch's result: "2 tickets to print: B-0153 · Indigo M · 6 units, B-0154 · Indigo L · 10 units", **Print 2 tickets** (main)
+  or **Print ticket** for one, then **Done**. The "⋯" menu: **Print ticket B-0147** last in every phase. `use-flash-toast`: an action
+  with `new_tab` uses `print-tickets` instead of a visit.
+
+**Tests**
+- Vitest: the sheet for B-0147 (each line of AC-1, Split from, one size), the Start batch result with one and two batches, the menu
+  item in In cutting, Sewing and the last phase, the toast action, the blocked tab message.
+
+> [!example]- Files (≈8)
+> - `resources/js/pages/progress/tickets.tsx` (+ test), `resources/js/lib/print-tickets.ts` (+ test)
+> - `resources/js/components/production/{start-batch-dialog,phase-view}.tsx` (+ tests), `resources/js/hooks/use-flash-toast.ts` (+ test)
+
+#### INV-15-e · The Scan page: field, confirm, refusals, scans today, sidebar
+**Commit:** `feat(production): the Scan page and its confirm (INV-15-e)`
+
+- Sidebar: **Scan** (`ScanQrCode` icon) after Progress. Progress's header: **Scan a ticket** (outline) between Production phases and
+  Start batch; on a phone beside **Phases**.
+- Page `scan/index`: the field "Scan or type a batch number" with the focus and the hint; **Find ticket**; Enter (what a scanner sends)
+  finds too. It calls `scan.lookup` and shows the confirm (a dialog; a sheet from the bottom on a phone): title, the batch line, the
+  path with "(now)", the warning line when given, **Move 4 units to Finishing** / **Put 4 units in stock** (56 px, full width) and
+  **Not now**; or the refusal with **Scan another**. Posting shows a spinner and keeps the label; `moved` shows its sentence and **Scan
+  another**; `phases` relabels the button with the fresh confirm. After a move the field is empty and focused again. The page opened
+  from `scan/t/<code>` opens with its confirm. "Your scans today" and "No scan yet today.". "Couldn't move B-0147. Check the connection
+  and try again." / "Couldn't load ticket B-0147. Try again." with **Try again**. Nothing scrolls sideways at 320 px; 44 px controls.
+
+**Tests**
+- Vitest: typing and Enter, each confirm (move, put in stock with the shelf note, the warning), each refusal, moved meanwhile, phases
+  changed, the network errors, scans today and its empty line, the confirm on load from a ticket link, the sidebar order, the header
+  button.
+
+> [!example]- Files (≈8)
+> - `resources/js/pages/scan/index.tsx` (+ test), `resources/js/components/scan/{scan-confirm,scans-today}.tsx` (new, + tests)
+> - `resources/js/components/app-sidebar.tsx` (+ test), `resources/js/pages/progress/index.tsx`
+
+#### INV-15-f · The camera on the Scan page
+**Commit:** `feat(production): read a ticket's QR code with the camera on the Scan page (INV-15-f)`
+
+- On a device with a camera, the Scan page shows the camera view with a frame and "Point the camera at the QR code on a work ticket.",
+  and "Or type the batch number" above the field. A QR read goes through the same lookup as the field. The camera stops while a
+  confirm is open and when the page is left. Refused camera: "Invory can't use the camera. Allow the camera for Invory in your
+  browser's settings, or type the batch number."; no camera: the field only. The QR is read with `barcode-detector` (the browser's own
+  `BarcodeDetector` when it has one, its WebAssembly reader otherwise, the `.wasm` file bundled by Vite and served by Invory, never
+  from a CDN); it is loaded only on the Scan page, so no other page grows.
+
+**Tests**
+- Vitest with the reader mocked: a read opens the confirm, the camera pauses during the confirm, refused and missing camera.
+
+> [!example]- Files (≈4)
+> - `resources/js/components/scan/camera-reader.tsx` (new, + test), `resources/js/pages/scan/index.tsx`, `package.json`, `package-lock.json` (`barcode-detector`)
+
+#### INV-15-g · Ticket size in Settings › Labels (after INV-9)
+**Commit:** `feat(production): the ticket size in Settings › Labels (INV-15-g)`
+
+- Built after INV-9, on the label settings it stores: a `ticket_size` (`a4_8` default · `label_100x60`) saved with **Save label
+  settings**; the print route sends it to the page; the print page lays out 100 × 60 mm, one per page (`@page { size: 100mm 60mm }`). Planned in
+  full when INV-9's storage exists; until then AC-7 stays open and INV-15 is accepted on AC-1 to AC-6.
+
+### Contract (frozen before dispatch)
+```ts
+export type TicketQr = { size: number; path: string };                           // SVG path of the modules, viewBox 0 0 size size
+export type WorkTicket = { id: number; number: string; product: string; variant: string; units: number; started_on: string;
+    sku: string | null; split_from: string | null; path: string[]; current: number; printed_on: string; qr: TicketQr };
+export type TicketSize = 'a4_8' | 'label_100x60';
+export type PrintTicketsProps = { tickets: WorkTicket[]; size: TicketSize };
+export type ScanConfirm = { batch_id: number; number: string; units: number; product: string; variant: string; started_on: string;
+    path: { name: string; state: 'done' | 'now' | 'next' | 'later' }[]; from: PhaseRef; to: PhaseRef | 'stock';
+    to_name: string; shelf: { now: number; after: number } | null; warning: string | null };   // shelf only when to = 'stock'
+export type ScanLookupResult = { confirm: ScanConfirm; refusal: null } | { confirm: null; refusal: string };
+export type ScanToday = { number: string; product: string; to: string; at: string };          // 'Finishing' | 'Put in stock'; ISO time
+export type ScanIndexProps = { scans_today: ScanToday[]; confirm: ScanConfirm | null; refusal: string | null };
+export type ScanBatchFormData = { from: PhaseRef; to: PhaseRef | 'stock'; units: number };
+// Changed
+BatchesStarted.batches[] += { id: number };
+FlashToast.action += { new_tab?: boolean };                                     // opens the tickets in a new tab (types/ui.ts)
+```
+Errors: `batches` (print) · `moved`, `phases` (scan; `phases` comes with the flash `scan_confirm`: the fresh `ScanConfirm`). Routes:
+`progress.tickets` GET progress/tickets · `scan.index` GET scan · `scan.ticket` GET scan/t/{code} (`[A-Za-z0-9]{32}`) · `scan.lookup`
+GET scan/lookup (JSON) · `scan.batches.store` POST scan/batches/{batch} (digits).
+
+### Decisions
+- **A random code, not the id or the number, in the QR.** The number is typed by people and can be guessed; the code can't, so a photo
+  of a ticket names nothing else. Inside the workshop both find the same batch; outside it, neither finds anything.
+- **The QR is drawn on the server** with the library Fortify already uses for two-factor codes, sent as a path, not as HTML. Rejected: a
+  QR package in the browser (a new dependency for something the server has).
+- **The scan reuses INV-5's Actions.** ScanBatch only checks that nothing changed since the confirm and then calls MoveBatch or
+  PutBatchInStock for all the units, so the locks, the split rule, the restock "From production" and the 1,000,000 limit have one
+  writer. The `scanned` mark is the only thing those Actions learn.
+- **After a scan the page goes to `/scan`, never back to the ticket link**, so the next step is never offered without a new scan.
+- **The print page is an Inertia page with no app frame** that prints itself; INV-9's labels can follow the same pattern.
+- **Wording the card doesn't give, written here:** the print page's **Print** button (for a second try) and, when every batch asked
+  for has left Progress, "These batches have left Progress, so there is nothing to print.".
+- **Times:** "today" and "since today 00:00" use the app's time zone (UTC), as INV-5's "since" does.
+
+### Order
+Wave 1 (backend, one after another): INV-15-a → INV-15-b → INV-15-c. Wave 2 (frontend, after wave 1's types land): INV-15-d in
+parallel with INV-15-e → INV-15-f. INV-15-g after INV-9. Merge order is the step order.
+
+### Risks
+- **A split copying its parent's code** → `ticket_code` left out of the replicate and a test on it; unique in the database.
+- **The QR link on this machine is `http://localhost:8000/…`**, which a phone can't open → the link follows `APP_URL`; to try it with a
+  phone, set `APP_URL` to the laptop's address on the Wi-Fi. Production is unaffected.
+- **A pop-up blocker on the print tab** → the tab is opened in the click itself; the blocked message otherwise.
+- **iPhone Safari has no built-in QR reader for web pages** → `barcode-detector`'s WebAssembly reader; the phone's own camera app
+  always works too (AC-5).
+- **Browser tests can't run on this machine** → Vitest and feature tests carry the proof, as in INV-5.
+
+### Answers (human, 2026-11-02)
+1. The camera reads QR codes with the `barcode-detector` package (a): the browser's own reader where there is one, a WebAssembly
+   reader served by Invory elsewhere, loaded only on the Scan page.
+2. `bacon/bacon-qr-code` becomes a direct dependency (yes).
