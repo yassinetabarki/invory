@@ -72,7 +72,7 @@
 
 | ID | What it brings | Type | Status | Priority / Size |
 | :--- | :--- | :--- | :--- | :--- |
-| **INV-15** | Work tickets and the Scan page *(split from INV-5; next, D-25)* | Feature | `UI approved` | Must / M |
+| **INV-15** | Work tickets and the Scan page *(split from INV-5; next, D-25; development card approved 2026-11-02)* | Feature | `Ready` | Must / M |
 | **INV-3** | Restock of finished products *(built, waiting for acceptance)* | Feature | `Planned` | Must / L |
 | **INV-9** | Print barcode labels | Feature | `Ready` | Must / M |
 | **INV-13** | Refactor the order, 2 of 3: product search with stock | Feature | `UI approved` | Must |
@@ -103,8 +103,8 @@
   - Restock serves as the main action on the product page's Sizes & colours card.
 
 #### `INV-15` · Work tickets and the Scan page
-- **Type:** Feature | **Priority:** Must | **Size:** M | **Status:** `UI approved` *(split from INV-5 on 2026-11-02, D-24; next, D-25: its development card is being written)*
-- **Cards:** [UI Card](stories/INV-5-progress-ui.md) *(shared with INV-5: "Work tickets", "Scan page and the scan confirm")*
+- **Type:** Feature | **Priority:** Must | **Size:** M | **Status:** `Ready` *(split from INV-5 on 2026-11-02, D-24; next, D-25: development card approved 2026-11-02; its Technical work comes next)*
+- **Cards:** [Development Card](stories/INV-15-work-tickets-scan.md) · [UI Card](stories/INV-5-progress-ui.md) *(shared with INV-5: "Work tickets", "Scan page and the scan confirm")*
 - **Details:**
   - A work ticket per batch (QR code, the batch number, no client or price), printed from Progress: after Start batch, from the "⋯" menu, and from a split's toast.
   - Ticket size in `Settings › Labels` (needs INV-9's page), the **Scan** page in the sidebar, and the scan confirm that moves a batch to its next phase or puts it in stock.
