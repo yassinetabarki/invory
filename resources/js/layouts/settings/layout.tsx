@@ -9,6 +9,7 @@ import { edit as editAppearance } from '@/routes/appearance';
 import { edit } from '@/routes/profile';
 import { edit as editSecurity } from '@/routes/security';
 import { index as coloursIndex } from '@/routes/settings/colours';
+import { edit as labelsEdit } from '@/routes/settings/labels';
 import { index as materialCategoriesIndex } from '@/routes/settings/material-categories';
 import { index as productCategoriesIndex } from '@/routes/settings/product-categories';
 import { index as productionPhasesIndex } from '@/routes/settings/production-phases';
@@ -53,6 +54,11 @@ const catalogueNavItems: NavItem[] = [
     {
         title: 'Colours',
         href: coloursIndex(),
+        icon: null,
+    },
+    {
+        title: 'Labels',
+        href: labelsEdit(),
         icon: null,
     },
 ];

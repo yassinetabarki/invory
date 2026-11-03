@@ -37,7 +37,7 @@ describe('settings layout navigation', () => {
         ).toEqual(['Profile', 'Security', 'Appearance']);
     });
 
-    it('adds a Catalogue group with Units, both category lists and Colours', () => {
+    it('adds a Catalogue group with Units, both category lists, Colours and Labels', () => {
         renderAt('/settings/profile');
 
         const group = screen.getByRole('group', { name: 'Catalogue' });
@@ -54,6 +54,7 @@ describe('settings layout navigation', () => {
             ['Material categories', '/settings/material-categories'],
             ['Product categories', '/settings/product-categories'],
             ['Colours', '/settings/colours'],
+            ['Labels', '/settings/labels'],
         ]);
     });
 
@@ -72,6 +73,7 @@ describe('settings layout navigation', () => {
             'Material categories',
             'Product categories',
             'Colours',
+            'Labels',
             'Production phases',
         ]);
     });
@@ -94,6 +96,7 @@ describe('settings layout navigation', () => {
         ['/settings/product-categories', 'Product categories'],
         ['/settings/colours', 'Colours'],
         ['/settings/production-phases', 'Production phases'],
+        ['/settings/labels', 'Labels'],
         ['/settings/profile', 'Profile'],
     ])('marks the entry of %s as the current page', (url, title) => {
         renderAt(url);

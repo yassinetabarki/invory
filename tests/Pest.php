@@ -695,13 +695,22 @@ function productionMigration(): Migration
     return require database_path('migrations/2026_11_04_100000_create_production_tables.php');
 }
 /**
- * The ticket codes migration object (INV-15-a): `ticket_code` on `production_batches` and `scanned` on `production_batch_moves`. It is the
- * newest of the hand-kept list (F-60): a test that rolls the production migration back (or anything below it) rolls this one back first,
+ * The ticket codes migration object (INV-15-a): `ticket_code` on `production_batches` and `scanned` on `production_batch_moves`. It was the
+ * newest of the hand-kept list (F-60) until the label settings: a test that rolls the production migration back (or anything below it) rolls this one back first,
  * and brings it back up after the production one.
  */
 function ticketCodesMigration(): Migration
 {
     return require database_path('migrations/2026_11_05_100000_add_ticket_codes_to_production_batches.php');
+}
+/**
+ * The label settings migration object (INV-15-g): `workshop_label_settings`, one row per workshop. It is the newest of the hand-kept list
+ * (F-60): a test that rolls back the workshops (or anything rolled back with the production migration) rolls this one back first, and
+ * brings it back up last.
+ */
+function labelSettingsMigration(): Migration
+{
+    return require database_path('migrations/2026_11_05_200000_create_workshop_label_settings_table.php');
 }
 
 /**

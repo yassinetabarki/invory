@@ -1015,3 +1015,12 @@ export type ProgressIndexProps = {
     products: Paginated<ProgressProductCard> | null; // All phases (no `phase`), A → Z, 10 a page
     phase_view: ProgressPhaseView | null; // with `phase`
 };
+
+// Work tickets and scanning (INV-15, ADR-0024).
+/** How tickets print (Settings › Labels): an A4 sheet of 8 (2 × 4) or one per 100 × 60 mm label. */
+export type TicketSize = 'a4_8' | 'label_100x60';
+/** `GET settings.labels.edit`: Settings › Labels (INV-15-g; INV-9 adds its label settings). */
+export type LabelSettingsProps = {
+    ticket_size: TicketSize;
+    ticket_sizes: { value: TicketSize; label: string }[];
+};
