@@ -5,7 +5,7 @@ type: feature
 phase: Colour × size variants
 priority: Must
 size: M
-status: Planned
+status: Done
 created: 2026-11-03
 tags:
   - story
@@ -50,7 +50,7 @@ Today is 30 Oct 2026. Shelf stock used in every example (S · M · L · XL):
 The Denim Jacket (SKU PRD-JKT-001) and the Denim Jeans 5-pocket each read "In stock 10 units". Settings › Colours lists Black,
 Indigo, Light wash in that order.
 
-- [ ] **AC-1 · Search products.** New order's Products card reads "Products" · "Search what the client wants, check what is in
+- [x] **AC-1 · Search products.** New order's Products card reads "Products" · "Search what the client wants, check what is in
   stock, then add it." and has the box **Search products** (placeholder "Name, SKU, colour or barcode", a **Clear search** button)
   with the hint "In stock is what is on the shelf now. Open orders don't set it aside, and a colour that is out of stock can still be
   ordered."
@@ -63,9 +63,9 @@ Indigo, Light wash in that order.
   - At most 6 results; beyond, "Showing 6 of 14. Keep typing to narrow the list."
   - States: before typing, only the box and its hint; while searching, a placeholder block and "Searching…"; no match, "No product
     matches "denm xyz"." · "Check the spelling, or search by SKU, colour or barcode."; a failure, "Couldn't search the products." ·
-    **Try again**, with the lines already on the order kept.
+    **Try again**, with the lines already on the order kept. ✅ 2026-11-03 · 39647ce
 
-- [ ] **AC-2 · Quantities per colour and size.** **Add to order** puts the product under "On this order · 1 product" and moves the
+- [x] **AC-2 · Quantities per colour and size.** **Add to order** puts the product under "On this order · 1 product" and moves the
   focus to its first quantity field; its result then shows **On this order** (with a check), which moves the focus to that line.
   - Each product shows its name, SKU, **Remove** (read as "Remove Denim Jacket from this order")
     and the table "Quantity per colour and size · Denim Jacket": rows are the product's colours, columns its sizes and **Total**. Each
@@ -75,41 +75,41 @@ Indigo, Light wash in that order.
     "Total on this order · 22 units · 2 products", and "22 units · 2 products" beside **Save order** and **Cancel**.
   - An empty cell or 0 means no units. Out of stock never blocks the order and no warning appears when a number is above the stock.
   - With no product: "No products on this order yet" · "Search for a product above and add what the client ordered."
-  - With 50 products on the order, **Add to order** can't be pressed and reads beside it "An order can hold up to 50 products."
+  - With 50 products on the order, **Add to order** can't be pressed and reads beside it "An order can hold up to 50 products." ✅ 2026-11-03 · 39647ce
 
-- [ ] **AC-3 · Saving the order.** **Save order** records one line per product with its units per colour and size, then shows "Order
+- [x] **AC-3 · Saving the order.** **Save order** records one line per product with its units per colour and size, then shows "Order
   recorded." (or INV-4's toast for a new client) and opens the order page. Saving changes no stock, no material and no sale.
   - Errors appear under their field or line, the focus on the first one: "Indigo M: Enter a whole number from 0 to 1,000,000." ·
     "Enter at least one unit of Denim Jeans 5-pocket, or remove it from this order." · "A line can hold up to 1,000,000 units." ·
     "The colours or sizes of Denim Jacket have changed. Enter its quantities again." · with no product, "Add at least one product to
     this order."
   - While saving, **Save order** shows a spinner and keeps its label. If saving fails: "Couldn't save the order. Try again.", with
-    everything typed kept.
+    everything typed kept. ✅ 2026-11-03 · 39647ce
 
-- [ ] **AC-4 · Edit order.** Edit order has the same Products part and grid, filled with the order's lines; **Save order** shows "Order
+- [x] **AC-4 · Edit order.** Edit order has the same Products part and grid, filled with the order's lines; **Save order** shows "Order
   updated.". A cell whose units have started (in cutting, ready to ship or shipped) shows "At least 10" under its field and can't go
   lower: "Indigo M can't be less than the 10 units already in cutting, ready to ship or shipped." A line with started units can't be
   removed: "Denim Jacket can't be removed: 30 units have started." A product already on the order stays on it even if it was
-  archived since.
+  archived since. ✅ 2026-11-03 · 39647ce
 
-- [ ] **AC-5 · Lines read with their colour.** The Orders list and the client page write "50 × Denim Jacket (Indigo S 10 · M 20 · L 15
+- [x] **AC-5 · Lines read with their colour.** The Orders list and the client page write "50 × Denim Jacket (Indigo S 10 · M 20 · L 15
   · XL 5)"; with two colours "4 × Denim Jacket (Black M 1 · Indigo S 1 · M 2)". Until INV-14 replaces it, the order page keeps its
   stages and buttons, each row now a colour and size ("Indigo M"), and **Start cutting**, **Mark ready**, **Ship** and the Move back
-  buttons act on that colour and size.
+  buttons act on that colour and size. ✅ 2026-11-03 · 39647ce
 
-- [ ] **AC-6 · Colours on orders.** An order recorded before this card keeps its quantities, sizes and started units, and reads as
+- [x] **AC-6 · Colours on orders.** An order recorded before this card keeps its quantities, sizes and started units, and reads as
   the product's first colour in Settings › Colours order (Boutique Lina's 50 Denim Jackets read "Black S 10 · M 20 · L 15 · XL 5").
   The owner can correct the colour in Edit order, except for units that have started.
   - In Edit product, taking a colour off a product is refused while open orders hold units of it that are not shipped yet: with 12
     Indigo Denim Jackets ordered and not shipped, "Indigo has 12 units on open orders, so it can't be removed from Denim Jacket."
-    (1 unit: "has 1 unit on open orders"). The existing refusals (units on the shelf, units in production) stay as they are.
+    (1 unit: "has 1 unit on open orders"). The existing refusals (units on the shelf, units in production) stay as they are. ✅ 2026-11-03 · 39647ce
 
-- [ ] **AC-7 · Phone and keyboard.** At 375 px, a result is a box with one group per colour and a chip per size ("S 1", "M" with the
+- [x] **AC-7 · Phone and keyboard.** At 375 px, a result is a box with one group per colour and a chip per size ("S 1", "M" with the
   amber "Out", "L 2"); a colour with nothing reads "Out of stock in every size"; **Add to order** is full width. The quantities read
   per colour (swatch, name, the colour's total) with three sizes to a row, each field with "In stock 2" or "Out of stock" under it.
   **Save order** sits in a bar fixed at the bottom with "22 units · 2 products" above it, and never hides the field with the focus.
   Every control is at least 44 px and nothing scrolls sideways at 320 px; 11 shoe sizes scroll inside their table, never the page.
-  The whole flow works with the keyboard alone, and stock is never shown by colour alone.
+  The whole flow works with the keyboard alone, and stock is never shown by colour alone. ✅ 2026-11-03 · 39647ce
 
 ---
 
