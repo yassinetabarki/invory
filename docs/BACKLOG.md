@@ -5,7 +5,7 @@
 > **Phases & Goals:** [ROADMAP.md](ROADMAP.md) · **Progress:** [STATUS.md](STATUS.md)
 
 > [!history] Last Cleaned: 2026-11-03
-> - **INV-14:** development card approved (`Ready`, 2026-11-03) and its Technical work too (`Planned`, 2026-11-03: 8 steps, INV-14-a … INV-14-h).
+> - **INV-14 Done** (accepted 2026-11-03; on `PI-DEV`: `7af1a63`; card `432731b`, Technical work `753c611`). Orders are served from the shelf: tracker, Mark delivered, Cancel units; orders no longer cut. It left the open list. **Next (D-26): INV-3's acceptance, then INV-9.**
 > - **INV-13 Done** (accepted 2026-11-03 by the human; on `PI-DEV`: `39647ce`; card `f07ef4e`, Technical work `7bf05bb`). Order lines hold colour and size; Search products shows the shelf stock (no "Can produce now", the human's answer). It left the open list. **INV-14 is next.**
 > - **D-26 (2026-11-03, human):** `INV-13` then `INV-14` come next, ahead of INV-3's acceptance and `INV-9`. INV-13's development card is approved (`Ready`, 2026-11-03) and its Technical work too (`Planned`, 2026-11-03: 8 steps, INV-13-a … INV-13-h; "Can produce now" left out of the search and the order, the human's answer).
 > - **INV-15 Done** (accepted 2026-11-03 by the human; on `PI-DEV`: `967dcf4`, `d876d37`, `7af351d`, `adea45b`; card `a523494`, Technical work `ae2716d`). Its Ticket size was built with it, so `Settings › Labels` exists with Ticket size only; INV-9 adds its label settings there. It left the open list.
@@ -21,7 +21,7 @@
 > - **INV-2 Split:** INV-2's card was split into three: **INV-2** (stock, done), **INV-8** (barcodes), and **INV-9** (labels).
 > - **Added 2026-11-01:** `INV-12` (Refactor the order), placed after INV-5 and before INV-7. **Split the same day into `INV-12`, `INV-13` and `INV-14`, each with a UI card.** `INV-12`, `INV-13` and `INV-14` are `UI approved` (2026-11-01); `INV-5`'s UI card, reopened because finished products are not tied to an order, was rewritten and is `UI approved` again (2026-11-01). `INV-13`'s card got a one-line wording fix (re-approved 2026-11-01). They wait their turn for building.
 > - **Parked idea:** "Barcodes tab polish" (from the INV-8 UX review), planned with INV-9; no ID yet.
-> - **Current Order** (D-26, INV-13 done): `INV-14` → `INV-3` (acceptance) → `INV-9` → `INV-7`. Next free ID: **INV-16** (INV-11 is the tech-debt item raised in the INV-8 review, see [TECH-DEBT.md](TECH-DEBT.md)).
+> - **Current Order** (D-26, INV-13 and INV-14 done): `INV-3` (acceptance) → `INV-9` → `INV-7`. Next free ID: **INV-16** (INV-11 is the tech-debt item raised in the INV-8 review, see [TECH-DEBT.md](TECH-DEBT.md)).
 > - **INV-1 Done:** "Colours as fixed values" accepted & merged (`a66f4bf`, `78a4eee`), so it left this backlog.
 > - **Added:** `INV-6` (picker-row item) and `INV-7` (Could: bigger tap targets on Settings).
 > - **Archive:** Done items leave this file and are recorded in `STATUS.md` and the archive.
@@ -69,7 +69,8 @@
 5. **INV-5** (Production for the shelf: Progress) — `#done` *(Accepted 2026-11-02)*
 6. **INV-15** (Work tickets and the Scan page) — `#done` *(Accepted 2026-11-03)*
 7. **INV-13** (Search products, order lines per colour and size) — `#done` *(Accepted 2026-11-03)*
-8. **Next Sequence (D-26):** `INV-14` ➔ `INV-3` *(acceptance)* ➔ `INV-9` ➔ `INV-7` *(the UI cards of INV-5, INV-12, INV-13 and INV-14 are all `UI approved`, 2026-11-01)*
+8. **INV-14** (Order tracker, served from the shelf) — `#done` *(Accepted 2026-11-03)*
+9. **Next Sequence (D-26):** `INV-3` *(acceptance)* ➔ `INV-9` ➔ `INV-7` *(the UI cards of INV-5, INV-12, INV-13 and INV-14 are all `UI approved`, 2026-11-01)*
 8. **Card Structure:** Each feature receives a UI card first (`INV-n-<slug>-ui.md`), followed by a development card (`INV-n-<slug>.md`).
 9. **Shared UI Cards:** `INV-2`, `INV-8`, and `INV-9` share the same UI card but are accepted individually; so do `INV-5` and `INV-15`.
 10. **Phase 7 Tech Allowance:** `F-43` · `F-46` · `F-52` · `F-53`
@@ -80,7 +81,6 @@
 | :--- | :--- | :--- | :--- | :--- |
 | **INV-3** | Restock of finished products *(built, waiting for acceptance)* | Feature | `Planned` | Must / L |
 | **INV-9** | Print barcode labels | Feature | `Ready` | Must / M |
-| **INV-14** | Refactor the order, 3 of 3: order tracker, orders served from the shelf | Feature | `Planned` | Must / L |
 | **INV-7** | Bigger tap targets on Settings pages | Feature | `Idea` | Could / S–M |
 
 > [!note] Technical Note on INV-6
@@ -114,7 +114,7 @@
   - `INV-12` · client first on New order (point 1). **Built within `INV-4` (D-22) and done with it, 2026-11-02.**
   - `INV-13` · product search with stock per colour and size, and order lines per colour and size (point 2). **Done 2026-11-03** (`39647ce`).
     - **Answers on the development card (human, 2026-11-03, all the recommended options):** until INV-14 the order page's stages and buttons work per colour and size; Edit order's floor keeps today's "already in cutting, ready to ship or shipped" (INV-14 rewords it); a colour with units on open orders (not shipped) can't be removed from its product; orders recorded before read as the product's first colour; INV-13 is built on `PI-DEV`.
-  - `INV-14` · order tracker (To deliver · Delivered · Cancelled), Mark delivered taking units off the finished stock, Cancel units, no production on orders (points 3 and 4). Needs `INV-13` and a redrawn `INV-5` (Progress makes products for the shelf, so cutting has somewhere to go).
+  - `INV-14` · order tracker (To deliver · Delivered · Cancelled), Mark delivered taking units off the finished stock, Cancel units, no production on orders (points 3 and 4). **Done 2026-11-03** (`7af1a63`). Needs `INV-13` and a redrawn `INV-5` (Progress makes products for the shelf, so cutting has somewhere to go).
     - **Answers on the development card (human, 2026-11-03):** Ready-to-ship units of old orders go on the shelf as one restock (Reference "Orders") and become To deliver; Shipped becomes Delivered; kept as one card (L); "Denim Jacket can't be removed: 5 units are delivered or cancelled."; Edit product keeps INV-13's sentence, counting units To deliver.
 - **Decision of 2026-11-01 (human, on Q1–Q10):** order lines are a colour × size grid, built before `INV-13`; "Not started" and "Delivered" are the words; the client is phone first; cancel only what is not delivered, no undo, no stock effect. **Also:** a finished product is not tied to an order. Progress makes products **for the shelf**; an order is covered from the finished stock (the shelf is checked, never set aside). This changes `INV-5`, see below.
   - **Answers on the model (human, 2026-11-01):** (1) the shelf is checked, never held: no reservation, "On the shelf now" shown beside each colour × size, Mark delivered takes units off the finished stock up to what the shelf holds, its move back returns them, Cancel changes no stock. (2) An order counts **To deliver · Delivered · Cancelled · Total**; its status is Not started · In progress (partly delivered) · Delivered · Cancelled; the list filter is Open orders · Delivered · Cancelled · All orders. (3) Deleting an order is always allowed (no refusal); the confirm adds a sentence when units were delivered. (4) `INV-5`'s UI card is reopened (see `INV-5`).

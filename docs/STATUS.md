@@ -61,6 +61,11 @@ Phases 6, 7 and 8 are on hold too (D-20).
 
 ## 2. Decisions needed from you
 
+**Decided on 2026-11-03: INV-14 accepted.** Old orders: Shipped became Delivered and Ready-to-ship units went on the shelf as one
+restock "Orders" per workshop (your answer 1b); kept as one card (L). Orders no longer cut: the order page has the Order tracker, Mark
+delivered (off the shelf), its move back and Cancel units; Delete order is never refused. One commit `7af1a63` on `PI-DEV`
+(`--no-verify`). A line recorded before sizes can't be delivered until it gets real sizes. **Next (D-26): INV-3's acceptance, then INV-9.**
+
 **Decided on 2026-11-03: INV-13 accepted.** You moved INV-13 then INV-14 ahead of INV-3's acceptance and INV-9 (D-26), approved
 INV-13's card and Technical work, left "Can produce now" out of the search, and accepted the delivery: one commit `39647ce` on `PI-DEV`
 (`--no-verify`, the Talisman hook). Order lines now hold colour and size; Search products shows the shelf per colour and size; a colour on
@@ -301,6 +306,7 @@ a PostgreSQL parity suite (last green: 2 604 of 2 604 on 2026-10-31, during INV-
 | **Colour × size variants** | INV-5 Progress, production for the shelf (L, 12 steps; D-24) | 2026-11-02 (card `12496f7`, Technical work `d993ce2`; INV-5-a `9672c68`, AC-1 `9c1b08e`, AC-2 `6ae913a`, AC-5 `788c3d2`, AC-6 `351267e`, AC-3/AC-4 `3ac5d2e`, AC-7 `a6c121d`; delivered `41ea604`; on branch `PI-DEV`, not merged to `main`, not pushed) | ✅ Done, accepted by the human 2026-11-02 (AC-1 to AC-7), who ran the checks himself. Built in this session without the separate agents (the human's choice). Work tickets, Ticket size and the Scan page were left out on purpose: they are INV-15 |
 | **Colour × size variants** | INV-15 work tickets and the Scan page (M, 7 steps; D-25) | 2026-11-03 (card `a523494`, Technical work `ae2716d`; INV-15-a `967dcf4`, AC-7 `d876d37`, AC-3 to AC-6 `7af351d`, AC-1/AC-2 `adea45b`; on branch `PI-DEV`, not merged to `main`, not pushed) | ✅ Done, accepted by the human 2026-11-03 (AC-1 to AC-7). Built in this session without the separate agents. Gates: `composer test` (3,046 tests), screen tests (1,514), lint, type check, build, and the PostgreSQL parity suite (3,044 of 3,044, then the scan tests 34 of 34) green. Not run: the browser golden path. New dependencies: `bacon/bacon-qr-code` (already installed), `barcode-detector` and `zxing-wasm` (the camera's QR reader, Scan page only). Run `php artisan migrate` on the dev database (two migrations) |
 | **Colour × size variants** | INV-13 search products, order lines per colour and size (M, 8 steps; D-26) | 2026-11-03 (card `f07ef4e`, Technical work `7bf05bb`; `39647ce`; on branch `PI-DEV`, not merged to `main`, not pushed) | ✅ Done, accepted by the human 2026-11-03 (AC-1 to AC-7). Built in this session without the separate agents. Gates: `composer test` (3,079 tests), screen tests (1,513), lint, type check, build, and the PostgreSQL parity suite (3,079 of 3,079). |
+| **Colour × size variants** | INV-14 order tracker, orders served from the shelf (L, 8 steps; D-26) | 2026-11-03 (card `432731b`, Technical work `753c611`; `7af1a63`; on branch `PI-DEV`, not merged to `main`, not pushed) | ✅ Done, accepted by the human 2026-11-03 (AC-1 to AC-7). Built in this session without the separate agents. Gates: `composer test` (2,989 tests), screen tests (1,455), lint, type check, build, and the PostgreSQL parity suite (2,989 of 2,989). |
 
 All phase branches (`phase/1-materials`, `phase/2-ui-first-preview`, `phase/3-performance-spa-data`, `fix/rl-02-product-show-loading`,
 `worktree-fix-hover-prefetch-bug`) are fully merged into `main`. They and the worktree under `.claude/worktrees/` can be deleted (human decision D-6).
@@ -352,8 +358,7 @@ All phase branches (`phase/1-materials`, `phase/2-ui-first-preview`, `phase/3-pe
    `PI-DEV` (`4ed7e4d` … `64f463c`). **D-23 (2026-11-02): `INV-3` now comes next, ahead of `INV-9`.** Human: run the PostgreSQL parity
    suite, the browser golden path and the GD tests on `PI-DEV`, then merge it to `main`.
    Done 2026-11-02: INV-5 Progress accepted, on `PI-DEV` (`9672c68` … `41ea604`). Done 2026-11-03: INV-15 work tickets and Scan
-   accepted, on `PI-DEV` (`967dcf4` … `adea45b`). Done 2026-11-03: INV-13 accepted, on `PI-DEV` (`39647ce`). **Next (D-26): INV-14,
-   then INV-3's acceptance and INV-9.**
+   accepted, on `PI-DEV` (`967dcf4` … `adea45b`). Done 2026-11-03: INV-13 accepted, on `PI-DEV` (`39647ce`), and INV-14 (`7af1a63`). **Next (D-26): INV-3's acceptance, then INV-9.**
 3. Human: discuss orders per colour and size (INV-5's "to be discussed" part); it is decided before INV-5's development card.
 4. Done 2026-10-31: INV-2's development card (stock per colour and size) was built and accepted, with the rule "a colour with stock
    can't be taken off a product". INV-8 was built and accepted on 2026-11-01. **INV-3's development card is written** (`Draft`, this

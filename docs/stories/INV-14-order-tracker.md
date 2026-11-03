@@ -5,7 +5,7 @@ type: feature
 phase: Colour × size variants
 priority: Must
 size: L
-status: Planned
+status: Done
 created: 2026-11-03
 tags:
   - story
@@ -57,7 +57,7 @@ unit To deliver. Its status: **Cancelled** when every unit is cancelled; **Deliv
 unit was delivered; **Not started** while nothing has been delivered; **In progress** when some units are delivered and some are still
 to deliver.
 
-- [ ] **AC-1 · The Order tracker.** Under the order's header (breadcrumb, client line, **Edit**, **Delete** as today), the card
+- [x] **AC-1 · The Order tracker.** Under the order's header (breadcrumb, client line, **Edit**, **Delete** as today), the card
   **Order tracker** shows the status badge (**In progress**) and "5 of 80 units delivered · 5 cancelled"; a thin bar whose segments
   follow the counts (Cancelled hatched; the bar is decoration); the list "Units of this order" with four tiles, each read "To deliver,
   70 units": **To deliver** 70 · **Delivered** 5 · **Cancelled** 5 · **Total** 80 ("units ordered"); and the grey line "To deliver:
@@ -67,9 +67,9 @@ to deliver.
     · 2 cancelled", the bar all hatched.
   - While it loads, the header and the card frame show at once with a bar and four tile placeholders; if it fails, "Couldn't load the
     tracker of this order." · **Try again**.
-  - On a phone: the status line, the bar, **Total** full width, then the three counts two to a row.
+  - On a phone: the status line, the bar, **Total** full width, then the three counts two to a row. ✅ 2026-11-03 · 7af1a63
 
-- [ ] **AC-2 · Products by colour and size, without production.** One card per product: its name (a link), SKU, "50 units", its
+- [x] **AC-2 · Products by colour and size, without production.** One card per product: its name (a link), SKU, "50 units", its
   status badge and "5 of 50 delivered"; then the table "Denim Jacket by colour and size": **Colour · size** · **To deliver** ·
   **Delivered** · **Cancelled** · **Total**, a gap, **On the shelf now**. A colour row (swatch, name, its subtotals, bold, on a light
   band), its sizes under it, a **Total** row; no shelf figure on the colour and Total rows. A "One size" product has colour rows only.
@@ -82,9 +82,9 @@ to deliver.
   - Gone from the order page: the stage boxes and columns, **Start cutting**, **Mark ready**, **Ship**, the three **Move back**, "0 of
     80 shipped". An order no longer takes or returns materials.
   - On a phone: a band per colour and one line per size with only the counts that hold units and the shelf ("M · To deliver 20 · Total
-    20 · On the shelf Out"), the Total line first; the three buttons full width, one under another, 44 px.
+    20 · On the shelf Out"), the Total line first; the three buttons full width, one under another, 44 px. ✅ 2026-11-03 · 7af1a63
 
-- [ ] **AC-3 · Mark delivered and its move back.** **Mark delivered** on the Jacket opens "Mark delivered · Denim Jacket" with
+- [x] **AC-3 · Mark delivered and its move back.** **Mark delivered** on the Jacket opens "Mark delivered · Denim Jacket" with
   "Boutique Lina · to deliver and on the shelf: Indigo S 2 · L 3" and "How many units of each colour and size?": a field only where
   something is both to deliver and on the shelf, "Up to 2" under Indigo S and "Up to 3" under Indigo L (the smaller of the two), the
   focus in the first; the note "Delivered units leave your finished stock."; **Mark delivered** and **Cancel**.
@@ -97,9 +97,9 @@ to deliver.
   - "Move delivered back to To deliver" opens "Move back to To deliver · Denim Jacket" with "Boutique Lina · delivered: Indigo XL 5",
     the note "These units go back on your shelf." and **Move back**: "5 units of Denim Jacket moved back to To deliver."; the units go
     back on the shelf. Refused: "Enter at least one unit to move back." · "You can move back at most 5 units of Indigo XL." · "Indigo
-    XL: Enter a whole number of units."
+    XL: Enter a whole number of units." ✅ 2026-11-03 · 7af1a63
 
-- [ ] **AC-4 · Cancel units.** **Cancel units** on the Jeans opens "Cancel units · Denim Jeans 5-pocket" with "Boutique Lina · to
+- [x] **AC-4 · Cancel units.** **Cancel units** on the Jeans opens "Cancel units · Denim Jeans 5-pocket" with "Boutique Lina · to
   deliver: Indigo S 5 · M 10 · L 10", "How many units of each colour and size?" with "Up to 10" under Indigo M and L, the focus in the
   first; the amber note "Cancelled units stay on the order, marked Cancelled, and are not delivered. This can't be undone. Finished
   stock doesn't change."; **Keep units** (outline) and **Cancel 5 units** (red; the number follows what is typed). The window is the
@@ -108,9 +108,9 @@ to deliver.
     stock, material or sale changes.
   - Refused: "Enter at least one unit to cancel." · "You can cancel at most 10 units of Indigo L." · "Indigo L: Enter a whole number
     of units." · units delivered or cancelled meanwhile: "This order changed since you opened this page." and **Close**.
-  - On a phone the windows are full screen, the fields three to a row, and their two buttons in a bar fixed at the bottom.
+  - On a phone the windows are full screen, the fields three to a row, and their two buttons in a bar fixed at the bottom. ✅ 2026-11-03 · 7af1a63
 
-- [ ] **AC-5 · Orders list and client page.** The Orders list shows two totals over every open order, whatever the filters: **Open
+- [x] **AC-5 · Orders list and client page.** The Orders list shows two totals over every open order, whatever the filters: **Open
   orders** 3 · **To deliver** 73 units. Filters: the search, **Status** ("Open orders" by default, "Delivered", "Cancelled", "All
   orders") and **Client**. Table: **Client** (name, the date in grey under it) · **Products** · **Ordered** (the Total, "5 cancelled" in
   grey under it when there are any) · **To deliver** · **Delivered** · **Status** (badge with an icon): Amira Ben Salah 2 · 2 · 0 Not
@@ -123,23 +123,23 @@ to deliver.
     ("All orders" by default there) and the empty message "Amira Ben Salah has no delivered orders." · **Show all orders**.
   - On a phone: the two totals side by side, the search, **Filters** ("Filters · 1" when set) opening a full-height panel, then one
     card per order with its name, status, date, "5 cancelled", the products, a small bar and "To deliver 70 · Delivered 5".
-  - The words To start, In cutting, In production, Ready to ship, Shipped and Ship are gone from orders.
+  - The words To start, In cutting, In production, Ready to ship, Shipped and Ship are gone from orders. ✅ 2026-11-03 · 7af1a63
 
-- [ ] **AC-6 · Edit order, Delete order and colours.** In Edit order a cell with delivered or cancelled units shows "At least 10" and
+- [x] **AC-6 · Edit order, Delete order and colours.** In Edit order a cell with delivered or cancelled units shows "At least 10" and
   can't go lower: "Indigo M can't be less than the 10 units already delivered or cancelled."; a line with delivered or cancelled units
   can't be removed: "Denim Jacket can't be removed: 5 units are delivered or cancelled." Delete order is always allowed: "Delete
   order?" · "The order of **Boutique Lina** (2 products, 80 units) will be removed. Material stock and sales are not affected. This
   cannot be undone." and, when units were delivered, "Finished stock isn't changed: the 5 units already delivered are not put back."
   ("the 1 unit already delivered is not put back") · **Cancel** · **Delete order** · "Order deleted.". In Edit product, a colour with
   units To deliver on open orders can't be taken off its product ("Indigo has 12 units on open orders, so it can't be removed from
-  Denim Jacket.", as INV-13 built it); Delivered and Cancelled units don't count.
+  Denim Jacket.", as INV-13 built it); Delivered and Cancelled units don't count. ✅ 2026-11-03 · 7af1a63
 
-- [ ] **AC-7 · Orders recorded before.** Every order keeps its Total per colour and size. Units that were **Shipped** become
+- [x] **AC-7 · Orders recorded before.** Every order keeps its Total per colour and size. Units that were **Shipped** become
   **Delivered** (the shelf doesn't change); units **To start**, **In cutting** or **Ready to ship** become **To deliver**. Units that
   were **Ready to ship** are first put on the shelf, in their colour and size, as one restock dated the day of the change with
   Reference "Orders" and Note "Ready to ship before INV-14", so they can be marked delivered at once. Materials already taken by past
   cuts stay as they are in the materials' history. Boutique Lina's order with 5 Jackets Indigo XL shipped and 10 Indigo S ready to
-  ship reads Delivered 5 and To deliver 75, and the shelf of Indigo S grows by 10.
+  ship reads Delivered 5 and To deliver 75, and the shelf of Indigo S grows by 10. ✅ 2026-11-03 · 7af1a63
 
 
 ---
