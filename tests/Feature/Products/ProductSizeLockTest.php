@@ -68,7 +68,7 @@ function bookForSizeLock(string $kind, int $number): void
 
     match ($kind) {
         'open' => bookOrder(lines: $lines),
-        'shipped' => bookShippedOrder([], $number, 10),
+        'shipped' => bookDeliveredOrder([], $number, 10),
         'deleted' => bookOrder(lines: $lines)->delete(),
         default => null,
     };

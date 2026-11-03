@@ -5,19 +5,21 @@ declare(strict_types=1);
 namespace App\Enums;
 
 /**
- * The Status filter of the Orders list (S-50). "Open" is the default: an order is open until every one of its lines has shipped.
+ * The Status filter of the Orders list (S-50, INV-14). "Open" is the default: an order is open while it has a unit To deliver.
  */
 enum OrderStatusFilter: string
 {
     case Open = 'open';
-    case Shipped = 'shipped';
+    case Delivered = 'delivered';
+    case Cancelled = 'cancelled';
     case All = 'all';
 
     public function label(): string
     {
         return match ($this) {
             self::Open => __('Open orders'),
-            self::Shipped => __('Shipped'),
+            self::Delivered => __('Delivered'),
+            self::Cancelled => __('Cancelled'),
             self::All => __('All orders'),
         };
     }

@@ -98,7 +98,7 @@ it('filters the Orders list by client, combined with the search and the status, 
         ->and(pageProp($response, 'client_filter.name'))->toBe('Amira Ben Salah')
         ->and(pageProp($response, 'totals'))->toBe($all);
 
-    $shipped = actingAs($this->user)->get(route('orders.index', ['client' => $amira->id, 'status' => 'shipped']));
+    $shipped = actingAs($this->user)->get(route('orders.index', ['client' => $amira->id, 'status' => 'delivered']));
 
     expect(array_column(pageProp($shipped, 'orders.data'), 'ordered_on'))->toBe(['2026-10-14', '2026-09-01'])
         ->and(pageProp($shipped, 'orders.links.next'))->toBeNull();

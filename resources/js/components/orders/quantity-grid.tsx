@@ -87,9 +87,9 @@ type QuantityGridProps = {
     values: CellValues;
     onChange: (colourId: number, sizeId: number, value: string) => void;
     onRemove: () => void;
-    /** Units already started per cell (`${colourId}.${sizeId}`), the lowest each can go ("At least 10"). */
+    /** Units already delivered or cancelled per cell (`${colourId}.${sizeId}`), the lowest each can go ("At least 10"; INV-14). */
     floors?: Readonly<Record<string, number>>;
-    /** Units started on the whole line: it can't be removed. */
+    /** Units delivered or cancelled on the whole line: it can't be removed (INV-14). */
     started?: number;
     /** The server's message about the line, under its total. */
     lineError?: string;
@@ -357,9 +357,9 @@ export function QuantityGrid({
                 <p id={removeHintId} className="text-xs text-muted-foreground">
                     {name} can't be removed:{' '}
                     {started === 1
-                        ? '1 unit has'
-                        : `${formatCount(started, locale)} units have`}{' '}
-                    started.
+                        ? '1 unit is'
+                        : `${formatCount(started, locale)} units are`}{' '}
+                    delivered or cancelled.
                 </p>
             )}
 

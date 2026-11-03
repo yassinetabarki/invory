@@ -50,11 +50,9 @@ function notStarted(
         id,
         product,
         quantity,
-        to_start: quantity,
-        in_cutting: 0,
-        ready_to_ship: 0,
-        shipped: 0,
-        started: 0,
+        to_deliver: quantity,
+        delivered: 0,
+        cancelled: 0,
         status: 'not_started',
         status_label: 'Not started',
     });
@@ -68,13 +66,11 @@ const props: OrderEditProps = {
         note: null,
         lines: [notStarted(70, jacket, 50), notStarted(71, jeans, 30)],
         units: 80,
-        to_start: 80,
-        in_cutting: 0,
-        ready_to_ship: 0,
-        shipped: 0,
+        to_deliver: 80,
+        delivered: 0,
+        cancelled: 0,
         status: 'not_started',
         status_label: 'Not started',
-        delete_refusal: null,
         client_id: 3,
         client_details: {
             id: 3,
@@ -186,7 +182,7 @@ describe('orders/edit page', () => {
                     ...sizedJacketLine.sizes[1],
                     colour: indigo,
                     quantity: 7,
-                    to_start: 7,
+                    to_deliver: 7,
                 },
             ],
         };
@@ -225,15 +221,15 @@ describe('orders/edit page', () => {
         );
     });
 
-    it('shows a started cell its minimum and locks Remove on a started line (INV-13 AC-4)', () => {
+    it('shows a cell its delivered and cancelled units as its minimum and locks Remove on such a line (INV-14 AC-6)', () => {
         const started: OrderLine = {
             ...sizedJacketLine,
-            in_cutting: 10,
-            to_start: 40,
-            started: 10,
+            delivered: 6,
+            cancelled: 4,
+            to_deliver: 40,
             sizes: sizedJacketLine.sizes.map((row) =>
                 row.size.id === sizeIds.M
-                    ? { ...row, in_cutting: 10, to_start: 10, started: 10 }
+                    ? { ...row, delivered: 6, cancelled: 4, to_deliver: 10 }
                     : row,
             ),
         };
@@ -266,7 +262,7 @@ describe('orders/edit page', () => {
                 name: 'Remove Denim Jacket from this order',
             }),
         ).toHaveAccessibleDescription(
-            "Denim Jacket can't be removed: 10 units have started.",
+            "Denim Jacket can't be removed: 10 units are delivered or cancelled.",
         );
     });
 

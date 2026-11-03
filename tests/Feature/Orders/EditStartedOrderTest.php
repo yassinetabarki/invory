@@ -61,20 +61,20 @@ function savedOrderFigures(Order $order): array
     return [
         'order' => ['client' => $saved->client, 'ordered_on' => $saved->ordered_on->toDateString(), 'note' => $saved->note],
         'lines' => OrderLine::query()->where('order_id', $order->id)->orderBy('position')->get()
-            ->map(static fn (OrderLine $line): array => $line->only(['id', 'product_id', 'quantity', 'position', 'in_cutting', 'ready_to_ship', 'shipped']))
+            ->map(static fn (OrderLine $line): array => $line->only(['id', 'product_id', 'quantity', 'position', 'delivered', 'cancelled']))
             ->all(),
     ];
 }
 
 /**
- * The lines in position order, each `[to start, in cutting, ready to ship, shipped]`.
+ * The lines in position order, each `[to deliver, delivered, cancelled]` (INV-14).
  *
- * @return list<array{int, int, int, int}>
+ * @return list<array{int, int, int}>
  */
 function savedStages(Order $order): array
 {
     return OrderLine::query()->where('order_id', $order->id)->orderBy('position')->get()
-        ->map(static fn (OrderLine $line): array => [$line->to_start, $line->in_cutting, $line->ready_to_ship, $line->shipped])
+        ->map(static fn (OrderLine $line): array => [$line->to_deliver, $line->delivered, $line->cancelled])
         ->all();
 }
 
@@ -87,14 +87,14 @@ function startedKey(string $key): string
 dataset('started line refusals', [
     'Denim Jacket 25' => [
         [['jacket', 25], ['jeans', 30]], 'jacket cell',
-        "White can't be less than the 30 units already in cutting, ready to ship or shipped.",
+        "White can't be less than the 30 units already delivered or cancelled.",
     ],
-    'Denim Jacket left out' => [[['jeans', 30]], 'lines', "Denim Jacket can't be removed: 30 units have started."],
-    'Denim Jacket swapped for another product' => [[['tshirt', 50], ['jeans', 30]], 'lines', "Denim Jacket can't be removed: 30 units have started."],
+    'Denim Jacket left out' => [[['jeans', 30]], 'lines', "Denim Jacket can't be removed: 30 units are delivered or cancelled."],
+    'Denim Jacket swapped for another product' => [[['tshirt', 50], ['jeans', 30]], 'lines', "Denim Jacket can't be removed: 30 units are delivered or cancelled."],
 ]);
 
-it('refuses a started line that drops below its started units or leaves the order, and saves nothing (AC-6)', function (array $lines, string $key, string $message) {
-    $order = bookOrderAtStages([[50, 20, 10, 0], [30, 0, 0, 0]]);
+it('refuses a line that drops below its delivered and cancelled units or leaves the order, and saves nothing (INV-14 AC-6)', function (array $lines, string $key, string $message) {
+    $order = bookOrderWithCounts([[50, 20, 10], [30, 0, 0]]);
     $before = savedOrderFigures($order);
 
     $key = startedKey($key);
@@ -106,24 +106,23 @@ it('refuses a started line that drops below its started units or leaves the orde
     expect(savedOrderFigures($order))->toBe($before);
 })->with('started line refusals');
 
-it('refuses leaving out a line that has one unit in cutting, in the singular (AC-6)', function () {
-    $order = bookOrderAtStages([[50, 1, 0, 0], [30, 0, 0, 0]]);
+it('refuses leaving out a line that has one unit cancelled, in the singular (INV-14 AC-6)', function () {
+    $order = bookOrderWithCounts([[50, 0, 1], [30, 0, 0]]);
     $before = savedOrderFigures($order);
 
     actingAs($this->user)->put(route('orders.update', $order), startedEditBody([['jeans', 30]]))
-        ->assertSessionHasErrors(['lines' => "Denim Jacket can't be removed: 1 unit has started."]);
+        ->assertSessionHasErrors(['lines' => "Denim Jacket can't be removed: 1 unit is delivered or cancelled."]);
 
     expect(savedOrderFigures($order))->toBe($before);
 });
 
-it('words the quantity message for one started unit in the singular (AC-6)', function () {
-    // Not reachable through the route: a quantity below 1 is refused first by the 1 to 1,000,000 rule, so the message is proved on its own.
-    expect(OrderMessages::quantityBelowStarted(1))
-        ->toBe("The quantity can't be less than the 1 unit already in cutting, ready to ship or shipped.");
+it('words the cell message for one unit in the singular (INV-14 AC-6)', function () {
+    expect(OrderMessages::sizeBelowSettled('Indigo M', 1))
+        ->toBe("Indigo M can't be less than the 1 unit already delivered or cancelled.");
 });
 
-it('keeps what has not started free to change, and a started line free to grow (AC-6)', function (array $lines, array $stages) {
-    $order = bookOrderAtStages([[50, 20, 10, 0], [30, 0, 0, 0]]);
+it('keeps what is To deliver free to change, and a line with delivered units free to grow (INV-14 AC-6)', function (array $lines, array $stages) {
+    $order = bookOrderWithCounts([[50, 20, 10], [30, 0, 0]]);
 
     actingAs($this->user)->put(route('orders.update', $order), startedEditBody($lines))
         ->assertRedirect(route('orders.show', $order))
@@ -133,24 +132,24 @@ it('keeps what has not started free to change, and a started line free to grow (
         // Edit order keeps the order's client: a typed name is no longer read (INV-4-b; INV-4-d gives Edit order its picker).
         ->and(Order::query()->findOrFail($order->id)->client)->toBe('Boutique Lina');
 })->with([
-    'Denim Jacket 40' => [[['jacket', 40], ['jeans', 30]], [[10, 20, 10, 0], [30, 0, 0, 0]]],
-    'Denim Jeans swapped' => [[['jacket', 50], ['tshirt', 5]], [[20, 20, 10, 0], [5, 0, 0, 0]]],
-    'Denim Jeans removed' => [[['jacket', 50]], [[20, 20, 10, 0]]],
-    'Denim Jeans changed' => [[['jacket', 50], ['jeans', 12]], [[20, 20, 10, 0], [12, 0, 0, 0]]],
-    'a new line added' => [[['jacket', 50], ['jeans', 30], ['tshirt', 7]], [[20, 20, 10, 0], [30, 0, 0, 0], [7, 0, 0, 0]]],
+    'Denim Jacket 40' => [[['jacket', 40], ['jeans', 30]], [[10, 20, 10], [30, 0, 0]]],
+    'Denim Jeans swapped' => [[['jacket', 50], ['tshirt', 5]], [[20, 20, 10], [5, 0, 0]]],
+    'Denim Jeans removed' => [[['jacket', 50]], [[20, 20, 10]]],
+    'Denim Jeans changed' => [[['jacket', 50], ['jeans', 12]], [[20, 20, 10], [12, 0, 0]]],
+    'a new line added' => [[['jacket', 50], ['jeans', 30], ['tshirt', 7]], [[20, 20, 10], [30, 0, 0], [7, 0, 0]]],
 ]);
 
-it('puts a fully shipped line back In progress when its quantity is raised from 50 to 60 (AC-6)', function () {
-    $order = bookOrderAtStages([[50, 0, 0, 50], [30, 0, 0, 30]]);
+it('puts a fully delivered line back In progress when its quantity is raised from 50 to 60 (INV-14 AC-6)', function () {
+    $order = bookOrderWithCounts([[50, 50, 0], [30, 30, 0]]);
 
-    expect(Order::query()->with('lines')->findOrFail($order->id)->progress()->value)->toBe('shipped');
+    expect(Order::query()->with('lines')->findOrFail($order->id)->progress()->value)->toBe('delivered');
 
     actingAs($this->user)->put(route('orders.update', $order), startedEditBody([['jacket', 60], ['jeans', 30]]))
         ->assertSessionHasNoErrors();
 
     $saved = Order::query()->with('lines')->findOrFail($order->id);
 
-    expect(savedStages($order))->toBe([[10, 0, 0, 50], [0, 0, 0, 30]])
+    expect(savedStages($order))->toBe([[10, 50, 0], [0, 30, 0]])
         ->and($saved->lines[0]->progress()->value)->toBe('in_progress')
         ->and($saved->progress()->value)->toBe('in_progress');
 });
@@ -159,15 +158,15 @@ it('refuses on the saved counts when units started after the form was opened (AC
     $order = bookOrder();
     $before = savedOrderFigures($order);
 
-    // The form was opened here, with nothing started; then someone else started 30 jackets.
-    OrderLine::query()->where('order_id', $order->id)->where('product_id', pid(1))->update(['in_cutting' => 30]);
-    OrderLineSize::query()->whereIn('order_line_id', OrderLine::query()->where('order_id', $order->id)->where('product_id', pid(1))->select('id'))->update(['in_cutting' => 30]);
+    // The form was opened here, with nothing delivered; then someone else delivered 30 jackets.
+    OrderLine::query()->where('order_id', $order->id)->where('product_id', pid(1))->update(['delivered' => 30]);
+    OrderLineSize::query()->whereIn('order_line_id', OrderLine::query()->where('order_id', $order->id)->where('product_id', pid(1))->select('id'))->update(['delivered' => 30]);
     $started = savedOrderFigures($order);
 
     actingAs($this->user)->put(route('orders.update', $order), startedEditBody($lines))
         ->assertSessionHasErrors([startedKey($key) => $message]);
 
-    expect($before['lines'][0]['in_cutting'])->toBe(0)
+    expect($before['lines'][0]['delivered'])->toBe(0)
         ->and(savedOrderFigures($order))->toBe($started);
 })->with('started line refusals');
 
@@ -175,8 +174,8 @@ it('checks again under the order lock, on a model loaded before the units starte
     $order = bookOrder();
     $stale = Order::query()->with('lines')->findOrFail($order->id);
 
-    OrderLine::query()->where('order_id', $order->id)->where('product_id', pid(1))->update(['in_cutting' => 30]);
-    OrderLineSize::query()->whereIn('order_line_id', OrderLine::query()->where('order_id', $order->id)->where('product_id', pid(1))->select('id'))->update(['in_cutting' => 30]);
+    OrderLine::query()->where('order_id', $order->id)->where('product_id', pid(1))->update(['delivered' => 30]);
+    OrderLineSize::query()->whereIn('order_line_id', OrderLine::query()->where('order_id', $order->id)->where('product_id', pid(1))->select('id'))->update(['delivered' => 30]);
     $started = savedOrderFigures($order);
     $data = startedEditBody($lines);
 
@@ -195,7 +194,7 @@ it('checks again under the order lock, on a model loaded before the units starte
 
 it('names a size of digits "size 36" when it cannot go below its started units, in the singular too (F9)', function (int $started, string $message) {
     $order = Order::factory()->create();
-    OrderLine::factory()->sized(['36' => 10, '37' => 8], ['36' => [$started, 0, 0]])->create(['order_id' => $order->id, 'product_id' => demoProduct('PRD-SNK-003')->id, 'position' => 0]);
+    OrderLine::factory()->sized(['36' => 10, '37' => 8], ['36' => [$started, 0]])->create(['order_id' => $order->id, 'product_id' => demoProduct('PRD-SNK-003')->id, 'position' => 0]);
     $before = sizedFigures($order);
     $size = array_key_first(sizeIds(['36' => 0], SizeList::EU_36_TO_46));
 
@@ -205,14 +204,14 @@ it('names a size of digits "size 36" when it cannot go below its started units, 
 
     expect(sizedFigures($order))->toBe($before);
 })->with([
-    'four units' => [4, "White, size 36 can't be less than the 4 units already in cutting, ready to ship or shipped."],
-    'one unit' => [1, "White, size 36 can't be less than the 1 unit already in cutting, ready to ship or shipped."],
+    'four units' => [4, "White, size 36 can't be less than the 4 units already delivered or cancelled."],
+    'one unit' => [1, "White, size 36 can't be less than the 1 unit already delivered or cancelled."],
 ]);
 
 dataset('started sizes', [
-    'in cutting' => [[10, 0, 0]],
-    'ready to ship' => [[0, 10, 0]],
-    'shipped' => [[0, 0, 10]],
+    'delivered' => [[10, 0]],
+    'cancelled' => [[0, 10]],
+    'both' => [[6, 4]],
 ]);
 
 /**
@@ -228,7 +227,7 @@ function sizedEditBody(array $sizes): array
     ]);
 }
 
-it('keeps each size at its started units, lets the others change, and keeps a started line on the order (S-61 AC-5)', function (array $started) {
+it('keeps each cell at its delivered and cancelled units, lets the others change, and keeps such a line on the order (INV-14 AC-6)', function (array $started) {
     $order = bookSizedOrder(stages: ['M' => $started]);
     $before = [savedOrderFigures($order), sizedFigures($order)];
     $mKey = unitsKey(0, orderUnits(pid(1), ['M' => 0]));
@@ -236,14 +235,14 @@ it('keeps each size at its started units, lets the others change, and keeps a st
     // M 8 is below the 10 units started: refused under M, nothing saved (not even the client's name).
     actingAs($this->user)->from(route('orders.edit', $order))->put(route('orders.update', $order), sizedEditBody(['S' => 10, 'M' => 8, 'L' => 15, 'XL' => 5]))
         ->assertRedirect(route('orders.edit', $order))
-        ->assertSessionHasErrors([$mKey => "White M can't be less than the 10 units already in cutting, ready to ship or shipped."]);
+        ->assertSessionHasErrors([$mKey => "White M can't be less than the 10 units already delivered or cancelled."]);
 
     expect(session('errors')->keys())->toBe([$mKey])
         ->and([savedOrderFigures($order), sizedFigures($order)])->toBe($before);
 
     // The line can't leave the order while 10 of its units have started.
     actingAs($this->user)->put(route('orders.update', $order), validOrderPayload(['lines' => [['product_id' => pid(5), 'units' => orderUnits(pid(5), ['M' => '5'])]]]))
-        ->assertSessionHasErrors(['lines' => "Denim Jacket can't be removed: 10 units have started."]);
+        ->assertSessionHasErrors(['lines' => "Denim Jacket can't be removed: 10 units are delivered or cancelled."]);
 
     expect([savedOrderFigures($order), sizedFigures($order)])->toBe($before);
 
@@ -253,21 +252,22 @@ it('keeps each size at its started units, lets the others change, and keeps a st
         ->assertSessionHasNoErrors();
 
     expect(sizedFigures($order)[pid(1)])->toBe([
-        'S' => [10, 0, 0, 0], 'M' => [10, ...$started], 'L' => [20, 0, 0, 0], 'XL' => [5, 0, 0, 0],
+        'S' => [10, 0, 0], 'M' => [10, ...$started], 'L' => [20, 0, 0], 'XL' => [5, 0, 0],
     ]);
 })->with('started sizes');
 
-it('sends each size its started units, computed from its three stages, on Edit order (S-70 AC-6)', function () {
-    // M: 4 in cutting + 3 ready to ship + 3 shipped; S: nothing started.
-    $order = bookSizedOrder(['S' => 10, 'M' => 20], ['M' => [4, 3, 3]]);
+it('sends each cell its delivered and cancelled units on Edit order (INV-14 AC-6)', function () {
+    $order = bookSizedOrder(['S' => 10, 'M' => 20], ['M' => [4, 3]]);
 
     actingAs($this->user)->get(route('orders.edit', $order))
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->where('order.lines.0.sizes.0.size.label', 'S')
-            ->where('order.lines.0.sizes.0.started', 0)
+            ->where('order.lines.0.sizes.0.delivered', 0)
             ->where('order.lines.0.sizes.1.size.label', 'M')
-            ->where('order.lines.0.sizes.1.started', 10)
-            ->where('order.lines.0.started', 10)
+            ->where('order.lines.0.sizes.1.delivered', 4)
+            ->where('order.lines.0.sizes.1.cancelled', 3)
+            ->where('order.lines.0.sizes.1.to_deliver', 13)
+            ->where('order.lines.0.delivered', 4)
             ->etc());
 });

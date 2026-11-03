@@ -34,6 +34,7 @@ function referenceMigration(): Migration
     // The INV-8-a barcodes migration points at the workshops, colours and sizes, so it goes before everything it depends on.
     // The INV-13-a colour on the order line sizes points at colours and order lines, so it goes first.
     if (Schema::hasColumn('order_line_sizes', 'colour_id')) {
+        deliveryCountsMigration()->down();
         orderLineColoursMigration()->down();
     }
 

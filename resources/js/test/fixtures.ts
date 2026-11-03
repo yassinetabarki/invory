@@ -11,11 +11,16 @@ import type {
     OrderLine,
     OrderLineSizeMode,
     OrderProduct,
+    OrderProgress,
+    OrderTracker,
     OrderStockProduct,
     Paginated,
     Size,
     SizeList,
     StockMovement,
+    TrackerCounts,
+    TrackerLine,
+    TrackerRow,
 } from '@/types/domain';
 
 /** The installation's three size lists (S-58), with fixed size ids shared by every test. */
@@ -180,17 +185,15 @@ export function withOneSize(
                 colour: white,
                 size: size(sizeIds.oneSize, 'One size'),
                 quantity: line.quantity,
-                to_start: line.to_start,
-                in_cutting: line.in_cutting,
-                ready_to_ship: line.ready_to_ship,
-                shipped: line.shipped,
-                started: line.started,
+                to_deliver: line.to_deliver,
+                delivered: line.delivered,
+                cancelled: line.cancelled,
             },
         ],
     };
 }
 
-/** A Denim Jacket line counted by size: S 10 · M 20 · L 15 · XL 5 = 50 units, nothing started. */
+/** A Denim Jacket line counted by size: S 10 · M 20 · L 15 · XL 5 = 50 units, nothing delivered. */
 export const sizedJacketLine: OrderLine = {
     id: 80,
     product: {
@@ -201,11 +204,9 @@ export const sizedJacketLine: OrderLine = {
         deleted: false,
     },
     quantity: 50,
-    to_start: 50,
-    in_cutting: 0,
-    ready_to_ship: 0,
-    shipped: 0,
-    started: 0,
+    to_deliver: 50,
+    delivered: 0,
+    cancelled: 0,
     size_mode: 'by_size',
     sizes: [
         [sizeIds.S, 'S', 10],
@@ -216,11 +217,9 @@ export const sizedJacketLine: OrderLine = {
         colour: white,
         size: size(Number(id), String(label)),
         quantity: Number(quantity),
-        to_start: Number(quantity),
-        in_cutting: 0,
-        ready_to_ship: 0,
-        shipped: 0,
-        started: 0,
+        to_deliver: Number(quantity),
+        delivered: 0,
+        cancelled: 0,
     })),
     status: 'not_started',
     status_label: 'Not started',
@@ -470,3 +469,100 @@ export function paginate<T>(
         },
     };
 }
+
+/** A tracker row of the Apparel list (INV-14): `[label, to deliver, delivered, cancelled, on the shelf]`; `can_deliver` as the server sends it. */
+function trackerRow([label, toDeliver, delivered, cancelled, onShelf]: [
+    keyof typeof sizeIds,
+    number,
+    number,
+    number,
+    number,
+]): TrackerRow {
+    return {
+        size: size(sizeIds[label], label),
+        to_deliver: toDeliver,
+        delivered,
+        cancelled,
+        total: toDeliver + delivered + cancelled,
+        on_shelf: onShelf,
+        can_deliver: Math.min(toDeliver, onShelf),
+    };
+}
+
+function sumOf(rows: TrackerCounts[]): TrackerCounts {
+    return (['to_deliver', 'delivered', 'cancelled', 'total'] as const).reduce(
+        (sum, key) => ({
+            ...sum,
+            [key]: rows.reduce((total, row) => total + row[key], 0),
+        }),
+        { to_deliver: 0, delivered: 0, cancelled: 0, total: 0 },
+    );
+}
+
+/** A tracker line in Indigo (INV-14). */
+export function trackerLine(
+    id: number,
+    product: OrderProduct,
+    rows: [keyof typeof sizeIds, number, number, number, number][],
+    status: OrderProgress,
+    status_label: string,
+): TrackerLine {
+    const sizes = rows.map(trackerRow);
+
+    return {
+        id,
+        product,
+        one_size: false,
+        ...sumOf(sizes),
+        status,
+        status_label,
+        colours: [{ colour: indigo, ...sumOf(sizes), rows: sizes }],
+    };
+}
+
+/** The INV-14 card's Boutique Lina: Jacket Indigo S 10 · M 20 · L 15 · XL 5 delivered; Jeans S 5 · M 10 · L 10 · XL 5 cancelled; the card's shelf. */
+export const linaTracker: OrderTracker = (() => {
+    const jacketLine = trackerLine(
+        70,
+        {
+            id: 1,
+            sku: 'PRD-JKT-001',
+            name: 'Denim Jacket',
+            status: 'active',
+            deleted: false,
+        },
+        [
+            ['S', 10, 0, 0, 2],
+            ['M', 20, 0, 0, 0],
+            ['L', 15, 0, 0, 3],
+            ['XL', 0, 5, 0, 1],
+        ],
+        'in_progress',
+        'In progress',
+    );
+    const jeansLine = trackerLine(
+        71,
+        {
+            id: 5,
+            sku: 'PRD-JNS-005',
+            name: 'Denim Jeans 5-pocket',
+            status: 'active',
+            deleted: false,
+        },
+        [
+            ['S', 5, 0, 0, 0],
+            ['M', 10, 0, 0, 5],
+            ['L', 10, 0, 0, 2],
+            ['XL', 0, 0, 5, 0],
+        ],
+        'not_started',
+        'Not started',
+    );
+
+    return {
+        ...sumOf([jacketLine, jeansLine]),
+        status: 'in_progress',
+        status_label: 'In progress',
+        lines: [jacketLine, jeansLine],
+    };
+})();

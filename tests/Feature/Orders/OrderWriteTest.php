@@ -76,8 +76,8 @@ function expectLinesCountedAsOneSize(Order $order): void
 
     foreach ($lines as $line) {
         expect($line->size_list_id)->toBe($oneSize->id)
-            ->and($line->sizes->map(fn ($row): array => [$row->size->label, $row->quantity, $row->in_cutting, $row->ready_to_ship, $row->shipped])->all())
-            ->toBe([['One size', $line->quantity, 0, 0, 0]]);
+            ->and($line->sizes->map(fn ($row): array => [$row->size->label, $row->quantity, $row->delivered, $row->cancelled])->all())
+            ->toBe([['One size', $line->quantity, 0, 0]]);
     }
 }
 
@@ -106,8 +106,8 @@ it('records Boutique Lina\'s order and lands on its page, where the list shows i
 
     // Both lines are counted by size, and each equals the sum of its rows (sizedFigures checks it).
     expect(sizedFigures($order))->toBe([
-        pid(1) => ['S' => [10, 0, 0, 0], 'M' => [20, 0, 0, 0], 'L' => [15, 0, 0, 0], 'XL' => [5, 0, 0, 0]],
-        pid(5) => ['M' => [30, 0, 0, 0]],
+        pid(1) => ['S' => [10, 0, 0], 'M' => [20, 0, 0], 'L' => [15, 0, 0], 'XL' => [5, 0, 0]],
+        pid(5) => ['M' => [30, 0, 0]],
     ]);
 
     $row = pageProp(actingAs($this->user)->get(route('orders.index'))->assertOk(), 'orders.data.0');

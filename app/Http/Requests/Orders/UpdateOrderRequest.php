@@ -17,8 +17,8 @@ use Illuminate\Validation\Validator;
 /**
  * Edit an order (S-48-c): the rules of {@see StoreOrderRequest}, and a product already on the order stays valid even once it is no
  * longer active or was deleted, and a line keeps the way it counts (S-60): a line recorded before sizes keeps its single size, also
- * when its product is removed and added back in the same visit, and the colours it holds (INV-13). A line that has started (S-49) keeps
- * its product and, per colour and size, at least its started units.
+ * when its product is removed and added back in the same visit, and the colours it holds (INV-13). A line with delivered or cancelled units
+ * (INV-14) keeps its product and, per colour and size, at least those units.
  */
 class UpdateOrderRequest extends StoreOrderRequest
 {
@@ -58,7 +58,7 @@ class UpdateOrderRequest extends StoreOrderRequest
     }
 
     /**
-     * The units of every line, then the started-line rules once the lines themselves are valid. This runs on unlocked data, to answer early; `UpdateOrder` repeats
+     * The units of every line, then the delivered-and-cancelled rules once the lines themselves are valid. This runs on unlocked data, to answer early; `UpdateOrder` repeats
      * it on the counts read under the order lock, which is the check that counts.
      *
      * @return list<callable(Validator): void>

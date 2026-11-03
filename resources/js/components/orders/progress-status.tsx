@@ -1,4 +1,4 @@
-import { CircleCheck, CircleDashed, Clock } from 'lucide-react';
+import { Ban, CircleCheck, CircleDashed, Clock } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -6,7 +6,7 @@ import type { OrderProgress } from '@/types/domain';
 
 type ProgressStatusProps = {
     status: OrderProgress;
-    /** The server's word for the status ("Not started", "In progress", "Shipped"). */
+    /** The server's word for the status ("Not started", "In progress", "Delivered", "Cancelled"). */
     label: string;
     className?: string;
 };
@@ -18,7 +18,11 @@ const LOOK: Record<OrderProgress, { icon: LucideIcon; tone: string }> = {
         tone: 'bg-neutral text-neutral-foreground',
     },
     in_progress: { icon: Clock, tone: 'bg-info text-info-foreground' },
-    shipped: { icon: CircleCheck, tone: 'bg-success text-success-foreground' },
+    delivered: {
+        icon: CircleCheck,
+        tone: 'bg-success text-success-foreground',
+    },
+    cancelled: { icon: Ban, tone: 'bg-muted text-muted-foreground' },
 };
 
 /** An order's or a line's status: an icon (hidden from screen readers) and the word. */

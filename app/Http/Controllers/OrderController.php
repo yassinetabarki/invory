@@ -9,7 +9,6 @@ use App\Actions\Orders\RecordOrder;
 use App\Actions\Orders\UpdateOrder;
 use App\Enums\ClientSource;
 use App\Enums\OrderStatusFilter;
-use App\Exceptions\OrderDeleteRefusedException;
 use App\Http\Requests\Orders\IndexOrderRequest;
 use App\Http\Requests\Orders\StoreOrderRequest;
 use App\Http\Requests\Orders\UpdateOrderRequest;
@@ -23,6 +22,7 @@ use App\Services\Clients\ClientBook;
 use App\Services\Clients\ClientMessages;
 use App\Services\Orders\OrderBook;
 use App\Services\Orders\OrderProductSearch;
+use App\Services\Orders\OrderTracker;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -80,12 +80,15 @@ final class OrderController extends Controller
         ]);
     }
 
-    public function show(Order $order, OrderBook $book): Response
+    public function show(Order $order, OrderBook $book, OrderTracker $tracker): Response
     {
         Gate::authorize('view', $order);
 
         return Inertia::render('orders/show', [
             'order' => fn (): OrderResource => new OrderResource($book->load($order, withClient: true)),
+            // INV-14: the tracker reads the shelf of every product of the order, so it comes after the frame and is rescued: if it
+            // fails, the page says so with "Try again" and the header stays.
+            'tracker' => Inertia::defer(fn (): array => $tracker->of($book->load($order)), rescue: true),
         ]);
     }
 
@@ -135,13 +138,7 @@ final class OrderController extends Controller
     {
         Gate::authorize('delete', $order);
 
-        try {
-            $deleteOrder->handle($order);
-        } catch (OrderDeleteRefusedException $e) {
-            Inertia::flash('toast', ['type' => 'error', 'message' => $e->getMessage()]);
-
-            return back();
-        }
+        $deleteOrder->handle($order);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Order deleted.')]);
 

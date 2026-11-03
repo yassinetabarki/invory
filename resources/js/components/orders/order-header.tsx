@@ -3,11 +3,10 @@ import { Pencil, Trash2 } from 'lucide-react';
 import { telHref } from '@/components/clients/client-header';
 import { SourceLabel } from '@/components/clients/source-label';
 import { formatUnits } from '@/components/orders/stage-figure';
-import { ProgressStatus } from '@/components/orders/progress-status';
 import { PageHeader } from '@/components/shared/page-header';
 import { Button } from '@/components/ui/button';
 import { useAppSettings } from '@/hooks/use-app-settings';
-import { formatCount, formatDate } from '@/lib/format';
+import { formatDate } from '@/lib/format';
 import { show as showClient } from '@/routes/clients';
 import { edit } from '@/routes/orders';
 import type { Order } from '@/types/domain';
@@ -18,7 +17,7 @@ type OrderHeaderProps = {
     onDelete: () => void;
 };
 
-/** The order's title, summary, status, progress, note and its Edit / Delete buttons. */
+/** The order's title, summary, client line, note and its Edit / Delete buttons. The status lives in the Order tracker (INV-14). */
 export function OrderHeader({ order, onDelete }: OrderHeaderProps) {
     const { locale } = useAppSettings();
     const products =
@@ -81,17 +80,6 @@ export function OrderHeader({ order, onDelete }: OrderHeaderProps) {
                     </Link>
                 </p>
             )}
-
-            <div className="flex flex-wrap items-center gap-3">
-                <ProgressStatus
-                    status={order.status}
-                    label={order.status_label}
-                />
-                <p className="text-sm font-medium tabular-nums">
-                    {formatCount(order.shipped, locale)} of{' '}
-                    {formatCount(order.units, locale)} shipped
-                </p>
-            </div>
 
             {order.note && (
                 <section

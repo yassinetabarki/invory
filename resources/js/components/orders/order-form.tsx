@@ -90,9 +90,10 @@ function toFormState(
                 };
                 held.set(row.colour.id, row.colour);
 
-                // A cell already started can't go below what has started (S-61, INV-13 AC-4).
-                if (row.started >= 1) {
-                    floors[`${row.colour.id}.${row.size.id}`] = row.started;
+                // A cell can't go below its delivered and cancelled units (INV-14 AC-6).
+                if (row.delivered + row.cancelled >= 1) {
+                    floors[`${row.colour.id}.${row.size.id}`] =
+                        row.delivered + row.cancelled;
                 }
             }
 
@@ -101,7 +102,7 @@ function toFormState(
                     units,
                     floors,
                     heldColours: [...held.values()],
-                    started: line.started,
+                    started: line.delivered + line.cancelled,
                 }),
             ];
         }),

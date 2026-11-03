@@ -25,19 +25,17 @@ function line(
     id: number,
     name: string,
     quantity: number,
-    stages: { in_cutting?: number; ready_to_ship?: number } = {},
+    counts: { delivered?: number; cancelled?: number } = {},
     deleted = false,
 ): OrderLine {
-    const { in_cutting = 0, ready_to_ship = 0 } = stages;
+    const { delivered = 0, cancelled = 0 } = counts;
 
     return withOneSize({
         id,
         quantity,
-        to_start: quantity - in_cutting - ready_to_ship,
-        in_cutting,
-        ready_to_ship,
-        shipped: 0,
-        started: in_cutting + ready_to_ship,
+        to_deliver: quantity - delivered - cancelled,
+        delivered,
+        cancelled,
         status: 'not_started',
         status_label: 'Not started',
         product: {
@@ -57,16 +55,14 @@ function sizedLine(counts: [keyof typeof sizeIds, number][]): OrderLine {
     return {
         ...sizedJacketLine,
         quantity,
-        to_start: quantity,
+        to_deliver: quantity,
         sizes: counts.map(([label, units]) => ({
             colour: white,
             size: { id: sizeIds[label], label },
             quantity: units,
-            to_start: units,
-            in_cutting: 0,
-            ready_to_ship: 0,
-            shipped: 0,
-            started: 0,
+            to_deliver: units,
+            delivered: 0,
+            cancelled: 0,
         })),
     };
 }
@@ -77,17 +73,15 @@ const lina: Order = {
     ordered_on: '2026-10-15',
     note: 'Deliver before the spring show',
     lines: [
-        line(1, 'Denim Jacket', 50, { in_cutting: 20, ready_to_ship: 10 }),
-        line(5, 'Denim Jeans 5-pocket', 30),
+        line(1, 'Denim Jacket', 50, { delivered: 5 }),
+        line(5, 'Denim Jeans 5-pocket', 30, { cancelled: 5 }),
     ],
     units: 80,
-    to_start: 50,
-    in_cutting: 20,
-    ready_to_ship: 10,
-    shipped: 0,
+    to_deliver: 70,
+    delivered: 5,
+    cancelled: 5,
     status: 'in_progress',
     status_label: 'In progress',
-    delete_refusal: null,
     client_id: 3,
     client_details: null,
 };
@@ -125,7 +119,7 @@ describe('<OrdersTable>', () => {
         resetInertiaMock();
     });
 
-    it('shows the stage columns and a row with its figures, the note under the client and its actions', () => {
+    it('shows the columns of INV-14 and a row with its figures: the date and the note under the client, "5 cancelled" under Ordered (AC-5)', () => {
         renderTable([lina]);
 
         expect(
@@ -133,63 +127,63 @@ describe('<OrdersTable>', () => {
                 .getAllByRole('columnheader')
                 .map((header) => header.textContent),
         ).toEqual([
-            'Order date',
             'Client',
             'Products',
             'Ordered',
-            'To start',
-            'In cutting',
-            'Ready to ship',
-            'Shipped',
+            'To deliver',
+            'Delivered',
             'Status',
             'Actions',
         ]);
-        expect(table().queryByText('Units')).not.toBeInTheDocument();
-        expect(table().queryByText('Note')).not.toBeInTheDocument();
 
         const cells = within(
             table().getByRole('row', { name: /Boutique Lina/ }),
         ).getAllByRole('cell');
 
+        expect(
+            within(cells[0]).getByRole('link', { name: 'Boutique Lina' }),
+        ).toHaveAttribute('href', '/orders/7');
         expect(cells[0]).toHaveTextContent('15 Oct 2026');
         expect(
-            within(cells[1]).getByRole('link', { name: 'Boutique Lina' }),
-        ).toHaveAttribute('href', '/orders/7');
-        expect(
-            within(cells[1]).getByText('Deliver before the spring show'),
+            within(cells[0]).getByText('Deliver before the spring show'),
         ).toHaveAttribute('title', 'Deliver before the spring show');
         expect(
-            within(cells[2])
+            within(cells[1])
                 .getAllByRole('listitem')
                 .map((item) => item.textContent),
         ).toEqual([
             '50 × Denim Jacket (White 50)',
             '30 × Denim Jeans 5-pocket (White 30)',
         ]);
-        expect(cells.slice(3, 8).map((cell) => cell.textContent)).toEqual([
-            '80',
-            '50',
-            '20',
-            '10',
-            '0',
+        expect(cells.slice(2, 5).map((cell) => cell.textContent)).toEqual([
+            '805 cancelled',
+            '70',
+            '5',
         ]);
-        expect(cells[8]).toHaveTextContent('In progress');
+        expect(within(cells[2]).getByText('5 cancelled')).toHaveClass(
+            'text-muted-foreground',
+        );
+        expect(cells[5]).toHaveTextContent('In progress');
         expect(
-            within(cells[9]).getByRole('link', {
+            within(cells[6]).getByRole('link', {
                 name: 'Edit order of Boutique Lina on 15 Oct 2026',
             }),
         ).toHaveAttribute('href', '/orders/7/edit');
         expect(
-            within(cells[9]).getByRole('button', {
+            within(cells[6]).getByRole('button', {
                 name: 'Delete order of Boutique Lina on 15 Oct 2026',
             }),
         ).toBeInTheDocument();
+        expect(
+            table().queryByText(/To start|In cutting|Ready to ship|Shipped/),
+        ).not.toBeInTheDocument();
     });
 
     it.each<[OrderProgress, string]>([
         ['not_started', 'Not started'],
         ['in_progress', 'In progress'],
-        ['shipped', 'Shipped'],
+        ['delivered', 'Delivered'],
+        ['cancelled', 'Cancelled'],
     ])(
         'shows the %s status as a word with an icon hidden from screen readers',
         (status, label) => {
@@ -254,14 +248,12 @@ describe('<OrdersTable>', () => {
                     colour: white,
                     size: { id: Number(id), label: String(label) },
                     quantity: Number(units),
-                    to_start: Number(units),
-                    in_cutting: 0,
-                    ready_to_ship: 0,
-                    shipped: 0,
-                    started: 0,
+                    to_deliver: Number(units),
+                    delivered: 0,
+                    cancelled: 0,
                 })),
                 quantity: 12,
-                to_start: 12,
+                to_deliver: 12,
             },
             '12 × Canvas Low Sneaker (White 36: 4 · 37: 8)',
         ],
@@ -290,11 +282,9 @@ describe('<OrdersTable>', () => {
                     colour,
                     size: { id: sizeIds[label], label },
                     quantity: units,
-                    to_start: units,
-                    in_cutting: 0,
-                    ready_to_ship: 0,
-                    shipped: 0,
-                    started: 0,
+                    to_deliver: units,
+                    delivered: 0,
+                    cancelled: 0,
                 })),
             },
             '4 × Denim Jacket (Black M 1 · Indigo S 1 · M 2)',
@@ -329,7 +319,7 @@ describe('<OrdersTable>', () => {
         ).not.toBeInTheDocument();
     });
 
-    it('shows each order as a card with its status, stages, date, note and labelled actions', async () => {
+    it('shows each order as a card with its status, date, "5 cancelled", counts, note and labelled actions (AC-5)', async () => {
         const { user, onDelete } = renderTable([lina]);
 
         const card = within(screen.getByRole('list', { name: 'Orders' }));
@@ -346,12 +336,8 @@ describe('<OrdersTable>', () => {
                 '30 × Denim Jeans 5-pocket (White 30)',
             ]),
         );
-        expect(
-            card.getByText(
-                'To start 50 · In cutting 20 · Ready to ship 10 · Shipped 0',
-            ),
-        ).toBeVisible();
-        expect(card.getByText('15 Oct 2026')).toBeVisible();
+        expect(card.getByText('To deliver 70 · Delivered 5')).toBeVisible();
+        expect(card.getByText('15 Oct 2026 · 5 cancelled')).toBeVisible();
         expect(card.getByText('Deliver before the spring show')).toBeVisible();
         expect(card.queryByText(/80 units/)).not.toBeInTheDocument();
         expect(card.getByRole('link', { name: /^Edit/ })).toHaveAttribute(

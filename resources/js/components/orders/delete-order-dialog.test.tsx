@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { DeleteOrderDialog } from '@/components/orders/delete-order-dialog';
@@ -33,11 +33,9 @@ function notStarted(
         id,
         product,
         quantity,
-        to_start: quantity,
-        in_cutting: 0,
-        ready_to_ship: 0,
-        shipped: 0,
-        started: 0,
+        to_deliver: quantity,
+        delivered: 0,
+        cancelled: 0,
         status: 'not_started',
         status_label: 'Not started',
     });
@@ -53,13 +51,11 @@ const lina: Order = {
         notStarted(2, product(5, 'Denim Jeans 5-pocket'), 30),
     ],
     units: 80,
-    to_start: 80,
-    in_cutting: 0,
-    ready_to_ship: 0,
-    shipped: 0,
+    to_deliver: 80,
+    delivered: 0,
+    cancelled: 0,
     status: 'not_started',
     status_label: 'Not started',
-    delete_refusal: null,
     client_id: 3,
     client_details: null,
 };
@@ -118,41 +114,24 @@ describe('<DeleteOrderDialog>', () => {
         expect(inertiaMock.router.delete).not.toHaveBeenCalled();
     });
 
-    describe('when units are in cutting or ready to ship (AC-6)', () => {
-        const refusal =
-            "Boutique Lina can't be deleted: 30 units are in cutting or ready to ship. Move them back to To start first.";
+    it('adds that delivered units are not put back, and is never refused (INV-14 AC-6)', () => {
+        renderDialog({ ...lina, delivered: 5, to_deliver: 75 });
 
-        it('shows the refusal in place of the question, with only Close, and sends nothing', async () => {
-            const { user, onCancel, onConfirm } = renderDialog({
-                ...lina,
-                delete_refusal: refusal,
-            });
+        expect(
+            screen.getByRole('alertdialog', { name: 'Delete order?' }),
+        ).toHaveTextContent(
+            "This cannot be undone. Finished stock isn't changed: the 5 units already delivered are not put back.",
+        );
+        expect(
+            screen.getByRole('button', { name: 'Delete order' }),
+        ).toBeEnabled();
+    });
 
-            const dialog = screen.getByRole('alertdialog', {
-                name: 'Delete order?',
-            });
+    it('says "the 1 unit already delivered is not put back" in the singular', () => {
+        renderDialog({ ...lina, delivered: 1, to_deliver: 79 });
 
-            expect(dialog).toHaveTextContent(refusal);
-            expect(dialog).not.toHaveTextContent('will be removed');
-            expect(within(dialog).getAllByRole('button')).toHaveLength(1);
-            expect(
-                screen.queryByRole('button', { name: 'Delete order' }),
-            ).not.toBeInTheDocument();
-
-            await user.click(screen.getByRole('button', { name: 'Close' }));
-
-            expect(onCancel).toHaveBeenCalledOnce();
-            expect(onConfirm).not.toHaveBeenCalled();
-            expect(inertiaMock.router.delete).not.toHaveBeenCalled();
-        });
-
-        it('shows the one-unit text as the server sent it', () => {
-            const oneUnit =
-                "Boutique Lina can't be deleted: 1 unit is in cutting or ready to ship. Move it back to To start first.";
-
-            renderDialog({ ...lina, delete_refusal: oneUnit });
-
-            expect(screen.getByRole('alertdialog')).toHaveTextContent(oneUnit);
-        });
+        expect(screen.getByRole('alertdialog')).toHaveTextContent(
+            'the 1 unit already delivered is not put back.',
+        );
     });
 });

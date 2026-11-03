@@ -62,50 +62,28 @@ class Order extends Model
         return $this->hasMany(OrderLine::class)->orderBy('position')->orderBy('id');
     }
 
-    /** Units in cutting, summed over the loaded lines (no query: the order must carry its `lines`). */
-    public function unitsInCutting(): int
+    /** Units still to deliver, summed over the loaded lines (no query: the order must carry its `lines`). */
+    public function unitsToDeliver(): int
     {
-        return (int) $this->lines->sum('in_cutting');
+        return (int) $this->lines->sum(fn (OrderLine $line): int => $line->to_deliver);
     }
 
-    /** Units still to start, summed over the loaded lines. */
-    public function unitsToStart(): int
+    /** Units delivered, summed over the loaded lines. */
+    public function unitsDelivered(): int
     {
-        return (int) $this->lines->sum(fn (OrderLine $line): int => $line->to_start);
+        return (int) $this->lines->sum('delivered');
     }
 
-    /** Units ready to ship, summed over the loaded lines. */
-    public function unitsReadyToShip(): int
+    /** Units cancelled, summed over the loaded lines. */
+    public function unitsCancelled(): int
     {
-        return (int) $this->lines->sum('ready_to_ship');
+        return (int) $this->lines->sum('cancelled');
     }
 
-    /** Units shipped, summed over the loaded lines. */
-    public function unitsShipped(): int
-    {
-        return (int) $this->lines->sum('shipped');
-    }
-
-    /**
-     * Units that hold material taken out of stock and haven't left yet: in cutting plus ready to ship. While there are any, the order
-     * can't be deleted.
-     */
-    public function unitsHeld(): int
-    {
-        return $this->unitsInCutting() + $this->unitsReadyToShip();
-    }
-
-    /**
-     * "Not started" while no unit of any line has left To start, "Shipped" once every line is fully shipped, "In progress" otherwise.
-     * Read from the loaded lines.
-     */
+    /** The order's status (INV-14), from the loaded lines' counts. */
     public function progress(): OrderProgress
     {
-        return match (true) {
-            $this->lines->every(fn (OrderLine $line): bool => $line->started === 0) => OrderProgress::NotStarted,
-            $this->lines->every(fn (OrderLine $line): bool => $line->progress() === OrderProgress::Shipped) => OrderProgress::Shipped,
-            default => OrderProgress::InProgress,
-        };
+        return OrderLine::progressOf((int) $this->lines->sum('quantity'), $this->unitsDelivered(), $this->unitsCancelled());
     }
 
     /**
@@ -158,25 +136,36 @@ class Order extends Model
     }
 
     /**
-     * Open orders: at least one line with units still to ship. The one definition behind the Status filter and the totals (S-50);
-     * it agrees with `progress()` for every order that has lines.
+     * Open orders (INV-14): at least one unit To deliver.
      *
      * @param  Builder<Order>  $query
      */
     #[Scope]
     protected function open(Builder $query): void
     {
-        $query->whereHas('lines', fn (Builder $line) => $line->whereColumn('order_lines.shipped', '<', 'order_lines.quantity'));
+        $query->whereHas('lines', fn (Builder $line) => $line->whereRaw('order_lines.delivered + order_lines.cancelled < order_lines.quantity'));
     }
 
     /**
-     * Shipped orders: every line fully shipped, the opposite of {@see self::open()}.
+     * Delivered orders: nothing left to deliver and at least one unit delivered.
      *
      * @param  Builder<Order>  $query
      */
     #[Scope]
-    protected function shipped(Builder $query): void
+    protected function delivered(Builder $query): void
     {
-        $query->whereDoesntHave('lines', fn (Builder $line) => $line->whereColumn('order_lines.shipped', '<', 'order_lines.quantity'));
+        $query->whereDoesntHave('lines', fn (Builder $line) => $line->whereRaw('order_lines.delivered + order_lines.cancelled < order_lines.quantity'))
+            ->whereHas('lines', fn (Builder $line) => $line->where('order_lines.delivered', '>', 0));
+    }
+
+    /**
+     * Cancelled orders: every unit cancelled.
+     *
+     * @param  Builder<Order>  $query
+     */
+    #[Scope]
+    protected function cancelled(Builder $query): void
+    {
+        $query->whereDoesntHave('lines', fn (Builder $line) => $line->whereColumn('order_lines.cancelled', '<', 'order_lines.quantity'));
     }
 }

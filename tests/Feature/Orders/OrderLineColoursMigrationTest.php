@@ -21,9 +21,9 @@ use Illuminate\Support\Facades\Schema;
 beforeEach(fn () => $this->user = prepareDemo($this));
 
 /**
- * Every row as `[product sku, colour code, size label, quantity, in cutting, ready to ship, shipped]`, in id order.
+ * Every row as `[product sku, colour code, size label, quantity, delivered, cancelled]`, in id order (INV-14's counts).
  *
- * @return list<array{string, string, string, int, int, int, int}>
+ * @return list<array{string, string, string, int, int, int}>
  */
 function orderLineColourRows(): array
 {
@@ -33,8 +33,8 @@ function orderLineColourRows(): array
         ->join('colours', 'colours.id', '=', 'order_line_sizes.colour_id')
         ->join('sizes', 'sizes.id', '=', 'order_line_sizes.size_id')
         ->orderBy('order_line_sizes.id')
-        ->get(['products.sku', 'colours.code', 'sizes.label', 'order_line_sizes.quantity', 'order_line_sizes.in_cutting', 'order_line_sizes.ready_to_ship', 'order_line_sizes.shipped'])
-        ->map(fn (object $row): array => [$row->sku, $row->code, $row->label, (int) $row->quantity, (int) $row->in_cutting, (int) $row->ready_to_ship, (int) $row->shipped])
+        ->get(['products.sku', 'colours.code', 'sizes.label', 'order_line_sizes.quantity', 'order_line_sizes.delivered', 'order_line_sizes.cancelled'])
+        ->map(fn (object $row): array => [$row->sku, $row->code, $row->label, (int) $row->quantity, (int) $row->delivered, (int) $row->cancelled])
         ->all();
 }
 
@@ -49,10 +49,12 @@ it('gives every row its product\'s first colour and keeps every quantity and cou
     $jeans = demoProduct('PRD-JNS-005');
     $tote = demoProduct('PRD-TOT-004');
     $order = Order::factory()->create();
-    OrderLine::factory()->sized(['S' => 10, 'M' => 20], ['M' => [5, 3, 2]])->create(['order_id' => $order->id, 'product_id' => $jacket->id, 'position' => 0]);
+    OrderLine::factory()->sized(['S' => 10, 'M' => 20], ['M' => [5, 0]])->create(['order_id' => $order->id, 'product_id' => $jacket->id, 'position' => 0]);
     OrderLine::factory()->sized(['L' => 7])->create(['order_id' => $order->id, 'product_id' => $jeans->id, 'position' => 1]);
     OrderLine::factory()->create(['order_id' => $order->id, 'product_id' => $tote->id, 'quantity' => 4, 'position' => 2]);
     $jeans->delete(); // A deleted product's lines are filled too.
+
+    deliveryCountsMigration()->down();
 
     orderLineColoursMigration()->down();
     expect(Schema::hasColumn('order_line_sizes', 'colour_id'))->toBeFalse();
@@ -64,11 +66,13 @@ it('gives every row its product\'s first colour and keeps every quantity and cou
 
     orderLineColoursMigration()->up();
 
+    deliveryCountsMigration()->up();
+
     expect(orderLineColourRows())->toBe([
-        ['PRD-JKT-001', 'BLK', 'S', 10, 0, 0, 0],
-        ['PRD-JKT-001', 'BLK', 'M', 20, 5, 3, 2],
-        ['PRD-JNS-005', 'IND', 'L', 7, 0, 0, 0],
-        ['PRD-TOT-004', 'WHT', 'One size', 4, 0, 0, 0],
+        ['PRD-JKT-001', 'BLK', 'S', 10, 0, 0],
+        ['PRD-JKT-001', 'BLK', 'M', 20, 5, 0],
+        ['PRD-JNS-005', 'IND', 'L', 7, 0, 0],
+        ['PRD-TOT-004', 'WHT', 'One size', 4, 0, 0],
     ])
         // The tote got its workshop's first colour (White), linked to it, so it never reads "No colour".
         ->and($tote->colours()->pluck('code')->all())->toBe(['WHT'])
@@ -80,10 +84,14 @@ it('adds the colours of a size back into one row on down()', function () {
     colourProductForOrderTest($jacket, ['BLK', 'IND']);
     $line = OrderLine::factory()->sized(['S' => 4])->create(['product_id' => $jacket->id]);
     $first = OrderLineSize::query()->where('order_line_id', $line->id)->firstOrFail();
-    $first->forceFill(['in_cutting' => 1, 'shipped' => 2])->save();
-    $indigo = (new OrderLineSize(['colour_id' => demoColour('IND')->id, 'size_id' => $first->size_id, 'quantity' => 6]))
-        ->forceFill(['workshop_id' => $line->workshop_id, 'order_line_id' => $line->id, 'ready_to_ship' => 3]);
-    $indigo->save();
+
+    // Back in the shape of before INV-14, with its stage counts.
+    deliveryCountsMigration()->down();
+    DB::table('order_line_sizes')->where('id', $first->id)->update(['in_cutting' => 1, 'shipped' => 2]);
+    DB::table('order_line_sizes')->insert([
+        'workshop_id' => $line->workshop_id, 'order_line_id' => $line->id, 'colour_id' => demoColour('IND')->id, 'size_id' => $first->size_id,
+        'quantity' => 6, 'ready_to_ship' => 3, 'created_at' => now(), 'updated_at' => now(),
+    ]);
 
     orderLineColoursMigration()->down();
 
@@ -94,6 +102,8 @@ it('adds the colours of a size back into one row on down()', function () {
         ->and([(int) $rows[0]->quantity, (int) $rows[0]->in_cutting, (int) $rows[0]->ready_to_ship, (int) $rows[0]->shipped])->toBe([10, 1, 3, 2]);
 
     orderLineColoursMigration()->up();
+
+    deliveryCountsMigration()->up();
 });
 
 it('refuses a row with no colour and a second row of the same colour and size', function () {

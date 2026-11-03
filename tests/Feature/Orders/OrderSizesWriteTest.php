@@ -48,8 +48,8 @@ it('records the units per colour and size, a cell left empty having no row, and 
     $order = Order::query()->firstOrFail();
 
     expect(sizedFigures($order))->toBe([
-        pid(1) => ['S' => [10, 0, 0, 0], 'M' => [20, 0, 0, 0], 'L' => [15, 0, 0, 0], 'XL' => [5, 0, 0, 0]],
-        pid(4) => ['One size' => [12, 0, 0, 0]],
+        pid(1) => ['S' => [10, 0, 0], 'M' => [20, 0, 0], 'L' => [15, 0, 0], 'XL' => [5, 0, 0]],
+        pid(4) => ['One size' => [12, 0, 0]],
     ])->and($order->lines()->pluck('quantity', 'product_id')->all())->toBe([pid(1) => 50, pid(4) => 12]);
 
     // The same jacket with XL left empty: no XL row, 45 units.
@@ -58,7 +58,7 @@ it('records the units per colour and size, a cell left empty having no row, and 
 
     $second = Order::query()->latest('id')->firstOrFail();
 
-    expect(sizedFigures($second))->toBe([pid(1) => ['S' => [10, 0, 0, 0], 'M' => [20, 0, 0, 0], 'L' => [15, 0, 0, 0]]])
+    expect(sizedFigures($second))->toBe([pid(1) => ['S' => [10, 0, 0], 'M' => [20, 0, 0], 'L' => [15, 0, 0]]])
         ->and($second->lines()->value('quantity'))->toBe(45);
 });
 
@@ -74,8 +74,8 @@ it('records the card\'s order: Jacket Indigo S 4 and M 8, Jeans Indigo M 10, wit
     ]))->assertSessionHasNoErrors();
 
     expect(colourFigures(Order::query()->firstOrFail()))->toBe([
-        pid(1) => ['Indigo S' => [4, 0, 0, 0], 'Indigo M' => [8, 0, 0, 0]],
-        pid(5) => ['Indigo M' => [10, 0, 0, 0]],
+        pid(1) => ['Indigo S' => [4, 0, 0], 'Indigo M' => [8, 0, 0]],
+        pid(5) => ['Indigo M' => [10, 0, 0]],
     ])
         ->and(StockMovement::query()->count())->toBe($movements)
         ->and(DB::table('product_size_stocks')->count())->toBe(0)
@@ -132,29 +132,29 @@ it('changes a cell, removes a cell set to 0 and moves units to another colour, l
         ->assertSessionHasNoErrors()
         ->assertInertiaFlash('toast', ['type' => 'success', 'message' => 'Order updated.']);
 
-    expect(sizedFigures($order)[pid(1)])->toBe(['S' => [10, 0, 0, 0], 'M' => [25, 0, 0, 0], 'L' => [15, 0, 0, 0], 'XL' => [5, 0, 0, 0]])
+    expect(sizedFigures($order)[pid(1)])->toBe(['S' => [10, 0, 0], 'M' => [25, 0, 0], 'L' => [15, 0, 0], 'XL' => [5, 0, 0]])
         ->and($line->fresh()->quantity)->toBe(55)
         ->and(pageProp(actingAs($this->user)->get(route('orders.show', $order))->assertOk(), 'order.lines.0.quantity'))->toBe(55);
 
     // The S and M units move from White to Indigo; XL goes.
     $edit(orderUnits(pid(1), ['L' => '15'], 'WHT') + orderUnits(pid(1), ['S' => '10', 'M' => '25'], 'IND'))->assertSessionHasNoErrors();
 
-    expect(colourFigures($order)[pid(1)])->toBe(['White L' => [15, 0, 0, 0], 'Indigo S' => [10, 0, 0, 0], 'Indigo M' => [25, 0, 0, 0]])
+    expect(colourFigures($order)[pid(1)])->toBe(['White L' => [15, 0, 0], 'Indigo S' => [10, 0, 0], 'Indigo M' => [25, 0, 0]])
         ->and($line->fresh()->quantity)->toBe(50)
         ->and($order->lines()->count())->toBe(1);
 });
 
 it('keeps a row in a colour since taken off the product, and refuses a colour the line never held (INV-13 AC-4)', function () {
-    $order = bookSizedOrder(['M' => 4], ['M' => [0, 0, 4]]);
+    $order = bookSizedOrder(['M' => 4], ['M' => [4, 0]]);
     $white = demoColour('WHT')->id;
     $jacket = demoProduct('PRD-JKT-001');
-    // The 4 white jackets were shipped; White then left the product, which now has Indigo only.
+    // The 4 white jackets were delivered; White then left the product, which now has Indigo only.
     $jacket->colours()->sync([demoColour('IND')->id => ['workshop_id' => $jacket->workshop_id]]);
 
     actingAs($this->user)->put(route('orders.update', $order), sizedOrderBody([[pid(1), orderUnits(pid(1), ['M' => '4'], 'WHT') + orderUnits(pid(1), ['S' => '2'], 'IND')]]))
         ->assertSessionHasNoErrors();
 
-    expect(colourFigures($order)[pid(1)])->toBe(['White M' => [4, 0, 0, 4], 'Indigo S' => [2, 0, 0, 0]]);
+    expect(colourFigures($order)[pid(1)])->toBe(['White M' => [4, 4, 0], 'Indigo S' => [2, 0, 0]]);
 
     actingAs($this->user)->put(route('orders.update', $order), sizedOrderBody([[pid(1), [$white => sizeIds(['M' => '4'])] + [demoColour('RED')->id => sizeIds(['M' => '1'])]]]))
         ->assertSessionHasErrors(['lines.0.units' => 'The colours or sizes of Denim Jacket have changed. Enter its quantities again.']);
@@ -168,7 +168,7 @@ it('keeps a line recorded before sizes on its single size, one field per colour 
         ['product_id' => pid(1), 'units' => orderUnits(pid(1), ['One size' => '60'], list: SizeList::ONE_SIZE)],
     ]]))->assertSessionHasNoErrors();
 
-    expect(sizedFigures($order))->toBe([pid(1) => ['One size' => [60, 0, 0, 0]]])
+    expect(sizedFigures($order))->toBe([pid(1) => ['One size' => [60, 0, 0]]])
         ->and($line->fresh()->size_list_id)->toBe(SizeList::query()->where('code', SizeList::ONE_SIZE)->value('id'))
         ->and(pageProp(actingAs($this->user)->get(route('orders.show', $order))->assertOk(), 'order.lines.0.size_mode'))->toBe('before_sizes');
 
@@ -195,13 +195,13 @@ function syncRefusal(Order $order, array $lines): ?array
 }
 
 it('checks a cell against its started units under the lock, on lines read inside the transaction (S-61 AC-5, INV-13 AC-4)', function () {
-    $order = bookSizedOrder(stages: ['M' => [10, 0, 0]]);
+    $order = bookSizedOrder(stages: ['M' => [10, 0]]);
     $before = sizedFigures($order);
 
     // Straight into the Action: the form request, whose check runs on unlocked data, is out of the picture.
     $refusal = syncRefusal($order, [['product_id' => pid(1), 'units' => orderUnits(pid(1), ['S' => '10', 'M' => '8', 'L' => '15', 'XL' => '5'])]]);
 
-    expect($refusal)->toBe([unitsKey(0, orderUnits(pid(1), ['M' => 0])) => ["White M can't be less than the 10 units already in cutting, ready to ship or shipped."]])
+    expect($refusal)->toBe([unitsKey(0, orderUnits(pid(1), ['M' => 0])) => ["White M can't be less than the 10 units already delivered or cancelled."]])
         ->and(sizedFigures($order))->toBe($before);
 });
 

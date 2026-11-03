@@ -24,9 +24,9 @@ it('shows Amira with her figures and her three orders, newest first, all orders 
         'id' => $amira->id, 'name' => 'Amira Ben Salah', 'orders' => 3, 'open_orders' => 1, 'last_order_on' => '2026-10-28',
     ])
         ->and(array_column(pageProp($response, 'orders.data'), 'ordered_on'))->toBe(['2026-10-28', '2026-10-14', '2026-09-01'])
-        ->and(array_column(pageProp($response, 'orders.data'), 'status_label'))->toBe(['Not started', 'Shipped', 'Shipped'])
+        ->and(array_column(pageProp($response, 'orders.data'), 'status_label'))->toBe(['Not started', 'Delivered', 'Delivered'])
         ->and(pageProp($response, 'filters'))->toBe(['status' => 'all'])
-        ->and(array_column(pageProp($response, 'statuses'), 'label'))->toBe(['Open orders', 'Shipped', 'All orders']);
+        ->and(array_column(pageProp($response, 'statuses'), 'label'))->toBe(['Open orders', 'Delivered', 'Cancelled', 'All orders']);
 });
 
 it('filters her orders by status', function (string $status, array $dates) {
@@ -37,7 +37,8 @@ it('filters her orders by status', function (string $status, array $dates) {
     expect(array_column(pageProp($response, 'orders.data'), 'ordered_on'))->toBe($dates);
 })->with([
     'open' => ['open', ['2026-10-28']],
-    'shipped' => ['shipped', ['2026-10-14', '2026-09-01']],
+    'delivered' => ['delivered', ['2026-10-14', '2026-09-01']],
+    'cancelled' => ['cancelled', []],
 ]);
 
 it('shows a client with no orders', function () {

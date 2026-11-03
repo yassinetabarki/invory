@@ -21,13 +21,52 @@ import type { Order } from '@/types/domain';
 /** An order lists this many products; the rest collapse into "+ N more". */
 const VISIBLE_LINES = 3;
 
-/** The four stages, in the order the columns and the card line show them. */
-const STAGES = [
-    { key: 'to_start', label: 'To start' },
-    { key: 'in_cutting', label: 'In cutting' },
-    { key: 'ready_to_ship', label: 'Ready to ship' },
-    { key: 'shipped', label: 'Shipped' },
+/** The two counts after "Ordered" (INV-14), in the order the columns and the card line show them. */
+const COUNTS = [
+    { key: 'to_deliver', label: 'To deliver' },
+    { key: 'delivered', label: 'Delivered' },
 ] as const;
+
+/** "Ordered" with "5 cancelled" under it when there are any (INV-14, AC-5). */
+function Ordered({ order, locale }: { order: Order; locale: string }) {
+    return (
+        <>
+            <span className="font-bold">
+                {formatCount(order.units, locale)}
+            </span>
+            {order.cancelled > 0 && (
+                <span className="block text-xs font-normal text-muted-foreground">
+                    {formatCount(order.cancelled, locale)} cancelled
+                </span>
+            )}
+        </>
+    );
+}
+
+/** The phone card's small bar: Delivered, To deliver and Cancelled (hatched) as parts of the order. Decoration: the line under it holds the numbers. */
+function SmallBar({ order }: { order: Order }) {
+    const total = Math.max(order.units, 1);
+
+    return (
+        <div
+            aria-hidden="true"
+            className="flex h-1.5 overflow-hidden rounded-full bg-muted"
+        >
+            <span
+                className="bg-success-foreground/70"
+                style={{ width: `${(order.delivered / total) * 100}%` }}
+            />
+            <span
+                className="bg-info-foreground/60"
+                style={{ width: `${(order.to_deliver / total) * 100}%` }}
+            />
+            <span
+                className="bg-[repeating-linear-gradient(135deg,var(--color-muted-foreground)_0_2px,transparent_2px_5px)] opacity-60"
+                style={{ width: `${(order.cancelled / total) * 100}%` }}
+            />
+        </div>
+    );
+}
 
 type OrdersTableProps = {
     orders: Order[];
@@ -175,15 +214,16 @@ export function OrdersTable({
                     <TableCaption className="sr-only">Orders</TableCaption>
                     <TableHeader>
                         <TableRow>
-                            <TableHead scope="col">Order date</TableHead>
-                            {!withoutClient && (
+                            {withoutClient ? (
+                                <TableHead scope="col">Order date</TableHead>
+                            ) : (
                                 <TableHead scope="col">Client</TableHead>
                             )}
                             <TableHead scope="col">Products</TableHead>
                             <TableHead scope="col" className="text-right">
                                 Ordered
                             </TableHead>
-                            {STAGES.map(({ key, label }) => (
+                            {COUNTS.map(({ key, label }) => (
                                 <TableHead
                                     key={key}
                                     scope="col"
@@ -206,22 +246,22 @@ export function OrdersTable({
 
                             return (
                                 <TableRow key={order.id}>
-                                    <TableCell className="align-top whitespace-nowrap text-muted-foreground">
-                                        {withoutClient ? (
+                                    {withoutClient ? (
+                                        <TableCell className="align-top whitespace-nowrap text-muted-foreground">
                                             <Link
                                                 href={showOrder(order.id)}
                                                 className="font-medium text-foreground hover:underline focus-visible:underline"
                                             >
                                                 {date}
                                             </Link>
-                                        ) : (
-                                            date
-                                        )}
-                                    </TableCell>
-                                    {!withoutClient && (
-                                        <TableCell className="align-top">
-                                            <p className="font-semibold">
+                                        </TableCell>
+                                    ) : (
+                                        <TableCell className="max-w-64 align-top">
+                                            <p className="truncate font-semibold">
                                                 <ClientLink order={order} />
+                                            </p>
+                                            <p className="text-sm whitespace-nowrap text-muted-foreground">
+                                                {date}
                                             </p>
                                             {order.note && (
                                                 <p
@@ -236,10 +276,13 @@ export function OrdersTable({
                                     <TableCell className="align-top whitespace-normal">
                                         <ProductLines order={order} />
                                     </TableCell>
-                                    <TableCell className="text-right align-top font-bold tabular-nums">
-                                        {formatCount(order.units, locale)}
+                                    <TableCell className="text-right align-top tabular-nums">
+                                        <Ordered
+                                            order={order}
+                                            locale={locale}
+                                        />
                                     </TableCell>
-                                    {STAGES.map(({ key }) => (
+                                    {COUNTS.map(({ key }) => (
                                         <TableCell
                                             key={key}
                                             className="text-right align-top tabular-nums"
@@ -295,18 +338,21 @@ export function OrdersTable({
                                     className="shrink-0"
                                 />
                             </div>
+                            {!withoutClient && (
+                                <p className="text-sm text-muted-foreground">
+                                    {date}
+                                    {order.cancelled > 0 &&
+                                        ` · ${formatCount(order.cancelled, locale)} cancelled`}
+                                </p>
+                            )}
                             <ProductLines order={order} />
+                            <SmallBar order={order} />
                             <p className="text-sm tabular-nums">
-                                {STAGES.map(
+                                {COUNTS.map(
                                     ({ key, label }) =>
                                         `${label} ${formatCount(order[key], locale)}`,
                                 ).join(' · ')}
                             </p>
-                            {!withoutClient && (
-                                <p className="text-sm text-muted-foreground">
-                                    {date}
-                                </p>
-                            )}
                             {order.note && (
                                 <p
                                     className="line-clamp-2 text-sm text-muted-foreground"

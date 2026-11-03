@@ -9,8 +9,8 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * `OrderLineSize` in resources/js/types/domain.ts: one colour and size of an order line with its quantity and four stages (S-60, S-61,
- * INV-13). The row must carry `size_label` and `colour_code`, `colour_name`, `colour_swatch` (not columns: the order pages' queries add
+ * `OrderLineSize` in resources/js/types/domain.ts: one colour and size of an order line with its quantity, delivered and cancelled units (S-60,
+ * INV-13, INV-14). The row must carry `size_label` and `colour_code`, `colour_name`, `colour_swatch` (not columns: the order pages' queries add
  * them, see `OrderBook`).
  *
  * @mixin OrderLineSize
@@ -29,11 +29,9 @@ final class OrderLineSizeResource extends JsonResource
             ],
             'size' => ['id' => $this->size_id, 'label' => $this->getAttribute('size_label')],
             'quantity' => $this->quantity,
-            'to_start' => $this->to_start,
-            'in_cutting' => $this->in_cutting,
-            'ready_to_ship' => $this->ready_to_ship,
-            'shipped' => $this->shipped,
-            'started' => $this->started,
+            'to_deliver' => $this->to_deliver,
+            'delivered' => $this->delivered,
+            'cancelled' => $this->cancelled,
         ];
     }
 }

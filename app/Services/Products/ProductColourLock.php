@@ -84,7 +84,7 @@ final class ProductColourLock
             );
         }
 
-        // INV-13-b: a colour that open orders still hold (units ordered and not shipped yet) can't come off either. The shelf and the
+        // INV-13-b: a colour that open orders still hold (units To deliver, INV-14) can't come off either. The shelf and the
         // production sentences win: this one shows once both are at 0. A deleted order holds nothing.
         $onOrders = OrderLineSize::query()
             ->join('order_lines', 'order_lines.id', '=', 'order_line_sizes.order_line_id')
@@ -93,10 +93,10 @@ final class ProductColourLock
             ->where('order_lines.product_id', $product->id)
             ->whereNull('orders.deleted_at')
             ->whereNotIn('order_line_sizes.colour_id', $keptColourIds)
-            ->whereColumn('order_line_sizes.shipped', '<', 'order_line_sizes.quantity')
+            ->whereRaw('order_line_sizes.delivered + order_line_sizes.cancelled < order_line_sizes.quantity')
             ->groupBy('colours.id', 'colours.name', 'colours.position')
             ->toBase()
-            ->selectRaw('colours.id, colours.name, colours.position, SUM(order_line_sizes.quantity - order_line_sizes.shipped) as units')
+            ->selectRaw('colours.id, colours.name, colours.position, SUM(order_line_sizes.quantity - order_line_sizes.delivered - order_line_sizes.cancelled) as units')
             ->get();
 
         foreach ($onOrders as $colour) {

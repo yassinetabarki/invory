@@ -7,9 +7,9 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MaterialController;
 use App\Http\Controllers\MaterialOptionController;
 use App\Http\Controllers\MaterialRestockController;
+use App\Http\Controllers\OrderCancellationController;
 use App\Http\Controllers\OrderController;
-use App\Http\Controllers\OrderLineMoveController;
-use App\Http\Controllers\OrderLineMovePreviewController;
+use App\Http\Controllers\OrderDeliveryController;
 use App\Http\Controllers\OrderProductSearchController;
 use App\Http\Controllers\ProductBarcodeController;
 use App\Http\Controllers\ProductController;
@@ -129,17 +129,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('orders', OrderController::class)->only(['index', 'create', 'store', 'show', 'edit', 'update', 'destroy'])
         ->where(['order' => '[0-9]{1,18}']);
 
-    // Moving units of an order line between stages (S-49). `scopeBindings()`: a line that isn't the order's own is a 404.
-    Route::post('orders/{order}/lines/{line}/moves', [OrderLineMoveController::class, 'store'])
+    // Mark delivered, its move back and Cancel units on an order line (INV-14-d). `scopeBindings()`: a line that isn't the order's own is a 404.
+    Route::post('orders/{order}/lines/{line}/deliveries', [OrderDeliveryController::class, 'store'])
         ->where(['order' => '[0-9]{1,18}', 'line' => '[0-9]{1,18}'])
         ->scopeBindings()
-        ->name('orders.lines.moves.store');
-
-    // The move window's materials table: JSON, read-only, no locks (S-53, ADR-0009 rule 5).
-    Route::get('orders/{order}/lines/{line}/moves/preview', [OrderLineMovePreviewController::class, 'show'])
+        ->name('orders.lines.deliveries.store');
+    Route::post('orders/{order}/lines/{line}/deliveries/back', [OrderDeliveryController::class, 'destroy'])
         ->where(['order' => '[0-9]{1,18}', 'line' => '[0-9]{1,18}'])
         ->scopeBindings()
-        ->name('orders.lines.moves.preview');
+        ->name('orders.lines.deliveries.destroy');
+    Route::post('orders/{order}/lines/{line}/cancellations', [OrderCancellationController::class, 'store'])
+        ->where(['order' => '[0-9]{1,18}', 'line' => '[0-9]{1,18}'])
+        ->scopeBindings()
+        ->name('orders.lines.cancellations.store');
 
     // {sale} is route-model bound; the digit constraint keeps a malformed id a 404 (a bigint query error on PostgreSQL otherwise).
     Route::resource('sales', SaleController::class)->only(['index', 'store', 'update', 'destroy'])

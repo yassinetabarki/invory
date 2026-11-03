@@ -359,12 +359,12 @@ export type OrderProduct = {
     deleted: boolean;
 };
 
-export type OrderStage =
-    | 'to_start'
-    | 'in_cutting'
-    | 'ready_to_ship'
-    | 'shipped';
-export type OrderProgress = 'not_started' | 'in_progress' | 'shipped';
+/** An order's or a line's status (INV-14): from its delivered and cancelled units, worked out by the server. */
+export type OrderProgress =
+    | 'not_started'
+    | 'in_progress'
+    | 'delivered'
+    | 'cancelled';
 
 /** How an order line counts its units (S-60, ADR-0016). */
 export type OrderLineSizeMode =
@@ -377,26 +377,22 @@ export type OrderLineSize = {
     colour: Colour; // INV-13: rows come by colour (list order), then size
     size: Size;
     quantity: number;
-    to_start: number; // computed server-side
-    in_cutting: number;
-    ready_to_ship: number;
-    shipped: number;
-    started: number; // in_cutting + ready_to_ship + shipped, computed server-side
+    to_deliver: number; // quantity − delivered − cancelled, computed server-side (INV-14)
+    delivered: number;
+    cancelled: number;
 };
 
 export type OrderLine = {
     id: number;
     product: OrderProduct;
     quantity: number; // whole units, 1 … 1 000 000
-    to_start: number; // quantity − in_cutting − ready_to_ship − shipped, computed server-side
-    in_cutting: number;
-    ready_to_ship: number;
-    shipped: number;
-    started: number; // in_cutting + ready_to_ship + shipped, computed server-side
+    to_deliver: number; // quantity − delivered − cancelled, computed server-side (INV-14)
+    delivered: number;
+    cancelled: number;
     size_mode: OrderLineSizeMode;
     sizes: OrderLineSize[]; // by colour (list order), then size order, at least one; the line's own figures are their sums (server-side)
     status: OrderProgress;
-    status_label: string; // "Not started", "In progress", "Shipped"
+    status_label: string; // "Not started", "In progress", "Delivered", "Cancelled"
 };
 
 export type Order = {
@@ -406,20 +402,16 @@ export type Order = {
     note: string | null;
     lines: OrderLine[]; // in the order entered (position)
     units: number; // sum of the lines' quantities, computed server-side
-    to_start: number; // the lines' To start summed, server-side
-    in_cutting: number; // the lines summed, server-side
-    ready_to_ship: number;
-    shipped: number; // "10 of 80 shipped"
-    status: OrderProgress; // on the list (S-50): the order's status ("Not started", "In progress", "Shipped")
+    to_deliver: number; // the lines summed, server-side (INV-14); the three counts add up to `units`
+    delivered: number; // "5 of 80 units delivered"
+    cancelled: number;
+    status: OrderProgress; // the order's status ("Not started", "In progress", "Delivered", "Cancelled")
     status_label: string;
-    // Set while units are in cutting or ready to ship: "Boutique Lina can't be deleted: 30 units are in cutting or ready to
-    // ship. Move them back to To start first." (30 = in_cutting + ready_to_ship; for one: "1 unit is" and "Move it back"); null when it may be deleted
-    delete_refusal: string | null;
     client_id: number | null; // INV-4: her id (Edit order's picker, the Client filter); null only for an order put away by INV-4's migration
     client_details: ClientRef | null; // INV-4: who she is, on the order page only (its client line); null on the lists and Edit order
 };
 
-export type OrderStatusFilter = 'open' | 'shipped' | 'all';
+export type OrderStatusFilter = 'open' | 'delivered' | 'cancelled' | 'all';
 
 export type OrderFilters = {
     search: string | null; // client, note, or a line's product name or SKU
@@ -430,9 +422,7 @@ export type OrderFilters = {
 /** Every line of every open order of the workshop, whatever the search and the filter (S-50). */
 export type OpenOrderTotals = {
     open_orders: number;
-    to_start: number;
-    in_cutting: number;
-    ready_to_ship: number;
+    to_deliver: number; // INV-14: units To deliver on open orders; never Delivered or Cancelled
 };
 
 export type OrderLineFormRow = {
@@ -533,7 +523,7 @@ export type OrderFormData = {
 export type OrdersIndexProps = {
     orders: Paginated<Order>;
     filters: OrderFilters;
-    statuses: Option<OrderStatusFilter>[]; // "Open orders", "Shipped", "All orders", from the server
+    statuses: Option<OrderStatusFilter>[]; // "Open orders", "Delivered", "Cancelled", "All orders", from the server
     totals: OpenOrderTotals;
     has_orders: boolean; // any order at all in the workshop, whatever its status
     client_filter: ClientRef | null; // INV-4: the client chosen in the Client filter
@@ -561,7 +551,45 @@ export type OrderEditProps = {
     cities?: string[]; // INV-4: for the Add client window over the order; an optional prop, asked for (`only: ['cities']`) when it opens
     client_sources: Option<ClientSource>[];
 };
-export type OrderShowProps = { order: Order };
+/** INV-14: counts that always add up to their total. */
+export type TrackerCounts = {
+    to_deliver: number;
+    delivered: number;
+    cancelled: number;
+    total: number;
+};
+/** One colour and size of a line on the tracker, with the shelf now and what Mark delivered can take (min of To deliver and the shelf). */
+export type TrackerRow = TrackerCounts & {
+    size: Size;
+    on_shelf: number;
+    can_deliver: number;
+};
+export type TrackerColour = TrackerCounts & {
+    colour: Colour;
+    rows: TrackerRow[];
+};
+export type TrackerLine = TrackerCounts & {
+    id: number;
+    product: OrderProduct;
+    one_size: boolean; // colour rows only
+    status: OrderProgress;
+    status_label: string;
+    colours: TrackerColour[]; // in list order
+};
+/** The Order tracker of the order page (INV-14): deferred, rescued ("Couldn't load the tracker of this order."). */
+export type OrderTracker = TrackerCounts & {
+    status: OrderProgress;
+    status_label: string;
+    lines: TrackerLine[];
+};
+export type OrderShowProps = { order: Order; tracker?: OrderTracker };
+/**
+ * What Mark delivered (`orders.lines.deliveries.store`), its move back (`orders.lines.deliveries.destroy`) and Cancel units
+ * (`orders.lines.cancellations.store`) post. Errors: `cells` (the window) and `cells.<colour id>.<size id>` (a field).
+ */
+export type OrderCellsFormData = {
+    cells: Record<number, Record<number, string>>;
+};
 
 // ---------------------------------------------------------------------------
 // Restocks of finished products (INV-3, ADR-0022). Whole units only.
@@ -662,32 +690,6 @@ export type NewRestockFormData = {
     }[]; // every colour × size, '' when not typed
 };
 
-/**
- * start_cutting: to_start → in_cutting · mark_ready: in_cutting → ready_to_ship · ship: ready_to_ship → shipped ·
- * back_to_start: in_cutting → to_start · back_to_cutting: ready_to_ship → in_cutting · back_to_ready: shipped → ready_to_ship
- */
-export type OrderLineMove =
-    | 'start_cutting'
-    | 'mark_ready'
-    | 'ship'
-    | 'back_to_start'
-    | 'back_to_cutting'
-    | 'back_to_ready';
-
-/**
- * Fields the move window posts to `orders.lines.moves.store`. Errors come back as `units` (and `move`) for a line that counts as one
- * size, and as `sizes` (the move) and `sizes.<size id>` (a size) for a line counted by size.
- */
-export type MoveUnitsFormData = {
-    move: OrderLineMove;
-    units: string;
-    /**
-     * INV-13-e: a line counted by size, or holding several colours: colour id → size id → the units typed ('' counts 0). A line with a
-     * single row sends `units` as before. Errors: cells (the move) and cells.<colour id>.<size id> (a cell); single-row lines keep units.
-     */
-    cells?: Record<number, Record<number, string>>;
-};
-
 /** One row of the move window's materials table (S-53), worked out by the server: the screen never computes. */
 export type MaterialMoveRow = {
     material: MaterialRef;
@@ -696,21 +698,6 @@ export type MaterialMoveRow = {
     after: Decimal | null; // "Left after" / "After return"; null when short or not returned
     short_by: Decimal | null; // start_cutting, only when the stock is short: "Short by …" (every short row)
     not_returned: 'deleted' | 'unit_changed' | null; // back_to_start: "Deleted, not returned" / "Unit changed, not returned"
-};
-
-/** `GET orders.lines.moves.preview` (`?move=start_cutting|back_to_start&units=N`): the move window's materials table. */
-export type MovePreview = {
-    move: 'start_cutting' | 'back_to_start';
-    units: number;
-    rows: MaterialMoveRow[]; // by material name
-    has_composition: boolean; // start_cutting: false → "… has no composition, so no material is taken out of stock."
-    nothing_taken: boolean; // back_to_start: true → "No material was taken out of stock for these units, so none is returned."
-    max_cuttable: number | null; // start_cutting: "Stock on hand allows N units."; null without composition
-    // start_cutting, only when the units exceed max_cuttable; written by the server, the same text as the refusal under `units`:
-    //   max_cuttable ≥ 1: "Not enough stock to cut 20 units. You can cut at most 12 now: <bottleneck> runs short. Restock it first,
-    //                     or cut 12 or fewer."
-    //   max_cuttable = 0: "Not enough stock to cut 20 units. You can't cut any now: restock <bottleneck> first."
-    short_message: string | null;
 };
 
 export type StockMovement = {

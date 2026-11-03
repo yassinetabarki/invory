@@ -283,16 +283,16 @@ client's name, copied by the Actions (a client is never renamed).
 | product_id                         | FK → products               | `restrictOnDelete`; new lines take only `active` products of the workshop |
 | quantity                           | unsigned integer            | whole units, 1 … 1 000 000 (CHECK on PostgreSQL)                          |
 | position                           | unsignedSmallInteger        | the order entered                                                         |
-| in_cutting, ready_to_ship, shipped | unsigned integer, default 0 | stage counts (S-49); To start = quantity − the three, never stored        |
+| delivered, cancelled               | unsigned integer, default 0 | INV-14 (ADR-0026): To deliver = quantity − the two, never stored          |
 | size_list_id                       | FK → size_lists             | `restrictOnDelete`; the list the line counts by (S-60); NOT NULL on PG    |
 | timestamps                         |                             |                                                                           |
 
 Constraints: `unique(order_id, product_id)` (one line per product per order, at most 50 lines), `index(product_id)`. PostgreSQL only:
-CHECKs that the three counts are ≥ 0 and add up to at most `quantity`, and `unique(workshop_id, id)` (the cut tables' composite keys).
-Saving an order again matches lines **by product** (`SyncOrderLines`); a line that has started keeps its product and at least its started
-units (re-checked under the order row lock). A line keeps its product when that product is later archived, set back to draft or deleted.
-Only `MoveOrderLineUnits` changes the counts; only its `start_cutting` and `back_to_start` touch `materials` and `stock_movements`
-(ADR-0014). Orders never touch `sales`.
+CHECKs that the two counts are ≥ 0 and add up to at most `quantity`, and `unique(workshop_id, id)` (the cut tables' composite keys).
+Saving an order again matches lines **by product** (`SyncOrderLines`); a line with delivered or cancelled units keeps its product and at
+least those units (re-checked under the order row lock). A line keeps its product when that product is later archived, set back to draft
+or deleted. Since INV-14 (ADR-0026) orders never touch `materials` or `stock_movements`: `ChangeOrderUnits` changes the counts (Mark
+delivered takes units off `product_size_stocks`, its move back puts them on it, Cancel units touches no stock). Orders never touch `sales`.
 
 ### `product_size_stocks` (S-56, [ADR-0017](adr/0017-finished-stock-per-size.md); per colour since INV-2, [ADR-0019](adr/0019-finished-stock-per-colour-and-size.md))
 
@@ -365,14 +365,13 @@ them as `barcodes`, deferred in the group `stock` with `finished_stock`, rescued
 | colour_id                          | FK → colours                | `restrictOnDelete`, indexed, NOT NULL; INV-13: the colour ordered              |
 | size_id                            | FK → sizes                  | `restrictOnDelete`, indexed; a size of the line's `size_list_id`               |
 | quantity                           | unsigned integer            | units ordered in this size, 1 … 1 000 000 (CHECK on PostgreSQL)                |
-| in_cutting, ready_to_ship, shipped | unsigned integer, default 0 | stage counts per size; To start derived as on the line (`HasStageCounts`)      |
+| delivered, cancelled               | unsigned integer, default 0 | INV-14: counts per colour and size; To deliver derived (`HasDeliveryCounts`)   |
 | timestamps                         |                             |                                                                                |
 
 Constraints: `unique(order_line_id, colour_id, size_id)` (INV-13; rows recorded before took their product's first colour). PostgreSQL only: CHECKs that the counts are ≥ 0 and add up to at most `quantity`. Only
-colours and sizes ordered have a row; they are read by colour (list order), then size. The line's `quantity` and its three counts are the **sums of its size rows**, written only by
-`SyncOrderLines` and `MoveOrderLineUnits`, in the same transaction, under the order row lock (lock order: order row → products of
-the lines when saving, or the line and its size rows when moving → cuts → materials in ascending id). The Orders list, its filter and
-totals, the statuses and the delete refusal keep reading the line. Lines recorded before S-60 got the `one_size` list and one size row
+colours and sizes ordered have a row; they are read by colour (list order), then size. The line's `quantity` and its two counts are the **sums of its rows**, written only by
+`SyncOrderLines` and `ChangeOrderUnits`, in the same transaction, under the order row lock (lock order: order row → the products of the
+lines → the line → its rows → the product's shelf rows). The Orders list, its filter and totals and the statuses read the line. Lines recorded before S-60 got the `one_size` list and one size row
 holding their quantity and counts. How a line counts (`OrderLineSizeMode`: `by_size`, `one_size`, `before_sizes`) is decided by
 `App\Services\Orders\OrderLineSizing` alone.
 
@@ -470,7 +469,7 @@ app/
 │   ├── Fortify/                         # starter kit
 │   ├── Materials/  CreateMaterial · UpdateMaterial · DeleteMaterial
 │   ├── Orders/     RecordOrder · UpdateOrder · SyncOrderLines · DeleteOrder   (S-48, S-49)
-│   │               MoveOrderLineUnits · TakeMaterialsForCut · ReturnMaterialsFromCuts   (S-49, S-53)
+│   │               ChangeOrderUnits   (INV-14: Mark delivered, its move back, Cancel units)
 │   ├── Products/   CreateProduct · UpdateProduct · DeleteProduct · SyncProductComponents
 │   └── Workshops/  CreateWorkshop   (registration; S-45 adds the standard units and categories)
 ├── Domain/
@@ -549,12 +548,13 @@ tests/
 | GET | /clients/{client} | clients.show | @show | `clients/show` (her figures and orders, `status` default `all`) |
 | GET | /clients/options | clients.options | ClientOptionController@index | JSON `ClientRef[]` (`search`, `limit` ≤ 50, `include`), A → Z |
 | GET | /clients/lookup | clients.lookup | ClientLookupController@show | JSON `ClientLookup` by `phone` or `name` (INV-4-b, ADR-0009 rule 5, ADR-0021) |
-| GET | /orders/{order} | orders.show | @show | `orders/show` (S-49: stage figures per line, the move window) |
+| GET | /orders/{order} | orders.show | @show | `orders/show` (INV-14: the header, and `tracker` deferred and rescued: counts, rows by colour and size, the shelf now) |
 | GET | /orders/{order}/edit | orders.edit | @edit | `orders/edit` (also the order's own non-active or deleted products) |
 | PUT | /orders/{order} | orders.update | @update | redirect → show ("Order updated."); INV-4-d: `client_id` (the picker), the order keeps her name |
-| DELETE | /orders/{order} | orders.destroy | @destroy | from its own page → index, from the list → back ("Order deleted."); refused while units are in cutting or ready to ship (error toast) |
-| POST | /orders/{order}/lines/{line}/moves | orders.lines.moves.store | OrderLineMoveController@store | redirect → show (S-49; S-53: Start cutting takes, Move back to To start returns stock) |
-| GET | /orders/{order}/lines/{line}/moves/preview | orders.lines.moves.preview | OrderLineMovePreviewController | JSON `MovePreview` (S-53, ADR-0009 rule 5; no locks) |
+| DELETE | /orders/{order} | orders.destroy | @destroy | from its own page → index, from the list → back ("Order deleted."); never refused (INV-14) |
+| POST | /orders/{order}/lines/{line}/deliveries | orders.lines.deliveries.store | OrderDeliveryController@store | redirect → show (INV-14: Mark delivered, off the shelf) |
+| POST | /orders/{order}/lines/{line}/deliveries/back | orders.lines.deliveries.destroy | OrderDeliveryController@destroy | redirect → show (INV-14: back on the shelf) |
+| POST | /orders/{order}/lines/{line}/cancellations | orders.lines.cancellations.store | OrderCancellationController@store | redirect → show (INV-14: no stock moves) |
 
 Settings › Catalogue (S-21/S-22): for each of `units`, `material-categories` and `product-categories`, `GET settings/<list>` (page `settings/<list>`),
 `POST`, `PUT …/{id}`, `DELETE …/{id}`, `PATCH …/{id}/archive` and `PATCH …/{id}/restore`, named `settings.<list>.*`. Option lists for forms and

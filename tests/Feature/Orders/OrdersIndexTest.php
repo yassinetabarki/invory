@@ -91,7 +91,7 @@ it('finds an order by client, note, product name or SKU whatever the case, once 
     'nothing matches' => ['zzz', []],
 ]);
 
-it('shows the stages and the status of each order on its row (S-50 AC-1)', function () {
+it('shows the counts and the status of each order on its row (INV-14 AC-5)', function () {
     bookCardOrders();
 
     orderList()->assertOk()->assertInertia(fn (Assert $page) => $page
@@ -99,46 +99,50 @@ it('shows the stages and the status of each order on its row (S-50 AC-1)', funct
         ->has('orders.data.0', fn (Assert $order) => $order
             ->where('client', 'Boutique Lina')
             ->where('units', 80)
-            ->where('to_start', 50)
-            ->where('in_cutting', 20)
-            ->where('ready_to_ship', 10)
-            ->where('shipped', 0)
+            ->where('to_deliver', 70)
+            ->where('delivered', 5)
+            ->where('cancelled', 5)
             ->where('status', 'in_progress')
             ->where('status_label', 'In progress')
             ->etc()));
 });
 
-it('lists open, shipped or all orders, with the search, and an order with one line shipped is still open (S-50 AC-3)', function (array $query, array $clients) {
+it('lists open, delivered, cancelled or all orders, with the search, and an order with one line delivered is still open (INV-14 AC-5)', function (array $query, array $clients) {
     bookCardOrders();
-    // One line fully shipped, one not started: open, "In progress" (the scope agrees with `progress()`).
+    // One line fully delivered, one not started: open, "In progress" (the scope agrees with `progress()`).
     $mixed = Order::factory()->create(['client' => 'Atelier Mix', 'ordered_on' => '2026-10-01']);
-    OrderLine::factory()->shipped(10)->create(['order_id' => $mixed->id, 'product_id' => pid(7), 'quantity' => 10, 'position' => 0]);
+    // Nour Gharbi's two T-shirts, all cancelled.
+    $gharbi = Order::factory()->create(['client' => 'Nour Gharbi', 'ordered_on' => '2026-09-20']);
+    OrderLine::factory()->cancelled(2)->create(['order_id' => $gharbi->id, 'product_id' => pid(2), 'quantity' => 2, 'position' => 0]);
+    OrderLine::factory()->delivered(10)->create(['order_id' => $mixed->id, 'product_id' => pid(7), 'quantity' => 10, 'position' => 0]);
     OrderLine::factory()->create(['order_id' => $mixed->id, 'product_id' => pid(3), 'quantity' => 5, 'position' => 1]);
 
     $response = orderList($query);
-    $statuses = ['Boutique Lina' => 'in_progress', 'Concept Store Nour' => 'not_started', 'Hotel Dar Said' => 'shipped', 'Atelier Mix' => 'in_progress'];
+    $statuses = ['Boutique Lina' => 'in_progress', 'Concept Store Nour' => 'not_started', 'Hotel Dar Said' => 'delivered', 'Atelier Mix' => 'in_progress', 'Nour Gharbi' => 'cancelled'];
 
     expect(pageProp($response, 'orders.data.*.client'))->toBe($clients)
         ->and(pageProp($response, 'orders.data.*.status'))->toBe(array_map(fn (string $client): string => $statuses[$client], $clients))
         ->and(pageProp($response, 'filters'))->toBe(['search' => $query['search'] ?? null, 'status' => $query['status'] ?? 'open', 'client' => null])
         ->and(pageProp($response, 'statuses'))->toBe([
             ['value' => 'open', 'label' => 'Open orders'],
-            ['value' => 'shipped', 'label' => 'Shipped'],
+            ['value' => 'delivered', 'label' => 'Delivered'],
+            ['value' => 'cancelled', 'label' => 'Cancelled'],
             ['value' => 'all', 'label' => 'All orders'],
         ]);
 })->with([
     'no status: open orders' => [[], ['Boutique Lina', 'Concept Store Nour', 'Atelier Mix']],
     'open' => [['status' => 'open'], ['Boutique Lina', 'Concept Store Nour', 'Atelier Mix']],
-    'shipped' => [['status' => 'shipped'], ['Hotel Dar Said']],
-    'all, newest first' => [['status' => 'all'], ['Boutique Lina', 'Concept Store Nour', 'Hotel Dar Said', 'Atelier Mix']],
+    'delivered' => [['status' => 'delivered'], ['Hotel Dar Said']],
+    'cancelled' => [['status' => 'cancelled'], ['Nour Gharbi']],
+    'all, newest first' => [['status' => 'all'], ['Boutique Lina', 'Concept Store Nour', 'Hotel Dar Said', 'Atelier Mix', 'Nour Gharbi']],
     'all with a search' => [['status' => 'all', 'search' => 'Denim'], ['Boutique Lina']],
-    'shipped with a search that matches an open order' => [['status' => 'shipped', 'search' => 'Denim'], []],
+    'delivered with a search that matches an open order' => [['status' => 'delivered', 'search' => 'Denim'], []],
 ]);
 
 it('refuses a status the list does not offer (S-50 AC-3)', function (mixed $status) {
     orderList(['status' => $status])->assertSessionHasErrors('status');
 })->with([
-    'unknown' => ['cancelled'],
+    'unknown' => ['shipped'],
     'wrong case' => ['OPEN'],
     'a list' => [['open', 'all']],
 ]);

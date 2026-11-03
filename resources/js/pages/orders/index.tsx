@@ -159,7 +159,7 @@ export default function OrdersIndex({
     }
 
     const isEmpty = orders.data.length === 0;
-    const everyOrderShipped =
+    const noOrderOpen =
         serverFilters.search === null &&
         serverFilters.status === 'open' &&
         serverFilters.client === null;
@@ -203,11 +203,11 @@ export default function OrdersIndex({
                                     description="Record a client's order to keep track of what you've promised to make."
                                     action={<NewOrderButton />}
                                 />
-                            ) : everyOrderShipped ? (
+                            ) : noOrderOpen ? (
                                 <EmptyState
                                     icon={PackageCheck}
                                     title="No open orders"
-                                    description="Every order has shipped."
+                                    description="Every order has been delivered or cancelled."
                                     action={
                                         <Button
                                             type="button"

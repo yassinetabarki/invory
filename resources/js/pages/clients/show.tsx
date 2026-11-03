@@ -57,8 +57,8 @@ export default function ClientsShow({
         });
     }
 
-    // "Amira Ben Salah has no shipped orders." (the filter "All orders" always shows her orders, if any).
-    const filtered = filters.status === 'shipped' ? 'shipped' : 'open';
+    // "Amira Ben Salah has no delivered orders." (the filter "All orders" always shows her orders, if any).
+    const filtered = filters.status === 'all' ? 'open' : filters.status;
 
     let body;
 

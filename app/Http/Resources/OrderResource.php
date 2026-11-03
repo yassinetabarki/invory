@@ -6,7 +6,6 @@ namespace App\Http\Resources;
 
 use App\Models\Order;
 use App\Services\Orders\OrderBook;
-use App\Services\Orders\OrderMessages;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -23,7 +22,6 @@ final class OrderResource extends JsonResource
     public function toArray(Request $request): array
     {
         $progress = $this->progress();
-        $held = $this->unitsHeld();
 
         return [
             'id' => $this->id,
@@ -32,13 +30,12 @@ final class OrderResource extends JsonResource
             'note' => $this->note,
             'lines' => OrderLineResource::collection($this->lines),
             'units' => (int) $this->lines_sum_quantity,
-            'to_start' => $this->unitsToStart(),
-            'in_cutting' => $this->unitsInCutting(),
-            'ready_to_ship' => $this->unitsReadyToShip(),
-            'shipped' => $this->unitsShipped(),
+            // INV-14: the three counts add up to `units`; worked out from the loaded lines, never by the screen.
+            'to_deliver' => $this->unitsToDeliver(),
+            'delivered' => $this->unitsDelivered(),
+            'cancelled' => $this->unitsCancelled(),
             'status' => $progress->value,
             'status_label' => $progress->label(),
-            'delete_refusal' => $held > 0 ? OrderMessages::deleteRefusal($this->client, $held) : null,
             // INV-4: her id (Edit order's picker, the lists), and who she is on the order page only (loaded there, never queried here).
             'client_id' => $this->client_id,
             'client_details' => $this->relationLoaded('clientRecord') && $this->clientRecord !== null

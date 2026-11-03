@@ -20,14 +20,14 @@ use InvalidArgumentException;
  * and an active product of that order's workshop. It takes its order's workshop (pass `workshop_id` to say otherwise).
  *
  * A line is counted by size (ADR-0016). By default it is "One size" (list `one_size`) with one size row holding the line's quantity and
- * counts, built from the saved line: `stages()`, `shipped()` and a `create(['quantity' => …])` override keep the row matching.
+ * counts, built from the saved line: `counts()`, `delivered()`, `cancelled()` and a `create(['quantity' => …])` override keep the row matching.
  * {@see sized()} counts the line by the sizes of a list instead.
  *
  * @extends Factory<OrderLine>
  */
 class OrderLineFactory extends Factory
 {
-    private const FIGURES = ['quantity', 'in_cutting', 'ready_to_ship', 'shipped'];
+    private const FIGURES = ['quantity', 'delivered', 'cancelled'];
 
     /** @return array<string, mixed> */
     public function definition(): array
@@ -41,9 +41,8 @@ class OrderLineFactory extends Factory
             'size_list_id' => static fn (): mixed => SizeList::query()->where('code', SizeList::ONE_SIZE)->value('id'),
             'quantity' => fake()->numberBetween(1, 100),
             'position' => 0,
-            'in_cutting' => 0,
-            'ready_to_ship' => 0,
-            'shipped' => 0,
+            'delivered' => 0,
+            'cancelled' => 0,
         ];
     }
 
@@ -76,7 +75,7 @@ class OrderLineFactory extends Factory
      * gives a line recorded before sizes on a product that has several).
      *
      * @param  array<string, int>  $quantities  size label => quantity (1 or more), e.g. `['S' => 10, 'M' => 20]`
-     * @param  array<string, array{int, int, int}>  $stages  size label => [in_cutting, ready_to_ship, shipped]; a size left out has none, e.g. `['M' => [10, 0, 0]]`
+     * @param  array<string, array{0?: int, 1?: int}>  $stages  size label => [delivered, cancelled]; a size left out has none, e.g. `['M' => [10, 0]]`
      */
     public function sized(array $quantities, array $stages = []): static
     {
@@ -92,8 +91,8 @@ class OrderLineFactory extends Factory
             $sums = array_fill_keys(self::FIGURES, 0);
 
             foreach ($quantities as $label => $quantity) {
-                [$inCutting, $readyToShip, $shipped] = array_pad($stages[$label] ?? [], 3, 0);
-                $figures = array_combine(self::FIGURES, [$quantity, $inCutting, $readyToShip, $shipped]);
+                [$delivered, $cancelled] = array_pad($stages[$label] ?? [], 2, 0);
+                $figures = array_combine(self::FIGURES, [$quantity, $delivered, $cancelled]);
                 $rows->push($this->sizeRow($lists[$listId]->firstWhere('label', (string) $label)?->id, $figures));
 
                 foreach ($figures as $figure => $units) {
@@ -106,32 +105,26 @@ class OrderLineFactory extends Factory
     }
 
     /**
-     * Units already moved on (S-49). The quantity is raised to hold them when it would not: the counts never exceed it. To start is
-     * whatever is left.
+     * Units already delivered or cancelled (INV-14). The quantity is raised to hold them when it would not: the counts never exceed it.
+     * To deliver is whatever is left.
      */
-    public function stages(int $inCutting = 0, int $readyToShip = 0, int $shipped = 0): static
+    public function counts(int $delivered = 0, int $cancelled = 0): static
     {
         return $this->state(fn (array $attributes): array => [
-            'in_cutting' => $inCutting,
-            'ready_to_ship' => $readyToShip,
-            'shipped' => $shipped,
-            'quantity' => max((int) $attributes['quantity'], $inCutting + $readyToShip + $shipped),
+            'delivered' => $delivered,
+            'cancelled' => $cancelled,
+            'quantity' => max((int) $attributes['quantity'], $delivered + $cancelled),
         ]);
     }
 
-    public function inCutting(int $units): static
+    public function delivered(int $units): static
     {
-        return $this->stages(inCutting: $units);
+        return $this->counts(delivered: $units);
     }
 
-    public function readyToShip(int $units): static
+    public function cancelled(int $units): static
     {
-        return $this->stages(readyToShip: $units);
-    }
-
-    public function shipped(int $units): static
-    {
-        return $this->stages(shipped: $units);
+        return $this->counts(cancelled: $units);
     }
 
     /**
@@ -142,7 +135,7 @@ class OrderLineFactory extends Factory
     private function sizeRow(?int $sizeId, array $figures): OrderLineSize
     {
         return (new OrderLineSize(['size_id' => $sizeId, 'quantity' => $figures['quantity']]))->forceFill([
-            'in_cutting' => $figures['in_cutting'], 'ready_to_ship' => $figures['ready_to_ship'], 'shipped' => $figures['shipped'],
+            'delivered' => $figures['delivered'], 'cancelled' => $figures['cancelled'],
         ]);
     }
 }

@@ -5,20 +5,22 @@ declare(strict_types=1);
 namespace App\Enums;
 
 /**
- * How far an order line, or a whole order, has got (S-49). Worked out on the server from the stage counts.
+ * How far an order line, or a whole order, has got (S-49; INV-14: from its delivered and cancelled units, see `HasDeliveryCounts`).
  */
 enum OrderProgress: string
 {
     case NotStarted = 'not_started';
     case InProgress = 'in_progress';
-    case Shipped = 'shipped';
+    case Delivered = 'delivered';
+    case Cancelled = 'cancelled';
 
     public function label(): string
     {
         return match ($this) {
             self::NotStarted => __('Not started'),
             self::InProgress => __('In progress'),
-            self::Shipped => __('Shipped'),
+            self::Delivered => __('Delivered'),
+            self::Cancelled => __('Cancelled'),
         };
     }
 

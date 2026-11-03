@@ -42,31 +42,30 @@ final readonly class OrderBook
             // INV-4: one client's orders (her page, the Orders list's Client filter).
             ->when($clientId !== null, fn (Builder $orders) => $orders->where('client_id', $clientId))
             ->when($status === OrderStatusFilter::Open, fn (Builder $orders) => $orders->open())
-            ->when($status === OrderStatusFilter::Shipped, fn (Builder $orders) => $orders->shipped())
+            ->when($status === OrderStatusFilter::Delivered, fn (Builder $orders) => $orders->delivered())
+            ->when($status === OrderStatusFilter::Cancelled, fn (Builder $orders) => $orders->cancelled())
             ->search($search)->newestFirst()
             ->with($this->lineRelations())
             ->withSum('lines', 'quantity');
     }
 
     /**
-     * The figures above the list: the open orders and the units of every line of every open order of the workshop, whatever the
-     * search or the filter (S-50). One query; whole units, cast to int (PostgreSQL returns sums as strings, a sum over no rows is null).
+     * The figures above the list (INV-14): the open orders and their units To deliver, whatever the search or the filter. Delivered and
+     * Cancelled units never count. One query; whole units, cast to int (PostgreSQL returns sums as strings, a sum over no rows is null).
      *
-     * @return array{open_orders: int, to_start: int, in_cutting: int, ready_to_ship: int}
+     * @return array{open_orders: int, to_deliver: int}
      */
     public function openTotals(): array
     {
         $row = OrderLine::query()
             ->whereIn('order_id', Order::query()->open()->select('id'))
-            ->selectRaw('COUNT(DISTINCT order_id) as open_orders, SUM(quantity - in_cutting - ready_to_ship - shipped) as to_start, SUM(in_cutting) as in_cutting, SUM(ready_to_ship) as ready_to_ship')
+            ->selectRaw('COUNT(DISTINCT order_id) as open_orders, SUM(quantity - delivered - cancelled) as to_deliver')
             ->toBase()
             ->first();
 
         return [
             'open_orders' => (int) ($row->open_orders ?? 0),
-            'to_start' => (int) ($row->to_start ?? 0),
-            'in_cutting' => (int) ($row->in_cutting ?? 0),
-            'ready_to_ship' => (int) ($row->ready_to_ship ?? 0),
+            'to_deliver' => (int) ($row->to_deliver ?? 0),
         ];
     }
 

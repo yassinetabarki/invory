@@ -36,50 +36,25 @@ describe('<OpenOrderTotals>', () => {
         setPageProps({});
     });
 
-    it('reads the four totals with their units', () => {
-        const { pairs } = figures({
-            open_orders: 2,
-            to_start: 170,
-            in_cutting: 20,
-            ready_to_ship: 10,
-        });
+    it('reads Open orders and To deliver with its units (INV-14 AC-5)', () => {
+        const { pairs } = figures({ open_orders: 3, to_deliver: 73 });
 
-        expect(pairs).toEqual([
-            'Open orders 2',
-            'To start 170 units',
-            'In cutting 20 units',
-            'Ready to ship 10 units',
-        ]);
+        expect(pairs).toEqual(['Open orders 3', 'To deliver 73 units']);
     });
 
     it('reads "0 units" at zero and "1 unit" at one', () => {
-        const { pairs } = figures({
-            open_orders: 0,
-            to_start: 1,
-            in_cutting: 0,
-            ready_to_ship: 1,
-        });
-
-        expect(pairs).toEqual([
+        expect(figures({ open_orders: 0, to_deliver: 0 }).pairs).toEqual([
             'Open orders 0',
-            'To start 1 unit',
-            'In cutting 0 units',
-            'Ready to ship 1 unit',
+            'To deliver 0 units',
         ]);
     });
 
-    it('sits in two rows of two on a phone and four columns from lg', () => {
-        const { terms } = figures({
-            open_orders: 2,
-            to_start: 170,
-            in_cutting: 20,
-            ready_to_ship: 10,
-        });
+    it('sits side by side, also on a phone', () => {
+        const { terms } = figures({ open_orders: 3, to_deliver: 73 });
 
         // term → figure wrapper → the grid
         expect(terms[0].parentElement?.parentElement).toHaveClass(
             'grid-cols-2',
-            'lg:grid-cols-4',
         );
     });
 });

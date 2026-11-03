@@ -368,6 +368,16 @@ function orderUnits(?int $productId, array $byLabel, ?string $colour = null, ?st
     return [$colourId => $sizes];
 }
 
+/**
+ * The delivery counts migration object (INV-14-a): `delivered` and `cancelled` replace the stage counts of `order_lines` and
+ * `order_line_sizes`, and the Ready-to-ship units go on the shelf as a restock. It is the newest of the hand-kept list (F-60): a test
+ * that rolls back the order line colours (or anything below them) rolls this one back first, and brings it back up last.
+ */
+function deliveryCountsMigration(): Migration
+{
+    return require database_path('migrations/2026_11_07_100000_count_delivered_and_cancelled_on_orders.php');
+}
+
 /** A move window's `cells` in the default first colour, White (INV-13-e): `[White's id => [size id => units]]`. */
 function whiteCells(array $bySizeId): array
 {
@@ -428,22 +438,21 @@ function sizeIds(array $byLabel, string $list = SizeList::S_TO_XL): array
 }
 
 /**
- * Each line of an order as the order's pages read it: its sizes in size order, `label => [quantity, in_cutting, ready_to_ship, shipped]`,
- * by product id. And the rule every write must keep (ADR-0016): a line's quantity and three counts are the sums of its size rows.
+ * Each line of an order as the order's pages read it: its sizes in size order, `label => [quantity, delivered, cancelled]` (INV-14), by
+ * product id. And the rule every write must keep (ADR-0016): a line's quantity and two counts are the sums of its rows.
  *
- * @return array<int, array<string, array{int, int, int, int}>>
+ * @return array<int, array<string, array{int, int, int}>>
  */
 function sizedFigures(Order $order): array
 {
     $figures = [];
 
     foreach ($order->lines()->with('sizes.size')->get() as $line) {
-        $rows = $line->sizes->mapWithKeys(fn ($row): array => [$row->size->label => [$row->quantity, $row->in_cutting, $row->ready_to_ship, $row->shipped]]);
+        $rows = $line->sizes->mapWithKeys(fn ($row): array => [$row->size->label => [$row->quantity, $row->delivered, $row->cancelled]]);
 
         expect($line->quantity)->toBe($rows->sum(fn (array $row): int => $row[0]))
-            ->and($line->in_cutting)->toBe($rows->sum(fn (array $row): int => $row[1]))
-            ->and($line->ready_to_ship)->toBe($rows->sum(fn (array $row): int => $row[2]))
-            ->and($line->shipped)->toBe($rows->sum(fn (array $row): int => $row[3]));
+            ->and($line->delivered)->toBe($rows->sum(fn (array $row): int => $row[1]))
+            ->and($line->cancelled)->toBe($rows->sum(fn (array $row): int => $row[2]));
 
         $figures[$line->product_id] = $rows->all();
     }
@@ -453,9 +462,9 @@ function sizedFigures(Order $order): array
 
 /**
  * Like `sizedFigures()`, keyed by colour and size (INV-13): product id → "Indigo M" (or the colour alone for a "One size" row) →
- * `[quantity, in cutting, ready to ship, shipped]`, rows in the line's order (colour list order, then size). Checks the sums too.
+ * `[quantity, delivered, cancelled]`, rows in the line's order (colour list order, then size). Checks the sums too.
  *
- * @return array<int, array<string, array{int, int, int, int}>>
+ * @return array<int, array<string, array{int, int, int}>>
  */
 function colourFigures(Order $order): array
 {
@@ -463,11 +472,12 @@ function colourFigures(Order $order): array
 
     foreach ($order->lines()->with(['sizes.size', 'sizes.colour'])->get() as $line) {
         $rows = $line->sizes->mapWithKeys(fn ($row): array => [
-            ($row->size->label === 'One size' ? $row->colour->name : "{$row->colour->name} {$row->size->label}") => [$row->quantity, $row->in_cutting, $row->ready_to_ship, $row->shipped],
+            ($row->size->label === 'One size' ? $row->colour->name : "{$row->colour->name} {$row->size->label}") => [$row->quantity, $row->delivered, $row->cancelled],
         ]);
 
         expect($line->quantity)->toBe($rows->sum(fn (array $row): int => $row[0]))
-            ->and($line->in_cutting + $line->ready_to_ship + $line->shipped)->toBe($rows->sum(fn (array $row): int => $row[1] + $row[2] + $row[3]));
+            ->and($line->delivered)->toBe($rows->sum(fn (array $row): int => $row[1]))
+            ->and($line->cancelled)->toBe($rows->sum(fn (array $row): int => $row[2]));
 
         $figures[$line->product_id] = $rows->all();
     }
@@ -875,11 +885,11 @@ function bookOrder(array $attributes = [], ?array $lines = null): Order
 
 /**
  * Boutique Lina's order (as `bookOrder()`) with one line counted by size (S-60-a): Denim Jacket (needs the demo products), `$sizes` being
- * label => quantity, S 10 · M 20 · L 15 · XL 5 by default (50 units). `$stages` gives the stages of some sizes, label => [in_cutting,
- * ready_to_ship, shipped], e.g. `['M' => [10, 0, 0]]`; the line's figures are the sums.
+ * label => quantity, S 10 · M 20 · L 15 · XL 5 by default (50 units). `$stages` gives the counts of some sizes, label => [delivered,
+ * cancelled] (INV-14), e.g. `['M' => [10, 0]]`; the line's figures are the sums.
  *
  * @param  array<string, int>  $sizes
- * @param  array<string, array{int, int, int}>  $stages
+ * @param  array<string, array{0?: int, 1?: int}>  $stages
  */
 function bookSizedOrder(array $sizes = ['S' => 10, 'M' => 20, 'L' => 15, 'XL' => 5], array $stages = []): Order
 {
@@ -890,18 +900,18 @@ function bookSizedOrder(array $sizes = ['S' => 10, 'M' => 20, 'L' => 15, 'XL' =>
 }
 
 /**
- * Boutique Lina's order with its lines at given stages (S-49): Denim Jacket then Denim Jeans 5-pocket (needs the demo products), each
- * `[quantity, in_cutting, ready_to_ship, shipped]`; To start is what is left. Like `bookOrder()`, the lines are created last-first.
+ * Boutique Lina's order with its lines at given counts (INV-14): Denim Jacket then Denim Jeans 5-pocket (needs the demo products), each
+ * `[quantity, delivered, cancelled]`; To deliver is what is left. Like `bookOrder()`, the lines are created last-first.
  *
- * @param  list<array{int, int, int, int}>  $stages
+ * @param  list<array{int, int, int}>  $counts
  */
-function bookOrderAtStages(array $stages): Order
+function bookOrderWithCounts(array $counts): Order
 {
     $products = [demoProduct('PRD-JKT-001'), demoProduct('PRD-JNS-005')];
     $order = Order::factory()->create(['client' => 'Boutique Lina', 'ordered_on' => '2026-10-15', 'note' => 'Deliver before 30 Oct, in 2 boxes']);
 
-    foreach (array_reverse($stages, true) as $position => [$quantity, $inCutting, $readyToShip, $shipped]) {
-        OrderLine::factory()->stages($inCutting, $readyToShip, $shipped)->create([
+    foreach (array_reverse($counts, true) as $position => [$quantity, $delivered, $cancelled]) {
+        OrderLine::factory()->counts($delivered, $cancelled)->create([
             'order_id' => $order->id, 'product_id' => $products[$position]->id, 'quantity' => $quantity, 'position' => $position,
         ]);
     }
@@ -910,32 +920,32 @@ function bookOrderAtStages(array $stages): Order
 }
 
 /**
- * An order of the current workshop whose single line is fully shipped (needs the demo products). Hotel Dar Said's of the S-50 card by
+ * An order of the current workshop whose single line is fully delivered (needs the demo products). Hotel Dar Said's of the S-50 card by
  * default: Leather Tote 12, ordered 2 Oct 2026.
  *
  * @param  array<string, mixed>  $attributes
  */
-function bookShippedOrder(array $attributes = [], int $product = 4, int $quantity = 12): Order
+function bookDeliveredOrder(array $attributes = [], int $product = 4, int $quantity = 12): Order
 {
     $order = Order::factory()->create(['client' => 'Hotel Dar Said', 'ordered_on' => '2026-10-02', 'note' => null, ...$attributes]);
-    OrderLine::factory()->shipped($quantity)->create(['order_id' => $order->id, 'product_id' => pid($product), 'quantity' => $quantity, 'position' => 0]);
+    OrderLine::factory()->delivered($quantity)->create(['order_id' => $order->id, 'product_id' => pid($product), 'quantity' => $quantity, 'position' => 0]);
 
     return $order;
 }
 
 /**
- * The three orders of the S-50 card (needs the demo products): Boutique Lina, 15 Oct, Denim Jacket 50 (20 to start, 20 in cutting, 10
- * ready to ship) and Denim Jeans 5-pocket 30; Concept Store Nour, 14 Oct, Classic White T-shirt 120; Hotel Dar Said, 2 Oct, Leather Tote
- * 12, all shipped. Two are open: 170 to start, 20 in cutting, 10 ready to ship.
+ * The three orders of the S-50 card, in INV-14's counts (needs the demo products): Boutique Lina, 15 Oct, Denim Jacket 50 (5 delivered)
+ * and Denim Jeans 5-pocket 30 (5 cancelled); Concept Store Nour, 14 Oct, Classic White T-shirt 120; Hotel Dar Said, 2 Oct, Leather Tote
+ * 12, all delivered. Two are open: 190 To deliver.
  *
  * @return array{lina: Order, nour: Order, dar_said: Order}
  */
 function bookCardOrders(): array
 {
     return [
-        'lina' => bookOrderAtStages([[50, 20, 10, 0], [30, 0, 0, 0]]),
+        'lina' => bookOrderWithCounts([[50, 5, 0], [30, 0, 5]]),
         'nour' => bookOrder(['client' => 'Concept Store Nour', 'ordered_on' => '2026-10-14', 'note' => null], [[demoProduct('PRD-TSH-002'), 120]]),
-        'dar_said' => bookShippedOrder(),
+        'dar_said' => bookDeliveredOrder(),
     ];
 }
 
@@ -981,13 +991,13 @@ function demoClient(string $name): Client
 }
 
 /**
- * An order of the client on that day with one line of the Leather Tote (needs the demo products): open (nothing shipped) or fully
- * shipped, of `$units` units.
+ * An order of the client on that day with one line of the Leather Tote (needs the demo products): open (nothing delivered) or fully
+ * delivered (INV-14), of `$units` units.
  */
 function clientOrder(Client $client, string $orderedOn, bool $shipped = false, int $units = 2): Order
 {
     $order = Order::factory()->create(['client_id' => $client->id, 'client' => $client->name, 'ordered_on' => $orderedOn]);
-    OrderLine::factory()->stages(0, 0, $shipped ? $units : 0)->create(['order_id' => $order->id, 'product_id' => pid(4), 'quantity' => $units, 'position' => 0]);
+    OrderLine::factory()->counts($shipped ? $units : 0)->create(['order_id' => $order->id, 'product_id' => pid(4), 'quantity' => $units, 'position' => 0]);
 
     return $order;
 }

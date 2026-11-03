@@ -146,7 +146,7 @@ to deliver.
 
 ## Technical work
 > [!warning] Complex · CRITICAL · backend + frontend · 8 steps
-> Tech-lead · 2026-11-03 · approved 2026-11-03
+> Tech-lead · 2026-11-03 · approved 2026-11-03 · delivered 2026-11-03
 > Why complex: a migration that rewrites every order's counts and puts units on the shelf, a business-rule change (orders stop
 > cutting, delivering moves finished stock), new writers of the shelf, and a new contract for the order pages.
 
@@ -377,3 +377,39 @@ land): INV-14-f → INV-14-g, in parallel with INV-14-h.
   first; the delivery re-reads the shelf under that lock.
 - **A big removal** → the removed code goes in its own step (INV-14-b) with its tests, so a reviewer sees it at once.
 - **Size L** → kept as one card (the human's answer 2); the steps keep each review small.
+
+### Delivered differently from the plan
+- **One Action for the three windows:** `ChangeOrderUnits` with an `OrderUnitsChange` (deliver · move back · cancel) instead of three
+  Actions, and one request, `OrderCellsRequest`; the routes, locks and messages are those of the plan.
+- **`CuttingPreview` stays, trimmed to `plan()`**: Start batch (INV-5) uses it. Its order parts, the move code, the previews, the enums
+  `OrderLineMove` and `OrderStage`, `OrderDeleteRefusedException` and their tests are gone (INV-14-b). `stage-figure.tsx` keeps only
+  `formatUnits`.
+- **The order header loses its status line**: the status lives in the Order tracker card (AC-1). The Orders list's date moves under the
+  client's name (the card); the client page keeps its "Order date" column.
+- **The phone's Filters panel** (AC-5) is a bottom sheet at full height holding Status and Client; the search stays above it.
+- **A line recorded before sizes can't be delivered**: it names "One size" for a product with sizes, so no shelf row matches it (ADR-0026).
+  Edit order keeps it on "One size" (INV-13); the owner can remove it and add the product again with real sizes when nothing is
+  delivered or cancelled on it.
+- **Tests' helpers:** `bookOrderWithCounts()` and `bookDeliveredOrder()` replace `bookOrderAtStages()` and `bookShippedOrder()`; the
+  factory's `counts()`, `delivered()` and `cancelled()` replace `stages()`, `inCutting()`, `readyToShip()` and `shipped()`; the
+  hand-kept migration list gains `deliveryCountsMigration()`.
+- **Wording the card doesn't give, written here:** "Loading the tracker…" (screen readers), the menu's "More" label on a phone, the
+  tiles' word "units ordered" under Total, "Enter at least one unit to move back." / "… to cancel." (the card gives them), and
+  "You can't mark any unit of Indigo S: none is on the shelf." for a field emptied meanwhile (shown as "The shelf or this order
+  changed since you opened this page." in practice, since such a cell refuses the window as a whole).
+
+### Delivery report (2026-11-03)
+Gates on this machine, final tree: `composer test` green (Pint, PHPStan, 2,989 Pest tests: 2,916 green, 73 skipped); `npx vp test`
+green (125 files, 1,455 tests); `npm run check`, `npm run types:check` and `npm run build` green; `composer test:pgsql` 2,989 of 2,989.
+Not run: the browser golden path (Playwright is outdated on this machine).
+
+| AC | Evidence |
+| --- | --- |
+| AC-1 · Order tracker | `OrderTrackerTest` (counts, status, rows); `OrderPageTest` (statuses: not started, cancelled only, in progress, delivered, delivered and cancelled, all cancelled); `show.test.tsx` (tiles read "To deliver, 70 units", the line, loading, error and Try again); `order-tracker.test.tsx` (all delivered, all cancelled, the bar); `QueryBudgetTest` (deferred tracker) |
+| AC-2 · Products by colour and size | `OrderTrackerTest` (rows, shelf, `can_deliver`); `show.test.tsx` (the table row by row, Out, the reasons beside disabled buttons, the phone lines, no cutting buttons); `order-tracker.test.tsx` (One size, zeros, Out); `OrdersNeverTouchStockTest` (no material, history or cut touched; the old routes 404) |
+| AC-3 · Mark delivered and move back | `OrderTrackerTest` (Indigo S 2 and L 3, the shelf rows, the product page, each refusal, the singular, move back with its shelf, a row made again, 1,000,000, a restock no longer undoable); `show.test.tsx` (the window, fields, Up to, focus, payload, messages, Close, the menu's move back) |
+| AC-4 · Cancel units | `OrderTrackerTest` (Indigo L 5, no stock or restock touched, refusals, another workshop 404); `show.test.tsx` (the amber note, Keep units, "Cancel 5 units") |
+| AC-5 · Orders list and client page | `OpenOrderTotalsTest`, `OrdersIndexTest` (statuses and filters of the five orders), `ClientPageTest`, `OrderClientTest`; `orders-table.test.tsx` (columns, "5 cancelled", the phone card), `open-order-totals.test.tsx`, `index.test.tsx` (empty states, Filters · 1), `clients/show.test.tsx` |
+| AC-6 · Edit order, Delete order, colours | `EditStartedOrderTest`, `OrderSizesWriteTest` (floors and removal with delivered and cancelled, under the lock); `OrdersNeverTouchStockTest` (delete always allowed, nothing put back); `ProductColourLockTest` (units To deliver only); `delete-order-dialog.test.tsx`, `edit.test.tsx` |
+| AC-7 · Orders recorded before | `DeliveryCountsMigrationTest` (Shipped → Delivered, the rest To deliver, the restock "Orders" per workshop, a shelf row made and a colour linked, the 1,000,000 stop, `down()`, PostgreSQL checks) |
+

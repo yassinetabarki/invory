@@ -1,13 +1,4 @@
 import type { RefObject } from 'react';
-import {
-    AlertDialog,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { ConfirmDeleteDialog } from '@/components/shared/confirm-delete-dialog';
 import { useAppSettings } from '@/hooks/use-app-settings';
 import { formatCount } from '@/lib/format';
@@ -23,10 +14,10 @@ type DeleteOrderDialogProps = {
 };
 
 /**
- * Confirmation before an order goes. Stock and sales are never touched. While
- * units are in cutting or ready to ship (`delete_refusal`), the window shows
- * the server's refusal instead of its question, with only "Close": nothing is
- * sent.
+ * Confirmation before an order goes (INV-14, AC-6). It is never refused: an
+ * order holds no materials and no production. Stock, sales and the shelf are
+ * never touched; when units were delivered, one more sentence says they are
+ * not put back.
  */
 export function DeleteOrderDialog({
     order,
@@ -36,38 +27,6 @@ export function DeleteOrderDialog({
     onConfirm,
 }: DeleteOrderDialogProps) {
     const { locale } = useAppSettings();
-
-    if (order?.delete_refusal) {
-        return (
-            <AlertDialog
-                open
-                onOpenChange={(open) => {
-                    if (!open) {
-                        onCancel();
-                    }
-                }}
-            >
-                <AlertDialogContent
-                    onCloseAutoFocus={(event) => {
-                        if (returnFocusTo.current) {
-                            event.preventDefault();
-                            returnFocusTo.current.focus();
-                        }
-                    }}
-                >
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Delete order?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            {order.delete_refusal}
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Close</AlertDialogCancel>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
-        );
-    }
 
     return (
         <ConfirmDeleteDialog
@@ -91,6 +50,10 @@ export function DeleteOrderDialog({
                             : `${formatCount(order.units, locale)} units`}
                         ) will be removed. Material stock and sales are not
                         affected. This cannot be undone.
+                        {order.delivered > 0 &&
+                            (order.delivered === 1
+                                ? " Finished stock isn't changed: the 1 unit already delivered is not put back."
+                                : ` Finished stock isn't changed: the ${formatCount(order.delivered, locale)} units already delivered are not put back.`)}
                     </p>
                 )
             }

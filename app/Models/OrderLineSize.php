@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToWorkshop;
-use App\Models\Concerns\HasStageCounts;
+use App\Models\Concerns\HasDeliveryCounts;
 use Carbon\CarbonInterface;
 use Database\Factories\OrderLineSizeFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -14,8 +14,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * One colour and size of an order line (ADR-0016, ADR-0025): how many were ordered and how many of them are in cutting, ready to ship
- * and shipped. The line's own figures are the sums of its rows. Unique per line, colour and size.
+ * One colour and size of an order line (ADR-0016, ADR-0025, ADR-0026): how many were ordered and how many of them are delivered and
+ * cancelled. The line's own figures are the sums of its rows. Unique per line, colour and size.
  *
  * @property int $id
  * @property int $workshop_id The workshop of the line. Never mass-assignable: it comes from the line.
@@ -23,9 +23,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $colour_id The colour ordered (INV-13). Rows recorded before INV-13 have their product's first colour.
  * @property int $size_id
  * @property int $quantity Whole units, 1 to 1 000 000.
- * @property int $in_cutting Units of this size in cutting. To start is derived: see `to_start`.
- * @property int $ready_to_ship
- * @property int $shipped The three counts never add up to more than the quantity.
+ * @property int $delivered Units of this colour and size delivered (INV-14). To deliver is derived: see `to_deliver`.
+ * @property int $cancelled The two counts never add up to more than the quantity.
  * @property CarbonInterface $created_at
  * @property CarbonInterface $updated_at
  */
@@ -33,16 +32,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class OrderLineSize extends Model
 {
     /** @use HasFactory<OrderLineSizeFactory> */
-    use BelongsToWorkshop, HasFactory, HasStageCounts;
+    use BelongsToWorkshop, HasDeliveryCounts, HasFactory;
 
     /** @return array<string, string> */
     protected function casts(): array
     {
         return [
             'quantity' => 'integer',
-            'in_cutting' => 'integer',
-            'ready_to_ship' => 'integer',
-            'shipped' => 'integer',
+            'delivered' => 'integer',
+            'cancelled' => 'integer',
         ];
     }
 

@@ -37,9 +37,8 @@ class OrderLineSizeFactory extends Factory
                 ->orderBy('position')
                 ->value('id'),
             'quantity' => fake()->numberBetween(1, 100),
-            'in_cutting' => 0,
-            'ready_to_ship' => 0,
-            'shipped' => 0,
+            'delivered' => 0,
+            'cancelled' => 0,
         ];
     }
 

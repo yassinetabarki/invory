@@ -36,13 +36,13 @@ final readonly class SyncOrderLines
      * A product listed twice is not merged: the second line is inserted and the database's unique index rejects it, which rolls the
      * whole sync back (the form request refuses it earlier).
      *
-     * A colour and size that has started (S-49, S-61) keeps at least its started units, and a started line its product. The counts are
+     * A colour and size with delivered or cancelled units (INV-14) keeps at least those, and such a line its product. The counts are
      * read here, inside the transaction, after the caller took the order's row lock, so they are the saved ones: this check is the one
-     * that counts. Rows that have started are never removed or lowered, so the line's three counts stay the sums of its rows.
+     * that counts. Such rows are never removed or lowered, so the line's two counts stay the sums of its rows.
      *
      * @param  array<int|string, array{product_id: int|string, units?: array<int|string, array<int|string, int|string|null>|null>|null}>  $lines  validated input, in display order (`position` is the index in the order given; a key only names a line in an error message)
      *
-     * @throws ValidationException a started line was removed or given fewer units than started, or a product's colours or sizes changed
+     * @throws ValidationException a line with delivered or cancelled units was removed or given fewer, or a product's colours or sizes changed
      */
     public function handle(Order $order, array $lines): void
     {
@@ -125,8 +125,8 @@ final readonly class SyncOrderLines
     }
 
     /**
-     * What a submitted list of lines may not do to the lines that have started: remove one (a swap of its product reads as a removal,
-     * since lines are matched by product), or lower a colour and size below its started units. Lines that haven't started, and new
+     * What a submitted list of lines may not do to lines with delivered or cancelled units: remove one (a swap of its product reads as a
+     * removal, since lines are matched by product), or lower a colour and size below those units. Lines that haven't started, and new
      * lines, are free. The form request runs this on unlocked data for early messages; `handle()` runs it under the order lock.
      *
      * @param  Collection<int, OrderLine>  $current  the order's saved lines, by product id, with `product` and `sizes` (each with its `colour` and `size`) loaded
@@ -146,13 +146,13 @@ final readonly class SyncOrderLines
         $refusals = [];
 
         foreach ($current as $productId => $saved) {
-            if ($saved->started === 0) {
+            if ($saved->settled === 0) {
                 continue;
             }
 
             if (! isset($submitted[$productId])) {
                 // The product may be deleted: the line keeps it.
-                $refusals['lines'][] = OrderMessages::startedLineRemoved($saved->product->name, $saved->started);
+                $refusals['lines'][] = OrderMessages::settledLineRemoved($saved->product->name, $saved->settled);
 
                 continue;
             }
@@ -164,9 +164,9 @@ final readonly class SyncOrderLines
             foreach ($saved->sizes as $row) {
                 $value = is_array($typed[$row->colour_id] ?? null) ? ($typed[$row->colour_id][$row->size_id] ?? 0) : 0;
 
-                if ($row->started > 0 && (int) $value < $row->started) {
+                if ($row->settled > 0 && (int) $value < $row->settled) {
                     $variant = OrderMessages::variant($row->colour->name, $row->size->label, $oneSize);
-                    $refusals["lines.{$key}.units.{$row->colour_id}.{$row->size_id}"][] = OrderMessages::sizeBelowStarted($variant, $row->started);
+                    $refusals["lines.{$key}.units.{$row->colour_id}.{$row->size_id}"][] = OrderMessages::sizeBelowSettled($variant, $row->settled);
                 }
             }
         }
@@ -263,7 +263,8 @@ final readonly class SyncOrderLines
     }
 
     /**
-     * Make the rows of a line equal to `$rows`: new cells inserted, changed ones updated, the others removed (none of them has started).
+     * Make the rows of a line equal to `$rows`: new cells inserted, changed ones updated, the others removed (none holds a delivered or
+     * cancelled unit).
      *
      * @param  array<string, int>  $rows  units by cell
      * @param  Collection<string, OrderLineSize>  $saved  the line's saved rows by cell

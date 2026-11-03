@@ -1,19 +1,35 @@
-import { Head, router } from '@inertiajs/react';
+import { Deferred, Head, router } from '@inertiajs/react';
 import { useRef, useState } from 'react';
 import { DeleteOrderDialog } from '@/components/orders/delete-order-dialog';
-import { MoveUnitsDialog } from '@/components/orders/move-units-dialog';
-import type { MoveTarget } from '@/components/orders/move-units-dialog';
 import { OrderHeader } from '@/components/orders/order-header';
-import { OrderLineCard } from '@/components/orders/order-line-card';
+import { OrderProductCard } from '@/components/orders/order-product-card';
+import type { UnitsMode } from '@/components/orders/order-product-card';
+import {
+    OrderTracker,
+    OrderTrackerError,
+    OrderTrackerLoading,
+} from '@/components/orders/order-tracker';
+import { OrderUnitsDialog } from '@/components/orders/order-units-dialog';
 import { destroy, index, show } from '@/routes/orders';
-import type { OrderLine, OrderLineMove, OrderShowProps } from '@/types/domain';
+import type { OrderShowProps, TrackerLine } from '@/types/domain';
 
-export default function OrdersShow({ order }: OrderShowProps) {
-    const [moving, setMoving] = useState<MoveTarget | null>(null);
+/**
+ * An order (INV-14): its header, the Order tracker and each product by colour and size, with Mark delivered, its move back and Cancel
+ * units. The tracker arrives after the frame (a deferred prop) and its failure is rescued with "Try again".
+ */
+export default function OrdersShow({ order, tracker }: OrderShowProps) {
+    const [opened, setOpened] = useState<{
+        lineId: number;
+        mode: UnitsMode;
+    } | null>(null);
     const [deleting, setDeleting] = useState(false);
     const [deleteProcessing, setDeleteProcessing] = useState(false);
     // The control that opened a dialog, so focus can return to it.
     const triggerRef = useRef<HTMLElement | null>(null);
+    // The line is read from the tracker, so the window's figures follow every reload.
+    const openedLine = opened
+        ? tracker?.lines.find((line) => line.id === opened.lineId)
+        : undefined;
 
     function rememberTrigger() {
         triggerRef.current =
@@ -23,9 +39,17 @@ export default function OrdersShow({ order }: OrderShowProps) {
                 : null;
     }
 
-    function askToMove(line: OrderLine, move: OrderLineMove) {
+    function openUnits(line: TrackerLine, mode: UnitsMode) {
         rememberTrigger();
-        setMoving({ lineId: line.id, move });
+        setOpened({ lineId: line.id, mode });
+    }
+
+    function closeUnits() {
+        setOpened(null);
+        // Back to the button that opened the window, when it is still there.
+        requestAnimationFrame(
+            () => triggerRef.current?.isConnected && triggerRef.current.focus(),
+        );
     }
 
     function askToDelete() {
@@ -50,28 +74,49 @@ export default function OrdersShow({ order }: OrderShowProps) {
             <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
                 <OrderHeader order={order} onDelete={askToDelete} />
 
-                <section
-                    aria-labelledby="order-products"
-                    className="flex flex-col gap-3"
+                <Deferred
+                    data="tracker"
+                    fallback={<OrderTrackerLoading />}
+                    rescue={({ reloading }) => (
+                        <OrderTrackerError reloading={reloading} />
+                    )}
                 >
-                    <h2 id="order-products" className="text-lg font-semibold">
-                        Products
-                    </h2>
-                    {order.lines.map((line) => (
-                        <OrderLineCard
-                            key={line.id}
-                            line={line}
-                            onMove={askToMove}
-                        />
-                    ))}
-                </section>
+                    {/* Built eagerly: never read before it lands. */}
+                    {tracker && (
+                        <>
+                            <OrderTracker tracker={tracker} />
+                            <section
+                                aria-labelledby="order-products"
+                                className="flex flex-col gap-3"
+                            >
+                                <h2
+                                    id="order-products"
+                                    className="text-lg font-semibold"
+                                >
+                                    Products
+                                </h2>
+                                {tracker.lines.map((line) => (
+                                    <OrderProductCard
+                                        key={line.id}
+                                        line={line}
+                                        onOpen={openUnits}
+                                    />
+                                ))}
+                            </section>
+                        </>
+                    )}
+                </Deferred>
             </div>
 
-            <MoveUnitsDialog
-                order={order}
-                target={moving}
-                returnFocusTo={triggerRef}
-                onClose={() => setMoving(null)}
+            <OrderUnitsDialog
+                orderId={order.id}
+                client={order.client}
+                target={
+                    opened && openedLine
+                        ? { line: openedLine, mode: opened.mode }
+                        : null
+                }
+                onClose={closeUnits}
             />
             <DeleteOrderDialog
                 order={deleting ? order : null}

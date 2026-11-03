@@ -6,7 +6,7 @@ namespace App\Models;
 
 use App\Enums\OrderProgress;
 use App\Models\Concerns\BelongsToWorkshop;
-use App\Models\Concerns\HasStageCounts;
+use App\Models\Concerns\HasDeliveryCounts;
 use Carbon\CarbonInterface;
 use Database\Factories\OrderLineFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -25,9 +25,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int $quantity Whole units, 1 to 1 000 000: the sum of the line's sizes.
  * @property int $position Display order: the order the lines were entered in.
  * @property int|null $size_list_id The size list the line counts by (ADR-0016). Never null in PostgreSQL; never mass-assignable: the Actions set it.
- * @property int $in_cutting Units in cutting (S-49): the sum of the line's sizes. To start is derived: see `to_start`.
- * @property int $ready_to_ship Units ready to ship.
- * @property int $shipped Units shipped. The three counts never add up to more than the quantity.
+ * @property int $delivered Units delivered (INV-14): the sum of the line's rows. To deliver is derived: see `to_deliver`.
+ * @property int $cancelled Units cancelled. The two counts never add up to more than the quantity.
  * @property CarbonInterface $created_at
  * @property CarbonInterface $updated_at
  */
@@ -35,7 +34,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class OrderLine extends Model
 {
     /** @use HasFactory<OrderLineFactory> */
-    use BelongsToWorkshop, HasFactory, HasStageCounts;
+    use BelongsToWorkshop, HasDeliveryCounts, HasFactory;
 
     /** @return array<string, string> */
     protected function casts(): array
@@ -43,22 +42,15 @@ class OrderLine extends Model
         return [
             'quantity' => 'integer',
             'position' => 'integer',
-            'in_cutting' => 'integer',
-            'ready_to_ship' => 'integer',
-            'shipped' => 'integer',
+            'delivered' => 'integer',
+            'cancelled' => 'integer',
         ];
     }
 
-    /**
-     * "Not started" while every unit is still to start, "Shipped" once every unit has shipped, "In progress" in between.
-     */
+    /** The line's status (INV-14), from its delivered and cancelled units. */
     public function progress(): OrderProgress
     {
-        return match (true) {
-            $this->started === 0 => OrderProgress::NotStarted,
-            $this->shipped === $this->quantity => OrderProgress::Shipped,
-            default => OrderProgress::InProgress,
-        };
+        return self::progressOf($this->quantity, $this->delivered, $this->cancelled);
     }
 
     /** @return BelongsTo<Order, $this> */

@@ -43,12 +43,15 @@ it('gives every product recorded before INV-1 its own workshop\'s White, soft-de
         });
     }
 
+    deliveryCountsMigration()->down();
+
     orderLineColoursMigration()->down();
     productSizeStockColoursMigration()->down();
     productColoursMigration()->down();
     productColoursMigration()->up();
     productSizeStockColoursMigration()->up();
     orderLineColoursMigration()->up();
+    deliveryCountsMigration()->up();
 
     // Raw reads on purpose: nobody is signed in, and the products of the demo workshop (7) are in the table too.
     $links = DB::table('product_colours')

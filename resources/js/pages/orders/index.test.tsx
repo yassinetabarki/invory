@@ -15,6 +15,10 @@ import type {
     OrdersIndexProps,
 } from '@/types/domain';
 
+const device = vi.hoisted(() => ({ mobile: false }));
+
+vi.mock('@/hooks/use-mobile', () => ({ useIsMobile: () => device.mobile }));
+
 vi.mock('@inertiajs/react', async (importOriginal) => {
     const { createInertiaModule } = await import('@/test/inertia');
 
@@ -42,11 +46,9 @@ function notStarted(
         id,
         product,
         quantity,
-        to_start: quantity,
-        in_cutting: 0,
-        ready_to_ship: 0,
-        shipped: 0,
-        started: 0,
+        to_deliver: quantity,
+        delivered: 0,
+        cancelled: 0,
         status: 'not_started',
         status_label: 'Not started',
     });
@@ -62,22 +64,18 @@ const lina: Order = {
         notStarted(2, product(5, 'Denim Jeans 5-pocket'), 30),
     ],
     units: 80,
-    to_start: 80,
-    in_cutting: 0,
-    ready_to_ship: 0,
-    shipped: 0,
+    to_deliver: 80,
+    delivered: 0,
+    cancelled: 0,
     status: 'not_started',
     status_label: 'Not started',
-    delete_refusal: null,
     client_id: 3,
     client_details: null,
 };
 
 const zeroTotals: OpenOrderTotals = {
     open_orders: 0,
-    to_start: 0,
-    in_cutting: 0,
-    ready_to_ship: 0,
+    to_deliver: 0,
 };
 
 type Options = {
@@ -99,7 +97,8 @@ function withOrders(
         filters: { search, status, client: null },
         statuses: [
             { value: 'open', label: 'Open orders' },
-            { value: 'shipped', label: 'Shipped' },
+            { value: 'delivered', label: 'Delivered' },
+            { value: 'cancelled', label: 'Cancelled' },
             { value: 'all', label: 'All orders' },
         ],
         totals: zeroTotals,
@@ -169,7 +168,7 @@ describe('orders/index page', () => {
 
         expect(
             screen.getAllByRole('option').map((option) => option.textContent),
-        ).toEqual(['Open orders', 'Shipped', 'All orders']);
+        ).toEqual(['Open orders', 'Delivered', 'Cancelled', 'All orders']);
 
         await user.click(screen.getByRole('option', { name: 'All orders' }));
 
@@ -191,10 +190,10 @@ describe('orders/index page', () => {
             query: {},
         },
         {
-            name: 'every order has shipped',
+            name: 'every order has been delivered or cancelled',
             options: { hasOrders: true },
             title: 'No open orders',
-            description: 'Every order has shipped.',
+            description: 'Every order has been delivered or cancelled.',
             button: 'Show all orders',
             query: { status: 'all' },
         },
@@ -238,7 +237,7 @@ describe('orders/index page', () => {
             within(screen.getByRole('region', { name: 'Open orders totals' }))
                 .getAllByRole('definition')
                 .map((item) => item.textContent),
-        ).toEqual(['0', '0 units', '0 units', '0 units']);
+        ).toEqual(['0', '0 units']);
     });
 
     it('filters by client, kept with the search and status in the address, and Clear filters drops it (INV-4 AC-7)', async () => {
@@ -270,5 +269,27 @@ describe('orders/index page', () => {
         expect(
             screen.getByRole('combobox', { name: 'Client Amira Ben Salah' }),
         ).toBeInTheDocument();
+    });
+
+    it('puts Status and Client behind Filters on a phone, "Filters · 1" when one is set (INV-14 AC-5)', async () => {
+        device.mobile = true;
+        const { user } = renderPage(
+            withOrders([lina], { status: 'delivered' }),
+        );
+
+        expect(
+            screen.queryByRole('combobox', { name: /Client/ }),
+        ).not.toBeInTheDocument();
+        await user.click(screen.getByRole('button', { name: 'Filters · 1' }));
+
+        const panel = within(screen.getByRole('dialog', { name: 'Filters' }));
+
+        expect(
+            panel.getByRole('combobox', { name: 'Status' }),
+        ).toHaveTextContent('Delivered');
+        expect(
+            panel.getByRole('combobox', { name: 'Client All clients' }),
+        ).toBeInTheDocument();
+        device.mobile = false;
     });
 });

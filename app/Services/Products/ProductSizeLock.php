@@ -12,7 +12,7 @@ use App\Models\ProductionBatch;
 /**
  * The sizes of a product are locked once it is on an order (S-58, AC-4, ADR-0015 decision 4), has finished units in stock (S-56-e,
  * ADR-0017 decision 5) or has units in production (INV-5-g): its category may change only to one with the same size list. An order
- * counts until it is deleted, also once it is fully shipped; stock counts while any size holds a unit (a row in `product_size_stocks`). The order message wins when both
+ * counts until it is deleted, also once it is fully delivered; stock counts while any size holds a unit (a row in `product_size_stocks`). The order message wins when both
  * apply. Add product has no lock, and a product on no order and with no stock can change to any category.
  *
  * Checked twice: by the update request, so the error shows with the other errors, and by `UpdateProduct` under the product row lock.

@@ -5,62 +5,19 @@ declare(strict_types=1);
 namespace App\Services\Orders;
 
 use App\Domain\Stock\CutPlan;
-use App\Enums\OrderLineMove;
 use App\Services\Products\SizeNames;
+use Illuminate\Support\Number;
 use LogicException;
 
 /**
- * The sentences of the order pages (S-49), built in one place so the order's `delete_refusal` and the refusal of the delete itself
- * can't say different things. A count of 1 reads in the singular.
+ * The sentences of the order pages (S-49, INV-13, INV-14), built in one place so the screens and the refusals can't say different
+ * things. A count of 1 reads in the singular; counts are printed grouped ("1,000,000").
  */
 final readonly class OrderMessages
 {
     /**
-     * Why an order can't be deleted: `$held` units (in cutting plus ready to ship) still hold material taken out of stock.
-     */
-    public static function deleteRefusal(string $client, int $held): string
-    {
-        return trans_choice(
-            "{1} :client can't be deleted: :count unit is in cutting or ready to ship. Move it back to To start first."
-            ."|[2,*] :client can't be deleted: :count units are in cutting or ready to ship. Move them back to To start first.",
-            $held,
-            ['client' => $client],
-        );
-    }
-
-    /** The toast of a move: "30 units of Denim Jacket moved to In cutting." / "5 units of Denim Jacket moved back to To start." */
-    public static function moved(OrderLineMove $move, int $units, string $product): string
-    {
-        $replace = ['product' => $product, 'stage' => $move->toStage()->label()];
-
-        return $move->isBack()
-            ? trans_choice(
-                '{1} :count unit of :product moved back to :stage.|[2,*] :count units of :product moved back to :stage.',
-                $units,
-                $replace,
-            )
-            : trans_choice(
-                '{1} :count unit of :product moved to :stage.|[2,*] :count units of :product moved to :stage.',
-                $units,
-                $replace,
-            );
-    }
-
-    /** What Start cutting adds to the toast, only when at least one material's stock changed (S-53). */
-    public static function materialsTaken(): string
-    {
-        return __('Materials taken out of stock.');
-    }
-
-    /** What Move back to To start adds to the toast, only when at least one material's stock changed (S-53). */
-    public static function materialsReturned(): string
-    {
-        return __('Materials returned to stock.');
-    }
-
-    /**
-     * Why a cut of `$plan->units` is refused, and the same text the preview shows (S-53, ADR-0014): the plan's maximum and its
-     * bottleneck, which is named also when several materials are short.
+     * Why a cut of `$plan->units` is refused, and the same text the preview shows (S-53, ADR-0014; Start batch since INV-5): the plan's
+     * maximum and its bottleneck, which is named also when several materials are short.
      *
      * @throws LogicException If the plan is allowed (there is nothing to refuse).
      */
@@ -81,62 +38,28 @@ final readonly class OrderMessages
             );
     }
 
-    /** Why a move is refused: the stage holds `$held` units now (the saved count, which may differ from the screen's). */
-    public static function moveLimit(int $held): string
-    {
-        return trans_choice('{1} You can move at most :count unit.|[0,*] You can move at most :count units.', $held);
-    }
-
-    /** Why a size can't move that many units (S-61-a): its stage holds `$held` units of `$size` now. */
-    public static function sizeMoveLimit(string $size, int $held): string
+    /** Why a cell's quantity can't go lower in Edit order (INV-14 AC-6): `$settled` units of it are delivered or cancelled. */
+    public static function sizeBelowSettled(string $variant, int $settled): string
     {
         return trans_choice(
-            '{1} You can move at most :count unit of :size.|[0,*] You can move at most :count units of :size.',
-            $held,
-            ['size' => SizeNames::inText($size)],
+            "{1} :variant can't be less than the :count unit already delivered or cancelled."
+            ."|[2,*] :variant can't be less than the :count units already delivered or cancelled.",
+            $settled,
+            ['variant' => SizeNames::inText($variant, true), 'count' => self::count($settled)],
         );
     }
 
-    /** A size's field of the move window holds something that is not a whole number of units, or a negative one (S-61-a). */
-    public static function wholeUnits(): string
-    {
-        return __('Enter a whole number of units.');
-    }
-
-    /** Every size of a move is empty or 0 (S-61-a). */
-    public static function atLeastOneToMove(): string
-    {
-        return __('Enter at least one unit to move.');
-    }
-
-    /** Why a deleted product's units can't start cutting. */
-    public static function productDeleted(string $product): string
-    {
-        return __(':product was deleted, so it can\'t be cut.', ['product' => $product]);
-    }
-
-    /** Why a started line's quantity can't go lower: `$started` units are in cutting, ready to ship or shipped. */
-    public static function quantityBelowStarted(int $started): string
+    /** Why a line can't leave the order (INV-14 AC-6; also when its product is swapped, since lines are matched by product). */
+    public static function settledLineRemoved(string $product, int $settled): string
     {
         return trans_choice(
-            "{1} The quantity can't be less than the :count unit already in cutting, ready to ship or shipped."
-            ."|[2,*] The quantity can't be less than the :count units already in cutting, ready to ship or shipped.",
-            $started,
+            "{1} :product can't be removed: :count unit is delivered or cancelled.|[2,*] :product can't be removed: :count units are delivered or cancelled.",
+            $settled,
+            ['product' => $product, 'count' => self::count($settled)],
         );
     }
 
-    /** Why a size's quantity can't go lower (S-61 AC-5): `$started` units of that size are in cutting, ready to ship or shipped. */
-    public static function sizeBelowStarted(string $size, int $started): string
-    {
-        return trans_choice(
-            "{1} :size can't be less than the :count unit already in cutting, ready to ship or shipped."
-            ."|[2,*] :size can't be less than the :count units already in cutting, ready to ship or shipped.",
-            $started,
-            ['size' => SizeNames::inText($size, true)],
-        );
-    }
-
-    /** A size's quantity is not a whole number from 0 to 1,000,000 (S-60 AC-2). */
+    /** A cell's quantity is not a whole number from 0 to 1,000,000 (S-60 AC-2). */
     public static function sizeQuantity(): string
     {
         return __('Enter a whole number from 0 to 1,000,000.');
@@ -173,27 +96,108 @@ final readonly class OrderMessages
     }
 
     /**
-     * The product's sizes changed after the order form was built (F-64, S-60 F3): what was typed no longer fits, so nothing is saved.
-     * Shown under the field that was submitted.
+     * The product's colours or sizes changed after the order form was built (F-64, S-60 F3, INV-13): what was typed no longer fits, so
+     * nothing is saved.
      */
     public static function orderSizesChanged(string $product): string
     {
         return __('The colours or sizes of :product have changed. Enter its quantities again.', ['product' => $product]);
     }
 
-    /** The sizes of the line changed after the move window was built (S-61 F3): nothing moves. Shown under `sizes`, the whole window. */
-    public static function moveSizesChanged(string $product): string
+    // ---------------------------------------------------------------------------------------------------------------------------------
+    // INV-14: Mark delivered, its move back and Cancel units.
+    // ---------------------------------------------------------------------------------------------------------------------------------
+
+    /** "5 units of Denim Jacket marked delivered." */
+    public static function delivered(int $units, string $product): string
     {
-        return __('The sizes ordered for :product have changed. Enter the units again.', ['product' => $product]);
+        return trans_choice('{1} :count unit of :product marked delivered.|[2,*] :count units of :product marked delivered.', $units, ['product' => $product, 'count' => self::count($units)]);
     }
 
-    /** Why a started line can't leave the order (also when its product is swapped, since lines are matched by product). */
-    public static function startedLineRemoved(string $product, int $started): string
+    /** "5 units of Denim Jacket moved back to To deliver." */
+    public static function movedBack(int $units, string $product): string
+    {
+        return trans_choice('{1} :count unit of :product moved back to To deliver.|[2,*] :count units of :product moved back to To deliver.', $units, ['product' => $product, 'count' => self::count($units)]);
+    }
+
+    /** "5 units of Denim Jeans 5-pocket cancelled." */
+    public static function cancelled(int $units, string $product): string
+    {
+        return trans_choice('{1} :count unit of :product cancelled.|[2,*] :count units of :product cancelled.', $units, ['product' => $product, 'count' => self::count($units)]);
+    }
+
+    /** Nothing typed in a window. `$what` is "mark delivered", "move back" or "cancel". */
+    public static function atLeastOne(string $what): string
+    {
+        return __('Enter at least one unit to :what.', ['what' => $what]);
+    }
+
+    /** "Indigo S: Enter a whole number of units." */
+    public static function wholeUnits(string $variant): string
+    {
+        return SizeNames::inText($variant, true).': '.__('Enter a whole number of units.');
+    }
+
+    /** "You can mark at most 2 units of Indigo S: only 2 are on the shelf." */
+    public static function deliverShelfLimit(string $variant, int $max): string
     {
         return trans_choice(
-            "{1} :product can't be removed: :count unit has started.|[2,*] :product can't be removed: :count units have started.",
-            $started,
-            ['product' => $product],
+            '{0} You can\'t mark any unit of :variant: none is on the shelf.|{1} You can mark at most :count unit of :variant: only :count is on the shelf.|[2,*] You can mark at most :count units of :variant: only :count are on the shelf.',
+            $max,
+            ['variant' => SizeNames::inText($variant), 'count' => self::count($max)],
         );
+    }
+
+    /** "You can mark at most 4 units of Indigo S: only 4 are left to deliver." */
+    public static function deliverOrderLimit(string $variant, int $max): string
+    {
+        return trans_choice(
+            '{0} You can\'t mark any unit of :variant: none is left to deliver.|{1} You can mark at most :count unit of :variant: only :count is left to deliver.|[2,*] You can mark at most :count units of :variant: only :count are left to deliver.',
+            $max,
+            ['variant' => SizeNames::inText($variant), 'count' => self::count($max)],
+        );
+    }
+
+    /** "You can move back at most 5 units of Indigo XL." */
+    public static function moveBackLimit(string $variant, int $max): string
+    {
+        return trans_choice(
+            '{0} You can\'t move back any unit of :variant.|{1} You can move back at most :count unit of :variant.|[2,*] You can move back at most :count units of :variant.',
+            $max,
+            ['variant' => SizeNames::inText($variant), 'count' => self::count($max)],
+        );
+    }
+
+    /** "You can cancel at most 10 units of Indigo L." */
+    public static function cancelLimit(string $variant, int $max): string
+    {
+        return trans_choice(
+            '{0} You can\'t cancel any unit of :variant.|{1} You can cancel at most :count unit of :variant.|[2,*] You can cancel at most :count units of :variant.',
+            $max,
+            ['variant' => SizeNames::inText($variant), 'count' => self::count($max)],
+        );
+    }
+
+    /** Mark delivered, when the shelf or the order changed so a field no longer fits. */
+    public static function shelfOrOrderChanged(): string
+    {
+        return __('The shelf or this order changed since you opened this page.');
+    }
+
+    /** Move back and Cancel units, when the order changed so a field no longer fits. */
+    public static function orderChanged(): string
+    {
+        return __('This order changed since you opened this page.');
+    }
+
+    /** Move back past what a shelf figure can hold (INV-3's limit). */
+    public static function shelfFull(string $variant): string
+    {
+        return __(':variant can\'t go over 1,000,000 units on the shelf.', ['variant' => SizeNames::inText($variant, true)]);
+    }
+
+    private static function count(int $units): string
+    {
+        return (string) Number::format($units, locale: 'en');
     }
 }

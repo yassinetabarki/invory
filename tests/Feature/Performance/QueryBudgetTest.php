@@ -5,6 +5,7 @@ use App\Models\Barcode;
 use App\Models\BarcodeName;
 use App\Models\Colour;
 use App\Models\Material;
+use App\Models\Order;
 use App\Models\OrderLine;
 use App\Models\Product;
 use App\Models\ProductCategory;
@@ -209,22 +210,26 @@ it('stays within the query budget on Edit order, however many lines and products
         ->and(count($many))->toBe(count($few), implode(PHP_EOL, $many));
 });
 
-it('stays within the query budget on the preview of Start cutting, however many materials the composition has', function () {
-    $order = bookOrder();
-    $preview = fn (int $position) => countQueries(fn () => $this->getJson(route('orders.lines.moves.preview', [
-        $order, $order->lines()->get()[$position], 'move' => 'start_cutting', 'units' => 30,
-    ]))->assertOk());
+it('stays within the query budget when the deferred order tracker loads, however many lines the order has (INV-14)', function () {
     actingAs($this->user);
+    $trackerQueries = function (Order $order): array {
+        $firstVisit = $this->get(route('orders.show', $order))->assertOk();
+
+        return partialReloadQueries($firstVisit, ['tracker'], fn (Assert $partial) => $partial->has('tracker.lines'));
+    };
+    $small = bookSizedOrder();
+    $lines = array_map(fn (int $number): array => [demoProduct(DEMO_PRODUCT_SKUS[$number]), 10 * $number], [3, 4, 5, 7]);
+    $big = bookOrder(['client' => 'Five lines'], $lines);
+    OrderLine::factory()->sized(['S' => 4, 'XL' => 6])->create(['order_id' => $big->id, 'product_id' => demoProduct('PRD-TSH-002')->id, 'position' => 4]);
 
     // Warm up: the first request of a process may run one-off queries (schema introspection, the framework's own caches).
-    $preview(0);
+    $trackerQueries($small);
 
-    $jacket = $preview(0);
-    $jeans = $preview(1);
+    $few = $trackerQueries($small);
+    $many = $trackerQueries($big);
 
-    expect($jacket)->toBeLessThanOrEqual(QUERY_BUDGET)
-        ->and(demoProduct('PRD-JKT-001')->components()->count())->not->toBe(demoProduct('PRD-JNS-005')->components()->count())
-        ->and($jeans)->toBe($jacket);
+    expect(count($many))->toBeLessThanOrEqual(QUERY_BUDGET, implode(PHP_EOL, $many))
+        ->and(count($many))->toBe(count($few), implode(PHP_EOL, $many));
 });
 
 it('stays within the query budget when the deferred recent history of the materials list loads', function () {

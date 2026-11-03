@@ -67,8 +67,9 @@ function routeRows(): array
         'orders.edit' => ['get', 'orders.edit', 'order'],
         'orders.update' => ['put', 'orders.update', 'order'],
         'orders.destroy' => ['delete', 'orders.destroy', 'order'],
-        'orders.lines.moves.store' => ['post', 'orders.lines.moves.store', 'order line'],
-        'orders.lines.moves.preview' => ['get', 'orders.lines.moves.preview', 'order line'],
+        'orders.lines.deliveries.store' => ['post', 'orders.lines.deliveries.store', 'order line'],
+        'orders.lines.deliveries.destroy' => ['post', 'orders.lines.deliveries.destroy', 'order line'],
+        'orders.lines.cancellations.store' => ['post', 'orders.lines.cancellations.store', 'order line'],
         'materials.restocks.store' => ['post', 'materials.restocks.store', 'material'],
     ];
 }
@@ -120,7 +121,7 @@ function routePayload(string $kind): array
             ['product_id' => pid(1), 'units' => orderUnits(pid(1), ['One size' => '50'], list: SizeList::ONE_SIZE)],
             ['product_id' => pid(5), 'units' => orderUnits(pid(5), ['One size' => '30'], list: SizeList::ONE_SIZE)],
         ]]),
-        'move' => ['move' => 'start_cutting', 'units' => '5'],
+        'cancel' => ['cells' => orderUnits(pid(1), ['One size' => '1'], list: SizeList::ONE_SIZE)],
         default => [],
     };
 }
@@ -165,8 +166,9 @@ it('registers the frozen routes behind auth and verified', function (string $nam
     'orders.edit' => ['orders.edit', 'GET', 'orders/{order}/edit'],
     'orders.update' => ['orders.update', 'PUT', 'orders/{order}'],
     'orders.destroy' => ['orders.destroy', 'DELETE', 'orders/{order}'],
-    'orders.lines.moves.store' => ['orders.lines.moves.store', 'POST', 'orders/{order}/lines/{line}/moves'],
-    'orders.lines.moves.preview' => ['orders.lines.moves.preview', 'GET', 'orders/{order}/lines/{line}/moves/preview'],
+    'orders.lines.deliveries.store' => ['orders.lines.deliveries.store', 'POST', 'orders/{order}/lines/{line}/deliveries'],
+    'orders.lines.deliveries.destroy' => ['orders.lines.deliveries.destroy', 'POST', 'orders/{order}/lines/{line}/deliveries/back'],
+    'orders.lines.cancellations.store' => ['orders.lines.cancellations.store', 'POST', 'orders/{order}/lines/{line}/cancellations'],
 ]);
 
 it('keeps the existing materials route names and does not add sale pages beyond the contract', function () {
@@ -225,7 +227,7 @@ it('redirects valid writes to the page the contract names', function (string $me
     'orders.store goes to the order\'s page' => ['post', 'orders.store', null, 'order', 'orders.show', ['order']],
     'orders.update goes to the order\'s page' => ['put', 'orders.update', 'order', 'order edit', 'orders.show', ['order']],
     'orders.destroy goes back' => ['delete', 'orders.destroy', 'order', 'none', null, []],
-    'orders.lines.moves.store goes to the order\'s page' => ['post', 'orders.lines.moves.store', 'order line', 'move', 'orders.show', ['order']],
+    'orders.lines.cancellations.store goes to the order\'s page' => ['post', 'orders.lines.cancellations.store', 'order line', 'cancel', 'orders.show', ['order']],
 ]);
 
 it('sends an invalid write back to where it came from, with its errors', function (string $method, string $route, int|string|null $parameter, array $errors) {
@@ -243,7 +245,8 @@ it('sends an invalid write back to where it came from, with its errors', functio
     'sales.update' => ['put', 'sales.update', 'sale', ['product_id', 'quantity', 'unit_price', 'sold_on']],
     'orders.store' => ['post', 'orders.store', null, ['client.phone', 'client.name', 'client.city', 'ordered_on', 'lines']],
     'orders.update' => ['put', 'orders.update', 'order', ['ordered_on', 'lines']],
-    'orders.lines.moves.store' => ['post', 'orders.lines.moves.store', 'order line', ['move', 'units']],
+    'orders.lines.deliveries.store' => ['post', 'orders.lines.deliveries.store', 'order line', ['cells']],
+    'orders.lines.cancellations.store' => ['post', 'orders.lines.cancellations.store', 'order line', ['cells']],
     'restock' => ['post', 'materials.restocks.store', 'material', ['quantity', 'unit_price', 'received_on']], // update_unit_cost is optional (F-20)
 ]);
 
@@ -304,11 +307,11 @@ it('answers 404 for a non-numeric product or sale id', function (string $method,
     'order update, beyond the integer range' => ['put', '/orders/99999999999999999999'],
     'order destroy, decimal' => ['delete', '/orders/1.5'],
     'order destroy, beyond the integer range' => ['delete', '/orders/99999999999999999999'],
-    'order move, order in letters' => ['post', '/orders/abc/lines/1/moves'],
-    'order move, line in letters' => ['post', '/orders/1/lines/abc/moves'],
-    'order move, line beyond the integer range' => ['post', '/orders/1/lines/99999999999999999999/moves'],
-    'order move preview, line in letters' => ['get', '/orders/1/lines/abc/moves/preview'],
-    'order move preview, order beyond the integer range' => ['get', '/orders/99999999999999999999/lines/1/moves/preview'],
+    'order delivery, order in letters' => ['post', '/orders/abc/lines/1/deliveries'],
+    'order delivery, line in letters' => ['post', '/orders/1/lines/abc/deliveries'],
+    'order delivery, line beyond the integer range' => ['post', '/orders/1/lines/99999999999999999999/deliveries'],
+    'order cancellation, line in letters' => ['post', '/orders/1/lines/abc/cancellations'],
+    'order move back, order beyond the integer range' => ['post', '/orders/99999999999999999999/lines/1/deliveries/back'],
 ]);
 
 // Route model binding makes an unknown product or sale a 404.
@@ -331,7 +334,7 @@ it('answers 404 for an unknown product or sale id, before anything is validated'
     'update an order' => ['put', '/orders/900000000', 'order'],
     'destroy an order' => ['delete', '/orders/900000000', 'none'],
     'order zero' => ['get', '/orders/0/edit', 'none'],
-    'move units on an unknown order' => ['post', '/orders/900000000/lines/1/moves', 'move'],
+    'cancel units on an unknown order' => ['post', '/orders/900000000/lines/1/cancellations', 'cancel'],
 ]);
 
 it('serves the last demo product', function () {

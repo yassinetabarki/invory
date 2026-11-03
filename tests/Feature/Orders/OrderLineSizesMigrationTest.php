@@ -64,6 +64,9 @@ function linesAsTheyWereBeforeSizes(): array
 
 it('makes every line recorded before sizes "One size" with one row holding its quantity and counts, and round-trips', function () {
     $migration = orderLineSizesMigration();
+    // The newer migrations of the hand-kept list (F-60) go first: INV-14's counts, then INV-13's colours.
+    deliveryCountsMigration()->down();
+    orderLineColoursMigration()->down();
     $migration->down();
 
     $workshopId = putLinesInTheOldShape();
@@ -90,4 +93,7 @@ it('makes every line recorded before sizes "One size" with one row holding its q
 
     expect(sizesOfEveryLine())->toBe($expected)
         ->and(Schema::hasColumn('stock_movements', 'sizes'))->toBeTrue();
+
+    orderLineColoursMigration()->up();
+    deliveryCountsMigration()->up();
 });

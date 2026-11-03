@@ -28,11 +28,10 @@ it('sends a line counted by size with a row per size, in size order, and the lin
     expect(pageProp($response, 'order.lines.0.size_mode'))->toBe('by_size')
         ->and(pageProp($response, 'order.lines.0.sizes.*.size.label'))->toBe(['S', 'M', 'L', 'XL'])
         ->and(pageProp($response, 'order.lines.0.sizes.*.quantity'))->toBe([10, 20, 15, 5])
-        ->and(pageProp($response, 'order.lines.0.sizes.*.to_start'))->toBe([10, 20, 15, 5])
-        ->and(pageProp($response, 'order.lines.0.sizes.*.in_cutting'))->toBe([0, 0, 0, 0])
-        ->and(pageProp($response, 'order.lines.0.sizes.*.ready_to_ship'))->toBe([0, 0, 0, 0])
-        ->and(pageProp($response, 'order.lines.0.sizes.*.shipped'))->toBe([0, 0, 0, 0])
-        ->and(pageProp($response, 'order.lines.0'))->toMatchArray(['quantity' => 50, 'to_start' => 50]);
+        ->and(pageProp($response, 'order.lines.0.sizes.*.to_deliver'))->toBe([10, 20, 15, 5])
+        ->and(pageProp($response, 'order.lines.0.sizes.*.delivered'))->toBe([0, 0, 0, 0])
+        ->and(pageProp($response, 'order.lines.0.sizes.*.cancelled'))->toBe([0, 0, 0, 0])
+        ->and(pageProp($response, 'order.lines.0'))->toMatchArray(['quantity' => 50, 'to_deliver' => 50]);
 });
 
 it('tells how a line counts: by size, as a "One size" product, or as recorded before sizes (S-60 AC-5)', function (callable $book, string $mode, string $label, int $quantity) {

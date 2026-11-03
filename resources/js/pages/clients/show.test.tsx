@@ -20,7 +20,7 @@ vi.mock('@inertiajs/react', async (importOriginal) => {
     );
 });
 
-/** One of Amira's orders: `units` of one product, open or shipped. */
+/** One of Amira's orders: `units` of one product, open or delivered. */
 function order(
     id: number,
     date: string,
@@ -44,23 +44,19 @@ function order(
                     deleted: false,
                 },
                 quantity: units,
-                to_start: shipped ? 0 : units,
-                in_cutting: 0,
-                ready_to_ship: 0,
-                shipped: shipped ? units : 0,
-                started: shipped ? units : 0,
-                status: shipped ? 'shipped' : 'not_started',
-                status_label: shipped ? 'Shipped' : 'Not started',
+                to_deliver: shipped ? 0 : units,
+                delivered: shipped ? units : 0,
+                cancelled: 0,
+                status: shipped ? 'delivered' : 'not_started',
+                status_label: shipped ? 'Delivered' : 'Not started',
             }),
         ],
         units,
-        to_start: shipped ? 0 : units,
-        in_cutting: 0,
-        ready_to_ship: 0,
-        shipped: shipped ? units : 0,
-        status: shipped ? 'shipped' : 'not_started',
-        status_label: shipped ? 'Shipped' : 'Not started',
-        delete_refusal: null,
+        to_deliver: shipped ? 0 : units,
+        delivered: shipped ? units : 0,
+        cancelled: 0,
+        status: shipped ? 'delivered' : 'not_started',
+        status_label: shipped ? 'Delivered' : 'Not started',
         client_id: 1,
         client_details: null,
     };
@@ -83,7 +79,8 @@ function props(
         filters: { status },
         statuses: [
             { value: 'open', label: 'Open orders' },
-            { value: 'shipped', label: 'Shipped' },
+            { value: 'delivered', label: 'Delivered' },
+            { value: 'cancelled', label: 'Cancelled' },
             { value: 'all', label: 'All orders' },
         ],
     };
@@ -147,11 +144,11 @@ describe('clients/show page', () => {
 
         render(<ClientsShow {...props(amira, amirasOrders)} />);
         await user.click(screen.getByRole('combobox', { name: 'Status' }));
-        await user.click(screen.getByRole('option', { name: 'Shipped' }));
+        await user.click(screen.getByRole('option', { name: 'Delivered' }));
 
         expect(inertiaMock.router.get).toHaveBeenCalledWith(
             '/clients/1',
-            { status: 'shipped' },
+            { status: 'delivered' },
             expect.objectContaining({
                 only: ['orders', 'filters'],
                 preserveState: true,
@@ -174,10 +171,10 @@ describe('clients/show page', () => {
         ).toEqual(['Open orders0', 'Orders0', 'Last orderNo orders yet']);
         unmount();
 
-        render(<ClientsShow {...props(amira, [], 'shipped')} />);
+        render(<ClientsShow {...props(amira, [], 'delivered')} />);
 
         expect(
-            screen.getByText('Amira Ben Salah has no shipped orders.'),
+            screen.getByText('Amira Ben Salah has no delivered orders.'),
         ).toBeInTheDocument();
         expect(
             screen.getByRole('button', { name: 'Show all orders' }),

@@ -143,11 +143,11 @@ it('checks again under the product\'s lock when stock was added after the reques
 | INV-13-b (AC-6): a colour that open orders still hold, units ordered and not shipped yet, can't come off either.
 */
 
-/** An order of the jacket in Indigo: one row per size label → [quantity, shipped]. */
+/** An order of the jacket in Indigo: one row per size label → [quantity, delivered]. */
 function orderJacketInIndigo(Product $jacket, array $rows, bool $deleted = false): void
 {
     $order = Order::factory()->create();
-    $line = OrderLine::factory()->sized(array_map(fn (array $row): int => $row[0], $rows), array_map(fn (array $row): array => [0, 0, $row[1]], $rows))
+    $line = OrderLine::factory()->sized(array_map(fn (array $row): int => $row[0], $rows), array_map(fn (array $row): array => [$row[1], 0], $rows))
         ->create(['order_id' => $order->id, 'product_id' => $jacket->id]);
     OrderLineSize::query()->where('order_line_id', $line->id)->update(['colour_id' => demoColour('IND')->id]);
 
@@ -171,14 +171,14 @@ it('refuses to take off a colour that open orders still hold, and saves nothing 
     '1 unit left to ship' => [['S' => [4, 3]], 'Indigo has 1 unit on open orders, so it can\'t be removed from Denim Jacket.'],
 ]);
 
-it('lets a colour come off once its ordered units are all shipped, or when its order was deleted (INV-13 AC-6)', function (bool $deleted, array $rows) {
+it('lets a colour come off once its ordered units are all delivered, or when its order was deleted (INV-13 AC-6)', function (bool $deleted, array $rows) {
     orderJacketInIndigo($this->jacket, $rows, $deleted);
 
     saveJacketColours($this, ['White', 'Black', 'Light wash'])->assertSessionHasNoErrors();
 
     expect($this->jacket->colours()->pluck('colours.code')->all())->not->toContain('IND');
 })->with([
-    'all shipped' => [false, ['S' => [4, 4]]],
+    'all delivered' => [false, ['S' => [4, 4]]],
     'deleted order' => [true, ['S' => [4, 0]]],
 ]);
 
