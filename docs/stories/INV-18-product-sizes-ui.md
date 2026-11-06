@@ -3,7 +3,7 @@ id: INV-18
 title: Sizes chosen per product, managed in Settings
 type: ui
 priority: Must
-status: Draft
+status: Approved
 created: 2026-11-06
 tags:
   - ui-card
