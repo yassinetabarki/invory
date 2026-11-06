@@ -41,7 +41,7 @@ Settings › Labels and its Ticket size. **INV-13 "Search products, order lines 
 yourself; `2575dd0` … `cbdae79`, docs `194534a`, `c8c4716`, browser golden path `aeee262`): the Restocks page, New restock (colour ×
 size grid, scan or type a barcode), the restock detail, Undo restock, and "Restock" on the product page. **Next: INV-16** "Material
 use per size and colour" (prioritized ahead of the queue by the human, D-27, 2026-11-06; pending an ADR before it can be carded), then
-INV-9 "Print barcode labels" (card `Ready`), then INV-7.
+INV-17 "Per-unit QR codes" (an `Idea`, D-28, 2026-11-06), then INV-9 "Print barcode labels" (card `Ready`), then INV-7.
 **Phase 5: Customer orders** (started 2026-10-15, D-12; on hold since 2026-10-24). **Done:** S-48 (accepted 2026-10-15), and **F-41, S-49
 and S-53** (accepted 2026-10-21 after your one click-through; built in one build and landed on `main` together, `e99615e` … `8ab9df8`,
 closing docs `f803cb1`), **S-50** (accepted 2026-10-22; `ba0a0cd`, `74f05a8`, `a23a5d7`, merged in `0270014`), **S-58**
@@ -68,6 +68,11 @@ Phases 6, 7 and 8 are on hold too (D-20).
 AC-7) `Done`: the Restocks page, New restock (colour × size grid, scanning), the restock detail and Undo restock, and "Restock" on
 the product page's Sizes & colours card. Eleven commits `2575dd0` … `cbdae79` (INV-3-a … INV-3-k), docs `194534a`, `c8c4716`, and the
 browser golden path `aeee262`. It left the open list.
+
+**Decided on 2026-11-06 (D-28): INV-17 registered.** You asked for a QR code per unit (one garment), so that progress is kept per
+unit as well as per batch: scanning a unit's code moves only that unit. Both modes stay and the user chooses (move a batch, or move
+units one by one). It is `INV-17` "Per-unit QR codes", an `Idea`, placed after INV-16 and before INV-9: `INV-16` → `INV-17` →
+`INV-9` → `INV-7`. How the two modes fit together is still to be decided (questions in the product-owner's hand-off). Next free ID: INV-18.
 
 **Decided on 2026-11-06 (D-27): INV-16 prioritized now.** You asked to start `INV-16` "Material use per size and colour" right away,
 ahead of the rest of the queue, instead of appending it after `INV-7`. It is still pending an ADR and the tech-lead's agreement on the
@@ -376,7 +381,7 @@ All phase branches (`phase/1-materials`, `phase/2-ui-first-preview`, `phase/3-pe
 3. Done: orders per colour and size was settled and built within INV-5/INV-13.
 4. Done 2026-10-31: INV-2's development card (stock per colour and size) was built and accepted, with the rule "a colour with stock
    can't be taken off a product". INV-8 was built and accepted on 2026-11-01. **INV-3 is `Done`** (2026-11-06); `INV-16` (pending
-   an ADR) is next, then INV-9 (card `Ready`), then INV-7.
+   an ADR) is next, then INV-17 (an `Idea`, D-28), then INV-9 (card `Ready`), then INV-7.
 5. Product-owner, at the next grooming: INV-7 (bigger tap targets on the Settings pages, a Could) gets its card when you ask.
 6. Done 2026-10-24: the process documents describe the new way of working (UI card, then development card, INV IDs; `e2be378`).
 7. Product-owner: before any on-hold story resumes, check its card against the new product model (R-21).

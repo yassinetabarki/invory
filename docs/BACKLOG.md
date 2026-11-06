@@ -25,9 +25,12 @@
 >   INV-3-a … INV-3-k, docs `194534a`, `c8c4716`, browser golden path `aeee262`). Restock of finished products: the Restocks page,
 >   New restock (colour × size grid, scan or type a barcode), the restock detail and Undo restock; "Restock" on the product page's
 >   Sizes & colours card. It left the open list. **INV-9 is next.**
-> - **Current Order** (D-27, 2026-11-06: the human prioritizes `INV-16` now, ahead of the rest): `INV-16` → `INV-9` → `INV-7`. Next
->   free ID: **INV-17** (INV-11 is the tech-debt item raised in the INV-8 review, see [TECH-DEBT.md](TECH-DEBT.md); INV-15 is the
->   real, done "Work tickets and the Scan page").
+> - **Current Order** (D-27, D-28, 2026-11-06: the human prioritizes `INV-16` now, ahead of the rest, and puts `INV-17` right after it):
+>   `INV-16` → `INV-17` → `INV-9` → `INV-7`. Next free ID: **INV-18** (INV-11 is the tech-debt item raised in the INV-8 review, see
+>   [TECH-DEBT.md](TECH-DEBT.md); INV-15 is the real, done "Work tickets and the Scan page").
+> - **Added 2026-11-06:** `INV-17` (Per-unit QR codes) — a new idea from the human: keep batch progress and add progress per unit, with
+>   a QR code per unit; a scan moves only that unit. Both modes stay, the user chooses. An `Idea`: the interaction model is still to be
+>   decided (see Item Details), then a UI card.
 > - **Added 2026-11-06:** `INV-16` (Material use per size and colour) — a new idea from the human: how much material a size uses
 >   may differ (e.g. an L jacket uses more fabric than an M), and "Can produce" should show per colour. This contradicts today's
 >   rule that every size and colour of a product shares one composition (see "Colours" and "Sizes" in the costing domain), so it
@@ -63,7 +66,8 @@
 - **Size:** `S` ($\le 1$ day agent work) · `M` · `L` *(needs split)*
 - **Card:** Full story cards (story, AC with examples, visual scope, out of scope, questions) live in `docs/stories/<id>-<slug>.md`. This backlog displays the short version.
 - **IDs & History:**
-  - Everything new since **2026-10-24 (D-20, D-21)** is numbered **INV-n** (including technical items without UI cards). Next free ID: **INV-17**.
+  - Everything new since **2026-10-24 (D-20, D-21)** is numbered **INV-n** (including technical items without UI cards). Next free ID: **INV-18**.
+  - `INV-17`: Per-unit QR codes, moving units one by one besides whole batches. Added 2026-11-06 (D-28), placed after `INV-16` and before `INV-9`. An `Idea` (see Item Details).
   - `INV-15`: Work tickets and Scan, split from INV-5 on 2026-11-02 (D-24); shares INV-5's UI card (done 2026-11-03).
   - `INV-1` to `INV-5`: Variant rework items (`INV-1`, `INV-2`, `INV-3`, `INV-4` and `INV-5` are all done).
   - `INV-6`: Picker-row swatch edge item.
@@ -95,18 +99,19 @@
 7. **INV-13** (Search products, order lines per colour and size) — `#done` *(Accepted 2026-11-03)*
 8. **INV-14** (Order tracker, served from the shelf) — `#done` *(Accepted 2026-11-03)*
 9. **INV-3** (Restock of finished products) — `#done` *(Accepted 2026-11-06)*
-10. **Next Sequence (D-27):** `INV-16` ➔ `INV-9` ➔ `INV-7`
+10. **Next Sequence (D-27, D-28):** `INV-16` ➔ `INV-17` ➔ `INV-9` ➔ `INV-7`
 8. **Card Structure:** Each feature receives a UI card first (`INV-n-<slug>-ui.md`), followed by a development card (`INV-n-<slug>.md`).
 9. **Shared UI Cards:** `INV-2`, `INV-8`, and `INV-9` share the same UI card but are accepted individually; so do `INV-5` and `INV-15`.
 10. **Phase 7 Tech Allowance:** `F-43` · `F-46` · `F-52` · `F-53`
 
 ### Open Backlog Table
 
-| ID         | What it brings                                               | Type    | Status        | Priority / Size  |
-| ---------- | ------------------------------------------------------------ | ------- | ------------- | ---------------- |
-| **INV-16** | Material use per size and colour, "Can produce" per colour   | Feature | `Ready`       | Must / L         |
-| **INV-9**  | Print barcode labels                                         | Feature | `Ready`       | Must / M         |
-| **INV-7**  | Bigger tap targets on Settings pages                         | Feature | `Idea`        | Could / S–M      |
+| ID         | What it brings                                               | Type    | Status        | Priority / Size    |
+| ---------- | ------------------------------------------------------------ | ------- | ------------- | ------------------ |
+| **INV-16** | Material use per size and colour, "Can produce" per colour   | Feature | `Ready`       | Must / L           |
+| **INV-17** | Per-unit QR codes: move units one by one, besides batches    | Feature | `Idea`        | Should / L (split) |
+| **INV-9**  | Print barcode labels                                         | Feature | `Ready`       | Must / M           |
+| **INV-7**  | Bigger tap targets on Settings pages                         | Feature | `Idea`        | Could / S–M        |
 
 > [!note] Technical Note on INV-6
 > **INV-6** (picker-row swatch edge) joins a phase's tech allowance when proposed by the tech lead. It does not block the feature sequence above.
@@ -181,6 +186,23 @@
   after them. Its UI card is approved and its development card is written (`Draft`, awaiting approval); then the tech-lead adds the Technical work.
 - **Links:** depends on the colour and size work already done (`INV-1`, `INV-2`) and sits downstream of the costing domain's BOM rules.
 
+#### `INV-17` · Per-unit QR codes: move units one by one, besides batches
+- **Type:** Feature | **Priority:** Should (the human's order, D-28, puts it ahead of the Must `INV-9`) | **Size:** L, to be split when carded (the split takes the next free IDs) | **Status:** `Idea`
+- **What it brings:** in Progress the workshop keeps batch progress and adds progress per unit. A unit gets its own QR code; scanning
+  it moves only that unit, through the same phases, until it is put in stock. Scanning a batch's work ticket still moves the batch.
+- **The request, from the human (2026-11-06):** "In Progress we want to keep the batch progress, and add progress per item. Generate a
+  QR code for each product (unit) and track its phases until the final step. Whenever a code is scanned, only that product moves."
+  On how it relates to the batch tickets: "I want the system to handle both, based on what the user chooses: move a batch, or move one
+  by one."
+- **Decided by the human (2026-11-06, D-28):** per-unit QR codes come **alongside** today's batch tracking; the system supports **both**
+  modes and the user chooses. The exact interaction model is still to be decided (the product-owner's brainstorm is in the hand-off of
+  2026-11-06). Queue: after `INV-16`, before `INV-9`.
+- **What exists:** `INV-5` (batches move through phases, Put in stock, Undo batch, split) and `INV-15` (a work ticket and QR per batch;
+  the Scan page moves a whole batch; moving part of a batch by scan was left out). Barcodes per colour and size (`INV-8`) identify a
+  variant, not one unit.
+- **Before a card:** the human picks the interaction model; the ui-ux-designer draws the Progress and Scan changes; the tech-lead sizes
+  the data and the split. Then the UI card, then the development card.
+
 > [!abstract] Unscheduled Idea
 > **Production for the shelf:** A batch with no attached client moving through production phases, ending with "Put in stock". *(No ID assigned yet.)* Since 2026-11-01 this is no longer an idea apart: it is how Progress works, and it is now `INV-5`'s rewritten card.
 
@@ -194,6 +216,7 @@
 ## 🏛️ Decisions That Shape the Backlog
 
 > [!summary] Core Operational Rules
+> - **D-28 (2026-11-06):** `INV-17` (per-unit QR codes) is registered and placed after `INV-16`, before `INV-9`: `INV-16` → `INV-17` → `INV-9` → `INV-7`. Scope: unit QR codes **alongside** batch tracking; both modes supported, the user chooses; the interaction model is still to be decided.
 > - **D-27 (2026-11-06):** `INV-16` moves to the front of the queue, ahead of `INV-9` and `INV-7`.
 > - **D-20 (2026-10-24):** Card flow paused. Open items placed on hold for variant rework (`INV-n` sequence).
 > - **D-26 (2026-11-03):** `INV-13` then `INV-14` move ahead of INV-3's acceptance and `INV-9`.
