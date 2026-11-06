@@ -41,7 +41,7 @@ Settings › Labels and its Ticket size. **INV-13 "Search products, order lines 
 yourself; `2575dd0` … `cbdae79`, docs `194534a`, `c8c4716`, browser golden path `aeee262`): the Restocks page, New restock (colour ×
 size grid, scan or type a barcode), the restock detail, Undo restock, and "Restock" on the product page. **Next: INV-18** "Sizes chosen per
 product, managed in Settings" (an `Idea`, D-29, 2026-11-06; its UI design is in progress), then INV-16 "Material use per colour and
-size" (card `Ready`, **on hold until INV-18 is done**), then INV-17 "Per-unit QR codes" (`UI approved` 2026-11-06, D-28), then INV-9 "Print barcode
+size" (card `Ready`, **on hold until INV-18 is done**), then INV-17 "Per-unit QR codes" (UI card `Approved` and development card `Ready`, both 2026-11-06, D-28), then INV-9 "Print barcode
 labels" (card `Ready`), then INV-7.
 **Phase 5: Customer orders** (started 2026-10-15, D-12; on hold since 2026-10-24). **Done:** S-48 (accepted 2026-10-15), and **F-41, S-49
 and S-53** (accepted 2026-10-21 after your one click-through; built in one build and landed on `main` together, `e99615e` … `8ab9df8`,
@@ -84,7 +84,11 @@ units one by one). It is `INV-17` "Per-unit QR codes", placed after INV-16 and b
 its start already in that phase; unit codes by a tick at Start batch or "Print unit codes"; the last phase puts one unit in stock; a
 "Move units as soon as I scan" switch), and its **UI card is `Approved`** ([INV-17-per-unit-qr-ui.md](stories/INV-17-per-unit-qr-ui.md),
 2026-11-06) with three answers from you: a unit ahead of the floor is not refused, every move joins a batch of the same start already in
-the phase (batches without unit codes too), and the two limits are left to the tech-lead. Next: its development card. Next free ID: INV-19.
+the phase (batches without unit codes too), and the two limits are left to the tech-lead. Its **development card is `Ready`** (you approved it on 2026-11-06,
+[INV-17-per-unit-qr.md](stories/INV-17-per-unit-qr.md)): ten criteria, size L, kept as one card (the tech-lead proposes a split only if it
+rates the work above L). Your answers: the unit toasts stay as written (the note's last sentence is dropped when all units of a batch
+move); batches of one start already side by side in a phase are left as they are, and the next move joins the lowest-numbered one. Its
+Technical work is added only when its turn comes (`INV-18` → `INV-16` → `INV-17`). Next free ID: INV-19.
 
 **Decided on 2026-11-06 (D-27): INV-16 prioritized now.** You asked to start `INV-16` "Material use per size and colour" right away,
 ahead of the rest of the queue, instead of appending it after `INV-7`. It is still pending an ADR and the tech-lead's agreement on the
@@ -393,7 +397,7 @@ All phase branches (`phase/1-materials`, `phase/2-ui-first-preview`, `phase/3-pe
 3. Done: orders per colour and size was settled and built within INV-5/INV-13.
 4. Done 2026-10-31: INV-2's development card (stock per colour and size) was built and accepted, with the rule "a colour with stock
    can't be taken off a product". INV-8 was built and accepted on 2026-11-01. **INV-3 is `Done`** (2026-11-06); `INV-18` (sizes
-   per product, an `Idea`, D-29) is next, then INV-16 (card `Ready`, on hold until INV-18 is done), then INV-17 (`UI approved` 2026-11-06, D-28; next its development card),
+   per product, an `Idea`, D-29) is next, then INV-16 (card `Ready`, on hold until INV-18 is done), then INV-17 (UI card `Approved` and development card `Ready`, both 2026-11-06, D-28; Technical work when its turn comes),
    then INV-9 (card `Ready`), then INV-7.
 5. Product-owner, at the next grooming: INV-7 (bigger tap targets on the Settings pages, a Could) gets its card when you ask.
 6. Done 2026-10-24: the process documents describe the new way of working (UI card, then development card, INV IDs; `e2be378`).
