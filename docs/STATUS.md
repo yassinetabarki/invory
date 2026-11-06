@@ -1,6 +1,6 @@
 # Invory — project status report
 
-> Owner: **product-owner** (updated at every phase boundary and after every accepted story) · Report date: **2026-11-03**
+> Owner: **product-owner** (updated at every phase boundary and after every accepted story) · Report date: **2026-11-06**
 > Sources: every plan in [docs/plans/](plans/README.md), the [backlog archive](archive/backlog-2026-10-14.md) and `git log` on `main`.
 > Gate results: run by the main session on 2026-10-14 for this first report. Later updates quote the tech-lead's latest delivery report
 > (the product-owner never runs gates).
@@ -35,10 +35,13 @@ range, all or nothing; products with the same name share barcodes; a renamed pro
 would give one colour and size two numbers. **INV-4 "Clients as an entity" is `Done`** (accepted 2026-11-02; INV-12's phone-first
 Client card was built within it, see §4). **INV-5 "Progress, production for the shelf" is `Done`** (accepted 2026-11-02, on
 `PI-DEV`, see §4). **INV-15 "Work tickets and the Scan page" is `Done`** (accepted 2026-11-03, on `PI-DEV`, see §4), with
-Settings › Labels and its Ticket size. **D-25 (2026-11-02):** `INV-15` (work tickets and Scan) comes next, its development card first. **D-23 (2026-11-02):** `INV-3` came next, ahead of `INV-9`. **Then INV-3**
-"Restock finished products" — its development card is `Ready` (approved 2026-11-02, size L, kept as one card); its Technical work comes next — then **INV-9** "Print barcode labels"
-(card `Ready`), then INV-5, INV-13 and INV-14 "Refactor the order" (all `UI approved`) and INV-7. Nothing is in flight: orders per
-colour and size is still to be discussed before INV-5's development card.
+Settings › Labels and its Ticket size. **INV-13 "Search products, order lines per colour and size" is `Done`** (accepted
+2026-11-03, on `PI-DEV`, see §4). **INV-14 "Order tracker, served from the shelf" is `Done`** (accepted 2026-11-03, on `PI-DEV`, see
+§4). **INV-3 "Restock finished products" is `Done`** (accepted 2026-11-06 after you merged `PI-DEV` into `main` and confirmed it
+yourself; `2575dd0` … `cbdae79`, docs `194534a`, `c8c4716`, browser golden path `aeee262`): the Restocks page, New restock (colour ×
+size grid, scan or type a barcode), the restock detail, Undo restock, and "Restock" on the product page. **Next: INV-16** "Material
+use per size and colour" (prioritized ahead of the queue by the human, D-27, 2026-11-06; pending an ADR before it can be carded), then
+INV-9 "Print barcode labels" (card `Ready`), then INV-7.
 **Phase 5: Customer orders** (started 2026-10-15, D-12; on hold since 2026-10-24). **Done:** S-48 (accepted 2026-10-15), and **F-41, S-49
 and S-53** (accepted 2026-10-21 after your one click-through; built in one build and landed on `main` together, `e99615e` … `8ab9df8`,
 closing docs `f803cb1`), **S-50** (accepted 2026-10-22; `ba0a0cd`, `74f05a8`, `a23a5d7`, merged in `0270014`), **S-58**
@@ -60,6 +63,15 @@ Phases 6, 7 and 8 are on hold too (D-20).
 ---
 
 ## 2. Decisions needed from you
+
+**Decided on 2026-11-06: INV-3 accepted.** You merged `PI-DEV` into `main` and confirmed INV-3 "Restock finished products" (AC-1 to
+AC-7) `Done`: the Restocks page, New restock (colour × size grid, scanning), the restock detail and Undo restock, and "Restock" on
+the product page's Sizes & colours card. Eleven commits `2575dd0` … `cbdae79` (INV-3-a … INV-3-k), docs `194534a`, `c8c4716`, and the
+browser golden path `aeee262`. It left the open list.
+
+**Decided on 2026-11-06 (D-27): INV-16 prioritized now.** You asked to start `INV-16` "Material use per size and colour" right away,
+ahead of the rest of the queue, instead of appending it after `INV-7`. It is still pending an ADR and the tech-lead's agreement on the
+costing rules before it can be carded. **Next: INV-16, then INV-9.**
 
 **Decided on 2026-11-03: INV-14 accepted.** Old orders: Shipped became Delivered and Ready-to-ship units went on the shelf as one
 restock "Orders" per workshop (your answer 1b); kept as one card (L). Orders no longer cut: the order page has the Order tracker, Mark
@@ -358,11 +370,13 @@ All phase branches (`phase/1-materials`, `phase/2-ui-first-preview`, `phase/3-pe
    `PI-DEV` (`4ed7e4d` … `64f463c`). **D-23 (2026-11-02): `INV-3` now comes next, ahead of `INV-9`.** Human: run the PostgreSQL parity
    suite, the browser golden path and the GD tests on `PI-DEV`, then merge it to `main`.
    Done 2026-11-02: INV-5 Progress accepted, on `PI-DEV` (`9672c68` … `41ea604`). Done 2026-11-03: INV-15 work tickets and Scan
-   accepted, on `PI-DEV` (`967dcf4` … `adea45b`). Done 2026-11-03: INV-13 accepted, on `PI-DEV` (`39647ce`), and INV-14 (`7af1a63`). **Next (D-26): INV-3's acceptance, then INV-9.**
-3. Human: discuss orders per colour and size (INV-5's "to be discussed" part); it is decided before INV-5's development card.
+   accepted, on `PI-DEV` (`967dcf4` … `adea45b`). Done 2026-11-03: INV-13 accepted, on `PI-DEV` (`39647ce`), and INV-14 (`7af1a63`).
+   Done 2026-11-06: INV-3 accepted, after you merged `PI-DEV` into `main` (`2575dd0` … `cbdae79`, `aeee262`). **D-27 (2026-11-06):
+   `INV-16` now comes first, ahead of `INV-9` and `INV-7`** (pending its ADR).
+3. Done: orders per colour and size was settled and built within INV-5/INV-13.
 4. Done 2026-10-31: INV-2's development card (stock per colour and size) was built and accepted, with the rule "a colour with stock
-   can't be taken off a product". INV-8 was built and accepted on 2026-11-01. **INV-3's development card is written** (`Draft`, this
-   hand-off), waiting for your approval; INV-9 (card `Ready`) follows, then INV-5, INV-13, INV-14 and INV-7 in order (D-23).
+   can't be taken off a product". INV-8 was built and accepted on 2026-11-01. **INV-3 is `Done`** (2026-11-06); `INV-16` (pending
+   an ADR) is next, then INV-9 (card `Ready`), then INV-7.
 5. Product-owner, at the next grooming: INV-7 (bigger tap targets on the Settings pages, a Could) gets its card when you ask.
 6. Done 2026-10-24: the process documents describe the new way of working (UI card, then development card, INV IDs; `e2be378`).
 7. Product-owner: before any on-hold story resumes, check its card against the new product model (R-21).

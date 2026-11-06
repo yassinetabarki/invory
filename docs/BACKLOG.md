@@ -4,7 +4,7 @@
 > **Owner:** `product-owner` (order, wording, acceptance criteria) · **Technical Detail:** `tech-lead` ([TECH-DEBT.md](TECH-DEBT.md), [plans/](plans/README.md))
 > **Phases & Goals:** [ROADMAP.md](ROADMAP.md) · **Progress:** [STATUS.md](STATUS.md)
 
-> [!history] Last Cleaned: 2026-11-03
+> [!history] Last Cleaned: 2026-11-06
 > - **INV-14 Done** (accepted 2026-11-03; on `PI-DEV`: `7af1a63`; card `432731b`, Technical work `753c611`). Orders are served from the shelf: tracker, Mark delivered, Cancel units; orders no longer cut. It left the open list. **Next (D-26): INV-3's acceptance, then INV-9.**
 > - **INV-13 Done** (accepted 2026-11-03 by the human; on `PI-DEV`: `39647ce`; card `f07ef4e`, Technical work `7bf05bb`). Order lines hold colour and size; Search products shows the shelf stock (no "Can produce now", the human's answer). It left the open list. **INV-14 is next.**
 > - **D-26 (2026-11-03, human):** `INV-13` then `INV-14` come next, ahead of INV-3's acceptance and `INV-9`. INV-13's development card is approved (`Ready`, 2026-11-03) and its Technical work too (`Planned`, 2026-11-03: 8 steps, INV-13-a … INV-13-h; "Can produce now" left out of the search and the order, the human's answer).
@@ -21,7 +21,24 @@
 > - **INV-2 Split:** INV-2's card was split into three: **INV-2** (stock, done), **INV-8** (barcodes), and **INV-9** (labels).
 > - **Added 2026-11-01:** `INV-12` (Refactor the order), placed after INV-5 and before INV-7. **Split the same day into `INV-12`, `INV-13` and `INV-14`, each with a UI card.** `INV-12`, `INV-13` and `INV-14` are `UI approved` (2026-11-01); `INV-5`'s UI card, reopened because finished products are not tied to an order, was rewritten and is `UI approved` again (2026-11-01). `INV-13`'s card got a one-line wording fix (re-approved 2026-11-01). They wait their turn for building.
 > - **Parked idea:** "Barcodes tab polish" (from the INV-8 UX review), planned with INV-9; no ID yet.
-> - **Current Order** (D-26, INV-13 and INV-14 done): `INV-3` (acceptance) → `INV-9` → `INV-7`. Next free ID: **INV-16** (INV-11 is the tech-debt item raised in the INV-8 review, see [TECH-DEBT.md](TECH-DEBT.md)).
+> - **INV-3 Done** (accepted 2026-11-06 by the human, who confirmed it after merging `PI-DEV` to `main`; `2575dd0` … `cbdae79` =
+>   INV-3-a … INV-3-k, docs `194534a`, `c8c4716`, browser golden path `aeee262`). Restock of finished products: the Restocks page,
+>   New restock (colour × size grid, scan or type a barcode), the restock detail and Undo restock; "Restock" on the product page's
+>   Sizes & colours card. It left the open list. **INV-9 is next.**
+> - **Current Order** (D-27, 2026-11-06: the human prioritizes `INV-16` now, ahead of the rest): `INV-16` → `INV-9` → `INV-7`. Next
+>   free ID: **INV-17** (INV-11 is the tech-debt item raised in the INV-8 review, see [TECH-DEBT.md](TECH-DEBT.md); INV-15 is the
+>   real, done "Work tickets and the Scan page").
+> - **Added 2026-11-06:** `INV-16` (Material use per size and colour) — a new idea from the human: how much material a size uses
+>   may differ (e.g. an L jacket uses more fabric than an M), and "Can produce" should show per colour. This contradicts today's
+>   rule that every size and colour of a product shares one composition (see "Colours" and "Sizes" in the costing domain), so it
+>   needs the human's decisions and an ADR before any card is drafted. (First logged as "INV-15" on 2026-11-06, before the `PI-DEV`
+>   merge revealed that number is taken by the done "Work tickets and Scan" item; renumbered to **INV-16**.) **Decided by the human,
+>   2026-11-06:** quantity varies by **both size and colour** (a full grid, not one override shared across colours); the input is a
+>   **flat quantity per size/colour combination**, not a multiplier on today's quantity; "per colour" capacity means **colour-specific
+>   material stock** (e.g. "Denim 12oz Indigo" would be its own stocked material with its own quantity on hand, not one shared stock
+>   sliced by colour).
+> - **D-27 (2026-11-06, human):** `INV-16` moves to the front of the queue, ahead of `INV-9` and `INV-7`, in place of being appended
+>   after them. The ADR and the tech-lead's agreement on the costing rules are still needed before any UI or development card is drafted.
 > - **INV-1 Done:** "Colours as fixed values" accepted & merged (`a66f4bf`, `78a4eee`), so it left this backlog.
 > - **Added:** `INV-6` (picker-row item) and `INV-7` (Could: bigger tap targets on Settings).
 > - **Archive:** Done items leave this file and are recorded in `STATUS.md` and the archive.
@@ -41,16 +58,18 @@
 - **Size:** `S` ($\le 1$ day agent work) · `M` · `L` *(needs split)*
 - **Card:** Full story cards (story, AC with examples, visual scope, out of scope, questions) live in `docs/stories/<id>-<slug>.md`. This backlog displays the short version.
 - **IDs & History:**
-  - Everything new since **2026-10-24 (D-20, D-21)** is numbered **INV-n** (including technical items without UI cards). Next free ID: **INV-16**.
+  - Everything new since **2026-10-24 (D-20, D-21)** is numbered **INV-n** (including technical items without UI cards). Next free ID: **INV-17**.
   - `INV-15`: Work tickets and Scan, split from INV-5 on 2026-11-02 (D-24); shares INV-5's UI card (done 2026-11-03).
-  - `INV-1` to `INV-5`: Variant rework items (`INV-1`, `INV-2`, `INV-4` and `INV-5` are done).
+  - `INV-1` to `INV-5`: Variant rework items (`INV-1`, `INV-2`, `INV-3`, `INV-4` and `INV-5` are all done).
   - `INV-6`: Picker-row swatch edge item.
   - `INV-7`: Settings tap targets.
   - `INV-2`: Stock per colour and size (done, `46af1cc`, `ab313eb`, `4088200`).
+  - `INV-3`: Restock of finished products (done 2026-11-06, `2575dd0` … `cbdae79`, `aeee262`).
   - `INV-8` & `INV-9`: Barcodes (done, `9f93175` … `3b55319`) and labels (split from INV-2 on 2026-10-31).
   - `INV-10`: PostgreSQL test fix (done, `76b1770`).
   - `INV-11`: Small barcode clean-ups from the INV-8 review (MINOR tech debt, in [TECH-DEBT.md](TECH-DEBT.md); proposed for when barcodes are next touched, INV-9).
   - `INV-12`, `INV-13`, `INV-14`: Refactor the order (client first · product search with stock · order tracker and no cutting on orders). Added 2026-11-01 as `INV-12`, split into three the same day.
+  - `INV-16`: Material use per size and colour, and "Can produce" per colour. Added 2026-11-06 (first as "INV-15", renumbered once the `PI-DEV` merge showed that number taken). `Idea`, moved to the front of the queue by the human (D-27, 2026-11-06); pending the ADR (see Item Details) and not yet carded.
   - Old `S-` and `F-` IDs are retained and never reused (last story ID: `S-74`).
   - Technical items register: See [TECH-DEBT.md](TECH-DEBT.md).
 
@@ -70,18 +89,19 @@
 6. **INV-15** (Work tickets and the Scan page) — `#done` *(Accepted 2026-11-03)*
 7. **INV-13** (Search products, order lines per colour and size) — `#done` *(Accepted 2026-11-03)*
 8. **INV-14** (Order tracker, served from the shelf) — `#done` *(Accepted 2026-11-03)*
-9. **Next Sequence (D-26):** `INV-3` *(acceptance)* ➔ `INV-9` ➔ `INV-7` *(the UI cards of INV-5, INV-12, INV-13 and INV-14 are all `UI approved`, 2026-11-01)*
+9. **INV-3** (Restock of finished products) — `#done` *(Accepted 2026-11-06)*
+10. **Next Sequence (D-27):** `INV-16` ➔ `INV-9` ➔ `INV-7`
 8. **Card Structure:** Each feature receives a UI card first (`INV-n-<slug>-ui.md`), followed by a development card (`INV-n-<slug>.md`).
 9. **Shared UI Cards:** `INV-2`, `INV-8`, and `INV-9` share the same UI card but are accepted individually; so do `INV-5` and `INV-15`.
 10. **Phase 7 Tech Allowance:** `F-43` · `F-46` · `F-52` · `F-53`
 
 ### Open Backlog Table
 
-| ID | What it brings | Type | Status | Priority / Size |
-| :--- | :--- | :--- | :--- | :--- |
-| **INV-3** | Restock of finished products *(built, waiting for acceptance)* | Feature | `Planned` | Must / L |
-| **INV-9** | Print barcode labels | Feature | `Ready` | Must / M |
-| **INV-7** | Bigger tap targets on Settings pages | Feature | `Idea` | Could / S–M |
+| ID         | What it brings                                              | Type    | Status  | Priority / Size |
+| ---------- | ------------------------------------------------------------ | ------- | ------- | ---------------- |
+| **INV-16** | Material use per size and colour, "Can produce" per colour  | Feature | `Idea`  | TBD              |
+| **INV-9**  | Print barcode labels                                        | Feature | `Ready` | Must / M         |
+| **INV-7**  | Bigger tap targets on Settings pages                        | Feature | `Idea`  | Could / S–M      |
 
 > [!note] Technical Note on INV-6
 > **INV-6** (picker-row swatch edge) joins a phase's tech allowance when proposed by the tech lead. It does not block the feature sequence above.
@@ -98,14 +118,6 @@
   - Supports $50 \times 30\text{ mm}$ labels or A4 sheets of 24.
   - Adds `Settings › Labels`. Runs after `INV-8`.
   - *Since INV-15 (2026-11-03):* `Settings › Labels` already exists with **Ticket size** only (table `workshop_label_settings`). INV-9 adds its label size and the selling price to that page and row, and widens its line "How your work tickets print.".
-
-#### `INV-3` · Restock finished products
-- **Type:** Feature | **Priority:** Must / L | **Status:** `Planned` *(Technical work approved 2026-11-02: 11 steps, INV-3-a … INV-3-k)*
-- **Cards:** [Development Card](stories/INV-3-restock-finished-products.md) · [UI Card](stories/INV-3-restock-finished-products-ui.md)
-- **Details:** 
-  - Adds Restocks page in sidebar + New restock page (colour × size grid up to 50 products, scanning support).
-  - Restock adds to shelf and never touches materials; can be undone as a whole.
-  - Restock serves as the main action on the product page's Sizes & colours card.
 
 #### `INV-12` · `INV-13` · `INV-14` · Refactor the order
 - **Type:** Feature | **Priority:** Must | **Size:** L, split on 2026-11-01 into three, one UI card each | **Status:** `INV-12`, `INV-13` and `INV-14` all `UI approved` (2026-11-01; `INV-14` was redrawn the same day for the shelf model). Building waits for its turn after `INV-5`.
@@ -142,6 +154,25 @@
 - **Type:** Feature | **Priority:** Could | **Size:** S–M | **Status:** `Idea`
 - **Details:** Increases button/field heights on phone/tablet from 32-36 px to 44 px. Related to `S-68` (order screen tap targets). Runs after `INV-14`.
 
+#### `INV-16` · Material use per size and colour, "Can produce" per colour
+- **Type:** Feature | **Priority:** TBD | **Status:** `Idea` (not yet carded; first logged as "INV-15" on 2026-11-06, renumbered once
+  the `PI-DEV` merge showed that number taken by the done "Work tickets and Scan" item)
+- **The request, from the human (2026-11-06):**
+  1. The system removes the correct amount of material depending on the size (and maybe the colour) made — the user sets up how
+     much material an L uses, separately from M or XL.
+  2. A new screen shows how much material is in stock and how many units can be made, **per colour**.
+- **Why this needs decisions first, not a card:** today every size and every colour of a product shares one composition — "Sizes
+  change no figure: every size of a product uses the same composition" and the same for colours. Point 1 changes that for sizes (and
+  maybe colours); point 2 asks for capacity split by colour. This is a business-rule change, not a screen, so it needs an ADR and the
+  tech-lead's agreement on the costing rules before any UI or development card is written.
+- **Decided by the human (2026-11-06):** quantity varies by **both size and colour** (a full grid); the input is a **flat quantity
+  per size/colour combination** (not a multiplier on today's one quantity per material); "per colour" capacity means
+  **colour-specific material stock** (each colour's fabric etc. is its own stocked material with its own quantity on hand), not the
+  same stock sliced by what you'd cut.
+- **Queue:** the human decided (D-27, 2026-11-06) to prioritize `INV-16` now, ahead of `INV-9` and `INV-7`, rather than append it
+  after them. It still can't be carded until the ADR settles the costing rules.
+- **Links:** depends on the colour and size work already done (`INV-1`, `INV-2`) and sits downstream of the costing domain's BOM rules.
+
 > [!abstract] Unscheduled Idea
 > **Production for the shelf:** A batch with no attached client moving through production phases, ending with "Put in stock". *(No ID assigned yet.)* Since 2026-11-01 this is no longer an idea apart: it is how Progress works, and it is now `INV-5`'s rewritten card.
 
@@ -155,6 +186,7 @@
 ## 🏛️ Decisions That Shape the Backlog
 
 > [!summary] Core Operational Rules
+> - **D-27 (2026-11-06):** `INV-16` moves to the front of the queue, ahead of `INV-9` and `INV-7`.
 > - **D-20 (2026-10-24):** Card flow paused. Open items placed on hold for variant rework (`INV-n` sequence).
 > - **D-26 (2026-11-03):** `INV-13` then `INV-14` move ahead of INV-3's acceptance and `INV-9`.
 > - **D-25 (2026-11-02):** `INV-15` moves ahead of INV-3's acceptance and `INV-9` (its development card first); its Ticket size part waits for INV-9's `Settings › Labels`.
