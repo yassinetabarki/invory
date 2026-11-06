@@ -39,6 +39,10 @@
 >   sliced by colour).
 > - **D-27 (2026-11-06, human):** `INV-16` moves to the front of the queue, ahead of `INV-9` and `INV-7`, in place of being appended
 >   after them. The ADR and the tech-lead's agreement on the costing rules are still needed before any UI or development card is drafted.
+> - **INV-16 UI approved** (2026-11-06, by the human, after ADR-0027 settled the costing rules): the composition line's
+>   "Same for every variant" / "By colour and size" toggle and colour × size grid (a Sheet, pre-filled from the old quantity),
+>   capacity shown as guaranteed (headline) and best (secondary, named by colour), cost and margin as ranges. Card
+>   [stories/INV-16-material-per-variant-ui.md](stories/INV-16-material-per-variant-ui.md). Its development card is next.
 > - **INV-1 Done:** "Colours as fixed values" accepted & merged (`a66f4bf`, `78a4eee`), so it left this backlog.
 > - **Added:** `INV-6` (picker-row item) and `INV-7` (Could: bigger tap targets on Settings).
 > - **Archive:** Done items leave this file and are recorded in `STATUS.md` and the archive.
@@ -97,11 +101,11 @@
 
 ### Open Backlog Table
 
-| ID         | What it brings                                              | Type    | Status  | Priority / Size |
-| ---------- | ------------------------------------------------------------ | ------- | ------- | ---------------- |
-| **INV-16** | Material use per size and colour, "Can produce" per colour  | Feature | `Idea`  | TBD              |
-| **INV-9**  | Print barcode labels                                        | Feature | `Ready` | Must / M         |
-| **INV-7**  | Bigger tap targets on Settings pages                        | Feature | `Idea`  | Could / S–M      |
+| ID         | What it brings                                               | Type    | Status        | Priority / Size  |
+| ---------- | ------------------------------------------------------------ | ------- | ------------- | ---------------- |
+| **INV-16** | Material use per size and colour, "Can produce" per colour   | Feature | `UI approved` | Must / TBD       |
+| **INV-9**  | Print barcode labels                                         | Feature | `Ready`       | Must / M         |
+| **INV-7**  | Bigger tap targets on Settings pages                         | Feature | `Idea`        | Could / S–M      |
 
 > [!note] Technical Note on INV-6
 > **INV-6** (picker-row swatch edge) joins a phase's tech allowance when proposed by the tech lead. It does not block the feature sequence above.
@@ -155,22 +159,25 @@
 - **Details:** Increases button/field heights on phone/tablet from 32-36 px to 44 px. Related to `S-68` (order screen tap targets). Runs after `INV-14`.
 
 #### `INV-16` · Material use per size and colour, "Can produce" per colour
-- **Type:** Feature | **Priority:** TBD | **Status:** `Idea` (not yet carded; first logged as "INV-15" on 2026-11-06, renumbered once
-  the `PI-DEV` merge showed that number taken by the done "Work tickets and Scan" item)
+- **Type:** Feature | **Priority:** Must | **Status:** `UI approved` (2026-11-06; first logged as "INV-15" on 2026-11-06, renumbered
+  once the `PI-DEV` merge showed that number taken by the done "Work tickets and Scan" item)
+- **Cards:** [UI card: material use per colour and size](stories/INV-16-material-per-variant-ui.md) (`Approved`, 2026-11-06) · design
+  spec [INV-16-material-per-variant](design/specs/INV-16-material-per-variant.md) · ADR [ADR-0027](adr/0027-material-use-per-colour-and-size.md).
+  The development card is next.
 - **The request, from the human (2026-11-06):**
   1. The system removes the correct amount of material depending on the size (and maybe the colour) made — the user sets up how
      much material an L uses, separately from M or XL.
   2. A new screen shows how much material is in stock and how many units can be made, **per colour**.
-- **Why this needs decisions first, not a card:** today every size and every colour of a product shares one composition — "Sizes
+- **Why this needed decisions first, not a card:** today every size and every colour of a product shares one composition — "Sizes
   change no figure: every size of a product uses the same composition" and the same for colours. Point 1 changes that for sizes (and
-  maybe colours); point 2 asks for capacity split by colour. This is a business-rule change, not a screen, so it needs an ADR and the
-  tech-lead's agreement on the costing rules before any UI or development card is written.
+  colours); point 2 asks for capacity split by colour. This was a business-rule change, not a screen, so it needed an ADR and the
+  tech-lead's agreement on the costing rules before any card. **Settled:** ADR-0027 and the UI card above.
 - **Decided by the human (2026-11-06):** quantity varies by **both size and colour** (a full grid); the input is a **flat quantity
   per size/colour combination** (not a multiplier on today's one quantity per material); "per colour" capacity means
   **colour-specific material stock** (each colour's fabric etc. is its own stocked material with its own quantity on hand), not the
   same stock sliced by what you'd cut.
 - **Queue:** the human decided (D-27, 2026-11-06) to prioritize `INV-16` now, ahead of `INV-9` and `INV-7`, rather than append it
-  after them. It still can't be carded until the ADR settles the costing rules.
+  after them. Its UI card is approved; the development card is written next, then it waits its turn to build.
 - **Links:** depends on the colour and size work already done (`INV-1`, `INV-2`) and sits downstream of the costing domain's BOM rules.
 
 > [!abstract] Unscheduled Idea
