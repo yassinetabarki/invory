@@ -70,8 +70,14 @@ defines two figures, both whole and both exact:
   `Σ n_v × r(m, v) ≤ N × max_v r(m, v) ≤ stock(m)`.
 - **best** = the maximum over the same variants: the most units of one variant made on its own.
 
-When every line is `same`, guaranteed = best = today's `max_producible(P)`, and today's "any mix of sizes" sentence stays true. Which
-figure the screens show, and in what words, is a product decision (questions below); the server sends both.
+When every line is `same`, guaranteed = best = today's `max_producible(P)`, and today's "any mix of sizes" sentence stays true. The
+screens show guaranteed as the headline and best beside it (INV-16 AC-4); the server sends both.
+
+Two readings settled in INV-16's Technical work (2026-11-06):
+- **Where best is reached:** the first variant, in colour list order then size order, with the largest capacity. Its colour is the
+  one named ("Best case: 112 units, in Indigo") and its bottleneck the material named ("limited there by …").
+- **A variant whose composition is empty** (no `same` line and no cell of its colour and size) has `max_producible = null`, like an
+  empty BOM today: it counts for neither guaranteed nor best, and a colour whose every size is null reads "No composition".
 
 ### 6. Start batch checks the grid it is given, exactly
 The plan sums per variant: `needed(m) = round4( Σ_v n_v × required_exact(m, v) )`, rounded once per material per start (as today).
@@ -82,15 +88,17 @@ for a mixed grid and needs new wording (question below).
 ### 7. Production cuts remember the amount per unit per variant
 ADR-0023 decision 2 stays (one cut per Start batch, shared by its batches; one rounding per material), but a single per-unit amount per
 material no longer fits a cut whose variants differ.
-- New `production_cut_variants` (`production_cut_id`, `colour_id`, `size_id`, `units`, `units_returned`) and
-  `production_cut_variant_materials` (`production_cut_variant_id`, `material_id`, `quantity_per_unit` `decimal(20,8)`).
-  `production_cut_materials.quantity_taken` stays the one rounded take per material.
+- New `production_cut_variants` (`workshop_id`, `production_cut_id`, `colour_id`, `size_id`, `units`, `units_returned`) and
+  `production_cut_variant_materials` (`workshop_id`, `production_cut_variant_id`, `material_id`, `quantity_per_unit` `decimal(20,8)`).
+  `production_cut_materials.quantity_taken` stays the one rounded take per material, with the material's unit at the time;
+  its `quantity_per_unit` becomes nullable and is null on every cut that has variant rows.
 - Return (ADR-0014 generalised): `held(c, m) = round4( Σ_v r_v × per_unit(c, v, m) )` with `r_v` the units of variant v not returned yet;
   Undo batch of a batch in variant v with k units returns `held(c, m)` before − after `r_v − k`. Undoing every batch of a start gives
   back exactly `taken`. A split batch keeps its colour and size, so it keeps its variant.
-- **Existing cuts are backfilled**, in the migration, with a frozen `DB::table` step: one variant row per colour and size of the cut's
-  batches (units from their `start` moves, returned from their `undo` moves), each with the cut's single `quantity_per_unit`. Since
-  `Σ r_v × p = p × r`, every `held` figure, and so every future undo of an old batch, is unchanged.
+- **Existing cuts are not backfilled** (changed in INV-16's Technical work, 2026-11-06). A cut with no variant rows (every cut made
+  before INV-16) is read as **one group**: outstanding `units − units_returned`, one `quantity_per_unit` per material, which is exactly
+  today's `held(r) − held(r − k)`. Since `Σ r_v × p = p × r`, this is the same figure a backfill would give, without rewriting live rows.
+  Every cut made from INV-16 on writes variant rows, also when nothing varies.
 
 ### 8. Colour, size and material changes keep the grid consistent
 Every writer of a product's composition, colours or category takes the product's row lock first (ADR-0017 decision 4).
@@ -102,8 +110,9 @@ Every writer of a product's composition, colours or category takes the product's
 
 ### 9. Bounds
 A product can have every colour of its workshop (no limit today) and up to 11 sizes, so one `by_variant` line can hold hundreds of
-cells. The save is validated as one nested payload and costed per variant. INV-16's Technical work sets a cap on cells per product
-(order of 2,000) with a load test of the products list and the dashboard at that size; the wording of the refusal is the product-owner's.
+cells. The save is validated as one nested payload and costed per variant. **The cap is 2,000 cells per product** (filled cells over
+all its `by_variant` lines; the human's figure, 2026-11-06), checked on the save. Variants with the same composition are costed once,
+so a product never costs more than its distinct compositions; a load test of the products list and the dashboard at the cap guards it.
 
 ### 10. Contract
 `ProductResource` gains per-colour and per-variant figures beside today's `cost` and `capacity`; `domain.ts` changes in the same
@@ -120,8 +129,8 @@ line, so screens that don't show colours keep working.
   reading that the screens choose (appendix gives the figures).
 - `CuttingCalculator::take()` takes a list of (units, requirements) per variant instead of one (requirements, N); `giveBack()` the
   per-variant outstanding units. Order cuts (`order_line_cuts`, history only since ADR-0026) are not touched.
-- The migration is additive except the production-cut backfill, which is the riskiest data step and gets its own migration test
-  (old cut → backfill → undo gives the same figures as before).
+- The migration is additive (plus `product_components.quantity` and `production_cut_materials.quantity_per_unit` becoming nullable);
+  no live row is rewritten. A test undoes a batch of a cut made before INV-16 and gets the same figures as before.
 
 ## Alternatives rejected
 - **A multiplier per size, or one override per size shared by every colour:** rejected by the human (2026-11-06).
@@ -175,6 +184,8 @@ best(P, c)            = max over sizes z of max_producible(P, (c, z))
 binding(P, c)         = the size z giving guaranteed(P, c)  (tie → size order);  bottleneck(P, c) = bottleneck(P, (c, binding))
 guaranteed(P)         = min over every variant v of max_producible(P, v);  best(P) = max over every variant
 binding(P)            = the variant giving guaranteed(P)  (tie → colour list order, then size order);  bottleneck(P) = its bottleneck
+best_at(P)            = the variant giving best(P)        (tie → colour list order, then size order);  named on screen by its colour
+                        and its bottleneck ("Best case: 112 units, in Indigo — limited there by Metal shank button 17mm")
 unit_cost_range(P)    = min and max of unit_cost(P, v) over every variant
 
 When P has no `by_variant` line, every variant has the same composition and:
@@ -233,7 +244,7 @@ Cuts made before INV-16 hold the same per-unit amount for every variant, so thei
 | Situation | Result |
 |---|---|
 | Every line `same` | Every variant has today's figures; guaranteed = best = `max_producible(P)` |
-| A variant with no line at all (e.g. Black when only an Indigo-only line exists) | `max_producible(P, v) = null`, left out of guaranteed and best |
+| A variant with no line at all (e.g. Black when only an Indigo-only line exists) | `max_producible(P, v) = null`, left out of guaranteed and best; a colour whose every size is null reads "No composition" |
 | A colour whose material has 0 on hand | that colour's variants = 0; `guaranteed(P) = 0`, `best(P)` may still be > 0 |
 | A colour taken off the product | its cells are deleted in the same save |
 | A colour added to the product | no cells: its variants use only the `same` lines |
@@ -243,11 +254,13 @@ Cuts made before INV-16 hold the same per-unit amount for every variant, so thei
 
 ### H. Validation (new bullets under "Validation rules")
 - Composition line: `quantity_mode` `same` or `by_variant`. `same`: `quantity` as today. `by_variant`: `quantities[colourId][sizeId]`
-  each empty (no cell) or > 0 with max 4 decimals; only colours and sizes of the product; at least one cell; at most the cap set by
-  INV-16's Technical work. When the product's colours or sizes no longer match the submitted grid, nothing is saved (wording: the
-  product-owner's).
+  each empty or 0 (no cell) or > 0 up to 1,000,000 with max 4 decimals; only colours the save leaves on the product and sizes of
+  its size list; at least one cell; at most 2,000 cells per product over all its lines. When the product's colours or sizes no
+  longer match the submitted grid, nothing is saved ("The sizes or colours of <product> have changed. Enter its quantities again.").
 
 ### I. Worked example (new golden test, added beside the Denim Jacket one)
+A domain-level example: the pure calculator is given these eight variants. (The Apparel list has had seven sizes, XS to XXXL, since
+2026-11-02, so tests through real products use INV-16's card example instead.)
 Denim Jacket in Indigo and Black, sizes S, M, L, XL; labor 12.0000, overhead 3.5000. Lines: *Denim 12oz Indigo* (8.5000/m, stock 250,
 waste 10 %) by colour and size, Indigo only: S 1.6000 · M 1.8000 · L 2.0000 · XL 2.2000; *Denim 12oz Black* (8.5000/m, stock 40, waste
 10 %), Black only, the same four quantities; button, thread and label `same` as in the main example.

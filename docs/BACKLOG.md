@@ -71,7 +71,7 @@
 - **Card:** Full story cards (story, AC with examples, visual scope, out of scope, questions) live in `docs/stories/<id>-<slug>.md`. This backlog displays the short version.
 - **IDs & History:**
   - Everything new since **2026-10-24 (D-20, D-21)** is numbered **INV-n** (including technical items without UI cards). Next free ID: **INV-19**.
-  - `INV-18`: Sizes chosen per product, managed in Settings. Added 2026-11-06 (D-29), placed first, before `INV-16`. An `Idea` (see Item Details).
+  - `INV-18`: Sizes chosen per product, managed in Settings. Added 2026-11-06 (D-29), placed first, before `INV-16`. UI card `Draft` (see Item Details).
   - `INV-17`: Per-unit QR codes, moving units one by one besides whole batches. Added 2026-11-06 (D-28), placed after `INV-16` and before `INV-9`. UI card `Approved` 2026-11-06 (see Item Details).
   - `INV-15`: Work tickets and Scan, split from INV-5 on 2026-11-02 (D-24); shares INV-5's UI card (done 2026-11-03).
   - `INV-1` to `INV-5`: Variant rework items (`INV-1`, `INV-2`, `INV-3`, `INV-4` and `INV-5` are all done).
@@ -113,7 +113,7 @@
 
 | ID         | What it brings                                               | Type    | Status                        | Priority / Size    |
 | ---------- | ------------------------------------------------------------ | ------- | ----------------------------- | ------------------ |
-| **INV-18** | Sizes chosen per product, managed in Settings                | Feature | `Idea`                        | Must / L or more   |
+| **INV-18** | Sizes chosen per product, managed in Settings                | Feature | `UI approved`                 | Must / L or more   |
 | **INV-16** | Material use per size and colour, "Can produce" per colour   | Feature | `Ready`, on hold until INV-18 | Must / L           |
 | **INV-17** | Per-unit QR codes: move units one by one, besides batches    | Feature | `UI approved`                 | Should / L (split) |
 | **INV-9**  | Print barcode labels                                         | Feature | `Ready`                       | Must / M           |
@@ -171,7 +171,8 @@
 - **Details:** Increases button/field heights on phone/tablet from 32-36 px to 44 px. Related to `S-68` (order screen tap targets). Runs after `INV-14`.
 
 #### `INV-18` · Sizes chosen per product, managed in Settings
-- **Type:** Feature | **Priority:** Must (it unblocks `INV-16`) | **Size:** L at least, to be split when carded (the split takes the next free IDs) | **Status:** `Idea`
+- **Type:** Feature | **Priority:** Must (it unblocks `INV-16`) | **Size:** L at least, to be split when carded (the split takes the next free IDs) | **Status:** `UI approved` (UI card written 2026-11-06, awaiting the human's validation)
+- **Cards:** [UI card: sizes chosen per product](stories/INV-18-product-sizes-ui.md) (`Draft`) · design spec [INV-18-product-sizes-in-settings](design/specs/INV-18-product-sizes-in-settings.md). The development card follows the approved UI card.
 - **The request, from the human (2026-11-06, free text, on `INV-16`):** "to each product we will assign the possible sizes per
   product and we will make the size under the settings like the units etc."
 - **Decided by the human (2026-11-06, D-29):** this is built **before** `INV-16`; `INV-16` keeps its 4-size Denim Jacket example.
@@ -200,8 +201,16 @@
   hint, the product page "Sizes" line and Sizes & colours card, the Settings menu); the nearest patterns to follow (Settings › Units and
   Settings › Colours, and the colour picker on the product form); the [S-58](design/specs/S-58-size-building-blocks.md) and
   [INV-2](design/specs/INV-2-product-sizes-colours-barcodes.md) specs for how sizes read today; phone layout at 375 px.
-- **Before a card:** the ui-ux-designer draws Settings › Sizes and the product form (dispatched 2026-11-06); the tech-lead sizes
-  the data move and the split and amends ADR-0015. Then the UI card, then the development card.
+- **Decided on the design (human, 2026-11-06, all the recommended options):** the category gets a **Suggests** column and a
+  **Suggested sizes** field in its Edit window (it pre-selects sizes on Add product); **One size** can't be combined with other sizes;
+  after sizes are changed by hand on Add product a category change keeps them and offers "Use the sizes of Footwear"; a size that ever
+  had a barcode on a product stays on it for good; renaming a size changes variant SKUs and never barcodes (said in the Edit window);
+  order is set by a Position field. The designer's choices are accepted: a row of toggle buttons, locked sizes stay reachable by
+  keyboard, names up to 12 characters, the badge "and N more" rule.
+- **Decided with it (INV-16):** INV-16's "Change the category?" question and category lock are replaced by INV-18's "Take XL off this
+  product?" question and a lock per size (a size with saved quantities can't be taken off). Both INV-16 cards are updated.
+- **Before the development card:** the human validates the UI card; the tech-lead sizes the data move and the split and amends
+  ADR-0015. Then the development card.
 
 #### `INV-16` · Material use per size and colour, "Can produce" per colour
 - **Type:** Feature | **Priority:** Must | **Status:** `Ready` (card approved 2026-11-06), **on hold until `INV-18` is done** (D-29,
@@ -226,8 +235,9 @@
   Denim Jacket (S · M · L · XL) as its example; under `INV-18` the jacket is simply given those sizes.
 - **What changes when it resumes (for the tech-lead, who replans the Technical work, and the product-owner):** the category no longer
   decides a product's sizes, so the grid's sizes are the product's own list, and the **category lock** (Edit product) is replaced by
-  "a size with cells can't be taken off a product" (its wording is written with `INV-18`'s UI card); on Add product the sizes are
-  chosen on the form, so the "category change clears the grid" question in AC-1 is rewritten. The card's Technical work (built on category
+  a lock per size ("a size with saved quantities can't be taken off a product", reason "has material quantities"); on the form, taking
+  a size off while quantities are typed asks "Take XL off this product?" (both now written into INV-16's cards, from INV-18's UI
+  card). The card's Technical work (built on category
   sizes: step INV-16-e and the `ProductSizeLock` change) must be replanned before the build; nothing else in the card changes.
 - **Links:** depends on the colour and size work already done (`INV-1`, `INV-2`) and sits downstream of the costing domain's BOM rules.
 

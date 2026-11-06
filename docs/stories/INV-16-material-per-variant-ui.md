@@ -19,7 +19,7 @@ tags:
 > **best**, what one colour on its own could reach, plus a new table of capacity by colour. Cost and margin become a range when they
 > vary. Start batch warns by material name, not by a single number, when a mixed batch runs short.
 > New: the quantity-mode choice and grid on a composition line; the product page's guaranteed/best wording and "Capacity by colour"
-> table; cost and margin shown as a range; the mixed-batch shortfall message; a new category-lock reason.
+> table; cost and margin shown as a range; the mixed-batch shortfall message; a lock on a size that has quantities.
 > Left out on purpose: a per-line cost range in the read-only composition table (it shows "Varies" with a link to the grid instead);
 > an inline grid for products with few colours (the grid always opens in a Sheet); any change to Start batch's "at most N" message
 > when the batch isn't mixed across variants; a multiplier per size and a stock split by colour (both already ruled out by the
@@ -81,7 +81,7 @@ Board: `Inv16ProductShow` (desktop)
 
    and a totals row "All colours (any mix)" repeating guaranteed 16 / best 112. "Limited by" links to the material, as today's
    bottleneck does.
-4. **Cost breakdown**: Materials "TND 18.384–23.994", Unit cost "TND 33.884–39.494", Margin "TND 49.506–55.116 · 55.62–61.92%".
+4. **Cost breakdown**: Materials "TND 18.384–23.994", Unit cost "TND 33.884–39.494", Margin "TND 49.506–55.116 · 55.62–61.93%".
    Labor and Overhead stay single values ("TND 12.000", "TND 3.500"). When nothing on a product varies, the range collapses to one
    number and the card reads exactly as it does today.
 5. **Composition table**: the denim line's Quantity, Effective qty and Units possible each read "Varies", with a small **View grid**
@@ -98,9 +98,14 @@ Board: `Inv16StartBatchShort`
   materials table's "Short by" row above the message, unchanged.
 - A batch in one colour and size only, or a product with no **By colour and size** line, keeps today's single "at most N" message.
 
-### Category lock
-- "Denim Jacket has materials set by colour and size, so its category can't change to one with other sizes. Keep a category with
-  sizes S, M, L, XL." (today's existing ending, unchanged wording).
+### Sizes of the product (drawn in INV-18)
+A product's sizes are the ones chosen in its Sizes field, not its category's ([[INV-18-product-sizes-ui]]).
+- Pressing a size off the form while a line holds quantities for it asks "Take XL off this product?" with "This clears the 2
+  quantities you set for XL across its materials." · **Keep XL** · **Take XL off** (Add product, and Edit product for quantities
+  typed but not saved). "Use the sizes of Footwear?" asks "This replaces the sizes and clears the 8 quantities you set across its
+  materials." · **Keep the sizes** · **Use Footwear sizes**.
+- On Edit product a size with a saved quantity is locked and can't be taken off: "Can't be taken off: it has material quantities."
+  A stale save reads "XL can't be taken off Denim Jacket: it has material quantities.".
 
 ## States
 
@@ -109,7 +114,7 @@ Board: `Inv16StartBatchShort`
 | **Grid, no cells yet**       | A fresh **By colour and size** line: "No cells set yet", **Edit grid** still offered, no warning                                            |
 | **Colour with no cells**     | A colour row in the Sheet reads "Not used", collapsed, no warning — a normal, allowed state                                                  |
 | **Loading**                  | Capacity by colour and the Composition table skeleton like every other server-filled card                                                    |
-| **Error, bad cell**          | "Enter a whole number from 0 to 1,000,000 with up to 4 decimals." under the cell                                                              |
+| **Error, bad cell**          | "Enter a number from 0 to 1,000,000 with up to 4 decimals." under the cell                                                            |
 | **Error, empty line**        | "Add at least one quantity for Denim 12oz Black, or switch it to Same for every variant." if a By colour and size line is saved with no cells |
 | **Error, data changed**      | "The sizes or colours of Denim Jacket have changed. Enter its quantities again." if the product's colours or sizes moved since the page opened |
 | **Confirm, switching back**  | "Switch to one quantity for every variant?" · body names the material and the exact count cleared · **Keep the grid** / **Switch anyway**   |
@@ -128,8 +133,9 @@ Board: `Inv16StartBatchShort`
   limited there by Metal shank button 17mm." · "Capacity by colour" · "All colours (any mix)" · "Varies" · "View grid".
 - Start batch: "Short on Denim 12oz Black. Restock it first, or lower the units." · "Short on Denim 12oz Black and Metal shank button
   17mm. Restock them first, or lower the units."
-- Category lock: "Denim Jacket has materials set by colour and size, so its category can't change to one with other sizes."
-- Errors: "Enter a whole number from 0 to 1,000,000 with up to 4 decimals." · "Add at least one quantity for Denim 12oz Black, or
+- Sizes: "Take XL off this product?" · "This clears the 2 quantities you set for XL across its materials." · "Keep XL" · "Take XL
+  off" · "Can't be taken off: it has material quantities." · "XL can't be taken off Denim Jacket: it has material quantities."
+- Errors: "Enter a number from 0 to 1,000,000 with up to 4 decimals." · "Add at least one quantity for Denim 12oz Black, or
   switch it to Same for every variant." · "The sizes or colours of Denim Jacket have changed. Enter its quantities again."
 
 ## Phone layout
