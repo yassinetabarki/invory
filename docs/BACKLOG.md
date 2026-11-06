@@ -25,12 +25,16 @@
 >   INV-3-a … INV-3-k, docs `194534a`, `c8c4716`, browser golden path `aeee262`). Restock of finished products: the Restocks page,
 >   New restock (colour × size grid, scan or type a barcode), the restock detail and Undo restock; "Restock" on the product page's
 >   Sizes & colours card. It left the open list. **INV-9 is next.**
-> - **Current Order** (D-27, D-28, 2026-11-06: the human prioritizes `INV-16` now, ahead of the rest, and puts `INV-17` right after it):
->   `INV-16` → `INV-17` → `INV-9` → `INV-7`. Next free ID: **INV-18** (INV-11 is the tech-debt item raised in the INV-8 review, see
+> - **Current Order** (D-29, 2026-11-06: sizes chosen per product come first, `INV-16` waits for them; D-27, D-28 before):
+>   `INV-18` → `INV-16` (on hold until `INV-18` is done) → `INV-17` → `INV-9` → `INV-7`. Next free ID: **INV-19** (INV-11 is the tech-debt item raised in the INV-8 review, see
 >   [TECH-DEBT.md](TECH-DEBT.md); INV-15 is the real, done "Work tickets and the Scan page").
+> - **Added 2026-11-06:** `INV-18` (Sizes chosen per product, managed in Settings) — from the human's answer on `INV-16`: today a
+>   product's sizes come from its category (Apparel XS to XXXL, Footwear 36 to 46, everything else One size); the human wants sizes to be
+>   a list in Settings, like units, and each product to be given its own sizes. Built **first**; `INV-16` is `Ready` but on hold until it
+>   is done (D-29). An `Idea`: it needs the ui-ux-designer, then a UI card (see Item Details).
 > - **Added 2026-11-06:** `INV-17` (Per-unit QR codes) — a new idea from the human: keep batch progress and add progress per unit, with
->   a QR code per unit; a scan moves only that unit. Both modes stay, the user chooses. An `Idea`: the interaction model is still to be
->   decided (see Item Details), then a UI card.
+>   a QR code per unit; a scan moves only that unit. Both modes stay, the user chooses. **UI card draft** (2026-11-06): the human decided the
+>   interaction model the same day (see Item Details); [INV-17-per-unit-qr-ui.md](stories/INV-17-per-unit-qr-ui.md) is `UI approved` (2026-11-06).
 > - **Added 2026-11-06:** `INV-16` (Material use per size and colour) — a new idea from the human: how much material a size uses
 >   may differ (e.g. an L jacket uses more fabric than an M), and "Can produce" should show per colour. This contradicts today's
 >   rule that every size and colour of a product shares one composition (see "Colours" and "Sizes" in the costing domain), so it
@@ -66,8 +70,9 @@
 - **Size:** `S` ($\le 1$ day agent work) · `M` · `L` *(needs split)*
 - **Card:** Full story cards (story, AC with examples, visual scope, out of scope, questions) live in `docs/stories/<id>-<slug>.md`. This backlog displays the short version.
 - **IDs & History:**
-  - Everything new since **2026-10-24 (D-20, D-21)** is numbered **INV-n** (including technical items without UI cards). Next free ID: **INV-18**.
-  - `INV-17`: Per-unit QR codes, moving units one by one besides whole batches. Added 2026-11-06 (D-28), placed after `INV-16` and before `INV-9`. An `Idea` (see Item Details).
+  - Everything new since **2026-10-24 (D-20, D-21)** is numbered **INV-n** (including technical items without UI cards). Next free ID: **INV-19**.
+  - `INV-18`: Sizes chosen per product, managed in Settings. Added 2026-11-06 (D-29), placed first, before `INV-16`. An `Idea` (see Item Details).
+  - `INV-17`: Per-unit QR codes, moving units one by one besides whole batches. Added 2026-11-06 (D-28), placed after `INV-16` and before `INV-9`. UI card `Approved` 2026-11-06 (see Item Details).
   - `INV-15`: Work tickets and Scan, split from INV-5 on 2026-11-02 (D-24); shares INV-5's UI card (done 2026-11-03).
   - `INV-1` to `INV-5`: Variant rework items (`INV-1`, `INV-2`, `INV-3`, `INV-4` and `INV-5` are all done).
   - `INV-6`: Picker-row swatch edge item.
@@ -99,19 +104,20 @@
 7. **INV-13** (Search products, order lines per colour and size) — `#done` *(Accepted 2026-11-03)*
 8. **INV-14** (Order tracker, served from the shelf) — `#done` *(Accepted 2026-11-03)*
 9. **INV-3** (Restock of finished products) — `#done` *(Accepted 2026-11-06)*
-10. **Next Sequence (D-27, D-28):** `INV-16` ➔ `INV-17` ➔ `INV-9` ➔ `INV-7`
+10. **Next Sequence (D-29):** `INV-18` ➔ `INV-16` *(on hold until INV-18 is done)* ➔ `INV-17` ➔ `INV-9` ➔ `INV-7`
 8. **Card Structure:** Each feature receives a UI card first (`INV-n-<slug>-ui.md`), followed by a development card (`INV-n-<slug>.md`).
 9. **Shared UI Cards:** `INV-2`, `INV-8`, and `INV-9` share the same UI card but are accepted individually; so do `INV-5` and `INV-15`.
 10. **Phase 7 Tech Allowance:** `F-43` · `F-46` · `F-52` · `F-53`
 
 ### Open Backlog Table
 
-| ID         | What it brings                                               | Type    | Status        | Priority / Size    |
-| ---------- | ------------------------------------------------------------ | ------- | ------------- | ------------------ |
-| **INV-16** | Material use per size and colour, "Can produce" per colour   | Feature | `Ready`       | Must / L           |
-| **INV-17** | Per-unit QR codes: move units one by one, besides batches    | Feature | `Idea`        | Should / L (split) |
-| **INV-9**  | Print barcode labels                                         | Feature | `Ready`       | Must / M           |
-| **INV-7**  | Bigger tap targets on Settings pages                         | Feature | `Idea`        | Could / S–M        |
+| ID         | What it brings                                               | Type    | Status                        | Priority / Size    |
+| ---------- | ------------------------------------------------------------ | ------- | ----------------------------- | ------------------ |
+| **INV-18** | Sizes chosen per product, managed in Settings                | Feature | `Idea`                        | Must / L or more   |
+| **INV-16** | Material use per size and colour, "Can produce" per colour   | Feature | `Ready`, on hold until INV-18 | Must / L           |
+| **INV-17** | Per-unit QR codes: move units one by one, besides batches    | Feature | `UI approved`                 | Should / L (split) |
+| **INV-9**  | Print barcode labels                                         | Feature | `Ready`                       | Must / M           |
+| **INV-7**  | Bigger tap targets on Settings pages                         | Feature | `Idea`                        | Could / S–M        |
 
 > [!note] Technical Note on INV-6
 > **INV-6** (picker-row swatch edge) joins a phase's tech allowance when proposed by the tech lead. It does not block the feature sequence above.
@@ -164,9 +170,42 @@
 - **Type:** Feature | **Priority:** Could | **Size:** S–M | **Status:** `Idea`
 - **Details:** Increases button/field heights on phone/tablet from 32-36 px to 44 px. Related to `S-68` (order screen tap targets). Runs after `INV-14`.
 
+#### `INV-18` · Sizes chosen per product, managed in Settings
+- **Type:** Feature | **Priority:** Must (it unblocks `INV-16`) | **Size:** L at least, to be split when carded (the split takes the next free IDs) | **Status:** `Idea`
+- **The request, from the human (2026-11-06, free text, on `INV-16`):** "to each product we will assign the possible sizes per
+  product and we will make the size under the settings like the units etc."
+- **Decided by the human (2026-11-06, D-29):** this is built **before** `INV-16`; `INV-16` keeps its 4-size Denim Jacket example.
+- **How sizes work today (S-58, ADR-0015):** a product's sizes come from its **category**. Each category points to a fixed **size
+  list**: Apparel "XS to XXXL" (XS, S, M, L, XL, XXL, XXXL since 2026-11-02), Footwear "36 to 46", every other category "One size". The
+  lists are the same for the whole installation and no screen edits them. A product has every size of its list; the product form says
+  "Sizes come with the category."; the product page shows "Sizes XS to XXXL".
+- **What rests on it today:** finished stock per colour and size (`INV-2`), restocks (`INV-3`), barcodes per colour and size (`INV-8`),
+  production batches (`INV-5`), order lines per colour and size (`INV-13`, `INV-14`), labels (`INV-9`), variant SKUs ("-IND-S"), and the
+  **category lock**: a product on an order, with stock or in production can't move to a category with other sizes (S-58, S-56, `INV-5`).
+- **What the request changes:** sizes become a list of the workshop in Settings (add, rename, reorder, like Units and Colours), and
+  each product is given the sizes it really comes in (a jacket S to XL, a tote One size, a sneaker 38 to 44). The category stops
+  deciding sizes, so the category lock becomes "a size that holds stock, orders, barcodes or production can't be taken off a product".
+- **Likely split (to confirm with the tech-lead):** the Settings list and the move of today's three lists; the per-product choice with
+  its locks (Add and Edit product, the product page); the screens and wording that name a size range ("XS to XXXL", "Sizes come with the
+  category", the digits-only text rule "size 36").
+- **Decided by the human (2026-11-06, all the recommended options):**
+  1. **One workshop-wide list of sizes** (XS, S, M … 36, 37 … 46, One size, all together) in Settings; each product picks some. No named groups.
+  2. **The category pre-selects a product's sizes on Add product** (Apparel XS to XXXL, Footwear 36 to 46, others One size); the user can change them.
+  3. **Existing products keep exactly the sizes they have now.** Nothing moves; no stock, barcode, order or batch is touched.
+  4. **A size is never deleted** (it can be renamed and reordered), like colours. **A size that is used** (finished stock, orders, barcodes,
+     production, and `INV-16` cells) **can't be taken off a product**: one refusal sentence, its wording written with the UI card.
+  5. **A product keeps at least one size** ("One size" counts as one).
+  6. **The order of sizes comes from a position set in Settings**, as for colours.
+- **What the ui-ux-designer needs to start:** the decisions above; today's screens to change (Add product and Edit product's "Sizes: …"
+  hint, the product page "Sizes" line and Sizes & colours card, the Settings menu); the nearest patterns to follow (Settings › Units and
+  Settings › Colours, and the colour picker on the product form); the [S-58](design/specs/S-58-size-building-blocks.md) and
+  [INV-2](design/specs/INV-2-product-sizes-colours-barcodes.md) specs for how sizes read today; phone layout at 375 px.
+- **Before a card:** the ui-ux-designer draws Settings › Sizes and the product form (dispatched 2026-11-06); the tech-lead sizes
+  the data move and the split and amends ADR-0015. Then the UI card, then the development card.
+
 #### `INV-16` · Material use per size and colour, "Can produce" per colour
-- **Type:** Feature | **Priority:** Must | **Status:** `Draft` (development card written 2026-11-06, awaiting the human's approval;
-  the UI card is `Approved`; first logged as "INV-15" on 2026-11-06, renumbered once the `PI-DEV` merge showed that number taken by
+- **Type:** Feature | **Priority:** Must | **Status:** `Ready` (card approved 2026-11-06), **on hold until `INV-18` is done** (D-29,
+  2026-11-06; the UI card is `Approved`; first logged as "INV-15" on 2026-11-06, renumbered once the `PI-DEV` merge showed that number taken by
   the done "Work tickets and Scan" item)
 - **Cards:** [Development card](stories/INV-16-material-per-variant.md) (`Ready`, 2026-11-06) · [UI card: material use per colour and size](stories/INV-16-material-per-variant-ui.md) (`Approved`, 2026-11-06) · design
   spec [INV-16-material-per-variant](design/specs/INV-16-material-per-variant.md) · ADR [ADR-0027](adr/0027-material-use-per-colour-and-size.md).
@@ -182,12 +221,18 @@
   per size/colour combination** (not a multiplier on today's one quantity per material); "per colour" capacity means
   **colour-specific material stock** (each colour's fabric etc. is its own stocked material with its own quantity on hand), not the
   same stock sliced by what you'd cut.
-- **Queue:** the human decided (D-27, 2026-11-06) to prioritize `INV-16` now, ahead of `INV-9` and `INV-7`, rather than append it
-  after them. Its UI card is approved and its development card is written (`Draft`, awaiting approval); then the tech-lead adds the Technical work.
+- **Queue:** the human decided (D-27, 2026-11-06) to prioritize `INV-16` ahead of `INV-9` and `INV-7`. Then (D-29, 2026-11-06) the
+  human chose to build **sizes chosen per product (`INV-18`) first**: `INV-16` stays `Ready` but waits. Its card keeps the 4-size
+  Denim Jacket (S · M · L · XL) as its example; under `INV-18` the jacket is simply given those sizes.
+- **What changes when it resumes (for the tech-lead, who replans the Technical work, and the product-owner):** the category no longer
+  decides a product's sizes, so the grid's sizes are the product's own list, and the **category lock** (Edit product) is replaced by
+  "a size with cells can't be taken off a product" (its wording is written with `INV-18`'s UI card); on Add product the sizes are
+  chosen on the form, so the "category change clears the grid" question in AC-1 is rewritten. The card's Technical work (built on category
+  sizes: step INV-16-e and the `ProductSizeLock` change) must be replanned before the build; nothing else in the card changes.
 - **Links:** depends on the colour and size work already done (`INV-1`, `INV-2`) and sits downstream of the costing domain's BOM rules.
 
 #### `INV-17` · Per-unit QR codes: move units one by one, besides batches
-- **Type:** Feature | **Priority:** Should (the human's order, D-28, puts it ahead of the Must `INV-9`) | **Size:** L, to be split when carded (the split takes the next free IDs) | **Status:** `Idea`
+- **Type:** Feature | **Priority:** Should (the human's order, D-28, puts it ahead of the Must `INV-9`) | **Size:** L, to be split when carded (the split takes the next free IDs) | **Status:** `UI approved` (2026-11-06; [INV-17-per-unit-qr-ui.md](stories/INV-17-per-unit-qr-ui.md), design [INV-17-per-unit-qr.md](design/specs/INV-17-per-unit-qr.md))
 - **What it brings:** in Progress the workshop keeps batch progress and adds progress per unit. A unit gets its own QR code; scanning
   it moves only that unit, through the same phases, until it is put in stock. Scanning a batch's work ticket still moves the batch.
 - **The request, from the human (2026-11-06):** "In Progress we want to keep the batch progress, and add progress per item. Generate a
@@ -195,13 +240,27 @@
   On how it relates to the batch tickets: "I want the system to handle both, based on what the user chooses: move a batch, or move one
   by one."
 - **Decided by the human (2026-11-06, D-28):** per-unit QR codes come **alongside** today's batch tracking; the system supports **both**
-  modes and the user chooses. The exact interaction model is still to be decided (the product-owner's brainstorm is in the hand-off of
-  2026-11-06). Queue: after `INV-16`, before `INV-9`.
+  modes and the user chooses. Queue: after `INV-16`, before `INV-9`.
+- **Interaction model, decided by the human (2026-11-06):**
+  - **Model B with regrouping:** a unit scan splits that unit off its batch and moves it one step; it joins the batch of the same start
+    already in that phase; a batch has one phase. The paper decides the mode: a ticket moves a batch, a unit label moves one unit.
+  - **Unit codes** are made by an optional tick at Start batch (off by default) and by **Print unit codes** in a batch's "⋯" menu.
+  - **Last phase:** a unit scan asks "Put 1 unit in stock?" and is a restock of 1 (Reference = the batch it is in then, Note "From
+    production"), one restock per scan.
+  - **Fast scanning:** a Scan-page switch "Move units as soon as I scan", off by default, remembered on the device.
+  - **Out of scope** (later cards): lost or defective units, and undoing a mistaken scan.
+- **Settled in the UI card draft by the product-owner (2026-11-06, from the designer's questions):** fast mode moves unit labels only (a
+  ticket always asks) and puts a unit in stock at once; a unit the system has ahead of the floor is not refused (the confirm names
+  "Finishing (now)" and Move back is the fix); every move joins a batch of the same start already in the phase, and the batch already
+  there keeps its number; a separate "Unit label size" in Settings › Labels; the button is **Find**; the Start batch tick is not
+  remembered; a partly used A4 sheet ("Start at slot") is decided together with `INV-9`.
+- **UI card approved by the human (2026-11-06), with three answers:** (1) a unit ahead of the floor is not refused (the recommended
+  option); (2) every move joins a batch of the same start already in the phase, batches without unit codes included; (3) the two
+  limits (200 units at a start with the tick on, 100 labels at a time) are left to the tech-lead.
 - **What exists:** `INV-5` (batches move through phases, Put in stock, Undo batch, split) and `INV-15` (a work ticket and QR per batch;
   the Scan page moves a whole batch; moving part of a batch by scan was left out). Barcodes per colour and size (`INV-8`) identify a
   variant, not one unit.
-- **Before a card:** the human picks the interaction model; the ui-ux-designer draws the Progress and Scan changes; the tech-lead sizes
-  the data and the split. Then the UI card, then the development card.
+- **Next:** development card (written from the approved UI card; the tech-lead sizes it and the split into INV cards then).
 
 > [!abstract] Unscheduled Idea
 > **Production for the shelf:** A batch with no attached client moving through production phases, ending with "Put in stock". *(No ID assigned yet.)* Since 2026-11-01 this is no longer an idea apart: it is how Progress works, and it is now `INV-5`'s rewritten card.
@@ -216,7 +275,8 @@
 ## 🏛️ Decisions That Shape the Backlog
 
 > [!summary] Core Operational Rules
-> - **D-28 (2026-11-06):** `INV-17` (per-unit QR codes) is registered and placed after `INV-16`, before `INV-9`: `INV-16` → `INV-17` → `INV-9` → `INV-7`. Scope: unit QR codes **alongside** batch tracking; both modes supported, the user chooses; the interaction model is still to be decided.
+> - **D-29 (2026-11-06, human):** sizes chosen per product and managed in Settings, like units, come **first** as `INV-18` (an `Idea`; the human's answer on `INV-16`). `INV-16` stays `Ready` but is **on hold until `INV-18` is done**; its Technical work is replanned then (category lock → "a size with cells can't be taken off", sizes from the product's own list). Order: `INV-18` → `INV-16` → `INV-17` → `INV-9` → `INV-7`.
+> - **D-28 (2026-11-06):** `INV-17` (per-unit QR codes) is registered and placed after `INV-16`, before `INV-9`: `INV-16` → `INV-17` → `INV-9` → `INV-7`. Scope: unit QR codes **alongside** batch tracking; both modes supported, the user chooses. The interaction model was decided the same day (see Item Details).
 > - **D-27 (2026-11-06):** `INV-16` moves to the front of the queue, ahead of `INV-9` and `INV-7`.
 > - **D-20 (2026-10-24):** Card flow paused. Open items placed on hold for variant rework (`INV-n` sequence).
 > - **D-26 (2026-11-03):** `INV-13` then `INV-14` move ahead of INV-3's acceptance and `INV-9`.

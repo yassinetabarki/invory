@@ -22,8 +22,9 @@ Work goes one item at a time, in the order below. A UI card comes first, then th
 | INV-4  | Clients, found by phone on New order (+ INV-12)    | `Done`        | Orders belong to a client                  |
 | INV-5  | Production for the shelf: a progress page          | `Done`        | See where every batch is in production     |
 | INV-3  | Restock of finished products                       | `Done`        | Add finished units to the shelf at once    |
-| INV-16 | Material use per size and colour                   | `Ready`       | Each size and colour uses its own material |
-| INV-17 | Per-unit QR codes, moved one by one                | `Idea`        | Follow each unit, not only its batch       |
+| INV-18 | Sizes chosen per product, managed in Settings      | `Idea`        | Each product has the sizes it really has   |
+| INV-16 | Material use per size and colour                   | `Ready`, on hold until INV-18 | Each size and colour uses its own material |
+| INV-17 | Per-unit QR codes, moved one by one                | `UI approved` | Follow each unit, not only its batch       |
 | INV-9  | Print barcode labels                               | `Ready`       | Print a label for a variant, or a sheet    |
 | INV-15 | Work tickets and the Scan page                     | `Done`        | Move a batch on by scanning its ticket     |
 | INV-12 | Refactor the order, 1 of 3: client first           | `Done`        | Built within INV-4                         |
@@ -37,6 +38,7 @@ the order.
 
 - D-20 (2026-10-24): the card flow is paused for this rework. Every older open story is on hold.
 - D-21 (2026-10-24): the order is INV-1, INV-2, INV-3, INV-4, INV-5.
+- D-29 (2026-11-06): INV-18 (sizes chosen per product, managed in Settings) comes first; INV-16 stays Ready but waits until it is done. Decided with it: one workshop-wide size list, the category pre-selects sizes on Add product, existing products keep their sizes, a size is never deleted and a used size can't be taken off a product, at least one size per product, order by position in Settings.
 - D-27 (2026-11-06): INV-16 comes first, ahead of INV-9 and INV-7.
 - D-28 (2026-11-06): INV-17 (per-unit QR codes, alongside batch tracking; the user chooses the mode) comes after INV-16 and before INV-9.
 - D-24 (2026-11-02): INV-5 comes next, ahead of INV-3's acceptance and INV-9; INV-15 (work tickets and Scan) is split from it and follows INV-9.

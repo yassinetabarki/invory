@@ -39,9 +39,10 @@ Settings › Labels and its Ticket size. **INV-13 "Search products, order lines 
 2026-11-03, on `PI-DEV`, see §4). **INV-14 "Order tracker, served from the shelf" is `Done`** (accepted 2026-11-03, on `PI-DEV`, see
 §4). **INV-3 "Restock finished products" is `Done`** (accepted 2026-11-06 after you merged `PI-DEV` into `main` and confirmed it
 yourself; `2575dd0` … `cbdae79`, docs `194534a`, `c8c4716`, browser golden path `aeee262`): the Restocks page, New restock (colour ×
-size grid, scan or type a barcode), the restock detail, Undo restock, and "Restock" on the product page. **Next: INV-16** "Material
-use per size and colour" (prioritized ahead of the queue by the human, D-27, 2026-11-06; pending an ADR before it can be carded), then
-INV-17 "Per-unit QR codes" (an `Idea`, D-28, 2026-11-06), then INV-9 "Print barcode labels" (card `Ready`), then INV-7.
+size grid, scan or type a barcode), the restock detail, Undo restock, and "Restock" on the product page. **Next: INV-18** "Sizes chosen per
+product, managed in Settings" (an `Idea`, D-29, 2026-11-06; its UI design is in progress), then INV-16 "Material use per colour and
+size" (card `Ready`, **on hold until INV-18 is done**), then INV-17 "Per-unit QR codes" (`UI approved` 2026-11-06, D-28), then INV-9 "Print barcode
+labels" (card `Ready`), then INV-7.
 **Phase 5: Customer orders** (started 2026-10-15, D-12; on hold since 2026-10-24). **Done:** S-48 (accepted 2026-10-15), and **F-41, S-49
 and S-53** (accepted 2026-10-21 after your one click-through; built in one build and landed on `main` together, `e99615e` … `8ab9df8`,
 closing docs `f803cb1`), **S-50** (accepted 2026-10-22; `ba0a0cd`, `74f05a8`, `a23a5d7`, merged in `0270014`), **S-58**
@@ -69,10 +70,21 @@ AC-7) `Done`: the Restocks page, New restock (colour × size grid, scanning), th
 the product page's Sizes & colours card. Eleven commits `2575dd0` … `cbdae79` (INV-3-a … INV-3-k), docs `194534a`, `c8c4716`, and the
 browser golden path `aeee262`. It left the open list.
 
+**Decided on 2026-11-06 (D-29): sizes chosen per product come first.** You decided that each product gets its own sizes from one
+workshop list in Settings (like units), built **before** INV-16. It is `INV-18`, an `Idea`. Decided with it: the category pre-selects
+sizes on Add product; existing products keep the sizes they have; a size is never deleted (rename and reorder only); a size that is
+used can't be taken off a product; a product keeps at least one size; sizes are ordered by position in Settings. INV-16's card stays
+`Ready` with its 4-size Denim Jacket example but **waits**; its Technical work is replanned afterwards. New order: `INV-18` →
+`INV-16` → `INV-17` → `INV-9` → `INV-7`. Next free ID: INV-19.
+
 **Decided on 2026-11-06 (D-28): INV-17 registered.** You asked for a QR code per unit (one garment), so that progress is kept per
 unit as well as per batch: scanning a unit's code moves only that unit. Both modes stay and the user chooses (move a batch, or move
-units one by one). It is `INV-17` "Per-unit QR codes", an `Idea`, placed after INV-16 and before INV-9: `INV-16` → `INV-17` →
-`INV-9` → `INV-7`. How the two modes fit together is still to be decided (questions in the product-owner's hand-off). Next free ID: INV-18.
+units one by one). It is `INV-17` "Per-unit QR codes", placed after INV-16 and before INV-9: `INV-16` → `INV-17` →
+`INV-9` → `INV-7`. The same day you decided how the two modes fit together (a unit scan splits the unit off its batch and joins the batch of
+its start already in that phase; unit codes by a tick at Start batch or "Print unit codes"; the last phase puts one unit in stock; a
+"Move units as soon as I scan" switch), and its **UI card is `Approved`** ([INV-17-per-unit-qr-ui.md](stories/INV-17-per-unit-qr-ui.md),
+2026-11-06) with three answers from you: a unit ahead of the floor is not refused, every move joins a batch of the same start already in
+the phase (batches without unit codes too), and the two limits are left to the tech-lead. Next: its development card. Next free ID: INV-19.
 
 **Decided on 2026-11-06 (D-27): INV-16 prioritized now.** You asked to start `INV-16` "Material use per size and colour" right away,
 ahead of the rest of the queue, instead of appending it after `INV-7`. It is still pending an ADR and the tech-lead's agreement on the
@@ -377,11 +389,12 @@ All phase branches (`phase/1-materials`, `phase/2-ui-first-preview`, `phase/3-pe
    Done 2026-11-02: INV-5 Progress accepted, on `PI-DEV` (`9672c68` … `41ea604`). Done 2026-11-03: INV-15 work tickets and Scan
    accepted, on `PI-DEV` (`967dcf4` … `adea45b`). Done 2026-11-03: INV-13 accepted, on `PI-DEV` (`39647ce`), and INV-14 (`7af1a63`).
    Done 2026-11-06: INV-3 accepted, after you merged `PI-DEV` into `main` (`2575dd0` … `cbdae79`, `aeee262`). **D-27 (2026-11-06):
-   `INV-16` now comes first, ahead of `INV-9` and `INV-7`** (pending its ADR).
+   `INV-16` came first, ahead of `INV-9` and `INV-7`; D-29 (2026-11-06) puts `INV-18` ahead of it and holds `INV-16` until INV-18 is done.**
 3. Done: orders per colour and size was settled and built within INV-5/INV-13.
 4. Done 2026-10-31: INV-2's development card (stock per colour and size) was built and accepted, with the rule "a colour with stock
-   can't be taken off a product". INV-8 was built and accepted on 2026-11-01. **INV-3 is `Done`** (2026-11-06); `INV-16` (pending
-   an ADR) is next, then INV-17 (an `Idea`, D-28), then INV-9 (card `Ready`), then INV-7.
+   can't be taken off a product". INV-8 was built and accepted on 2026-11-01. **INV-3 is `Done`** (2026-11-06); `INV-18` (sizes
+   per product, an `Idea`, D-29) is next, then INV-16 (card `Ready`, on hold until INV-18 is done), then INV-17 (`UI approved` 2026-11-06, D-28; next its development card),
+   then INV-9 (card `Ready`), then INV-7.
 5. Product-owner, at the next grooming: INV-7 (bigger tap targets on the Settings pages, a Could) gets its card when you ask.
 6. Done 2026-10-24: the process documents describe the new way of working (UI card, then development card, INV IDs; `e2be378`).
 7. Product-owner: before any on-hold story resumes, check its card against the new product model (R-21).
