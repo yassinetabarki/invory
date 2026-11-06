@@ -171,7 +171,7 @@
 - **Details:** Increases button/field heights on phone/tablet from 32-36 px to 44 px. Related to `S-68` (order screen tap targets). Runs after `INV-14`.
 
 #### `INV-18` · Sizes chosen per product, managed in Settings
-- **Type:** Feature | **Priority:** Must (it unblocks `INV-16`) | **Size:** L at least, to be split when carded (the split takes the next free IDs) | **Status:** `UI approved` (UI card written 2026-11-06, awaiting the human's validation)
+- **Type:** Feature | **Priority:** Must (it unblocks `INV-16`) | **Size:** L at least, to be split when carded (the split takes the next free IDs) | **Status:** `UI approved` (UI card approved by the human 2026-11-06; development card next)
 - **Cards:** [UI card: sizes chosen per product](stories/INV-18-product-sizes-ui.md) (`Draft`) · design spec [INV-18-product-sizes-in-settings](design/specs/INV-18-product-sizes-in-settings.md). The development card follows the approved UI card.
 - **The request, from the human (2026-11-06, free text, on `INV-16`):** "to each product we will assign the possible sizes per
   product and we will make the size under the settings like the units etc."
