@@ -76,8 +76,9 @@ Board: `Inv18SizeDialogs`
 
 ### Settings › Product categories — Suggests
 Board: `Inv18SizeDialogs` (bottom)
-1. The table gains a column **Suggests** with "XS to XXXL", "36 to 46" or "One size" (the suggested sizes in list order: an unbroken run
-   reads first to last, otherwise they are listed). The Edit category window gains a **Suggested sizes** field with the same toggle
+1. The table gains a column **Suggests** with "XS to XXXL", "36 to 46" or "One size", following the product badge's rule without the word
+   "Sizes": one size alone ("One size", "M"); two to six sizes listed ("S, M, L, XL"); seven or more in an unbroken run, first to last
+   ("XS to XXXL"); seven or more with gaps, the first three and a count ("XS, S, M and 4 more"). The Edit category window gains a **Suggested sizes** field with the same toggle
    buttons as the product form (nothing locked) and the hint "Add product pre-selects these sizes when you choose this category.".
    Saving with none chosen shows "Choose at least one size.".
 2. Apparel suggests XS to XXXL, Footwear 36 to 46, every other category One size, as today's lists do. A category added in Settings
@@ -97,15 +98,16 @@ Board: `Inv18ProductForm`
 4. **Edit product.** The hint reads "A new size adds a variant for every colour, with no stock and no barcode yet.". The sizes the
    product has are pressed. A size the product **uses** carries a lock icon after its name, stays pressed, keeps its full-strength
    text and **can't be pressed off**. Its reason is read when it takes focus or the pointer rests on it: "Can't be taken off: it has
-   units in stock, is on orders and has barcodes." The reasons, in this order, joined with commas and "and": "it has units in stock", "is on
-   orders", "has barcodes", "has units in production", "has material quantities" (a saved quantity on a By colour and size line of
-   INV-16). Under the group, once: "Sizes with a lock are in use by this product's stock, orders, barcodes, production or material
+   units in stock, is on orders and has barcodes." Every lock sentence puts "it" before its first reason ("Can't be taken off: it is on
+   orders and has barcodes."); the reasons, in this order, joined with commas and "and": "has units in stock", "is on orders", "has
+   barcodes", "has units in production", "has material quantities" (a saved quantity on a By colour and size line of INV-16). Under the group, once: "Sizes with a lock are in use by this product's stock, orders, barcodes, production or material
    quantities, so they can't be taken off." A size that ever had a barcode on the product stays on it for good.
    Sizes not in use can be pressed off (XS comes off the jacket) and any size of the list can be pressed on, such as 36, even though no
    category suggests it. **Save product** → "Product updated.".
 5. **One size** and the other sizes exclude each other: pressing One size turns the others off; pressing another size turns One size
-   off. If a locked size is pressed, One size can't be pressed, and its reason reads "S, M, L and XL are in use, so One size can't be
-   chosen.".
+   off. If a locked size is pressed, One size can't be pressed, and its reason names the sizes in use: "S, M, L and XL are in use, so One size can't be chosen."
+   ("XL is in use, so …", "Size 38 is in use, so …", "Sizes 36, 37 and 38 are in use, so …"). When One size itself is locked, every other
+   size can't be pressed and reads "One size is in use, so other sizes can't be chosen.".
 6. **A category change on Add product.** Choosing another category replaces the sizes only while she has not changed them herself and
    no composition line holds quantities per size (INV-16). Otherwise her sizes stay and a line under the buttons reads "Sizes kept: you
    changed them." with the text button **Use the sizes of Footwear**, which replaces them (after the question below if quantities
@@ -166,7 +168,7 @@ Board: `Inv18ProductShow`
 - Sizes field: "Sizes" · "Choosing a category pre-selects its sizes. Change them as you like." · "A new size adds a variant for every
   colour, with no stock and no barcode yet." · "4 sizes chosen" · "1 size chosen" · "None chosen yet" · "Can't be taken off: it has
   units in stock, is on orders and has barcodes." · "Sizes with a lock are in use by this product's stock, orders, barcodes, production
-  or material quantities, so they can't be taken off." · "S, M, L and XL are in use, so One size can't be chosen." · "Sizes kept: you
+  or material quantities, so they can't be taken off." · "S, M, L and XL are in use, so One size can't be chosen." · "One size is in use, so other sizes can't be chosen." · "Can't be taken off: it is on orders and has barcodes." · "Sizes kept: you
   changed them." · "Use the sizes of Footwear" · "Choose at least one size." · "One size can't be combined with other sizes. Choose it
   alone, or choose other sizes." · "XL can't be taken off Denim Jacket: it has units in stock, is on orders and has barcodes."
 - Questions: "Take XL off this product?" · "This clears the 2 quantities you set for XL across its materials." · "Keep XL" · "Take XL
