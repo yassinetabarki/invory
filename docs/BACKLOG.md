@@ -42,7 +42,8 @@
 > - **INV-16 UI approved** (2026-11-06, by the human, after ADR-0027 settled the costing rules): the composition line's
 >   "Same for every variant" / "By colour and size" toggle and colour × size grid (a Sheet, pre-filled from the old quantity),
 >   capacity shown as guaranteed (headline) and best (secondary, named by colour), cost and margin as ranges. Card
->   [stories/INV-16-material-per-variant-ui.md](stories/INV-16-material-per-variant-ui.md). Its development card is next.
+>   [stories/INV-16-material-per-variant-ui.md](stories/INV-16-material-per-variant-ui.md). Its development card is written
+>   ([stories/INV-16-material-per-variant.md](stories/INV-16-material-per-variant.md), `Ready`, approved by the human 2026-11-06).
 > - **INV-1 Done:** "Colours as fixed values" accepted & merged (`a66f4bf`, `78a4eee`), so it left this backlog.
 > - **Added:** `INV-6` (picker-row item) and `INV-7` (Could: bigger tap targets on Settings).
 > - **Archive:** Done items leave this file and are recorded in `STATUS.md` and the archive.
@@ -73,7 +74,7 @@
   - `INV-10`: PostgreSQL test fix (done, `76b1770`).
   - `INV-11`: Small barcode clean-ups from the INV-8 review (MINOR tech debt, in [TECH-DEBT.md](TECH-DEBT.md); proposed for when barcodes are next touched, INV-9).
   - `INV-12`, `INV-13`, `INV-14`: Refactor the order (client first · product search with stock · order tracker and no cutting on orders). Added 2026-11-01 as `INV-12`, split into three the same day.
-  - `INV-16`: Material use per size and colour, and "Can produce" per colour. Added 2026-11-06 (first as "INV-15", renumbered once the `PI-DEV` merge showed that number taken). `Idea`, moved to the front of the queue by the human (D-27, 2026-11-06); pending the ADR (see Item Details) and not yet carded.
+  - `INV-16`: Material use per size and colour, and "Can produce" per colour. Added 2026-11-06 (first as "INV-15", renumbered once the `PI-DEV` merge showed that number taken). Moved to the front of the queue by the human (D-27, 2026-11-06); UI card `Approved`, development card `Ready` (2026-11-06) (see Item Details).
   - Old `S-` and `F-` IDs are retained and never reused (last story ID: `S-74`).
   - Technical items register: See [TECH-DEBT.md](TECH-DEBT.md).
 
@@ -103,7 +104,7 @@
 
 | ID         | What it brings                                               | Type    | Status        | Priority / Size  |
 | ---------- | ------------------------------------------------------------ | ------- | ------------- | ---------------- |
-| **INV-16** | Material use per size and colour, "Can produce" per colour   | Feature | `UI approved` | Must / TBD       |
+| **INV-16** | Material use per size and colour, "Can produce" per colour   | Feature | `Ready`       | Must / L         |
 | **INV-9**  | Print barcode labels                                         | Feature | `Ready`       | Must / M         |
 | **INV-7**  | Bigger tap targets on Settings pages                         | Feature | `Idea`        | Could / S–M      |
 
@@ -159,11 +160,11 @@
 - **Details:** Increases button/field heights on phone/tablet from 32-36 px to 44 px. Related to `S-68` (order screen tap targets). Runs after `INV-14`.
 
 #### `INV-16` · Material use per size and colour, "Can produce" per colour
-- **Type:** Feature | **Priority:** Must | **Status:** `UI approved` (2026-11-06; first logged as "INV-15" on 2026-11-06, renumbered
-  once the `PI-DEV` merge showed that number taken by the done "Work tickets and Scan" item)
-- **Cards:** [UI card: material use per colour and size](stories/INV-16-material-per-variant-ui.md) (`Approved`, 2026-11-06) · design
+- **Type:** Feature | **Priority:** Must | **Status:** `Draft` (development card written 2026-11-06, awaiting the human's approval;
+  the UI card is `Approved`; first logged as "INV-15" on 2026-11-06, renumbered once the `PI-DEV` merge showed that number taken by
+  the done "Work tickets and Scan" item)
+- **Cards:** [Development card](stories/INV-16-material-per-variant.md) (`Ready`, 2026-11-06) · [UI card: material use per colour and size](stories/INV-16-material-per-variant-ui.md) (`Approved`, 2026-11-06) · design
   spec [INV-16-material-per-variant](design/specs/INV-16-material-per-variant.md) · ADR [ADR-0027](adr/0027-material-use-per-colour-and-size.md).
-  The development card is next.
 - **The request, from the human (2026-11-06):**
   1. The system removes the correct amount of material depending on the size (and maybe the colour) made — the user sets up how
      much material an L uses, separately from M or XL.
@@ -177,7 +178,7 @@
   **colour-specific material stock** (each colour's fabric etc. is its own stocked material with its own quantity on hand), not the
   same stock sliced by what you'd cut.
 - **Queue:** the human decided (D-27, 2026-11-06) to prioritize `INV-16` now, ahead of `INV-9` and `INV-7`, rather than append it
-  after them. Its UI card is approved; the development card is written next, then it waits its turn to build.
+  after them. Its UI card is approved and its development card is written (`Draft`, awaiting approval); then the tech-lead adds the Technical work.
 - **Links:** depends on the colour and size work already done (`INV-1`, `INV-2`) and sits downstream of the costing domain's BOM rules.
 
 > [!abstract] Unscheduled Idea
