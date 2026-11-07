@@ -104,6 +104,12 @@ A product's sizes are the ones chosen in its Sizes field, not its category's ([[
   quantities you set for XL across its materials." · **Keep XL** · **Take XL off** (Add product, and Edit product for quantities
   typed but not saved). "Use the sizes of Footwear?" asks "This replaces the sizes and clears the 8 quantities you set across its
   materials." · **Keep the sizes** · **Use Footwear sizes**.
+- Pressing **One size** while other sizes hold typed quantities asks in the same window as the category button: "Use One size?"
+  with "This replaces the sizes and clears the 8 quantities you set across its materials." · **Keep the sizes** · **Use One
+  size**. The number is every typed quantity of the sizes that come off ("the 1 quantity" for one); with none, nothing is asked.
+  The title and the button carry the name the workshop gave its One size. The same goes the other way: pressing a size while One
+  size is pressed and holds typed quantities asks "Take One size off this product?" with "This clears the 3 quantities you set for
+  One size across its materials." · **Keep One size** · **Take One size off**, as for any size taken off.
 - On Edit product a size with a saved quantity is locked and can't be taken off: "Can't be taken off: it has material quantities."
   A stale save reads "XL can't be taken off Denim Jacket: it has material quantities.".
 
@@ -134,7 +140,10 @@ A product's sizes are the ones chosen in its Sizes field, not its category's ([[
 - Start batch: "Short on Denim 12oz Black. Restock it first, or lower the units." · "Short on Denim 12oz Black and Metal shank button
   17mm. Restock them first, or lower the units."
 - Sizes: "Take XL off this product?" · "This clears the 2 quantities you set for XL across its materials." · "Keep XL" · "Take XL
-  off" · "Can't be taken off: it has material quantities." · "XL can't be taken off Denim Jacket: it has material quantities."
+  off" · "Use One size?" · "This replaces the sizes and clears the 8 quantities you set across its materials." · "Keep the
+  sizes" · "Use One size" · "Take One size off this product?" · "This clears the 3 quantities you set for One size across its
+  materials." · "Keep One size" · "Take One size off" · "Can't be taken off: it has material quantities." · "XL can't be taken
+  off Denim Jacket: it has material quantities."
 - Errors: "Enter a number from 0 to 1,000,000 with up to 4 decimals." · "Add at least one quantity for Denim 12oz Black, or
   switch it to Same for every variant." · "The sizes or colours of Denim Jacket have changed. Enter its quantities again."
 

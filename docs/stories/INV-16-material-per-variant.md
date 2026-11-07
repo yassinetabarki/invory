@@ -5,7 +5,7 @@ type: feature
 phase: Colour × size variants
 priority: Must
 size: L
-status: Ready
+status: Planned
 created: 2026-11-06
 tags:
   - story
@@ -71,6 +71,11 @@ XL 103; Black S 22 · M 20 · L 18 · XL 16.
     and **Take XL off**. A size with no quantity comes off without asking. On Add product, "Use the sizes of Footwear" with quantities
     typed asks "Use the sizes of Footwear?" and "This replaces the sizes and clears the 8 quantities you set across its materials."
     with **Keep the sizes** and **Use Footwear sizes**.
+  - Pressing **One size** while other sizes hold typed quantities asks the same way: "Use One size?" and "This replaces the sizes
+    and clears the 8 quantities you set across its materials." with **Keep the sizes** and **Use One size** (the name is the one
+    the workshop gave its One size; "the 1 quantity" for one). With no typed quantity to clear, it asks nothing. Pressing another
+    size while One size is pressed and holds 3 typed quantities asks "Take One size off this product?" and "This clears the 3
+    quantities you set for One size across its materials." with **Keep One size** and **Take One size off**.
   - On a phone the control is full width under the line, and every field and button is 44 px high.
 
 - [ ] **AC-2 · The quantity grid.** **Edit grid** opens a side panel titled "Denim 12oz Indigo", with the composition list still
@@ -173,20 +178,21 @@ XL 103; Black S 22 · M 20 · L 18 · XL 16.
 ---
 
 ## Technical work
-> [!warning] Complex · CRITICAL · backend + frontend · 12 commits
-> Tech-lead · 2026-11-06 · proposed
+> [!warning] Complex · CRITICAL · backend + frontend · 13 commits
+> Tech-lead · 2026-11-07 · approved 2026-11-07 (replanned on per-product sizes, INV-18 / ADR-0028; first proposed 2026-11-06)
 > Why complex: changes the cost and capacity maths (per colour and size), two new tables and two column changes, a new business rule
-> (the grid, its cap, a new category lock), Start batch's take and Undo batch's return, and the data four screens receive.
+> (the grid, its cap, a fifth reason on the size lock), Start batch's take and Undo batch's return, and the data four screens receive.
 
 ### In short
 A composition line gets a mode. A **Same for every variant** line keeps its one quantity; a **By colour and size** line keeps its
 quantities in a new table, one row per filled cell. Behind every figure, the server now builds the composition of each colour and size
 (the shared lines plus that variant's cells), runs today's calculator on it unchanged, and sums up: the smallest capacity is the
 **guaranteed** figure, the largest the **best**, and cost and margin become a lowest–highest range. A product with no **By colour and
-size** line is calculated once, exactly as today, so its figures and words don't move. Start batch adds up what each colour and size
-takes, checks the exact total against stock, and remembers the amount per unit for each colour and size so Undo batch gives back
-exactly what it took. Batches started before this change are read the old way. The work runs maths first, then saving, then the
-editor, then each screen.
+size** line is calculated once, exactly as today, so its figures and words don't move. The grid's sizes are the product's own sizes
+(INV-18): a size with saved quantities joins INV-18's size lock as its fifth reason, and on the form a size with typed quantities asks
+before it comes off. Start batch adds up what each colour and size takes, checks the exact total against stock, and remembers the
+amount per unit for each colour and size so Undo batch gives back exactly what it took. Batches started before this change are read
+the old way. The work runs maths first, then saving, then the editor, then each screen.
 
 ### Steps
 
@@ -196,9 +202,10 @@ editor, then each screen.
 | **INV-16-b** | Cost and capacity per colour and size (pure maths)      | AC-4, AC-5 | CRITICAL     | Backend            | ~350 lines |
 | **INV-16-c** | Taking and giving back per colour and size (pure maths) | AC-6       | CRITICAL     | Backend            | ~250 lines |
 | **INV-16-d** | Every product costed per variant; Can't produce by best | AC-4, AC-7 | CRITICAL     | Backend            | ~300 lines |
-| **INV-16-e** | Saving the grid, and keeping it true                    | AC-3       | CRITICAL     | Backend + Frontend | ~400 lines |
-| **INV-16-f** | Same for every variant or By colour and size            | AC-1       | CRITICAL     | Frontend           | ~300 lines |
+| **INV-16-e** | Saving the grid, and the lock on a size with quantities | AC-3       | CRITICAL     | Backend + Frontend | ~350 lines |
+| **INV-16-f** | Same for every variant or By colour and size            | AC-1       | CRITICAL     | Frontend           | ~320 lines |
 | **INV-16-g** | The quantity grid panel                                 | AC-2       | CRITICAL     | Frontend           | ~380 lines |
+| **INV-16-m** | A size taken off while quantities are typed             | AC-1       | CRITICAL     | Frontend           | ~250 lines |
 | **INV-16-h** | Guaranteed and best on the product page                 | AC-4       | CRITICAL     | Backend + Frontend | ~350 lines |
 | **INV-16-i** | Capacity by colour, and Varies in the composition       | AC-4       | NON-CRITICAL | Frontend           | ~300 lines |
 | **INV-16-j** | Cost and margin as a range, the list badge              | AC-5       | CRITICAL     | Backend + Frontend | ~350 lines |
@@ -208,7 +215,8 @@ editor, then each screen.
 Every step keeps `composer test`, `npx vp test`, `npm run check`, `npm run types:check` and `npm run build` green. The backend steps
 run their PostgreSQL tests; after the last wave the whole tree runs `composer test:pgsql`, and the tech-lead runs the load test once.
 A "Backend + Frontend" step is one commit: the backend developer changes the Resources and `domain.ts`, then the frontend developer
-changes every screen and test fixture that reads them, so no commit leaves a type or a screen behind.
+changes every screen and test fixture that reads them, so no commit leaves a type or a screen behind. INV-16-m was added in the
+replan; the commits merge in the table's order.
 
 #### INV-16-a · The quantity tables, their models, the ADR
 **Commit:** `feat(products): quantity cells per colour and size on composition lines (INV-16-a)`
@@ -216,20 +224,28 @@ changes every screen and test fixture that reads them, so no commit leaves a typ
 - `product_components.quantity_mode` (`same` · `by_variant`, default `same`); `quantity` becomes nullable. PostgreSQL CHECK: `quantity`
   is null exactly when `by_variant`, and > 0 otherwise. Every existing line becomes `same` with its quantity; nothing else moves.
 - `product_component_quantities`: `workshop_id`, `product_component_id` (cascade), `product_id`, `colour_id`, `size_id` (restrict),
-  `quantity` 14,4, timestamps; unique (`product_component_id`, `colour_id`, `size_id`). PostgreSQL: CHECK `quantity > 0 AND quantity
-  <= 1000000`, the workshop composite keys (ADR-0013) and (`product_id`, `colour_id`) → `product_colours` (restrict).
+  `quantity` 14,4, timestamps; unique (`product_component_id`, `colour_id`, `size_id`); an index on (`product_id`, `size_id`) for the
+  size lock. PostgreSQL: CHECK `quantity > 0 AND quantity <= 1000000`, the workshop composite keys (ADR-0013; sizes already carry
+  `UNIQUE (workshop_id, id)` since INV-18), (`product_id`, `colour_id`) → `product_colours` and (`product_id`, `size_id`) →
+  `product_sizes`. Both product keys are `NO ACTION` (the default, checked at the end of the statement) rather than `RESTRICT`, so a
+  product's own cascade can still remove its links and its cells together.
 - `production_cut_variants` (`workshop_id`, `production_cut_id` cascade, `colour_id`, `size_id`, `units`, `units_returned`; unique cut +
   colour + size; CHECK `units >= 1`, `0 <= units_returned <= units`) and `production_cut_variant_materials` (`workshop_id`,
   `production_cut_variant_id` cascade, `material_id` restrict, `quantity_per_unit` 20,8 > 0; unique variant + material).
   `production_cut_materials.quantity_per_unit` becomes nullable (CHECK `> 0` when set). No backfill (ADR-0027 §7).
 - Enum `ComponentQuantityMode`; models `ProductComponentQuantity`, `ProductionCutVariant`, `ProductionCutVariantMaterial`
   (`BelongsToWorkshop`); relations `ProductComponent::quantities()`, `ProductionCut::variants()`; factories (a `byVariant()` state).
-- The tech-lead writes in this commit: ADR-0027 Accepted, its appendix applied to the costing skill, and `docs/ARCHITECTURE.md` (the
-  tables, the variant costing, the cut groups).
+- The migration is dated after INV-18's (`2026_11_08_100000` is taken by it).
+- The tech-lead writes in this commit: ADR-0027 Accepted, with §8's category bullet replaced by the size lock (a size with a cell
+  can't be taken off; INV-18's fifth reason), appendix G's category row replaced likewise, appendix H reading "sizes the save leaves on
+  the product", and appendix I's note on the Apparel list dropped (real products now take the sizes S · M · L · XL); the appendix
+  applied to the costing skill, whose *Sizes* section's `[INV-16: material quantities]` becomes the fifth reason; and
+  `docs/ARCHITECTURE.md` (the tables, the variant costing, the cut groups, the fifth lock reason).
 
 **Tests**
-- 1 PostgreSQL schema dataset: a cell for a colour the product doesn't have, another workshop's colour, quantity 0, a second cell for
-  one colour and size, a `by_variant` line with a quantity and a `same` line without one: all refused.
+- 1 PostgreSQL schema dataset: a cell for a colour the product doesn't have, a cell for a size the product doesn't have, another
+  workshop's colour or size, quantity 0, a second cell for one colour and size, a `by_variant` line with a quantity and a `same` line
+  without one: all refused.
 - 1 migration test: existing lines read `same` with their quantity; the golden Denim Jacket still costs 35.7540 and makes 112.
 - The workshop arch test lists the three models.
 
@@ -237,26 +253,29 @@ changes every screen and test fixture that reads them, so no commit leaves a typ
 > - `.claude/skills/invory-costing-domain/SKILL.md`, `docs/adr/0027-material-use-per-colour-and-size.md`, `docs/ARCHITECTURE.md`
 > - `app/Enums/ComponentQuantityMode.php` (new), `app/Models/{ProductComponentQuantity,ProductionCutVariant,ProductionCutVariantMaterial}.php` (new),
 >   `app/Models/{ProductComponent,ProductionCut}.php`
-> - `database/migrations/2026_11_08_100000_add_quantity_cells_to_compositions.php` (new), `database/factories/…Factory.php` (new, 3; `ProductComponentFactory`)
+> - `database/migrations/2026_11_09_100000_add_quantity_cells_to_compositions.php` (new), `database/factories/…Factory.php` (new, 3; `ProductComponentFactory`)
 > - `tests/Feature/Products/QuantityCellsSchemaTest.php` (new), `tests/Arch/WorkshopScopeTest.php`
 
 #### INV-16-b · Cost and capacity per colour and size (pure maths)
 **Commit:** `feat(costing): cost and capacity per colour and size, guaranteed and best (INV-16-b)`
 
 - `App\Domain\Costing\VariantCosting` (pure, no `Illuminate\*`): takes the lines in composition order (each with its quantity, or its
-  cells by variant), the variants in order (colour list order, then size order), labor, overhead and the selling price. It builds each
-  variant's composition and runs `CostingCalculator::calculate()` on it **unchanged**, once per distinct composition. It returns the
-  appendix's figures: per variant (cost, capacity, bottleneck), per colour (guaranteed, best, the binding size and its bottleneck, or
-  null for "No composition"), per product (guaranteed and its binding variant, best and where it is reached, unit and material cost
-  min–max, margin amount and percent min–max), and per material its need and units covered, lowest and highest, over the variants that
-  use it.
+  cells by variant), the variants in order (colour list order, then the product's size order), labor, overhead and the selling price.
+  It builds each variant's composition and runs `CostingCalculator::calculate()` on it **unchanged**, once per distinct composition.
+  It returns the appendix's figures: per variant (cost, capacity, bottleneck), per colour (guaranteed, best, the binding size and its
+  bottleneck, or null for "No composition"), per product (guaranteed and its binding variant, best and where it is reached, unit and
+  material cost min–max, margin amount and percent min–max), and per material its need and units covered, lowest and highest, over
+  the variants that use it.
+- A variant with an empty composition counts for neither capacity figure but is part of the cost range, at labor + overhead (AC-4,
+  AC-5).
 - With no `by_variant` line it calculates once and every figure equals today's (`varies = false`).
 
 **Tests**
-- The appendix's worked example as a golden test (eight variants, exact strings: 33.8840 … 39.4940, Indigo 103 / 112, Black 16 / 22,
-  product 16 / 112 bound at Black XL, best at Indigo S limited by the button).
-- 1 edge-case dataset: every line `same` (the main golden figures), a colour with no line at all (null, left out), a colour material at
-  0 (guaranteed 0, best 112), ties for binding and for best (colour order, then size order), no selling price, selling price 0.
+- The appendix's worked example as a golden test (eight variants, exact strings: 33.8840 … 39.4940, margin 49.5060–55.1160 and
+  55.62–61.93, Indigo 103 / 112, Black 16 / 22, product 16 / 112 bound at Black XL, best at Indigo S limited by the button).
+- 1 edge-case dataset: every line `same` (the main golden figures), a colour with no line at all (capacity null and left out, unit cost
+  15.5000 at the bottom of the range), a colour material at 0 (guaranteed 0, best 112), ties for binding and for best (colour order,
+  then size order), no selling price, selling price 0.
 - 1 test for the per-material lowest and highest (Black denim 16–22, Indigo denim 103–142).
 
 > [!example]- Files (≈6)
@@ -286,18 +305,20 @@ changes every screen and test fixture that reads them, so no commit leaves a typ
 #### INV-16-d · Every product costed per variant; Can't produce by best
 **Commit:** `feat(costing): products costed per colour and size; Can't produce counts best (INV-16-d)`
 
-- `ProductCostingService` builds the `VariantCosting` input from the product's lines and cells, its colours and its size list
-  (`SizeLists`), and `ProductCosting` carries the result. `costMany()` and every reader that loads compositions
-  (`ProductIndexQuery`, `ProductCatalog`, `MaterialUsageService`, `CuttingPreview`) also load the cells and colours, in a constant
-  number of queries. A product with no `by_variant` line takes the fast path.
+- `ProductCostingService` builds the `VariantCosting` input from the product's lines and cells, its colours and its own sizes
+  (`ProductSizes::of()`, and `ProductSizes::forProducts()` for a page of products), and `ProductCosting` carries the result.
+  `costMany()` and every reader that loads compositions (`ProductIndexQuery`, `ProductCatalog`, `MaterialUsageService`,
+  `CuttingPreview`) also load the cells and colours, in a constant number of queries. A product with no `by_variant` line takes the
+  fast path.
 - `ProductCosting::cantProduce()` reads **best = 0**: the dashboard's count and alerts and the products list's Can't produce filter
   follow. `CapacityResource` sends the guaranteed figure and its bottleneck under today's keys (the contract changes in INV-16-h).
 - A load test (group `load`, left out of `composer test`, run by the tech-lead in review): the products list page with 25 products at
   2,000 cells and the dashboard with 100 products, five at the cap, each under 1.5 s on SQLite.
 
 **Tests**
-- The card's Denim Jacket through real models (guaranteed, best, ranges); Light wash added with no cells (18.9240, 112); the golden
-  product unchanged; the dashboard and the filter counting a product only at best 0 (Black at 0 m: not counted).
+- The card's Denim Jacket through real models, given the sizes S · M · L · XL (`ProductFactory::withSizes()`): guaranteed, best,
+  ranges; Light wash added with no cells (18.9240, 112); the golden product unchanged; the dashboard and the filter counting a product
+  only at best 0 (Black at 0 m: not counted).
 - 1 N+1 test: `costMany()` over 10 varying products runs the same number of queries as over 1.
 
 > [!example]- Files (≈10)
@@ -306,53 +327,67 @@ changes every screen and test fixture that reads them, so no commit leaves a typ
 > - `phpunit.xml` (exclude the `load` group)
 > - `tests/Feature/Products/{ProductCostingServiceTest,VariantCostingLoadTest}.php` (one new), `tests/Feature/Dashboard/DashboardTest.php`
 
-#### INV-16-e · Saving the grid, and keeping it true
+#### INV-16-e · Saving the grid, and the lock on a size with quantities
 **Commit:** `feat(products): save quantities by colour and size with the product (INV-16-e)`
 
-- `UpdateProductRequest` (shared rules with Store): `components.*.quantity_mode` (`same` · `by_variant`, default `same`); `same` needs
-  `quantity` as today; `by_variant` takes `quantities[colourId][sizeId]` (empty or 0 = no cell; else a number up to 1,000,000 with up
-  to 4 decimals) and at least one cell. The card's sentences: under the cell, on `components.{i}.quantities` ("Add at least one
-  quantity for …"), on `components` (colours or sizes changed: a cell for a colour the save doesn't leave on the product, or a size
-  not of its list; more than 2,000 cells). Checked again under the product lock in `UpdateProduct`.
+- `StoreProductRequest` (its rules and messages shared with `UpdateProductRequest`, so Add product and Edit product take the same
+  grid): `components.*.quantity_mode` (`same` · `by_variant`, default `same`); `same` needs `quantity` as today; `by_variant` takes
+  `quantities[colourId][sizeId]` (empty or 0 = no cell; else a number up to 1,000,000 with up to 4 decimals) and at least one cell.
+  The card's sentences: "Enter a number from 0 to 1,000,000 with up to 4 decimals." under the cell; "Add at least one quantity for …,
+  or switch it to Same for every variant." on `components.{i}.quantities`; on `components`, "The sizes or colours of … have changed.
+  Enter its quantities again." for a cell whose colour isn't in the save's `colours` or whose size isn't in its `sizes` (both are
+  required on Add and Edit since INV-1 / INV-18), and the 2,000-cell sentence. These read only the payload, so nothing about them is
+  checked again under the lock.
 - `SyncProductComponents` writes the mode and replaces each line's cells (a line back to `same` loses them). `SyncProductColours`
-  deletes the cells of a colour it takes off, before it detaches it. `ProductSizeLock` adds "… has materials set by colour and size, so
-  its category can't change to one with other sizes." with today's ending, last in the order, counting a `by_variant` line saved now
-  or sent in this save.
+  deletes the cells of a colour it takes off, before it detaches it. `SyncProductSizes` doesn't change: a size it takes off has no
+  saved cell (the lock below) and gets none from the save (the request), and on PostgreSQL the (`product_id`, `size_id`) key refuses
+  it if both ever failed.
+- `ProductSizeLock::reasons()` gains its fifth reason, **has material quantities**, last: one grouped query, the distinct sizes of the
+  product's cells. Everything else follows from INV-18 without change: the Sizes field's tooltip ("Can't be taken off: it has units in
+  stock, is on orders and has material quantities."), the refusal on `sizes.removed.{sizeId}` ("XL can't be taken off Denim Jacket: it
+  has material quantities.") in the request and again in `UpdateProduct` under the product's row lock, and the One size sentences.
+  The Sizes field's lock note already names material quantities. Edit product's query budget goes from 4 to 5 lock queries.
 - `ProductComponentResource`: `quantity_mode`, `quantities` (colour list order, then size order); `quantity`, `effective_quantity`,
   `line_cost` and `units_possible` null on a `by_variant` line. Frontend type-compat in the same commit: the composition table and
   the editor's rows accept the null fields (the table writes "Varies"; INV-16-i adds **View grid**), fixtures gain the new fields.
 
 **Tests**
-- Save the card's two denim lines (cells stored, toast "Product saved."); 1 validation dataset (each refusal with its field and
-  sentence; 2,000 cells accepted, 2,001 refused; 0 and empty make no cell; another workshop's colour refused); taking Indigo off
-  deletes its cells; Light wash added has none; switching a line back to `same` clears its cells.
-- Category lock: refused with the new sentence (a `by_variant` line saved, or sent now); on an order, in stock or in production the
-  existing sentence shows instead. A material on a `by_variant` line can't be deleted or change unit.
-- Edit page contract via `assertInertia`: one `by_variant` line's shape.
+- Save the card's two denim lines on Edit (cells stored, toast "Product updated.") and on Add ("Product created."); 1 validation
+  dataset (each refusal with its field and sentence; a cell for a colour or a size not in the save; 2,000 cells accepted, 2,001
+  refused; 0 and empty make no cell; another workshop's colour refused); taking Indigo off deletes its cells; Light wash added, or a
+  size added, has none; switching a line back to `same` clears its cells.
+- Size lock (`ProductSizeLockTest`): XL with a saved cell reads "has material quantities", alone and after stock and orders; a save
+  taking it off is refused with the card's sentence, and so is the second check under the row lock; XL locked this way keeps One size
+  from being chosen; a size with no cell comes off. A material on a `by_variant` line can't be deleted or change unit.
+- Edit page contract via `assertInertia`: one `by_variant` line's shape; the query budget with five lock queries.
 
-> [!example]- Files (≈11)
-> - `app/Http/Requests/Products/{StoreProductRequest,UpdateProductRequest}.php`, `app/Actions/Products/{UpdateProduct,SyncProductComponents,SyncProductColours}.php`,
+> [!example]- Files (≈12)
+> - `app/Http/Requests/Products/{StoreProductRequest,UpdateProductRequest}.php`, `app/Actions/Products/{SyncProductComponents,SyncProductColours}.php`,
 >   `app/Services/Products/ProductSizeLock.php`, `app/Http/Resources/ProductComponentResource.php`
 > - `resources/js/types/domain.ts`, `resources/js/components/products/{bom-table,bom-rows}.ts(x)`, FE fixtures that type a `ProductComponentLine`
-> - `tests/Feature/Products/{QuantityGridWriteTest,ProductSizeLockTest}.php` (one new)
+> - `tests/Feature/Products/{QuantityGridWriteTest,ProductSizeLockTest}.php` (one new), `tests/Feature/Performance/QueryBudgetTest.php`
 
 #### INV-16-f · Same for every variant or By colour and size
 **Commit:** `feat(products): a composition line counts the same for every variant or by colour and size (INV-16-f)`
 
-- Edit product's composition row gains the `ToggleGroup` **Same for every variant** / **By colour and size** (full width under the line
-  on a phone, 44 px). By colour and size shows the card's summary (cells filled of cells possible, the colours named up to two, "No
-  cells set yet") and **Edit grid**. Switching a line with a quantity pre-fills every cell of the product's colours and sizes and opens the
-  grid; a line with none opens blank. Switching back a line with cells asks the card's question (**Keep the grid** / **Switch
-  anyway**). The payload sends `quantity_mode` and the filled cells of the colours ticked in the form.
-- The grid's colours are the colours ticked in the form, in list order; its sizes are the product's size list.
+- The composition row of `ProductForm`, on Add product and on Edit product alike, gains the `ToggleGroup` **Same for every variant** /
+  **By colour and size** (full width under the line on a phone, 44 px). By colour and size shows the card's summary (cells filled of
+  cells possible, the colours named up to two, "No cells set yet") and **Edit grid**. Switching a line with a quantity pre-fills every
+  cell of the form's colours and sizes and opens the grid; a line with none opens blank. Switching back a line with cells asks the
+  card's question (**Keep the grid** / **Switch anyway**). The payload sends `quantity_mode` and the filled cells of the colours ticked
+  and the sizes pressed in the form.
+- The grid's colours are the colours ticked in the form, in list order; its sizes are the sizes pressed in the Sizes field, in list
+  order (`form.data.sizes`, labelled from the `sizes` prop). A colour taken off leaves its cells out of the payload, with no question;
+  a size taken off is INV-16-m.
 
 **Tests**
 - Vitest: default mode; pre-filled switch; blank switch; the three summary forms; the confirm, both answers, and no confirm on an empty
-  line; the submitted payload; a cell error after a failed save shown on the line; Add product has no control.
+  line; the submitted payload, on Add product and on Edit product; a colour taken off leaves its cells out; a cell error after a failed
+  save shown on the line.
 
 > [!example]- Files (≈6)
-> - `resources/js/components/products/{bom-editor,bom-editor-row,bom-rows,product-form}.tsx`, `…/quantity-mode-control.tsx` (new)
-> - `resources/js/components/products/{bom-editor,bom-rows}.test.ts(x)`
+> - `resources/js/components/products/{bom-editor.tsx,bom-editor-row.tsx,bom-rows.ts,product-form.tsx}`, `…/quantity-mode-control.tsx` (new)
+> - `resources/js/components/products/{bom-editor.test.tsx,bom-rows.test.ts,product-form.test.tsx}`
 
 #### INV-16-g · The quantity grid panel
 **Commit:** `feat(products): the quantity grid by colour and size in a side panel (INV-16-g)`
@@ -371,17 +406,56 @@ changes every screen and test fixture that reads them, so no commit leaves a typ
 > [!example]- Files (≈5)
 > - `resources/js/components/products/quantity-grid-sheet.tsx` (new, + test), `resources/js/components/products/decimals.ts` (+ test)
 
+#### INV-16-m · A size taken off while quantities are typed
+**Commit:** `feat(products): ask before a size with typed quantities comes off the product (INV-16-m)`
+
+- `ProductForm` checks every change of the Sizes field: when it takes off a size that holds typed cells on any **By colour and size**
+  line, an alert dialog asks first: "Take XL off this product?" and "This clears the 2 quantities you set for XL across its
+  materials." ("the 1 quantity"; a number size "Take size 36 off this product?" and "…for size 36…", as INV-18's UI card writes them),
+  with **Keep XL** (focused; Esc does the same) and the red **Take XL off**, which clears those cells and then takes the size off. A
+  size with no typed cell comes off without asking. On Edit product a size with saved cells is locked (INV-16-e), so only quantities
+  typed since the page opened reach the question.
+- Add product: **Use the sizes of Footwear**, when the replacement would clear typed cells, asks "Use the sizes of Footwear?" and "This
+  replaces the sizes and clears the 8 quantities you set across its materials." with **Keep the sizes** and **Use Footwear sizes**;
+  the count is the cells of the sizes the replacement takes off, and with none it asks nothing. Choosing another category keeps the
+  sizes ("Sizes kept: you changed them.") as soon as any line holds a quantity per size, as INV-18's UI card rule 6 says.
+- Pressing **One size** while other sizes hold typed cells asks, in the same dialog as the category button, "Use One size?" and "This
+  replaces the sizes and clears the 8 quantities you set across its materials." ("clears the 1 quantity you set across its
+  materials." for one) with **Keep the sizes** (focused; Esc does the same) and **Use One size**. Title and button carry the name the
+  workshop gave its One size (the `sizes` option flagged `one_size`, e.g. "Use Free size?"). The count is the typed cells of the
+  sizes that come off; with none, nothing is asked and One size is pressed at once.
+- The reverse move is the take-off rule above: pressing another size while One size is pressed and holds typed cells asks "Take One
+  size off this product?" and "This clears the 3 quantities you set for One size across its materials." with **Keep One size** and
+  **Take One size off**; the press happens only on **Take One size off**, and with no typed cell nothing is asked.
+- One dialog component (`size-quantities-dialog.tsx`) serves every question of this step: a size taken off, the category button and
+  One size. A helper in `bom-rows.ts` counts the typed cells of a set of sizes.
+
+**Tests**
+- Vitest: the question on XL with 2 cells, both answers (Keep XL leaves the sizes and the cells; Take XL off sends neither XL nor its
+  cells); "the 1 quantity" and "size 36"; no question for a size with no cell; Use the sizes of Footwear with 8 cells to clear, both
+  answers, and no question when none would be cleared; a category change with a typed quantity keeps the sizes.
+- Vitest, One size: pressing it with 8 typed cells on S–XL asks "Use One size?", both answers (Keep the sizes changes nothing; Use One
+  size sends One size alone and none of the 8 cells); the "clears the 1 quantity" form; the workshop's own name ("Use Free size?");
+  nothing asked with no typed cell; the reverse "Take One size off this product?" with 3 cells, both answers.
+
+> [!example]- Files (≈5)
+> - `resources/js/components/products/{product-form.tsx,bom-rows.ts}`, `resources/js/components/products/size-quantities-dialog.tsx` (new)
+> - `resources/js/components/products/{product-form.test.tsx,bom-rows.test.ts}`
+
 #### INV-16-h · Guaranteed and best on the product page
 **Commit:** `feat(products): guaranteed and best capacity on the product page (INV-16-h)`
 
 - Backend: `Capacity` gains `best` and `by_variant` (the binding variant; where best is reached and its bottleneck), and `Product`
   gains `capacity_by_colour` (see the Contract). `max_producible` and `bottleneck` keep their meaning: the guaranteed figure.
 - Frontend: the hero's number, its caption ("any mix of colours and sizes." / "any mix of colours."), "Can't produce" only at best 0;
-  the bottleneck callout's three sentences with links. Products with no `by_variant` line render exactly as today.
+  the bottleneck callout's three sentences with links, in the card's three readings: several colours and sizes ("(Black, size XL)"), a
+  "One size" product ("(Black)", "… the smallest across every colour."; `binding.size` null) and a one-colour product ("(size XL)", "…
+  the smallest across every size."). Products with no `by_variant` line render exactly as today.
 
 **Tests**
 - Contract via `assertInertia`: the example (16, 112, Black XL, Indigo + button) and a product with no `by_variant` line (`best` =
-  `max_producible`, `by_variant` null). Vitest: hero and callout for the example, for Black at 0 m, and unchanged for the golden product.
+  `max_producible`, `by_variant` null). Vitest: hero and callout for the example, for Black at 0 m, for a "One size" product and for a
+  one-colour product, and unchanged for the golden product.
 
 > [!example]- Files (≈9)
 > - `app/Http/Resources/{CapacityResource,ProductResource,ColourCapacityResource}.php` (one new), `resources/js/types/domain.ts`
@@ -411,8 +485,8 @@ changes every screen and test fixture that reads them, so no commit leaves a typ
   the short-stock icon), "Can't produce" at best 0. Phone: each range on its own line.
 
 **Tests**
-- Contract: the example's ranges and a product with no `by_variant` line (min = max). Vitest: the formatters' rules (TND 3 decimals,
-  equal ends), the card, the table cells and the badge's three tones.
+- Contract: the example's ranges (TND 33.884–39.494, margin 49.506–55.116 · 55.62–61.93%) and a product with no `by_variant` line
+  (min = max). Vitest: the formatters' rules (TND 3 decimals, equal ends), the card, the table cells and the badge's three tones.
 
 > [!example]- Files (≈10)
 > - `app/Http/Resources/{CostBreakdownResource,ProductResource,ProductListResource}.php`, `resources/js/types/domain.ts`
@@ -486,15 +560,16 @@ MaterialUsage      : effective_quantity: Decimal | null; units_covered: CountRan
 StartBatchPreview  : max_cuttable null also for a mixed grid; short_message may be the "Short on …" sentence
 ```
 Errors: `components.{i}.quantities.{colourId}.{sizeId}` (a cell) · `components.{i}.quantities` (no cell) · `components` (changed,
-over 2,000) · `category` (the new lock). Routes: no new route; `progress.products.materials` takes `units[colourId][sizeId]=n` (only
-n > 0) in place of `units=16`.
+over 2,000) · `sizes.removed.{sizeId}` (INV-18's size lock, now with "has material quantities"). Edit product's `size_locks`,
+`one_size_lock` and `other_sizes_lock` props keep their shape; their text gains the fifth reason. Routes: no new route;
+`progress.products.materials` takes `units[colourId][sizeId]=n` (only n > 0) in place of `units=16`.
 
 ### Decisions
 - **The calculator doesn't change; it runs per variant.** `VariantCosting` feeds it each variant's composition and sums up, so the
   golden test and every existing formula stay as they are. Variants with the same composition are costed once.
 - **Best is reached at** the first variant, in colour list order then size order, with the largest capacity: the card's example names
-  Indigo, limited by the button. **A colour with no line at all** gives null ("No composition") and counts for neither figure, as an
-  empty composition does today (ADR-0027, updated).
+  Indigo, limited by the button. **A colour with no line at all** gives null ("No composition") and counts for neither capacity
+  figure, as an empty composition does today; its unit cost (labor + overhead) is part of the cost range (ADR-0027, updated).
 - **The cap is 2,000 filled cells per product**, over all its lines, counted on the save.
 - **Old production cuts are not rewritten.** A cut with no variant rows is one group, which gives exactly today's return; every new
   cut writes variant rows. ADR-0027 §7 changed from a backfill to this (no live row is touched).
@@ -502,24 +577,35 @@ n > 0) in place of `units=16`.
   screens that don't show colours (Start batch's "Can produce now", the dashboard alerts) stay true without a change.
 - **Ranges replace single values** in `CostBreakdown`, `Margin` and `ProductListItem` rather than living beside them: one meaning per
   key. Each such change ships with its screens in one commit.
-- **The grid uses the colours ticked in the form and the product's saved sizes.** A category change is refused while a line is By
-  colour and size, so the sizes can't move under the grid.
+- **The grid follows the form, and the lock keeps saved cells true** (replanned 2026-11-07 on ADR-0028). The grid uses the colours
+  ticked and the sizes pressed in the form; the server checks every cell against the colours and sizes the save leaves on the product,
+  which the form always sends (so, as in INV-18, the last save wins for them). A size with a saved cell is locked through
+  `ProductSizeLock`'s fifth reason, the slot ADR-0028 §5 kept for it, so INV-18's tooltip, refusal, second check under the row lock
+  and One size sentences cover it unchanged; it also means a "One size" product with a cell can't take other sizes until its
+  By colour and size lines are cleared. The category lock of the first plan is dropped: a category no longer decides sizes.
+- **The product keys of the cells are `NO ACTION`, not `RESTRICT`**, so a product's own cascade still deletes its size and colour links
+  and its cells in one statement, while a size taken off with cells is still refused.
 - **No new generated component:** the colour rows use the existing `Collapsible` (the design names an accordion; same behaviour).
 
 ### Order
 Wave 1 (backend): INV-16-a → INV-16-b ∥ INV-16-c (two developers, disjoint folders) → INV-16-d → INV-16-e (backend, then its
-frontend type-compat). Wave 2: INV-16-f → INV-16-g (frontend) in parallel with INV-16-k → INV-16-l (backend, then each one's small
-frontend part). Wave 3: INV-16-h → INV-16-i → INV-16-j (they share the product page and `domain.ts`). Merge order is the step order.
+frontend type-compat). Wave 2: INV-16-f → INV-16-g → INV-16-m (frontend) in parallel with INV-16-k → INV-16-l (backend, then each
+one's small frontend part). Wave 3: INV-16-h → INV-16-i → INV-16-j (they share the product page and `domain.ts`). Merge order is the
+table's order.
 
 ### Risks
 - **Costing every variant of every product on the list and the dashboard** (up to 220 variants at the cap) → one costing per distinct
-  composition, the fast path for products that don't vary, constant queries, and the load test at the cap; if it is over budget, the
-  cells are read as plain rows instead of models.
+  composition, the fast path for products that don't vary, constant queries (sizes through `ProductSizes::forProducts()`), and the load
+  test at the cap; if it is over budget, the cells are read as plain rows instead of models.
 - **`quantity` becoming nullable** breaks readers that expect a string → every reader of `ProductComponent::quantity` is listed in the
   INV-16-d and INV-16-e briefs; strict types and the golden tests catch the rest.
 - **Changing a column on SQLite rebuilds the table** → the migration test runs on both databases; parity after wave 1.
 - **Changing existing contract types ripples into frontend fixtures** → each contract step carries its frontend part in one commit.
 - **A colour detached while its cells exist** would break the PostgreSQL key → `SyncProductColours` deletes the cells first, under the
   product lock every writer takes.
-- **The card's example numbers** assume four sizes; the feature tests use the product-owner's corrected example (see the hand-off).
-  The domain golden test (INV-16-b) uses ADR-0027's eight abstract variants and doesn't depend on it.
+- **A size detached while its cells exist** → it can't happen through the app (the size lock under the row lock, and the request), and
+  the PostgreSQL key makes it fail loudly instead of leaving orphans; the schema test proves the key.
+- **`ProductForm` grows again** (INV-18's Sizes field, now the mode control and two questions) → the size questions are their own step
+  (INV-16-m) with their own dialog component, so INV-16-f stays within budget.
+- **The card's example** is built in the feature tests by giving the Denim Jacket the sizes S · M · L · XL (INV-18's `withSizes()`);
+  the domain golden test (INV-16-b) uses ADR-0027's eight abstract variants and doesn't depend on any size list.
