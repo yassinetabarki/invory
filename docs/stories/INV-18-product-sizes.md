@@ -5,7 +5,7 @@ type: feature
 phase: Colour × size variants
 priority: Must
 size: L
-status: Planned
+status: Done
 created: 2026-11-06
 tags:
   - story
@@ -44,7 +44,7 @@ The workshop's 19 starting sizes, in order, numbered 10, 20 … 190: XS 10 · S 
 Black and Light wash) has XS to XXXL today, with units in stock, on orders and with barcodes in S, M, L and XL; XS, XXL and XXXL hold
 nothing. A **Leather Tote** (a category suggesting One size) has "One size".
 
-- [ ] **AC-1 · The list in Settings.** Settings › Catalogue lists Units · Material categories · Product categories · Colours ·
+- [x] **AC-1 · The list in Settings.** Settings › Catalogue lists Units · Material categories · Product categories · Colours ·
   **Sizes** · Labels. **Sizes** shows the heading, "The sizes your products come in. Each product picks the ones it has. Rename any of
   them, or add your own.", the main button **Add size**, and one table with the caption "Sizes".
   - One row per size in list order, no paging: **Size** (a small outlined tag) · **Position** · **Used by** ("3 products", "1
@@ -54,9 +54,9 @@ nothing. A **Leather Tote** (a category suggesting One size) has "One size".
   - Under the table: "A size is never removed. Positions set the order sizes are listed in, on every screen and in every SKU. "One
     size" is for products that don't come in sizes: a product that has it has no other size."
   - On a phone each size is one 56 px row with its tag, "Used by 3 products" and a 44 px **Edit**; **Add size** is full width, 44 px.
-  - Sizes with the same position are listed by their creation order, not by name (S, M, L stay S, M, L).
+  - Sizes with the same position are listed by their creation order, not by name (S, M, L stay S, M, L). ✅ 2026-11-07 · e069997
 
-- [ ] **AC-2 · Add and rename a size.** **Add size** opens a window with **Name** (up to 12 characters) and **Position (optional)**
+- [x] **AC-2 · Add and rename a size.** **Add size** opens a window with **Name** (up to 12 characters) and **Position (optional)**
   ("Lower numbers are listed first. Leave empty to list it last."), **Cancel** and **Save size**; **Edit XXL** is the same window.
   - Saved: "Size created." / "Size updated."; the size is in its place at once. A new size is on no product until chosen on one. An
     empty position lists it last; 0 lists it first.
@@ -68,9 +68,9 @@ nothing. A **Leather Tote** (a category suggesting One size) has "One size".
     Editing "One size" adds "The size for products without sizes. A product that has it has no other size." under the title.
   - Renaming XXL to 2XL shows "2XL" at once on every product that has it, in its variant SKUs ("PRD-JKT-001-IND-XXL" becomes
     "PRD-JKT-001-IND-2XL") and in the barcode lists; no barcode number changes.
-  - Every figure is as before: sizes change no cost, "Can produce now" or sale.
+  - Every figure is as before: sizes change no cost, "Can produce now" or sale. ✅ 2026-11-07 · e069997
 
-- [ ] **AC-3 · Every product keeps the sizes it has.** When this ships, a workshop gets the 19 sizes above, and each product keeps
+- [x] **AC-3 · Every product keeps the sizes it has.** When this ships, a workshop gets the 19 sizes above, and each product keeps
   exactly the sizes its category gave it: the Denim Jacket XS to XXXL ("3 colours × 7 sizes = 21 variants"), a Footwear product 36 to
   46, the Leather Tote "One size".
   - Nothing moves: stock, restocks, barcodes (their numbers and names), order lines and their delivered and cancelled counts, batches in
@@ -78,9 +78,9 @@ nothing. A **Leather Tote** (a category suggesting One size) has "One size".
   - "Used by" counts the products that have each size (non-deleted, any status): XS 3 products when three Apparel products exist.
   - A new account's workshop starts with the same 19 sizes, numbered 10 to 190.
   - The three starting size lists no longer exist as lists a category points to; the lock "… so its category can't change to one with
-    other sizes." is gone from every screen, and changing a product's category changes none of its sizes.
+    other sizes." is gone from every screen, and changing a product's category changes none of its sizes. ✅ 2026-11-07 · e069997
 
-- [ ] **AC-4 · The category suggests sizes.** Settings › Product categories gains the column **Suggests**: Apparel "XS to XXXL",
+- [x] **AC-4 · The category suggests sizes.** Settings › Product categories gains the column **Suggests**: Apparel "XS to XXXL",
   Footwear "36 to 46", every other category "One size". The line follows the product badge's rule without the word "Sizes": one size
   alone ("One size", "M"); two to six sizes listed ("S, M, L, XL"); seven or more in an unbroken run of the list, first to last ("XS
   to XXXL"); seven or more with gaps, the first three and a count ("XS, S, M and 4 more"). The Edit category window gains **Suggested sizes**, the same toggle buttons as the product form with nothing
@@ -88,9 +88,9 @@ nothing. A **Leather Tote** (a category suggesting One size) has "One size".
   - Saving with none chosen: "Choose at least one size." under the field, nothing saved. One size can't be combined with others here
     either (pressing it turns the others off, and the reverse).
   - A category added in Settings starts by suggesting "One size". Renaming or archiving a category changes none of its suggestions.
-  - Changing a category's suggestion changes no existing product; it only decides what Add product pre-selects.
+  - Changing a category's suggestion changes no existing product; it only decides what Add product pre-selects. ✅ 2026-11-07 · e069997
 
-- [ ] **AC-5 · The Sizes field on Add product.** In the Details card, after Category and Status and before Colours, **Sizes** (red
+- [x] **AC-5 · The Sizes field on Add product.** In the Details card, after Category and Status and before Colours, **Sizes** (red
   star) shows one toggle button per size of the list, all visible, in Settings order, with the hint "Choosing a category pre-selects
   its sizes. Change them as you like." and a count under them.
   - A pressed size is tinted, ringed and has a check mark before its name (never colour alone); the group is one stop for the
@@ -103,9 +103,9 @@ nothing. A **Leather Tote** (a category suggesting One size) has "One size".
   - Choosing another category replaces the sizes only while she has not changed them herself. Once she has, they stay and a line under
     the buttons reads "Sizes kept: you changed them." with the text button **Use the sizes of Footwear**, which replaces them.
   - Refused on save, nothing saved, under the group, the focus on the first button: no size pressed → "Choose at least one size."; One
-    size with others (a stale page) → "One size can't be combined with other sizes. Choose it alone, or choose other sizes.".
+    size with others (a stale page) → "One size can't be combined with other sizes. Choose it alone, or choose other sizes.". ✅ 2026-11-07 · e069997
 
-- [ ] **AC-6 · The Sizes field on Edit product, and the locks.** Edit product shows the same field with the hint "A new size adds a
+- [x] **AC-6 · The Sizes field on Edit product, and the locks.** Edit product shows the same field with the hint "A new size adds a
   variant for every colour, with no stock and no barcode yet.", the product's sizes pressed.
   - A size the product **uses** shows a lock icon after its name, stays pressed, keeps its full-strength text and can't be pressed
     off, but stays reachable by keyboard. Its reason is read on focus and hover. Every lock sentence puts "it" before its first reason;
@@ -127,9 +127,9 @@ nothing. A **Leather Tote** (a category suggesting One size) has "One size".
   - Refused on save, nothing saved: "Choose at least one size."; a size taken off that is in use (a stale page): "XL can't be taken
     off Denim Jacket: it has units in stock, is on orders and has barcodes." (one sentence per size, in list order, "it" before the
     first reason; a number size reads "Size 36 can't be taken off Denim Jacket: …"). Changing the category on Edit product never changes the sizes.
-  - Two people saving at once can't take a size off that the other has just put stock or an order on.
+  - Two people saving at once can't take a size off that the other has just put stock or an order on. ✅ 2026-11-07 · e069997
 
-- [ ] **AC-7 · The product page, and every screen follows the product's sizes.**
+- [x] **AC-7 · The product page, and every screen follows the product's sizes.**
   - The badge between Category and Status reads "One size" (or "Size M", "Size 38" for a single size), "Sizes S, M, L, XL" or "Sizes
     38, 39, 40" for two to six sizes, "Sizes XS to XXXL" or "Sizes 38 to 44" for seven or more in an unbroken run of the list, and
     "Sizes XS, S, M and 4 more" for seven or more with gaps.
@@ -142,7 +142,7 @@ nothing. A **Leather Tote** (a category suggesting One size) has "One size".
     never XS, XXL or XXXL. Variant lists in text keep their rules ("Indigo S, M, L and XL", "Light wash sizes 36, 37 and 38"). A
     renamed size shows its new name in all of them.
   - A size taken off a product that still appears in an old record can't happen: a size on an order, a batch, stock or a barcode is
-    locked, so those screens never lose a row.
+    locked, so those screens never lose a row. ✅ 2026-11-07 · e069997
 
 ---
 
