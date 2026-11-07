@@ -148,7 +148,7 @@ nothing. A **Leather Tote** (a category suggesting One size) has "One size".
 
 ## Technical work
 > [!warning] Complex · CRITICAL · backend + frontend · 9 commits
-> Tech-lead · 2026-11-06 · approved 2026-11-06
+> Tech-lead · 2026-11-06 · approved 2026-11-06 · delivered 2026-11-07
 > Why complex: a migration that moves every size reference of every workshop, a new business rule (the lock per size, One size
 > alone), a changed contract between the server and the product, order and settings screens, and about 25 places that read sizes.
 
@@ -412,6 +412,7 @@ ProductEditProps   += { size_locks: Record<number, string>;             // size 
                         one_size_lock: string | null;                    // "S, M, L and XL are in use, so One size can't be chosen."
                         other_sizes_lock: string | null }                // "One size is in use, so other sizes can't be chosen."; null unless One size is locked
 ProductCategoriesSettingsProps.categories: (ReferenceRow & { suggested_size_ids: number[]; suggests: string })[]
+ProductCategoriesSettingsProps.sizes: SizeOption[]       // added at INV-18-i: the toggles of Suggested sizes need the workshop's list
 // Removed: SizeList
 ```
 Payloads: product `sizes: number[]`; size `{ label, position }`; category update `suggested_sizes: number[]`. Errors: `sizes`,
@@ -465,3 +466,18 @@ files), then INV-18-e (frontend) ∥ INV-18-g (backend, then its frontend part).
 - **Thirty-four test files read size lists** → INV-18-a moves them to helpers first, so INV-18-c changes the helpers, not the tests.
 - **Edit product gains four lock queries** → grouped per product, checked against the page budget in INV-18-g.
 - **INV-16 is planned on size lists** → its Technical work is replanned after this card (see the hand-off).
+
+### Progress log (build)
+- 2026-11-06 · INV-18-a approved (all PHP gates green; `types:check` red on HEAD from a local `node_modules` mix, same 21 errors before and after). Docker down: parity and the scratch-copy migration wait.
+- 2026-11-06 · INV-18-b approved (PHP gates green, `types:check` same 21 HEAD errors, Vitest/check/build green). Docker back: parity on a + b green (3000 passed). Next: INV-18-c.
+- 2026-11-07 · INV-18-c approved: all gates green (same 21 `types:check` HEAD errors), parity green (2993). ADR-0028 Accepted, costing skill and ARCHITECTURE.md amended. Scratch copy of `laravel`: down → up round trip identical. Found `laravel` already migrated (2026-11-06 23:00:19, during the step's development); result checked correct. Next: INV-18-d ∥ INV-18-f.
+- 2026-11-07 · INV-18-d (1 fix round: empty position on Edit lists last; `SizeClash`) and INV-18-f approved: all gates green, parity green (3042). INV-18-e delivered, gates running. Next: INV-18-g (backend, then frontend).
+- 2026-11-07 · INV-18-e approved (fast lane; all gates green). INV-18-g backend dispatch cut off by the usage limit before any edit; re-dispatched. Remaining: g (backend, then frontend), h, i.
+- 2026-11-07 · INV-18-g backend approved after 1 fix round (workshop list and suggestions moved from `ProductResource` into `ProductSizes`; Edit page budget + 4 lock queries). Next: INV-18-g frontend, then gates + parity, then h, i.
+- 2026-11-07 · INV-18-g approved (backend 1 fix round, frontend 1 fix round: Update stock reads `one_size`): all gates green, parity green (3057). Next: INV-18-h (backend: `sizes` required; then frontend: the Sizes field + browser golden path), then INV-18-i.
+- 2026-11-07 · INV-18-h backend (`sizes` required) and frontend (Sizes field; 1 fix round: Manage sizes & colours → `#sizes`) delivered; gates and browser tests running. Next: INV-18-i.
+- 2026-11-07 · INV-18-h approved: all gates green; browser tests 4/5 (the one red, `OrderGoldenPathTest`, has been stale since INV-13: it looks for an "Add product" button the New order page no longer has). Next: INV-18-i.
+- 2026-11-07 · INV-18-i backend delivered (contract adds `ProductCategoriesSettingsProps.sizes`). Next: INV-18-i frontend, then the final gates, parity and browser run.
+- 2026-11-07 · INV-18-i approved. Final run on the whole tree: composer test 2991 passed (77 PG-only skips), Vitest 1475, check and build green, tsc = the 21 HEAD errors, parity 3068 passed, browser 4/5 (stale OrderGoldenPathTest). Delivered.
+- 2026-11-07 · UX review fixes delivered (Edit category dialog scrolls with title and buttons fixed; the size error is announced on the first size button; check slot reserved; `anchorId` prop). Gates running.
+- 2026-11-07 · UX review fixes approved: composer test 2991 passed (77 PG-only skips), Vitest 1477 (green on re-run; the first run, on an overloaded machine, had 5 timing failures in `product-form.test.tsx` that pass alone and on re-run), check and build green, tsc = the 21 HEAD errors. Not checked in the running app (not serving on :8000; no known login).
