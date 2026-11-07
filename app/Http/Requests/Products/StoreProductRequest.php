@@ -8,11 +8,13 @@ use App\Enums\ProductStatus;
 use App\Models\Colour;
 use App\Models\Material;
 use App\Models\Product;
+use App\Models\Size;
 use App\Services\Reference\ReferenceCode;
 use App\Validation\WorkshopRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\File;
+use Illuminate\Validation\Validator;
 
 class StoreProductRequest extends FormRequest
 {
@@ -39,7 +41,18 @@ class StoreProductRequest extends FormRequest
     }
 
     /**
-     * The messages shared with UpdateProductRequest. Only `colours` has its own wording; `colours.*` fails only on a tampered request.
+     * INV-18-f: One size is chosen alone.
+     *
+     * @return list<callable(Validator): void>
+     */
+    public function after(): array
+    {
+        return [fn (Validator $validator) => self::oneSizeAlone($this, $validator)];
+    }
+
+    /**
+     * The messages shared with UpdateProductRequest. Only `colours` and `sizes` have their own wording; `colours.*` and `sizes.*` fail
+     * only on a tampered request.
      *
      * @return array<string, string>
      */
@@ -49,7 +62,27 @@ class StoreProductRequest extends FormRequest
             'colours.required' => __('Choose at least one colour.'),
             'colours.array' => __('Choose at least one colour.'),
             'colours.min' => __('Choose at least one colour.'),
+            'sizes.required' => __('Choose at least one size.'),
+            'sizes.array' => __('Choose at least one size.'),
+            'sizes.min' => __('Choose at least one size.'),
         ];
+    }
+
+    /**
+     * INV-18-f, AC-5: the workshop's One size can't be combined with another (a stale page can send both). Shared with
+     * UpdateProductRequest; checked only when `sizes` itself passed.
+     */
+    public static function oneSizeAlone(FormRequest $request, Validator $validator): void
+    {
+        if ($validator->errors()->hasAny(['sizes', 'sizes.*'])) {
+            return;
+        }
+
+        $ids = array_map(fn (mixed $id): int => (int) (is_scalar($id) ? $id : 0), $request->array('sizes'));
+
+        if (count($ids) > 1 && Size::query()->whereIn('id', $ids)->where('is_one_size', true)->exists()) {
+            $validator->errors()->add('sizes', __("One size can't be combined with other sizes. Choose it alone, or choose other sizes."));
+        }
     }
 
     /**
@@ -89,6 +122,9 @@ class StoreProductRequest extends FormRequest
             // INV-1: at least one colour of the workshop, whatever the status. A multipart body that carries none has no key at all.
             'colours' => ['bail', 'required', 'array', 'min:1'],
             'colours.*' => ['bail', 'integer', 'distinct', WorkshopRule::exists(Colour::class)],
+            // INV-18-h, AC-5, AC-6: at least one size of the workshop, on Add and Edit; a missing, empty or non-array list is refused.
+            'sizes' => ['bail', 'required', 'array', 'min:1'],
+            'sizes.*' => ['bail', 'integer', 'distinct', WorkshopRule::exists(Size::class)],
             // The composition may be empty (a draft). It is `nullable` rather than `present` because a multipart body
             // (a photo is attached) cannot carry an empty array: the key is simply absent, and on update a missing or null list is an empty
             // composition (F-36: the composition is always replaced).

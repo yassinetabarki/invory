@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace App\Services\Restocks;
 
+use App\Models\Product;
 use App\Models\ProductRestock;
 use App\Models\ProductRestockLine;
 use App\Models\ProductSizeStock;
-use App\Models\SizeList;
+use App\Services\Products\ProductSizes;
 use Illuminate\Database\Eloquent\Collection;
 
 /**
@@ -19,15 +20,17 @@ use Illuminate\Database\Eloquent\Collection;
  */
 final class UndoCheck
 {
+    public function __construct(private readonly ProductSizes $productSizes) {}
+
     /**
      * The lines that still count (their product isn't deleted), in the order the reason is looked for, with their product, colour and
-     * size (and its list) loaded: two queries beyond the restock's lines.
+     * size loaded (one query each, however many lines).
      *
      * @return Collection<int, ProductRestockLine>
      */
     public function linesOf(ProductRestock $restock): Collection
     {
-        return $restock->lines()->with(['product', 'colour', 'size.sizeList'])->get()
+        return $restock->lines()->with(['product', 'colour', 'size'])->get()
             ->reject(fn (ProductRestockLine $line): bool => $line->product->trashed())
             ->sortBy(fn (ProductRestockLine $line): array => [$line->position, $line->colour->position, $line->colour->name, $line->colour_id, $line->size->position])
             ->values();
@@ -46,6 +49,8 @@ final class UndoCheck
 
         $lines ??= $this->linesOf($restock);
         $shelf = $this->shelfOf($lines);
+        // One read for every product of the lines: the sentence below names one only when it refuses.
+        $this->productSizes->forProducts($lines->map(fn (ProductRestockLine $line): Product => $line->product));
 
         foreach ($lines as $line) {
             $onShelf = $shelf[$line->product_id.'-'.$line->colour_id.'-'.$line->size_id] ?? 0;
@@ -55,7 +60,7 @@ final class UndoCheck
                     $line->product->name,
                     $line->colour->name,
                     $line->size->label,
-                    $line->size->sizeList->code === SizeList::ONE_SIZE,
+                    $this->productSizes->of($line->product)->oneSize,
                     $onShelf,
                     $line->units,
                 );

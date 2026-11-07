@@ -7,12 +7,12 @@ namespace App\Actions\Restocks;
 use App\Actions\Products\UpdateFinishedStock;
 use App\Models\Colour;
 use App\Models\Product;
-use App\Models\ProductCategory;
 use App\Models\ProductRestock;
 use App\Models\ProductSizeStock;
 use App\Models\Size;
-use App\Models\SizeList;
 use App\Models\User;
+use App\Services\Products\ProductSizes;
+use App\Services\Products\ProductSizeSet;
 use App\Services\Restocks\RestockMessages;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -28,6 +28,8 @@ use Illuminate\Validation\ValidationException;
 final readonly class RecordRestock
 {
     public const MAX_UNITS = 1000000;
+
+    public function __construct(private ProductSizes $productSizes) {}
 
     /**
      * @param  array{restocked_on: string, reference: ?string, note: ?string, products: list<array{product_id: int, units: array<int, array<int, int>>}>}  $data  units by colour id then size id, 0 for an empty field
@@ -59,8 +61,8 @@ final readonly class RecordRestock
                 }
 
                 $colours = $product->colours()->get()->keyBy('id');
-                $sizeList = ProductCategory::query()->with('sizeList.sizes')->findOrFail($product->category_id)->sizeList;
-                $sizes = $sizeList->sizes->keyBy('id');
+                $sizeSet = $this->productSizes->fresh($product);
+                $sizes = $sizeSet->sizes->keyBy('id');
 
                 if (! UpdateFinishedStock::matches($line['units'], $colours->keys()->all(), $sizes->keys()->all())) {
                     $errors["products.{$i}.product"] = RestockMessages::changed($product->name);
@@ -83,7 +85,7 @@ final readonly class RecordRestock
                         $row = $onShelf->get($colourId.'-'.$sizeId);
 
                         if (($row->units ?? 0) + $units > self::MAX_UNITS) {
-                            $errors["products.{$i}.units.{$colourId}.{$sizeId}"] = RestockMessages::overLimit(self::variant($colour, $size, $sizeList));
+                            $errors["products.{$i}.units.{$colourId}.{$sizeId}"] = RestockMessages::overLimit(self::variant($colour, $size, $sizeSet));
 
                             continue;
                         }
@@ -136,8 +138,8 @@ final readonly class RecordRestock
     }
 
     /** "Indigo M", "Black, size 38", "Camel". */
-    private static function variant(Colour $colour, Size $size, SizeList $sizeList): string
+    private static function variant(Colour $colour, Size $size, ProductSizeSet $sizes): string
     {
-        return RestockMessages::variant($colour->name, $size->label, $sizeList->code === SizeList::ONE_SIZE);
+        return RestockMessages::variant($colour->name, $size->label, $sizes->oneSize);
     }
 }

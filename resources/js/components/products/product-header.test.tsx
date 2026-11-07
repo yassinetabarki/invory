@@ -7,7 +7,6 @@ import {
     canvasLowSneaker,
     choreJacket,
     denimJacket,
-    sizeListOneSize,
 } from '@/test/fixtures/products';
 
 describe('<ProductHeader>', () => {
@@ -24,6 +23,12 @@ describe('<ProductHeader>', () => {
 
     it.each([
         ['Denim Jacket', denimJacket, 'Apparel', 'Sizes S, M, L, XL'],
+        [
+            'a jacket in seven sizes',
+            { ...denimJacket, sizes_line: 'Sizes XS to XXXL' },
+            'Apparel',
+            'Sizes XS to XXXL',
+        ],
         ['Canvas Low Sneaker', canvasLowSneaker, 'Footwear', 'Sizes 36 to 46'],
         [
             'Leather Tote',
@@ -31,7 +36,8 @@ describe('<ProductHeader>', () => {
                 ...denimJacket,
                 name: 'Leather Tote',
                 category_label: 'Bag',
-                size_list: sizeListOneSize,
+                one_size: true,
+                sizes_line: 'One size',
             },
             'Bag',
             'One size',

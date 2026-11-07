@@ -4,7 +4,6 @@ use App\Models\Order;
 use App\Models\OrderLine;
 use App\Models\OrderLineSize;
 use App\Models\Product;
-use App\Models\SizeList;
 use App\Models\Workshop;
 use App\Services\Workshops\CurrentWorkshop;
 use Illuminate\Database\QueryException;
@@ -35,6 +34,7 @@ it('creates both tables with their columns, indexes and foreign keys, and drops 
         ->and($foreignKeys('order_lines', 'products')['on_delete'])->toBe('restrict');
 
     // Newest first: the clients add a column to `orders`, the cuts point at lines and stock movements, the stage counts are columns of `order_lines`.
+    sizesPerWorkshopMigration()->down();
     deliveryCountsMigration()->down();
     orderLineColoursMigration()->down();
     clientsMigration()->down();
@@ -57,6 +57,7 @@ it('creates both tables with their columns, indexes and foreign keys, and drops 
     clientsMigration()->up();
     orderLineColoursMigration()->up();
     deliveryCountsMigration()->up();
+    sizesPerWorkshopMigration()->up();
 
     $line = OrderLine::factory()->create();
 
@@ -81,7 +82,7 @@ it('makes PostgreSQL refuse an order line that breaks a workshop, quantity or du
         'mine' => $mine->id,
         'other' => $other->id,
     ];
-    $row = ['workshop_id' => $ids['mine'], 'order_id' => $ids['order'], 'product_id' => $ids['product'], 'size_list_id' => SizeList::query()->where('code', SizeList::ONE_SIZE)->value('id'), 'quantity' => 1, 'position' => 0, 'created_at' => now(), 'updated_at' => now()];
+    $row = ['workshop_id' => $ids['mine'], 'order_id' => $ids['order'], 'product_id' => $ids['product'], 'by_size' => false, 'quantity' => 1, 'position' => 0, 'created_at' => now(), 'updated_at' => now()];
 
     // The order already holds the product once, so a second line of it is refused.
     DB::table('order_lines')->insert($row);
@@ -100,6 +101,7 @@ it('adds the three stage counts at 0 to the lines that exist, and drops them on 
     $line = OrderLine::factory()->create(['quantity' => 40]);
 
     // INV-14 replaced these columns; it goes first, and comes back after.
+    sizesPerWorkshopMigration()->down();
     deliveryCountsMigration()->down();
     stageCountsMigration()->down();
 
@@ -112,6 +114,7 @@ it('adds the three stage counts at 0 to the lines that exist, and drops them on 
         ->toMatchObject(['in_cutting' => 0, 'ready_to_ship' => 0, 'shipped' => 0, 'quantity' => 40]);
 
     deliveryCountsMigration()->up();
+    sizesPerWorkshopMigration()->up();
 });
 
 it('makes PostgreSQL refuse a negative count and counts that add up to more than the quantity (INV-14-a)', function (array $counts, string $constraint) {
@@ -131,24 +134,24 @@ it('makes PostgreSQL refuse a negative count and counts that add up to more than
     'counts above the quantity' => [['delivered' => 8], 'order_lines_delivery_counts_total_check'],
 ]);
 
-it('keeps every line equal to the sum of its size rows, whichever way the factory builds it (S-60-a)', function (Closure $make, string $list, array $labels) {
-    $line = OrderLine::with('sizes.size', 'sizeList')->findOrFail($make()->id);
+it('keeps every line equal to the sum of its size rows, whichever way the factory builds it (S-60-a)', function (Closure $make, bool $bySize, array $labels) {
+    $line = OrderLine::with('sizes.size')->findOrFail($make()->id);
 
-    expect($line->sizeList->code)->toBe($list)
+    expect($line->by_size)->toBe($bySize)
         ->and($line->sizes->map(fn (OrderLineSize $row) => $row->size->label)->all())->toBe($labels);
 
     foreach (['quantity', 'delivered', 'cancelled', 'to_deliver', 'settled'] as $figure) {
         expect($line->{$figure})->toBe($line->sizes->sum($figure), $figure);
     }
 })->with([
-    'by default' => [fn () => OrderLine::factory()->create(['quantity' => 40]), 'one_size', ['One size']],
-    'counts()' => [fn () => OrderLine::factory()->counts(20, 10)->create(['quantity' => 50]), 'one_size', ['One size']],
-    'delivered()' => [fn () => OrderLine::factory()->delivered(12)->create(), 'one_size', ['One size']],
+    'by default' => [fn () => OrderLine::factory()->create(['quantity' => 40]), false, ['One size']],
+    'counts()' => [fn () => OrderLine::factory()->counts(20, 10)->create(['quantity' => 50]), false, ['One size']],
+    'delivered()' => [fn () => OrderLine::factory()->delivered(12)->create(), false, ['One size']],
     // Created out of order: the rows come back by the size's position, not by id.
     'sized()' => [
         fn () => OrderLine::factory()->sized(['XL' => 5, 'S' => 10, 'L' => 15, 'M' => 20], ['M' => [10, 0], 'XL' => [2, 3]])
             ->create(['product_id' => Product::factory()->create(['category' => 'apparel'])->id]),
-        's_to_xl', ['S', 'M', 'L', 'XL'],
+        true, ['S', 'M', 'L', 'XL'],
     ],
 ]);
 

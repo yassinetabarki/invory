@@ -1,212 +1,256 @@
 <?php
 
 use App\Actions\Products\UpdateProduct;
+use App\Enums\ProductionBatchStatus;
+use App\Models\Barcode;
+use App\Models\BarcodeName;
+use App\Models\Order;
+use App\Models\OrderLine;
 use App\Models\Product;
-use App\Models\ProductCategory;
-use App\Models\ProductComponent;
+use App\Models\ProductionBatch;
 use App\Models\ProductSizeStock;
 use App\Models\Size;
-use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Testing\TestResponse;
+use App\Models\Workshop;
+use App\Services\Products\ProductSizeLock;
+use App\Services\Workshops\CurrentWorkshop;
+use Illuminate\Support\Arr;
 use Illuminate\Validation\ValidationException;
 
 use function Pest\Laravel\actingAs;
 
 /*
 |--------------------------------------------------------------------------
-| The sizes are locked once the product is on an order (S-58-c, AC-4)
+| A size the product uses stays on it (INV-18-f, AC-5, AC-6, ADR-0028)
 |--------------------------------------------------------------------------
 |
-| A product on an order that isn't deleted (also once fully shipped) can't change to a category with another size list. Checked by
-| UpdateProductRequest (the error sits on `category`) and again by UpdateProduct under the product row lock. Rule: ADR-0015 decision 4.
-| S-56-e (AC-4) adds the same lock while the product has finished units in stock (ADR-0017 decision 5); the order message wins.
+| The Denim Jacket (PRD-JKT-001, White) comes in XS to XXXL here; the Leather Tote is "One size". A size is locked while the product has
+| finished units in it, a row on a (non-deleted) order, a barcode of its name in one of its colours, or a batch In production. Taking a
+| locked size off on Edit product saves nothing and puts one sentence per size on `sizes.removed.{sizeId}`, in list order.
 */
+
+const SIZES_COMBINED = "One size can't be combined with other sizes. Choose it alone, or choose other sizes.";
 
 beforeEach(function () {
     $this->user = prepareDemo($this);
-    Storage::fake('public');
+    $this->jacket = demoProduct('PRD-JKT-001');
+    $this->tote = demoProduct('PRD-TOT-004');
 });
 
-const SIZE_LOCK_JACKET = 'Denim Jacket is on orders, so its category can\'t change to one with other sizes. Keep a category with sizes XS to XXXL.';
-const SIZE_LOCK_SNEAKER = 'Canvas Low Sneaker is on orders, so its category can\'t change to one with other sizes. Keep a category with sizes 36 to 46.';
-const SIZE_LOCK_TOTE = 'Leather Tote is on orders, so its category can\'t change to one with other sizes. Keep a "One size" category.';
-
-const SIZE_LOCK_STOCK_JACKET = 'Denim Jacket has units in stock, so its category can\'t change to one with other sizes. Keep a category with sizes XS to XXXL.';
-const SIZE_LOCK_STOCK_TOTE = 'Leather Tote has units in stock, so its category can\'t change to one with other sizes. Keep a "One size" category.';
-
-/** Put finished units in stock for demo product `$id`: size label => units (a row per size, as the Action stores them). */
-function stockForSizeLock(int $id, array $units): void
+/** Puts one thing on the product's size (by label) so that it is locked for that reason: stock, orders, barcodes or production ('size' gives the product the size first). */
+function szlPlant(Product $product, string $reason, string $label, bool $delivered = false): void
 {
-    $listId = Product::query()->with('category')->findOrFail($id)->category->size_list_id;
+    $size = sizeId($label);
+    $colour = $product->colours()->value('colours.id');
 
-    foreach ($units as $label => $count) {
-        ProductSizeStock::factory()->create([
-            'product_id' => $id,
-            'size_id' => Size::query()->where('size_list_id', $listId)->where('label', $label)->value('id'),
-            'units' => $count,
-        ]);
-    }
-}
-
-/** What a refused save must leave alone: name, category and composition. */
-function sizeLockState(int $id): array
-{
-    $product = Product::query()->findOrFail($id);
-
-    return [
-        $product->name,
-        $product->category_id,
-        ProductComponent::query()->where('product_id', $id)->orderBy('position')->pluck('quantity', 'material_id')->all(),
-    ];
-}
-
-/** Book demo product number `$number` (1 = Denim Jacket) on an order of the given kind: open, fully shipped, deleted, or none. */
-function bookForSizeLock(string $kind, int $number): void
-{
-    $lines = [[demoProduct(DEMO_PRODUCT_SKUS[$number]), 10]];
-
-    match ($kind) {
-        'open' => bookOrder(lines: $lines),
-        'shipped' => bookDeliveredOrder([], $number, 10),
-        'deleted' => bookOrder(lines: $lines)->delete(),
-        default => null,
+    match ($reason) {
+        'size' => $product->sizes()->attach($size, ['workshop_id' => $product->workshop_id]),
+        'stock' => ProductSizeStock::factory()->create(['product_id' => $product->id, 'colour_id' => $colour, 'size_id' => $size, 'units' => 2]),
+        'orders' => OrderLine::factory()->sized([$label => 3], $delivered ? [$label => [3, 0]] : [])
+            ->create(['order_id' => Order::factory()->create()->id, 'product_id' => $product->id]),
+        'barcodes' => BarcodeName::factory()->create([
+            'barcode_id' => Barcode::factory()->create(['colour_id' => $colour, 'size_id' => $size])->id, 'name_key' => $product->name_key,
+        ]),
+        'production' => ProductionBatch::factory()->create(['product_id' => $product->id, 'colour_id' => $colour, 'size_id' => $size, 'units' => 3]),
     };
 }
 
-/** The update route, from the edit page, with the product's own SKU and name unless overridden. The composition differs from the seeded one. */
-function updateForSizeLock(object $test, int $id, array $overrides): TestResponse
+/** Edit product's save of a product keeping its name and colours, with exactly these sizes (labels) or, as a list of ids, these; null sends no `sizes` at all. */
+function szlSave(Product $product, ?array $sizes, array $overrides = [])
 {
-    $product = Product::query()->findOrFail($id);
+    $payload = validProductPayload([
+        'sku' => $product->sku, 'name' => $product->name, 'status' => 'active', 'category' => $product->category->code,
+        'colours' => $product->colours()->pluck('colours.id')->all(), ...$overrides,
+    ]);
+    $payload['sizes'] = $sizes === null ? null : array_map(fn (string|int $size): int => is_int($size) ? $size : sizeId($size), $sizes);
 
-    return actingAs($test->user)
-        ->from(route('products.edit', $id))
-        ->put(route('products.update', $id), validProductPayload(['sku' => $product->sku, 'name' => $product->name, 'status' => 'active', ...$overrides]));
+    return actingAs(test()->user)->from(route('products.edit', $product))->put(route('products.update', $product), array_filter($payload, fn (mixed $value, string $key): bool => $key !== 'sizes' || $value !== null, ARRAY_FILTER_USE_BOTH));
 }
 
-it('keeps the sizes of the Denim Jacket while it is on an order', function (string $orders, array $overrides, ?string $message) {
-    $id = pid(1);
-    bookForSizeLock($orders, 1);
-    $before = sizeLockState($id);
+/** The labels of the sizes of the product now. */
+function szlLabels(Product $product): array
+{
+    return sizesOf($product)->pluck('label')->map(fn (mixed $label): string => (string) $label)->all();
+}
 
-    $response = updateForSizeLock($this, $id, $overrides);
+const SZL_ALL = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
 
-    if ($message !== null) {
-        $response->assertRedirect(route('products.edit', $id))->assertSessionHasErrors(['category' => $message]);
-        expect(sizeLockState($id))->toBe($before);
+it('refuses a save that chooses no size, One size with others, a size of another workshop or a locked size taken off, and saves nothing (AC-5, AC-6)', function (string $product, array $plants, ?array $sizes, array $expected) {
+    $product = $this->{$product};
 
-        return;
+    foreach ($plants as [$reason, $label]) {
+        szlPlant($product, $reason, $label);
     }
 
-    $response->assertSessionHasNoErrors();
-    expect(sizeLockState($id))->not->toBe($before);
-})->with([
-    'on an open order, to Footwear' => ['open', ['category' => 'footwear'], SIZE_LOCK_JACKET],
-    'on an open order, to Bag' => ['open', ['category' => 'bag'], SIZE_LOCK_JACKET],
-    'on a fully shipped order, to Footwear' => ['shipped', ['category' => 'footwear'], SIZE_LOCK_JACKET],
-    'on a deleted order only, to Footwear' => ['deleted', ['category' => 'footwear'], null],
-    'on no order, to Footwear' => ['none', ['category' => 'footwear'], null],
-    'on an order, Apparel kept and renamed' => ['open', ['category' => 'apparel', 'name' => 'Denim Jacket Slim'], null],
-]);
+    $before = szlLabels($product);
 
-it('names the sizes of a Footwear product it keeps', function () {
-    $id = pid(3);
-    bookForSizeLock('open', 3);
-    $before = sizeLockState($id);
+    $ids = $sizes === null ? null : array_map(fn (string $label): int|string => $label === 'other workshop' ? CurrentWorkshop::run(Workshop::factory()->create(), fn () => Size::factory()->create())->id : $label, $sizes);
+    $expected = collect($expected)->mapWithKeys(fn (?string $message, string $key): array => [
+        (string) preg_replace_callback('/\{([^}]+)\}/', fn (array $match): string => (string) sizeId($match[1]), $key) => $message,
+    ])->all();
 
-    updateForSizeLock($this, $id, ['category' => 'apparel'])->assertSessionHasErrors(['category' => SIZE_LOCK_SNEAKER]);
+    szlSave($product, $ids)->assertRedirect(route('products.edit', $product))->assertSessionHasErrors(array_keys($expected));
 
-    expect(sizeLockState($id))->toBe($before);
-});
+    // Every key and nothing else, in list order, each with its sentence; and nothing saved.
+    expect(session('errors')->keys())->toBe(array_keys($expected))
+        ->and(szlLabels($product))->toBe($before);
 
-it('asks for a "One size" category when the product has one size', function () {
-    $id = pid(4);
-    bookForSizeLock('open', 4);
-    $before = sizeLockState($id);
-
-    updateForSizeLock($this, $id, ['category' => 'apparel'])->assertSessionHasErrors(['category' => SIZE_LOCK_TOTE]);
-
-    expect(sizeLockState($id))->toBe($before);
-});
-
-it('lets a one-size product on an order move to any other one-size category', function (string $code) {
-    ProductCategory::factory()->create(['code' => 'kids', 'name' => 'Kids']);
-    $id = pid(4);
-    bookForSizeLock('open', 4);
-
-    updateForSizeLock($this, $id, ['category' => $code])->assertSessionHasNoErrors();
-
-    expect(Product::query()->findOrFail($id)->category_id)->toBe(ProductCategory::query()->where('code', $code)->value('id'));
-})->with(['Accessory' => 'accessory', 'a category added in Settings' => 'kids']);
-
-it('checks again in UpdateProduct and saves nothing, not even the photo', function () {
-    $jacket = Product::query()->findOrFail(pid(1));
-    bookForSizeLock('open', 1);
-    $before = sizeLockState($jacket->id);
-    actingAs($this->user);
-
-    $save = fn () => app(UpdateProduct::class)->handle(
-        $jacket,
-        validProductPayload(['sku' => $jacket->sku, 'name' => 'Changed', 'category' => 'footwear', 'photo' => UploadedFile::fake()->image('new.jpg')]),
-        $this->user,
-    );
-
-    expect($save)->toThrow(fn (ValidationException $e) => expect($e->errors())->toBe(['category' => [SIZE_LOCK_JACKET]]));
-    expect(sizeLockState($jacket->id))->toBe($before)
-        ->and(Storage::disk('public')->allFiles())->toBe([]);
-});
-
-it('keeps the sizes of a product while it has units in stock', function (int $number, array $stock, bool $onOrder, string $category, ?string $message) {
-    $id = pid($number);
-    stockForSizeLock($id, $stock);
-    $onOrder && bookForSizeLock('open', $number);
-    $before = sizeLockState($id);
-
-    $response = updateForSizeLock($this, $id, ['category' => $category]);
-
-    if ($message !== null) {
-        $response->assertRedirect(route('products.edit', $id))->assertSessionHasErrors(['category' => $message]);
-        expect(sizeLockState($id))->toBe($before);
-
-        return;
+    foreach (array_filter($expected) as $key => $message) {
+        expect(session('errors')->first($key))->toBe($message);
     }
 
-    $response->assertSessionHasNoErrors();
-    expect(sizeLockState($id))->not->toBe($before);
+    // A save with no `sizes` at all is refused the same way on Add product (INV-18-h).
+    if ($sizes === null) {
+        actingAs($this->user)->from(route('products.create'))->post(route('products.store'), Arr::except(validProductPayload(), 'sizes'))
+            ->assertRedirect(route('products.create'))->assertSessionHasErrors(['sizes' => 'Choose at least one size.']);
+        expect(Product::query()->where('sku', 'PRD-NEW-100')->exists())->toBeFalse();
+    }
 })->with([
-    '14 jackets in stock, to Footwear' => [1, ['S' => 3, 'M' => 4, 'L' => 5, 'XL' => 2], false, 'footwear', SIZE_LOCK_STOCK_JACKET],
-    'no jacket in stock, to Footwear' => [1, [], false, 'footwear', null],
-    'jackets in stock and on an order: the order message wins' => [1, ['S' => 3, 'M' => 4, 'L' => 5, 'XL' => 2], true, 'footwear', SIZE_LOCK_JACKET],
-    'no jacket in stock but on an order' => [1, [], true, 'footwear', SIZE_LOCK_JACKET],
-    'totes in stock, to Accessory (same list)' => [4, ['One size' => 4], false, 'accessory', null],
-    'totes in stock, to Apparel' => [4, ['One size' => 4], false, 'apparel', SIZE_LOCK_STOCK_TOTE],
+    'none chosen' => ['jacket', [], [], ['sizes' => 'Choose at least one size.']],
+    'sizes missing' => ['jacket', [], null, ['sizes' => 'Choose at least one size.']],
+    'One size with others' => ['jacket', [], ['S', 'One size'], ['sizes' => SIZES_COMBINED]],
+    'a size of another workshop' => ['jacket', [], ['S', 'other workshop'], ['sizes.1' => null]],
+    'XL with stock, orders and barcodes' => ['jacket', [['stock', 'XL'], ['orders', 'XL'], ['barcodes', 'XL']], ['XS', 'S', 'M', 'L', 'XXL', 'XXXL'], [
+        'sizes.removed.{XL}' => "XL can't be taken off Denim Jacket: it has units in stock, is on orders and has barcodes.",
+    ]],
+    'S and M, two keys in list order' => ['jacket', [['barcodes', 'M'], ['stock', 'S']], ['XS', 'L', 'XL', 'XXL', 'XXXL'], [
+        'sizes.removed.{S}' => "S can't be taken off Denim Jacket: it has units in stock.",
+        'sizes.removed.{M}' => "M can't be taken off Denim Jacket: it has barcodes.",
+    ]],
+    'a number size reads "Size 36"' => ['jacket', [['size', '36'], ['orders', '36']], SZL_ALL, [
+        'sizes.removed.{36}' => "Size 36 can't be taken off Denim Jacket: it is on orders.",
+    ]],
+    'stock alone' => ['jacket', [['stock', 'M']], ['XS', 'S', 'L', 'XL', 'XXL', 'XXXL'], ['sizes.removed.{M}' => "M can't be taken off Denim Jacket: it has units in stock."]],
+    'orders alone' => ['jacket', [['orders', 'M']], ['XS', 'S', 'L', 'XL', 'XXL', 'XXXL'], ['sizes.removed.{M}' => "M can't be taken off Denim Jacket: it is on orders."]],
+    'barcodes alone' => ['jacket', [['barcodes', 'M']], ['XS', 'S', 'L', 'XL', 'XXL', 'XXXL'], ['sizes.removed.{M}' => "M can't be taken off Denim Jacket: it has barcodes."]],
+    'production alone' => ['jacket', [['production', 'M']], ['XS', 'S', 'L', 'XL', 'XXL', 'XXXL'], ['sizes.removed.{M}' => "M can't be taken off Denim Jacket: it has units in production."]],
+    'all four reasons' => ['jacket', [['stock', 'M'], ['orders', 'M'], ['barcodes', 'M'], ['production', 'M']], ['XS', 'S', 'L', 'XL', 'XXL', 'XXXL'], [
+        'sizes.removed.{M}' => "M can't be taken off Denim Jacket: it has units in stock, is on orders, has barcodes and has units in production.",
+    ]],
+    'the Tote with One size locked, adding S (a stale page)' => ['tote', [['stock', 'One size']], ['S', 'One size'], ['sizes' => SIZES_COMBINED]],
 ]);
 
-it('checks the stock again in UpdateProduct when it was written after the request, and saves nothing', function () {
-    $jacket = Product::query()->findOrFail(pid(1));
-    $before = sizeLockState($jacket->id);
-    actingAs($this->user);
-    stockForSizeLock($jacket->id, ['M' => 6]);
+it('words why One size can\'t be chosen and why other sizes can\'t (AC-6)', function (array $labels, array $locked, ?string $oneSize, ?string $others) {
+    $product = Product::factory()->withSizes($labels)->create(['sku' => 'PRD-SZL-001', 'name' => 'Slim Jacket', 'category' => 'apparel']);
+    $product->colours()->attach(demoColour('WHT')->id, ['workshop_id' => $product->workshop_id]);
 
-    $save = fn () => app(UpdateProduct::class)->handle(
-        $jacket,
-        validProductPayload(['sku' => $jacket->sku, 'name' => 'Changed', 'category' => 'footwear']),
-        $this->user,
-    );
+    foreach ($locked as $label) {
+        szlPlant($product, 'stock', $label);
+    }
 
-    expect($save)->toThrow(fn (ValidationException $e) => expect($e->errors())->toBe(['category' => [SIZE_LOCK_STOCK_JACKET]]));
-    expect(sizeLockState($jacket->id))->toBe($before);
-});
+    $lock = app(ProductSizeLock::class);
 
-it('counts a unit in any colour of the product for the category lock (INV-2, AC-1)', function () {
-    $id = pid(1);
-    // Six units in Indigo only: White, the jacket's other colour, has none.
-    setFinishedStock(Product::query()->findOrFail($id), ['Indigo' => [0, 6, 0, 0]]);
-    $before = sizeLockState($id);
+    expect($lock->oneSizeLock($product))->toBe($oneSize)
+        ->and($lock->otherSizesLock($product))->toBe($others)
+        ->and($lock->tooltip(['has units in stock', 'is on orders', 'has barcodes']))->toBe("Can't be taken off: it has units in stock, is on orders and has barcodes.");
+})->with([
+    'one letter size' => [['S', 'M', 'L', 'XL'], ['XL'], "XL is in use, so One size can't be chosen.", null],
+    'one number size' => [['36', '37', '38'], ['38'], "Size 38 is in use, so One size can't be chosen.", null],
+    'several number sizes' => [['36', '37', '38'], ['36', '37', '38'], "Sizes 36, 37 and 38 are in use, so One size can't be chosen.", null],
+    'several letter sizes' => [['S', 'M', 'L', 'XL'], ['S', 'M', 'L', 'XL'], "S, M, L and XL are in use, so One size can't be chosen.", null],
+    'nothing locked' => [['S', 'M'], [], null, null],
+    'One size locked' => [['One size'], ['One size'], null, "One size is in use, so other sizes can't be chosen."],
+    'One size free' => [['One size'], [], null, null],
+]);
 
-    updateForSizeLock($this, $id, ['category' => 'footwear', 'colours' => [demoColour('WHT')->id, demoColour('IND')->id]])
-        ->assertRedirect(route('products.edit', $id))
-        ->assertSessionHasErrors(['category' => SIZE_LOCK_STOCK_JACKET]);
+it('locks a size only for what is really on it, in four queries (AC-6)', function (Closure $plant, array $expected) {
+    $plant->call($this, $this->jacket);
 
-    expect(sizeLockState($id))->toBe($before);
-});
+    $lock = app(ProductSizeLock::class);
+    $reasons = [];
+    $queries = countQueries(function () use ($lock, &$reasons) {
+        $reasons = $lock->reasons($this->jacket);
+    });
+    $m = sizeId('M');
+
+    expect($queries)->toBe(4)
+        ->and($reasons[$m] ?? [])->toBe($expected);
+})->with([
+    'a deleted order' => [function (Product $jacket) {
+        szlPlant($jacket, 'orders', 'M');
+        Order::query()->latest('id')->firstOrFail()->delete();
+    }, []],
+    'a fully delivered order' => [fn (Product $jacket) => szlPlant($jacket, 'orders', 'M', delivered: true), ['is on orders']],
+    'a batch put in stock or undone' => [function (Product $jacket) {
+        szlPlant($jacket, 'production', 'M');
+        ProductionBatch::query()->update(['status' => ProductionBatchStatus::InStock->value]);
+        szlPlant($jacket, 'production', 'M');
+        ProductionBatch::query()->latest('id')->firstOrFail()->update(['status' => ProductionBatchStatus::Undone->value]);
+    }, []],
+    'a batch in production' => [fn (Product $jacket) => szlPlant($jacket, 'production', 'M'), ['has units in production']],
+    'a barcode of the name in a current colour' => [fn (Product $jacket) => szlPlant($jacket, 'barcodes', 'M'), ['has barcodes']],
+    'a barcode of another name, or in a colour the product does not have' => [function (Product $jacket) {
+        $other = BarcodeName::factory()->create([
+            'barcode_id' => Barcode::factory()->create(['colour_id' => $jacket->colours()->value('colours.id'), 'size_id' => sizeId('M')])->id, 'name_key' => 'trucker jacket',
+        ]);
+        BarcodeName::factory()->create([
+            'barcode_id' => Barcode::factory()->create(['colour_id' => demoColour('RED')->id, 'size_id' => sizeId('M')])->id, 'name_key' => $jacket->name_key,
+        ]);
+        expect($other->exists)->toBeTrue();
+    }, []],
+    'stock and orders, in that order' => [function (Product $jacket) {
+        szlPlant($jacket, 'orders', 'M');
+        szlPlant($jacket, 'stock', 'M');
+    }, ['has units in stock', 'is on orders']],
+]);
+
+/**
+ * Two saves at once: the lock is read again under the product's row lock, and every other writer reads the product's sizes under it too,
+ * so a size can't be taken off by one save while another puts something on it, or the other way round.
+ */
+dataset('saves that meet a size change', [
+    'Update product, after stock was written' => [function () {
+        actingAs($this->user);
+        $stale = demoProduct('PRD-JKT-001');
+        // The request passed with XL free; before the save, 3 units were counted in XL.
+        szlPlant($this->jacket, 'stock', 'XL');
+        $save = fn () => app(UpdateProduct::class)->handle($stale, validProductPayload([
+            'sku' => $stale->sku, 'name' => 'Changed', 'sizes' => array_map(fn (string $label): int => sizeId($label), ['XS', 'S', 'M', 'L', 'XXL', 'XXXL']),
+        ]), $this->user);
+
+        expect($save)->toThrow(fn (ValidationException $e) => expect($e->errors())->toBe([
+            'sizes.removed.'.sizeId('XL') => ["XL can't be taken off Denim Jacket: it has units in stock."],
+        ]));
+        expect($this->jacket->fresh()->name)->toBe('Denim Jacket')
+            ->and(szlLabels($this->jacket))->toBe(SZL_ALL);
+    }],
+    'Update stock' => [function () {
+        $body = ['stock' => [demoColour('WHT')->id => sizeIds(array_fill_keys(SZL_ALL, '1'))]];
+        $this->jacket->sizes()->detach(sizeId('XXXL'));
+
+        actingAs($this->user)->put(route('products.stock.update', $this->jacket), $body)
+            ->assertSessionHasErrors(['stock' => 'The sizes or colours of Denim Jacket have changed. Enter the stock again.']);
+    }],
+    'Record restock' => [function () {
+        $body = restockBody([restockLine($this->jacket, ['White' => ['XXXL' => 1]])]);
+        $this->jacket->sizes()->detach(sizeId('XXXL'));
+
+        actingAs($this->user)->post(route('restocks.store'), $body)
+            ->assertSessionHasErrors(['products.0.product' => 'The sizes or colours of Denim Jacket have changed. Enter its units again.']);
+    }],
+    'an order save' => [function () {
+        $body = validOrderPayload(['lines' => [['product_id' => $this->jacket->id, 'units' => orderUnits($this->jacket->id, ['S' => '1', 'XXXL' => '2'])]]]);
+        $this->jacket->sizes()->detach(sizeId('XXXL'));
+
+        actingAs($this->user)->post(route('orders.store'), $body)
+            ->assertSessionHasErrors(['lines.0.units' => 'The colours or sizes of Denim Jacket have changed. Enter its quantities again.']);
+    }],
+    'Start batch' => [function () {
+        $body = ['product_id' => $this->jacket->id, 'units' => restockLine($this->jacket, ['White' => ['XXXL' => 1]])['units']];
+        $this->jacket->sizes()->detach(sizeId('XXXL'));
+
+        actingAs($this->user)->post(route('progress.batches.store'), $body)
+            ->assertSessionHasErrors(['units' => 'The colours or sizes of Denim Jacket have changed. Enter the units again.']);
+    }],
+    'Generate barcodes' => [function () {
+        $variants = [['colour_id' => demoColour('WHT')->id, 'size_id' => sizeId('XXXL')]];
+        $this->jacket->sizes()->detach(sizeId('XXXL'));
+
+        actingAs($this->user)->post(route('products.barcodes.store', $this->jacket), ['variants' => $variants])
+            ->assertSessionHasErrors(['variants' => "Couldn't generate the barcodes. Try again."]);
+        expect(Barcode::query()->count())->toBe(0);
+    }],
+]);
+
+it('refuses a size change that meets another save, and a save on a size taken off (AC-6)', function (Closure $case) {
+    $case->call($this);
+})->with('saves that meet a size change');

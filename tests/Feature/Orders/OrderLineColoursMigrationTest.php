@@ -54,6 +54,7 @@ it('gives every row its product\'s first colour and keeps every quantity and cou
     OrderLine::factory()->create(['order_id' => $order->id, 'product_id' => $tote->id, 'quantity' => 4, 'position' => 2]);
     $jeans->delete(); // A deleted product's lines are filled too.
 
+    sizesPerWorkshopMigration()->down();
     deliveryCountsMigration()->down();
 
     orderLineColoursMigration()->down();
@@ -67,6 +68,7 @@ it('gives every row its product\'s first colour and keeps every quantity and cou
     orderLineColoursMigration()->up();
 
     deliveryCountsMigration()->up();
+    sizesPerWorkshopMigration()->up();
 
     expect(orderLineColourRows())->toBe([
         ['PRD-JKT-001', 'BLK', 'S', 10, 0, 0],
@@ -86,6 +88,7 @@ it('adds the colours of a size back into one row on down()', function () {
     $first = OrderLineSize::query()->where('order_line_id', $line->id)->firstOrFail();
 
     // Back in the shape of before INV-14, with its stage counts.
+    sizesPerWorkshopMigration()->down();
     deliveryCountsMigration()->down();
     DB::table('order_line_sizes')->where('id', $first->id)->update(['in_cutting' => 1, 'shipped' => 2]);
     DB::table('order_line_sizes')->insert([
@@ -104,6 +107,7 @@ it('adds the colours of a size back into one row on down()', function () {
     orderLineColoursMigration()->up();
 
     deliveryCountsMigration()->up();
+    sizesPerWorkshopMigration()->up();
 });
 
 it('refuses a row with no colour and a second row of the same colour and size', function () {

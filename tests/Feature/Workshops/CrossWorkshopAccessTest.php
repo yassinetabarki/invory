@@ -4,6 +4,7 @@ use App\Models\Material;
 use App\Models\OrderLine;
 use App\Models\Product;
 use App\Models\Sale;
+use App\Models\Size;
 use App\Models\User;
 use App\Models\Workshop;
 use App\Services\Workshops\CurrentWorkshop;
@@ -211,6 +212,7 @@ it('stores a photo under an address its record does not give away (AC-3)', funct
     $this->post(route('products.store'), [
         'sku' => 'B-SHIRT-001', 'name' => 'Linen shirt', 'category' => 'apparel', 'status' => 'active', 'labor_cost' => '5', 'overhead_cost' => '0',
         'colours' => [demoColour('WHT')->id], // Sami is signed in: his own workshop's White
+        'sizes' => [Size::query()->where('is_one_size', true)->value('id')], // and his One size
         'photo' => realUpload('linen-shirt.png', $png, 'image/png'),
     ])->assertSessionHasNoErrors();
 

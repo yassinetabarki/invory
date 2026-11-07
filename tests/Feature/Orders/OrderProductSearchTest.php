@@ -5,7 +5,6 @@ use App\Models\Barcode;
 use App\Models\BarcodeName;
 use App\Models\Colour;
 use App\Models\Product;
-use App\Models\Size;
 use App\Models\Workshop;
 use App\Services\Workshops\CurrentWorkshop;
 
@@ -71,7 +70,7 @@ it('finds a product by its SKU, a variant SKU typed in full, a colour name or a 
     'a variant SKU in small letters' => [fn () => 'prd-jns-005-blk-s', ['Denim Jeans 5-pocket']],
     'a colour name' => [fn () => 'light w', ['Denim Jacket']],
     'a barcode number' => [function () {
-        $size = Size::query()->where('label', 'M')->whereIn('size_list_id', DB::table('product_categories')->where('id', test()->jeans->category_id)->select('size_list_id'))->value('id');
+        $size = sizeId('M', test()->jeans);
         $barcode = Barcode::factory()->create(['number' => '2000000000015', 'colour_id' => demoColour('IND')->id, 'size_id' => $size]);
         BarcodeName::factory()->create(['barcode_id' => $barcode->id, 'name_key' => NameKey::of('Denim Jeans 5-pocket'), 'colour_id' => $barcode->colour_id, 'size_id' => $size]);
 

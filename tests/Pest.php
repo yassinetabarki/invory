@@ -14,9 +14,10 @@ use App\Models\ProductionPhase;
 use App\Models\ProductSizeStock;
 use App\Models\Sale;
 use App\Models\Size;
-use App\Models\SizeList;
 use App\Models\StockMovement;
 use App\Models\User;
+use App\Models\Workshop;
+use App\Services\Products\ProductSizes;
 use App\Services\Workshops\CurrentWorkshop;
 use Carbon\CarbonImmutable;
 use Database\Factories\OrderLineSizeFactory;
@@ -27,6 +28,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Response;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Vite;
@@ -283,7 +285,30 @@ function validProductPayload(array $overrides = []): array
             ['material_id' => demoMaterial('MAT-THR-PES')->id, 'quantity' => '90', 'waste_percent' => '5', 'notes' => 'Seams'],
         ],
         ...$overrides,
+        'sizes' => $overrides['sizes'] ?? validProductPayloadSizes($overrides['sku'] ?? 'PRD-NEW-100', $overrides['category'] ?? 'apparel'),
     ];
+}
+
+/**
+ * The `sizes` of a valid product payload (INV-18-h: required on Add and Edit): the product's own sizes when the SKU is a product of the
+ * current workshop (Edit keeps them), else what the category suggests there (Add).
+ *
+ * @return list<int>
+ */
+function validProductPayloadSizes(mixed $sku, mixed $category): array
+{
+    $sku = is_string($sku) ? $sku : 'PRD-NEW-100';
+    $category = is_string($category) ? $category : 'apparel';
+    $product = Product::query()->where('sku', $sku)->first();
+
+    if ($product !== null) {
+        return array_values(sizesOf($product)->pluck('id')->map(fn (mixed $id): int => (int) $id)->all());
+    }
+
+    $workshopId = (int) sizesWorkshopId();
+    $categoryId = CurrentWorkshop::run($workshopId, fn (): int => (int) ProductCategory::query()->where('code', $category)->value('id'));
+
+    return app(ProductSizes::class)->startingSizes($categoryId, $workshopId);
 }
 
 /**
@@ -332,7 +357,7 @@ function validOrderPayload(array $overrides = []): array
 
 /**
  * The units of an order line as the form posts them (INV-13): colour id → size id → as typed, from size labels of the product's own
- * list (`'One size'` for a one-size product), or of the list with code `$list`. The colour is the one with code `$colour` (made a colour of the product when it isn't),
+ * sizes (`'One size'` for a one-size product), or of the old list with code `$list` ('s_to_xl', 'eu_36_to_46', 'one_size'). The colour is the one with code `$colour` (made a colour of the product when it isn't),
  * or the product's first colour. A product the workshop can't see (another workshop's, or none) gets the first colour of the current
  * workshop and the Apparel sizes, so the payload still has a shape.
  *
@@ -354,11 +379,8 @@ function orderUnits(?int $productId, array $byLabel, ?string $colour = null, ?st
         $colourId = OrderLineSizeFactory::firstColourOf($product->id);
     }
 
-    // `$list` (a list code) for a line that counts by another list than its product's: "One size" for one recorded before sizes.
-    $listId = $list === null
-        ? ProductCategory::query()->whereKey($product->category_id)->value('size_list_id')
-        : SizeList::query()->where('code', $list)->value('id');
-    $ids = Size::query()->where('size_list_id', $listId)->pluck('id', 'label');
+    // `$list` (an old list code) for a line that counts by other sizes than its product's: "One size" for one recorded before sizes.
+    $ids = sizesOf($product, $list)->pluck('id', 'label');
     $sizes = [];
 
     foreach ($byLabel as $label => $units) {
@@ -366,6 +388,17 @@ function orderUnits(?int $productId, array $byLabel, ?string $colour = null, ?st
     }
 
     return [$colourId => $sizes];
+}
+
+/**
+ * The sizes per workshop and product migration object (INV-18-c): `workshop_id` and `is_one_size` on `sizes`, `product_sizes`,
+ * `product_category_sizes` and `order_lines.by_size`; the size lists and every `size_list_id` are gone. It is the newest of the hand-kept
+ * list (F-60): a test that rolls any older migration back rolls this one back first (before `deliveryCountsMigration()`), and brings it
+ * back up last (after it).
+ */
+function sizesPerWorkshopMigration(): Migration
+{
+    return require database_path('migrations/2026_11_08_100000_sizes_per_workshop_and_product.php');
 }
 
 /**
@@ -420,14 +453,14 @@ function unitsKey(int $line, array $units): string
 
 /**
  * The quantities of an order line by size id, from labels (S-60): `['M' => '20']` → `[<id of M> => '20']`. Labels of the Apparel list
- * (S, M, L, XL) unless `$list` says another.
+ * (XS … XXXL) unless `$list` says another.
  *
  * @param  array<string, int|string|null>  $byLabel
  * @return array<int, int|string|null>
  */
-function sizeIds(array $byLabel, string $list = SizeList::S_TO_XL): array
+function sizeIds(array $byLabel, string $list = 's_to_xl'): array
 {
-    $ids = Size::query()->whereIn('size_list_id', SizeList::query()->where('code', $list)->select('id'))->pluck('id', 'label');
+    $ids = sizesOf(null, $list)->pluck('id', 'label');
     $sizes = [];
 
     foreach ($byLabel as $label => $units) {
@@ -435,6 +468,52 @@ function sizeIds(array $byLabel, string $list = SizeList::S_TO_XL): array
     }
 
     return $sizes;
+}
+
+/**
+ * The labels of the three lists the workshops started with (ADR-0015, gone since INV-18-c): tests still say "the Apparel list" or "the
+ * one-size list" when they mean these sizes of the current workshop.
+ *
+ * @var array<string, list<string>>
+ */
+const STARTING_LISTS = [
+    's_to_xl' => ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'],
+    'eu_36_to_46' => ['36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '46'],
+    'one_size' => ['One size'],
+];
+
+/** The workshop the tests read sizes of: the current one, else the oldest. */
+function sizesWorkshopId(): ?int
+{
+    return CurrentWorkshop::id() ?? Workshop::query()->orderBy('id')->value('id');
+}
+
+/**
+ * The sizes of a product, in list order: position, then id (INV-18-c: read from `product_sizes`). Or, with `$list`, the sizes of the
+ * current workshop that one of the three starting lists had ('s_to_xl', 'eu_36_to_46', 'one_size'); the Apparel ones for neither.
+ * THE place where a test reads a size list.
+ *
+ * @return Collection<int, Size>
+ */
+function sizesOf(?Product $product = null, ?string $list = null): Collection
+{
+    if ($list === null && $product !== null) {
+        return CurrentWorkshop::run($product->workshop_id, fn (): Collection => $product->sizes()->get()->toBase());
+    }
+
+    return CurrentWorkshop::run((int) sizesWorkshopId(), fn (): Collection => Size::query()
+        ->whereIn('label', STARTING_LISTS[$list ?? 's_to_xl'])->ordered()->get()->toBase());
+}
+
+/** The id of the size with this label: of the product's sizes, or of the current workshop (`sizeId('M')`). */
+function sizeId(string $label, ?Product $product = null): int
+{
+    $sizes = $product !== null
+        ? sizesOf($product)
+        : CurrentWorkshop::run((int) sizesWorkshopId(), fn (): Collection => Size::query()->ordered()->get()->toBase());
+
+    return $sizes->firstWhere('label', $label)?->id
+        ?? throw new InvalidArgumentException("No size {$label} for ".($product?->name ?? 'the workshop').'.');
 }
 
 /**
@@ -845,7 +924,7 @@ function orderLineColoursMigration(): Migration
  */
 function setFinishedStock(Product $product, array $byColour): void
 {
-    $sizes = Size::query()->where('size_list_id', ProductCategory::query()->whereKey($product->category_id)->value('size_list_id'))->orderBy('position')->get();
+    $sizes = sizesOf($product)->values();
 
     ProductSizeStock::query()->where('product_id', $product->id)->delete();
 
@@ -1062,7 +1141,7 @@ function restockCatalogue(): array
     $colours($tote, ['CAM', 'BLK']);
 
     setShelf($jacket, ['Black' => ['S' => 1, 'L' => 2, 'XL' => 1], 'Indigo' => ['S' => 2, 'L' => 3, 'XL' => 1]]);
-    setShelf($tote, ['Camel' => ['One size' => 4]], SizeList::ONE_SIZE);
+    setShelf($tote, ['Camel' => ['One size' => 4]], 'one_size');
 
     return ['jacket' => $jacket, 'jeans' => $jeans, 'tote' => $tote];
 }
@@ -1072,7 +1151,7 @@ function restockCatalogue(): array
  *
  * @param  array<string, array<string, int>>  $byColour
  */
-function setShelf(Product $product, array $byColour, string $list = SizeList::S_TO_XL): void
+function setShelf(Product $product, array $byColour, string $list = 's_to_xl'): void
 {
     foreach ($byColour as $name => $bySize) {
         foreach (sizeIds($bySize, $list) as $sizeId => $units) {
@@ -1108,7 +1187,7 @@ function shelfByColour(Product $product): array
  */
 function restockLine(Product $product, array $typed): array
 {
-    $sizes = $product->category()->firstOrFail()->sizeList()->firstOrFail()->sizes()->orderBy('position')->get();
+    $sizes = sizesOf($product);
     $units = [];
 
     foreach ($product->colours()->get() as $colour) {

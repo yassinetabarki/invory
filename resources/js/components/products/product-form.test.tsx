@@ -1,13 +1,15 @@
 import { render, screen, within } from '@testing-library/react';
+import type { ComponentProps } from 'react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { ProductForm } from '@/components/products/product-form';
 import { defaultColours } from '@/test/fixtures/colours';
 import {
     answerMaterialOptions,
-    categorySizesFixture,
     choreJacket,
     denimJacket,
+    fullCategorySizesFixture,
+    fullSizeOptionsFixture,
     productCategories,
     productStatuses,
 } from '@/test/fixtures/products';
@@ -29,6 +31,10 @@ vi.mock('@inertiajs/react', async (importOriginal) => {
 });
 
 type SetupOptions = {
+    locks?: Pick<
+        ComponentProps<typeof ProductForm>,
+        'sizeLocks' | 'oneSizeLock' | 'otherSizesLock'
+    >;
     product?: Product;
     method?: 'post' | 'put';
     url?: string;
@@ -38,6 +44,7 @@ function setup({
     product,
     method = product ? 'put' : 'post',
     url = product ? `/products/${product.id}` : '/products',
+    locks,
 }: SetupOptions = {}) {
     const user = userEvent.setup();
     const view = render(
@@ -47,8 +54,10 @@ function setup({
             description="Details, photo and the materials that make one unit."
             categories={productCategories}
             statuses={productStatuses}
-            categorySizes={categorySizesFixture}
             colours={defaultColours}
+            sizes={fullSizeOptionsFixture}
+            categorySizes={fullCategorySizesFixture}
+            {...locks}
             action={{ url, method }}
             cancelHref={product ? `/products/${product.id}` : '/products'}
             submitLabel="Save product"
@@ -148,62 +157,7 @@ describe('<ProductForm>', () => {
             expect(
                 screen.queryByRole('group', { name: /^Row/ }),
             ).not.toBeInTheDocument();
-            // No category chosen: no sizes line.
-            expect(
-                screen.queryByText('Sizes come with the category.'),
-            ).not.toBeInTheDocument();
         });
-
-        it.each([
-            [
-                'Apparel',
-                'apparel',
-                'Sizes: S, M, L, XL',
-                ['S', 'M', 'L', 'XL'],
-                null,
-            ],
-            ['Footwear', 'footwear', 'Sizes: 36 to 46', [], '36 to 46'],
-            ['Bag', 'bag', 'One size', [], 'One size'],
-        ] as const)(
-            'names the sizes of %s under "Category"',
-            (_, category, spoken, tags, bold) => {
-                setup({ product: { ...denimJacket, category } });
-
-                // The category field: select, sizes line, hint.
-                const field = screen.getByText('Sizes come with the category.')
-                    .parentElement as HTMLElement;
-
-                expect(
-                    screen.getByLabelText(/^Category/),
-                ).toHaveAccessibleDescription(
-                    `${spoken} Sizes come with the category.`,
-                );
-
-                // One outline tag per size up to 6 sizes; above that, the list's name in bold.
-                expect(
-                    [...field.querySelectorAll('[data-slot="badge"]')].map(
-                        (badge) => badge.textContent,
-                    ),
-                ).toEqual(tags);
-
-                // The board's look (13 px semibold on the card, a stronger border); the tags are plain text, not controls.
-                for (const badge of field.querySelectorAll(
-                    '[data-slot="badge"]',
-                )) {
-                    expect(badge).toHaveClass(
-                        'text-[0.8125rem]',
-                        'font-semibold',
-                        'bg-card',
-                        'border-input/50',
-                    );
-                    expect(badge).not.toHaveAttribute('tabindex');
-                    expect(badge.closest('button, a')).toBeNull();
-                }
-                expect(field.querySelector('strong')?.textContent).toBe(
-                    bold ?? undefined,
-                );
-            },
-        );
 
         it('marks the required fields and labels the optional ones', () => {
             setup();
@@ -356,9 +310,8 @@ describe('<ProductForm>', () => {
             );
         });
 
-        it('shows the category-lock error under "Category", with the sizes line still there', () => {
-            const message =
-                "Denim Jacket is on orders, so its category can't change to one with other sizes. Keep a category with sizes S, M, L, XL.";
+        it('shows a category error under "Category"', () => {
+            const message = 'The selected category is invalid.';
 
             setFormState({ errors: { category: message } });
             setup({ product: denimJacket });
@@ -370,7 +323,6 @@ describe('<ProductForm>', () => {
             expect(category).toHaveAccessibleDescription(
                 expect.stringContaining(message),
             );
-            expect(screen.getByText('Sizes: S, M, L, XL')).toBeInTheDocument();
         });
 
         it('moves focus to the first invalid field', () => {
@@ -778,6 +730,133 @@ describe('<ProductForm>', () => {
                     (row) => (row as { material_id: number }).material_id,
                 ),
             ).toEqual([4, 8, 5, 12]);
+        });
+    });
+
+    describe('the Sizes field', () => {
+        const sizesGroup = () => screen.getByRole('group', { name: /^Sizes/ });
+        const size = (name: string) =>
+            within(sizesGroup()).getByRole('button', { name });
+
+        async function chooseCategory(
+            user: ReturnType<typeof userEvent.setup>,
+            name: string,
+        ) {
+            await user.click(screen.getByLabelText(/^Category/));
+            await user.click(screen.getByRole('option', { name }));
+        }
+
+        it('starts with nothing chosen on Add, and a category pre-selects its sizes', async () => {
+            const { user } = setup();
+
+            expect(
+                screen.getByText(
+                    'Choosing a category pre-selects its sizes. Change them as you like.',
+                ),
+            ).toBeInTheDocument();
+            expect(screen.getByText('None chosen yet')).toBeInTheDocument();
+            expect(size('XS')).toHaveAttribute('aria-pressed', 'false');
+
+            await chooseCategory(user, 'Apparel');
+
+            expect(screen.getByText('7 sizes chosen')).toBeInTheDocument();
+            expect(size('XXXL')).toHaveAttribute('aria-pressed', 'true');
+            expect(size('36')).toHaveAttribute('aria-pressed', 'false');
+        });
+
+        it("keeps the sizes she changed on another category, until she asks for that category's sizes", async () => {
+            const { user } = setup();
+
+            await chooseCategory(user, 'Apparel');
+            await user.click(size('XS'));
+            await user.click(size('XXL'));
+            await user.click(size('XXXL'));
+
+            expect(screen.getByText('4 sizes chosen')).toBeInTheDocument();
+
+            await chooseCategory(user, 'Footwear');
+
+            expect(screen.getByText('4 sizes chosen')).toBeInTheDocument();
+            expect(
+                screen.getByText(/Sizes kept: you changed them./),
+            ).toBeInTheDocument();
+
+            await user.click(
+                screen.getByRole('button', {
+                    name: 'Use the sizes of Footwear',
+                }),
+            );
+
+            expect(screen.getByText('11 sizes chosen')).toBeInTheDocument();
+            expect(size('36')).toHaveAttribute('aria-pressed', 'true');
+            expect(size('S')).toHaveAttribute('aria-pressed', 'false');
+            expect(screen.queryByText(/Sizes kept/)).toBeNull();
+        });
+
+        it('submits the chosen size ids', async () => {
+            const { user } = setup();
+
+            await chooseCategory(user, 'Apparel');
+            await user.click(size('XS'));
+            await user.click(
+                screen.getAllByRole('button', { name: 'Save product' })[0],
+            );
+
+            expect(submission().data.sizes).toEqual([1, 2, 3, 4, 22, 23]);
+        });
+
+        it('shows both kinds of refusal under the group, in list order, with the focus on the first button', () => {
+            setFormState({
+                errors: {
+                    sizes: 'Choose at least one size.',
+                    'sizes.removed.4':
+                        "XL can't be taken off Denim Jacket: it has units in stock.",
+                    'sizes.removed.2':
+                        "M can't be taken off Denim Jacket: it is on orders.",
+                },
+            });
+            setup({ product: denimJacket });
+
+            for (const sentence of [
+                'Choose at least one size.',
+                "M can't be taken off Denim Jacket: it is on orders.",
+                "XL can't be taken off Denim Jacket: it has units in stock.",
+            ]) {
+                expect(screen.getByText(sentence)).toBeVisible();
+            }
+
+            expect(
+                screen
+                    .getAllByText(/can't be taken off Denim Jacket/)
+                    .map((line) => line.textContent?.[0]),
+            ).toEqual(['M', 'X']);
+            expect(size('XS')).toHaveFocus();
+            expect(sizesGroup()).toHaveAccessibleDescription(
+                expect.stringContaining('Choose at least one size.'),
+            );
+        });
+
+        it("on Edit presses the product's sizes and never changes them with the category", async () => {
+            window.history.replaceState(null, '', '/products/1/edit#sizes');
+            const { user } = setup({
+                product: { ...denimJacket, sizes: [{ id: 1, label: 'S' }] },
+            });
+
+            expect(
+                screen.getByText(
+                    'A new size adds a variant for every colour, with no stock and no barcode yet.',
+                ),
+            ).toBeInTheDocument();
+            expect(screen.getByText('1 size chosen')).toBeInTheDocument();
+            expect(size('S')).toHaveAttribute('aria-pressed', 'true');
+            // #sizes: the focus goes to the group's first button.
+            expect(size('XS')).toHaveFocus();
+
+            await chooseCategory(user, 'Footwear');
+
+            expect(screen.getByText('1 size chosen')).toBeInTheDocument();
+            expect(screen.queryByText(/Sizes kept/)).toBeNull();
+            window.history.replaceState(null, '', '/');
         });
     });
 });

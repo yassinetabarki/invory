@@ -266,7 +266,7 @@ describe('show', function () {
                 ->component('products/show')
                 ->loadDeferredProps('default', fn (Assert $reloaded) => $reloaded
                     ->has('product', fn (Assert $product) => $product->hasAll([
-                        'id', 'sku', 'name', 'category', 'category_label', 'size_list', 'status', 'status_label', 'description', 'photo_url',
+                        'id', 'sku', 'name', 'category', 'category_label', 'sizes', 'one_size', 'sizes_line', 'status', 'status_label', 'description', 'photo_url',
                         'labor_cost', 'overhead_cost', 'selling_price', 'cost', 'margin', 'capacity', 'colours', 'components',
                         'created_at', 'updated_at',
                     ]))
@@ -577,7 +577,9 @@ it('reads the materials table once per page and answers within a bounded number 
     // colours cost one read there, paid for by the product categories, which the size lists now take from the shared reference read.
     // INV-8-b: the barcodes read the product's colours with the numbers of its name, one query: show 12 -> 13.
     // INV-3-f: "Last restock" reads the newest restock of the product with its units, one query: show 13 -> 14.
-    $budget = ['index' => 6, 'show' => 14, 'create' => 3, 'edit' => 7];
+    // INV-18-g: Edit product adds the four grouped queries of its size locks (stock, orders, barcodes, production): edit 7 -> 11. The workshop's
+    // sizes are ONE read for the picker's `sizes`, the suggestions of `category_sizes` and the badge of a product with seven sizes or more.
+    $budget = ['index' => 6, 'show' => 14, 'create' => 3, 'edit' => 11];
     $materialReads = ['index' => 1, 'show' => 1, 'create' => 0, 'edit' => 1];
 
     $baseline = array_map($count, $urls);

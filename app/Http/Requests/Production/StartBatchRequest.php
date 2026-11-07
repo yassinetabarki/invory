@@ -4,14 +4,11 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Production;
 
-use App\Models\Colour;
 use App\Models\Product;
 use App\Models\ProductionBatch;
-use App\Models\Size;
-use App\Models\SizeList;
 use App\Services\Orders\OrderMessages;
 use App\Services\Production\ProductionMessages;
-use App\Services\Products\SizeLists;
+use App\Services\Products\ProductSizes;
 use App\Services\Restocks\RestockMessages;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
@@ -54,11 +51,11 @@ final class StartBatchRequest extends FormRequest
         $product = $this->product();
 
         if ($product !== null) {
-            $sizeList = app(SizeLists::class)->category($product->category_id)->sizeList;
+            $sizes = app(ProductSizes::class)->of($product);
 
             foreach ($product->colours as $colour) {
-                foreach ($sizeList->sizes as $size) {
-                    $named = RestockMessages::wholeNumber(self::variant($colour, $size, $sizeList));
+                foreach ($sizes->sizes as $size) {
+                    $named = RestockMessages::wholeNumber(RestockMessages::variant($colour->name, $size->label, $sizes->oneSize));
 
                     foreach (['integer', 'min', 'max'] as $rule) {
                         $messages["units.{$colour->id}.{$size->id}.{$rule}"] = $named;
@@ -127,10 +124,5 @@ final class StartBatchRequest extends FormRequest
         }
 
         return $this->product;
-    }
-
-    private static function variant(Colour $colour, Size $size, SizeList $sizeList): string
-    {
-        return RestockMessages::variant($colour->name, $size->label, $sizeList->code === SizeList::ONE_SIZE);
     }
 }

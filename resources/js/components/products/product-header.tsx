@@ -10,7 +10,7 @@ type ProductHeaderProps = {
         | 'name'
         | 'sku'
         | 'category_label'
-        | 'size_list'
+        | 'sizes_line'
         | 'colours'
         | 'status'
         | 'status_label'
@@ -41,9 +41,7 @@ export function ProductHeader({ product, actions }: ProductHeaderProps) {
                         variant="outline"
                         className="rounded-full font-semibold"
                     >
-                        {product.size_list.sizes.length > 1
-                            ? `Sizes ${product.size_list.name}`
-                            : product.size_list.name}
+                        {product.sizes_line}
                     </Badge>
                     <ProductStatusBadge
                         status={product.status}

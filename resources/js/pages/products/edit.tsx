@@ -8,8 +8,12 @@ import type { ProductEditProps } from '@/types/domain';
 export default function ProductsEdit({
     product,
     statuses,
-    category_sizes,
     colours,
+    sizes,
+    category_sizes: categorySizes,
+    size_locks: sizeLocks,
+    one_size_lock: oneSizeLock,
+    other_sizes_lock: otherSizesLock,
 }: ProductEditProps) {
     const reference = useReference();
 
@@ -30,8 +34,12 @@ export default function ProductsEdit({
                         product.category,
                     )}
                     statuses={statuses}
-                    categorySizes={category_sizes}
                     colours={colours}
+                    sizes={sizes}
+                    categorySizes={categorySizes}
+                    sizeLocks={sizeLocks}
+                    oneSizeLock={oneSizeLock}
+                    otherSizesLock={otherSizesLock}
                     action={{
                         url: ProductController.update.url(product.id),
                         method: 'put',

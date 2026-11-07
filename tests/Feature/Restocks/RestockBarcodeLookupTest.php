@@ -4,7 +4,6 @@ use App\Domain\Barcodes\NameKey;
 use App\Models\Barcode;
 use App\Models\BarcodeName;
 use App\Models\Product;
-use App\Models\SizeList;
 use App\Models\Workshop;
 use App\Services\Workshops\CurrentWorkshop;
 
@@ -23,7 +22,7 @@ beforeEach(function () {
 });
 
 /** A number standing for this colour and size of every product named `$name`. */
-function numberFor(string $number, string $name, string $colourCode, string $sizeLabel, string $list = SizeList::S_TO_XL): Barcode
+function numberFor(string $number, string $name, string $colourCode, string $sizeLabel, string $list = 's_to_xl'): Barcode
 {
     $size = array_key_first(sizeIds([$sizeLabel => 0], $list));
     $barcode = Barcode::factory()->create(['number' => $number, 'colour_id' => demoColour($colourCode)->id, 'size_id' => $size]);
@@ -92,7 +91,7 @@ it('treats another workshop\'s number as unknown', function () {
 });
 
 it('names a "One size" product\'s variant by its colour', function () {
-    numberFor('2000000000053', 'Leather Tote', 'CAM', 'One size', SizeList::ONE_SIZE);
+    numberFor('2000000000053', 'Leather Tote', 'CAM', 'One size', 'one_size');
 
     $found = lookUp('2000000000053');
 

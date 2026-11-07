@@ -8,9 +8,9 @@ use App\Models\Colour;
 use App\Models\Product;
 use App\Models\ProductRestock;
 use App\Models\Size;
-use App\Models\SizeList;
 use App\Services\Orders\OrderMessages;
-use App\Services\Products\SizeLists;
+use App\Services\Products\ProductSizes;
+use App\Services\Products\ProductSizeSet;
 use App\Services\Restocks\RestockMessages;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Database\Eloquent\Collection;
@@ -72,11 +72,11 @@ final class StoreRestockRequest extends FormRequest
                 continue;
             }
 
-            $sizeList = app(SizeLists::class)->category($product->category_id)->sizeList;
+            $sizeSet = app(ProductSizes::class)->of($product);
 
             foreach ($product->colours as $colour) {
-                foreach ($sizeList->sizes as $size) {
-                    $named = RestockMessages::wholeNumber(self::variant($colour, $size, $sizeList));
+                foreach ($sizeSet->sizes as $size) {
+                    $named = RestockMessages::wholeNumber(self::variant($colour, $size, $sizeSet));
 
                     foreach (['integer', 'min', 'max'] as $rule) {
                         $messages["products.{$i}.units.{$colour->id}.{$size->id}.{$rule}"] = $named;
@@ -195,8 +195,8 @@ final class StoreRestockRequest extends FormRequest
             ->whereKey(array_column($this->lines(), 'product_id'))->get()->keyBy('id');
     }
 
-    private static function variant(Colour $colour, Size $size, SizeList $sizeList): string
+    private static function variant(Colour $colour, Size $size, ProductSizeSet $sizes): string
     {
-        return RestockMessages::variant($colour->name, $size->label, $sizeList->code === SizeList::ONE_SIZE);
+        return RestockMessages::variant($colour->name, $size->label, $sizes->oneSize);
     }
 }

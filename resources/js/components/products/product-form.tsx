@@ -12,8 +12,8 @@ import { ColoursField } from '@/components/products/colours-field';
 import { DecimalInput } from '@/components/products/decimal-input';
 import { trimDecimal } from '@/components/products/decimals';
 import { FormField } from '@/components/products/form-field';
+import { SizesField } from '@/components/products/sizes-field';
 import { PhotoField } from '@/components/shared/photo-field';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -36,7 +36,7 @@ import type {
     ProductCategory,
     ProductFormData,
     ProductStatus,
-    SizeList,
+    SizeOption,
 } from '@/types/domain';
 
 /** The form's state: the submitted fields, with client-only keys on the composition rows. */
@@ -51,10 +51,18 @@ type ProductFormProps = {
     description: string;
     categories: Option<ProductCategory>[];
     statuses: Option<ProductStatus>[];
-    /** The sizes every category gives its products (S-58), shown under "Category". */
-    categorySizes: Record<ProductCategory, SizeList>;
     /** The workshop's whole colour list, in list order (INV-1). */
     colours: Colour[];
+    /** The workshop's whole size list, in list order (INV-18). */
+    sizes: SizeOption[];
+    /** The size ids each category suggests: Add product pre-selects them. */
+    categorySizes: Record<ProductCategory, number[]>;
+    /** Edit product: size id → why it can't be taken off. */
+    sizeLocks?: Record<number, string>;
+    /** Edit product: why One size can't be chosen, or null. */
+    oneSizeLock?: string | null;
+    /** Edit product: why no other size can be chosen, or null. */
+    otherSizesLock?: string | null;
     /** Where to send the form (Wayfinder in the page). */
     action: { url: string; method: 'post' | 'put' };
     cancelHref: string;
@@ -75,6 +83,7 @@ function emptyState(): ProductFormState {
         photo: null,
         remove_photo: false,
         colours: [],
+        sizes: [],
         components: [],
     };
 }
@@ -103,6 +112,7 @@ function toFormState(product: Product | undefined): ProductFormState {
         photo: null,
         remove_photo: false,
         colours: product.colours.map((colour) => colour.id),
+        sizes: product.sizes.map((size) => size.id),
         components: product.components.map((line) => ({
             uid: createRowUid(),
             material_id: line.material.id,
@@ -125,67 +135,16 @@ function removedColourId(name: string): number | null {
     return match ? Number(match[1]) : null;
 }
 
-/** A list with more sizes than this shows its name ("36 to 46") instead of one tag per size. */
-const MAX_SIZE_TAGS = 6;
+/** The error keys of the sizes: "sizes", or "sizes.N" for a wrong id. */
+function isSizesKey(name: string): name is 'sizes' | `sizes.${number}` {
+    return name === 'sizes' || /^sizes\.\d+$/.test(name);
+}
 
-/**
- * The sizes of the chosen category, under "Category": grey "Sizes:" then a tag
- * per size (or the list's name in bold), then the hint. The visual line is
- * hidden from screen readers; one hidden line says "Sizes: S, M, L, XL",
- * "Sizes: 36 to 46" or "One size", and the Category select is described by it
- * and by the hint (`spokenId`, `hintId`).
- */
-function SizesLine({
-    list,
-    spokenId,
-    hintId,
-}: {
-    list: SizeList;
-    spokenId: string;
-    hintId: string;
-}) {
-    const several = list.sizes.length > 1;
+/** "sizes.removed.7": a size taken off that is in use; the id of that size. */
+function removedSizeId(name: string): number | null {
+    const match = /^sizes\.removed\.(\d+)$/.exec(name);
 
-    return (
-        <>
-            {several ? (
-                <>
-                    <p id={spokenId} className="sr-only">
-                        Sizes: {list.name}
-                    </p>
-                    <p
-                        aria-hidden="true"
-                        className="flex flex-wrap items-center gap-1.5 text-sm"
-                    >
-                        <span className="text-muted-foreground">Sizes:</span>
-                        {list.sizes.length <= MAX_SIZE_TAGS ? (
-                            list.sizes.map((size) => (
-                                <Badge
-                                    key={size.id}
-                                    variant="outline"
-                                    className="rounded-md border-input/50 bg-card px-2.5 py-1 text-[0.8125rem] font-semibold"
-                                >
-                                    {size.label}
-                                </Badge>
-                            ))
-                        ) : (
-                            <strong className="font-semibold">
-                                {list.name}
-                            </strong>
-                        )}
-                    </p>
-                </>
-            ) : (
-                // One size: the bold words are also what a screen reader hears.
-                <p id={spokenId} className="text-sm">
-                    <strong className="font-semibold">{list.name}</strong>
-                </p>
-            )}
-            <p id={hintId} className="text-xs text-muted-foreground">
-                Sizes come with the category.
-            </p>
-        </>
-    );
+    return match ? Number(match[1]) : null;
 }
 
 /** The currency's symbol where the locale has one ("€"), otherwise its code ("TND"). */
@@ -262,8 +221,12 @@ export function ProductForm({
     description,
     categories,
     statuses,
-    categorySizes,
     colours,
+    sizes,
+    categorySizes,
+    sizeLocks,
+    oneSizeLock,
+    otherSizesLock,
     action,
     cancelHref,
     submitLabel,
@@ -287,12 +250,12 @@ export function ProductForm({
         }),
     );
     const { errors, processing } = form;
-
-    // `category` is '' until one is chosen; a code the server didn't send shows no line.
-    const sizeList =
-        form.data.category === ''
-            ? undefined
-            : categorySizes[form.data.category];
+    // Add product: she has pressed a size herself (a category then keeps them), and the
+    // category whose suggestion the "Use the sizes of …" button applies.
+    const [sizesTouched, setSizesTouched] = useState(false);
+    const [keptCategory, setKeptCategory] = useState<ProductCategory | null>(
+        null,
+    );
 
     const symbol = currencySymbol(currency, locale);
     const id = (name: string) => `${uid}-${name}`;
@@ -321,14 +284,66 @@ export function ProductForm({
         ...removedErrors,
     ].filter((sentence): sentence is string => Boolean(sentence));
 
-    // "Manage sizes & colours" opens this page at #colours: the focus goes to
-    // the Colours field (its Add colour button) once, when the form appears.
+    // The sizes taken off that are in use: one sentence each, in list order, after
+    // "Choose at least one size." (or the One size sentence), which arrives on `sizes`.
+    const sizesError = [
+        errors.sizes ??
+            Object.entries(errors).find(([name]) =>
+                /^sizes\.\d+$/.test(name),
+            )?.[1],
+        ...sizes.flatMap((size) => {
+            const message = (errors as Record<string, string | undefined>)[
+                `sizes.removed.${size.id}`
+            ];
+
+            return message ? [message] : [];
+        }),
+    ].filter((sentence): sentence is string => Boolean(sentence));
+
+    /** The sizes a category suggests, in list order. */
+    function suggestedSizes(category: ProductCategory): number[] {
+        const ids = categorySizes[category] ?? [];
+
+        return sizes.filter((size) => ids.includes(size.id)).map((s) => s.id);
+    }
+
+    const keptSuggestion = keptCategory ? suggestedSizes(keptCategory) : [];
+    const sizesKept =
+        keptCategory !== null &&
+        (keptSuggestion.length !== form.data.sizes.length ||
+            keptSuggestion.some((sizeId) => !form.data.sizes.includes(sizeId)));
+
+    function chooseCategory(category: ProductCategory) {
+        form.setData('category', category);
+
+        // Edit product never changes the sizes with the category.
+        if (product) {
+            return;
+        }
+
+        if (sizesTouched) {
+            setKeptCategory(category);
+
+            return;
+        }
+
+        form.setData('sizes', suggestedSizes(category));
+        form.clearErrors(...Object.keys(errors).filter(isSizesKey));
+    }
+
+    // "Manage sizes & colours" opens this page at #colours (the focus goes to the
+    // Colours field's Add colour button) or #sizes (to the first size button), once,
+    // when the form appears.
     useEffect(() => {
         if (window.location.hash === '#colours') {
             formRef.current
                 ?.querySelector<HTMLElement>(
                     `[aria-describedby~="${uid}-colours-hint"]`,
                 )
+                ?.focus();
+        } else if (window.location.hash === '#sizes') {
+            formRef.current
+                ?.querySelector<HTMLElement>('#sizes [aria-pressed]')
                 ?.focus();
         }
     }, [uid]);
@@ -466,27 +481,13 @@ export function ProductForm({
                                             <Select
                                                 value={form.data.category}
                                                 onValueChange={(value) =>
-                                                    form.setData(
-                                                        'category',
+                                                    chooseCategory(
                                                         value as ProductCategory,
                                                     )
                                                 }
                                             >
                                                 <SelectTrigger
                                                     {...control}
-                                                    aria-describedby={
-                                                        [
-                                                            sizeList
-                                                                ? `${control.id}-sizes ${control.id}-sizes-hint`
-                                                                : null,
-                                                            control[
-                                                                'aria-describedby'
-                                                            ],
-                                                        ]
-                                                            .filter(Boolean)
-                                                            .join(' ') ||
-                                                        undefined
-                                                    }
                                                     className="w-full"
                                                 >
                                                     <SelectValue placeholder="Select a category" />
@@ -508,13 +509,6 @@ export function ProductForm({
                                                     )}
                                                 </SelectContent>
                                             </Select>
-                                            {sizeList && (
-                                                <SizesLine
-                                                    list={sizeList}
-                                                    spokenId={`${control.id}-sizes`}
-                                                    hintId={`${control.id}-sizes-hint`}
-                                                />
-                                            )}
                                         </>
                                     )}
                                 </FormField>
@@ -554,6 +548,70 @@ export function ProductForm({
                                         </Select>
                                     )}
                                 </FormField>
+                                <SizesField
+                                    id={id('sizes')}
+                                    sizes={sizes}
+                                    value={form.data.sizes}
+                                    hint={
+                                        product
+                                            ? 'A new size adds a variant for every colour, with no stock and no barcode yet.'
+                                            : 'Choosing a category pre-selects its sizes. Change them as you like.'
+                                    }
+                                    locks={sizeLocks}
+                                    oneSizeLock={oneSizeLock}
+                                    otherSizesLock={otherSizesLock}
+                                    error={sizesError}
+                                    className="col-span-full"
+                                    kept={
+                                        sizesKept && keptCategory
+                                            ? {
+                                                  categoryName:
+                                                      categories.find(
+                                                          (option) =>
+                                                              option.value ===
+                                                              keptCategory,
+                                                      )?.label ?? keptCategory,
+                                                  onUse: () => {
+                                                      form.setData(
+                                                          'sizes',
+                                                          keptSuggestion,
+                                                      );
+                                                      setSizesTouched(false);
+                                                      setKeptCategory(null);
+                                                  },
+                                              }
+                                            : null
+                                    }
+                                    onChange={(ids) => {
+                                        form.setData('sizes', ids);
+                                        setSizesTouched(true);
+
+                                        // "Choose at least one size." (and a wrong id) are answered
+                                        // as soon as there is a size; a lock sentence goes when its
+                                        // own size is back. Never call clearErrors() with no names.
+                                        const stale =
+                                            ids.length > 0
+                                                ? Object.keys(errors).filter(
+                                                      isSizesKey,
+                                                  )
+                                                : [];
+                                        const back = Object.keys(errors).filter(
+                                            (name) => {
+                                                const removed =
+                                                    removedSizeId(name);
+
+                                                return (
+                                                    removed !== null &&
+                                                    ids.includes(removed)
+                                                );
+                                            },
+                                        ) as (keyof typeof errors)[];
+
+                                        if (stale.length + back.length > 0) {
+                                            form.clearErrors(...stale, ...back);
+                                        }
+                                    }}
+                                />
                                 <ColoursField
                                     id={id('colours')}
                                     colours={colours}

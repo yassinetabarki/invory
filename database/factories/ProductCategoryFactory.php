@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Database\Factories;
 
 use App\Models\ProductCategory;
-use App\Models\SizeList;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -23,7 +22,6 @@ class ProductCategoryFactory extends Factory
             'name' => fake()->unique()->bothify('Category ####'),
             'position' => 100,
             'archived_at' => null,
-            'size_list_id' => fn (): mixed => SizeList::query()->where('code', SizeList::ONE_SIZE)->value('id'),
         ];
     }
 

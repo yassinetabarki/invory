@@ -196,15 +196,8 @@ export type ProductListItem = {
     units_sold_last_30_days: number;
 };
 
-/** One size of a product (S-58). Later stories (S-60, S-61, S-56) refer to a size by its id. */
+/** One size of the workshop's list (S-58, INV-18). Later stories (S-60, S-61, S-56) refer to a size by its id. */
 export type Size = { id: number; label: string }; // "S", "36", "One size"
-
-/** The fixed sizes of a product category (S-58, ADR-0015). */
-export type SizeList = {
-    code: string; // immutable: 's_to_xl', 'eu_36_to_46' or 'one_size' today
-    name: string; // what the screens show: "XS to XXXL", "36 to 46" or "One size"
-    sizes: Size[]; // in order, at least one
-};
 
 /** Finished units of a product on the shelf in one size (S-56). */
 export type FinishedStockSize = { size: Size; units: number };
@@ -246,7 +239,9 @@ export type Product = {
     name: string;
     category: ProductCategory;
     category_label: string;
-    size_list: SizeList; // the sizes of the product's category
+    sizes: Size[]; // the product's own sizes, in list order, at least one (INV-18, ADR-0028)
+    one_size: boolean; // its only size is the workshop's flagged One size
+    sizes_line: string; // the badge, written by the server: "One size", "Size M", "Sizes S, M, L, XL", "Sizes XS to XXXL", "Sizes XS, S, M and 4 more"
     status: ProductStatus;
     status_label: string;
     description: string | null;
@@ -309,6 +304,7 @@ export type ProductFormData = {
     photo: File | null;
     remove_photo: boolean;
     colours: number[]; // colour ids, at least one
+    sizes: number[]; // size ids, at least one; One size only alone
     components: ProductComponentFormRow[];
 };
 
@@ -786,10 +782,16 @@ export type ProductsIndexProps = {
 };
 export type ProductCreateProps = {
     statuses: Option<ProductStatus>[];
-    category_sizes: Record<ProductCategory, SizeList>; // every category, archived ones included
+    category_sizes: Record<ProductCategory, number[]>; // the size ids each category suggests, this workshop, every category (archived included); no row = [the One size id]
+    sizes: SizeOption[]; // every size of the workshop, in list order
     colours: Colour[]; // the workshop's whole list, in list order
 };
-export type ProductEditProps = ProductCreateProps & { product: Product };
+export type ProductEditProps = ProductCreateProps & {
+    product: Product;
+    size_locks: Record<number, string>; // size id → why it can't be taken off (ProductSizeLock::tooltip), only the locked sizes
+    one_size_lock: string | null; // why One size can't be chosen, or null
+    other_sizes_lock: string | null; // why no other size can be chosen, or null
+};
 export type ProductShowProps = {
     product?: Product; // deferred prop
     sales_last_30_days?: { units_sold: number; revenue: Decimal }; // deferred prop
@@ -861,7 +863,13 @@ export type UnitsSettingsProps = {
     dimensions: Option<UnitDimension>[];
 };
 export type MaterialCategoriesSettingsProps = { categories: ReferenceRow[] };
-export type ProductCategoriesSettingsProps = { categories: ReferenceRow[] };
+export type ProductCategoriesSettingsProps = {
+    categories: (ReferenceRow & {
+        suggested_size_ids: number[];
+        suggests: string;
+    })[]; // ids in list order; no row = [One size id]; suggests = "XS to XXXL", "One size" (SizeLine, no "Sizes")
+    sizes: SizeOption[]; // every size of the workshop, list order (the toggles of Suggested sizes)
+};
 
 // Settings forms. `code` is sent on create only. `position` empty = last. System units: only name and position change.
 export type UnitFormData = {
@@ -887,6 +895,9 @@ export type Colour = {
 };
 export type ColourRow = Colour & { position: number; usage_count: number }; // non-deleted products with the colour, any status
 export type ColoursSettingsProps = { colours: ColourRow[] }; // list order: position, then name, then id
+export type SizeOption = Size & { one_size: boolean }; // the workshop's list: position, then id
+export type SizeRow = SizeOption & { position: number; usage_count: number }; // usage_count: non-deleted products with the size, any status
+export type SizesSettingsProps = { sizes: SizeRow[] }; // list order: position, then id
 export type ColourFormData = {
     code: string;
     name: string;

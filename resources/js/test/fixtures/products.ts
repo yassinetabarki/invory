@@ -23,7 +23,8 @@ import type {
     ProductListItem,
     ProductStatus,
     Sale,
-    SizeList,
+    Size,
+    SizeOption,
     UnitOfMeasure,
     VariantBarcode,
 } from '@/types/domain';
@@ -333,8 +334,11 @@ export const noProductFilters: ProductFilters = {
 };
 
 // ---------------------------------------------------------------------------
-// Size lists (S-58): ids as the migration numbers them
+// Sizes: ids as the migration numbers them. A "list" is only a test helper that
+// groups the sizes of a fixture product (INV-18 dropped the size list from the contract).
 // ---------------------------------------------------------------------------
+
+export type SizeList = { code: string; name: string; sizes: Size[] };
 
 export const sizeListSToXl: SizeList = {
     code: 's_to_xl',
@@ -362,14 +366,36 @@ export const sizeListOneSize: SizeList = {
     sizes: [{ id: 16, label: 'One size' }],
 };
 
-/** The sizes of each default category, as the create and edit pages receive them. */
-export const categorySizesFixture: Record<ProductCategory, SizeList> = {
-    apparel: sizeListSToXl,
-    footwear: sizeListEu36To46,
-    bag: sizeListOneSize,
-    accessory: sizeListOneSize,
-    jewelry: sizeListOneSize,
-    other: sizeListOneSize,
+/** Every size of the workshop, as the create and edit pages receive them (INV-18). */
+export const sizeOptionsFixture: SizeOption[] = [
+    ...sizeListSToXl.sizes,
+    ...sizeListEu36To46.sizes,
+    ...sizeListOneSize.sizes,
+].map((size) => ({ ...size, one_size: size.label === 'One size' }));
+
+/** The size ids each default category suggests, as the create and edit pages receive them. */
+export const categorySizesFixture: Record<ProductCategory, number[]> = {
+    apparel: sizeListSToXl.sizes.map((size) => size.id),
+    footwear: sizeListEu36To46.sizes.map((size) => size.id),
+    bag: [16],
+    accessory: [16],
+    jewelry: [16],
+    other: [16],
+};
+
+/** A new workshop's list as far as the form tests need it: XS … XXXL (ids 1-4 are S … XL), 36 … 46, One size. */
+export const fullSizeOptionsFixture: SizeOption[] = [
+    { id: 21, label: 'XS', one_size: false },
+    ...sizeOptionsFixture.slice(0, 4),
+    { id: 22, label: 'XXL', one_size: false },
+    { id: 23, label: 'XXXL', one_size: false },
+    ...sizeOptionsFixture.slice(4),
+];
+
+/** Apparel suggests XS to XXXL (7 sizes), as a new workshop does. */
+export const fullCategorySizesFixture: Record<ProductCategory, number[]> = {
+    ...categorySizesFixture,
+    apparel: [21, 1, 2, 3, 4, 22, 23],
 };
 
 /** The first colour of every workshop: the one products recorded before colours got (INV-1). */
@@ -391,7 +417,9 @@ export const denimJacket: Product = {
     name: 'Denim Jacket',
     category: 'apparel',
     category_label: 'Apparel',
-    size_list: sizeListSToXl,
+    sizes: sizeListSToXl.sizes,
+    one_size: false,
+    sizes_line: 'Sizes S, M, L, XL',
     colours: [white],
     status: 'active',
     status_label: 'Active',
@@ -591,7 +619,9 @@ export const canvasLowSneaker: Product = {
     name: 'Canvas Low Sneaker',
     category: 'footwear',
     category_label: 'Footwear',
-    size_list: sizeListEu36To46,
+    sizes: sizeListEu36To46.sizes,
+    one_size: false,
+    sizes_line: 'Sizes 36 to 46',
     colours: [white],
     status: 'active',
     status_label: 'Active',
@@ -662,7 +692,9 @@ export const choreJacket: Product = {
     name: 'Canvas Chore Jacket',
     category: 'apparel',
     category_label: 'Apparel',
-    size_list: sizeListSToXl,
+    sizes: sizeListSToXl.sizes,
+    one_size: false,
+    sizes_line: 'Sizes S, M, L, XL',
     colours: [white],
     status: 'draft',
     status_label: 'Draft',

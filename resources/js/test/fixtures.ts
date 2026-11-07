@@ -16,7 +16,6 @@ import type {
     OrderStockProduct,
     Paginated,
     Size,
-    SizeList,
     StockMovement,
     TrackerCounts,
     TrackerLine,
@@ -54,7 +53,10 @@ export const black: Colour = {
     swatch: '#1F1F23',
 };
 
-export const sizeLists: Record<string, SizeList> = {
+export const sizeLists: Record<
+    string,
+    { code: string; name: string; sizes: Size[] }
+> = {
     s_to_xl: {
         code: 's_to_xl',
         name: 'S, M, L, XL',

@@ -129,12 +129,13 @@ it('gives the next numbers in colour then size order, goes on where it stopped, 
     // Another workshop starts at 2000000000015 too, and cannot be reached from this one.
     $other = Workshop::factory()->create();
     $stranger = User::factory()->create(['workshop_id' => $other->id]);
-    [$product, $colourId] = CurrentWorkshop::run($other, fn () => [
+    // Each workshop has its own sizes (INV-18): the S of the other one is read there.
+    [$product, $colourId, $sizeId] = CurrentWorkshop::run($other, fn () => [
         Product::factory()->create(['sku' => 'PRD-JKT-001', 'name' => 'Denim Jacket', 'category' => 'apparel']),
         Colour::query()->where('code', 'IND')->value('id'),
+        Size::query()->where('label', 'S')->value('id'),
     ]);
     $product->colours()->attach($colourId, ['workshop_id' => $other->id]);
-    $sizeId = Size::query()->where('label', 'S')->value('id');
     $mine = Workshop::query()->findOrFail($this->user->workshop_id);
     $count = Barcode::query()->count();
 

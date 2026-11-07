@@ -7,22 +7,21 @@ namespace App\Services\Restocks;
 use App\Models\Barcode;
 use App\Models\Product;
 use App\Models\Size;
-use App\Models\SizeList;
 use App\Services\Products\FinishedStockLevel;
-use App\Services\Products\SizeLists;
+use App\Services\Products\ProductSizes;
 use Illuminate\Database\Eloquent\Collection;
 
 /**
  * "Scan or type a barcode" on New restock (INV-3, AC-4; ADR-0020, ADR-0022): which products, colour and size a number stands for.
  *
  * A number stands for one colour and size and for the product names in `barcode_names`. Its matches are the non-deleted products of
- * any status with one of those names whose size list has its size and which have its colour, by SKU. When the products of that name
+ * any status with one of those names that have its size and its colour, by SKU. When the products of that name
  * no longer have its colour, or no longer have its size, the lookup says so (the human's answer of 2026-11-02 for the size); a number
  * the workshop doesn't have, or no product of its names at all, is unknown.
  */
 final readonly class RestockBarcodeLookup
 {
-    public function __construct(private RestockBook $restocks, private SizeLists $sizeLists) {}
+    public function __construct(private RestockBook $restocks, private ProductSizes $productSizes) {}
 
     /**
      * @return array{result: 'found', colour_id: int, size_id: int, matches: list<array{product: Product, sizes: list<Size>, one_size: bool, stock: FinishedStockLevel}>}|array{result: 'invalid'|'unknown'|'colour_gone'|'size_gone', message: string}
@@ -35,7 +34,7 @@ final readonly class RestockBarcodeLookup
             return ['result' => 'invalid', 'message' => RestockMessages::notABarcode()];
         }
 
-        $barcode = Barcode::query()->with(['colour', 'size.sizeList', 'names'])->where('number', $number)->first();
+        $barcode = Barcode::query()->with(['colour', 'size', 'names'])->where('number', $number)->first();
 
         if ($barcode === null) {
             return self::unknown($number);
@@ -45,10 +44,11 @@ final readonly class RestockBarcodeLookup
         $named = Product::query()->with('colours')->whereIn('name_key', $barcode->names->pluck('name_key')->all())
             ->orderBy('sku')->orderBy('id')->get();
 
-        $withSize = $named->filter(fn (Product $product): bool => $this->sizeLists->category($product->category_id)->sizeList->sizes->contains('id', $barcode->size_id));
+        $sizes = $this->productSizes->forProducts($named);
+        $withSize = $named->filter(fn (Product $product): bool => $sizes[$product->id]->has($barcode->size_id));
         $matches = $withSize->filter(fn (Product $product): bool => $product->colours->contains('id', $barcode->colour_id));
 
-        $variant = RestockMessages::variant($barcode->colour->name, $barcode->size->label, $barcode->size->sizeList->code === SizeList::ONE_SIZE);
+        $variant = RestockMessages::variant($barcode->colour->name, $barcode->size->label, self::isOneSize($barcode->size));
 
         if ($matches->isNotEmpty()) {
             return [
@@ -72,6 +72,12 @@ final readonly class RestockBarcodeLookup
         }
 
         return self::unknown($number);
+    }
+
+    /** Whether the barcode's size is "One size" (it names a size, not a product: the products may have lost it). */
+    private static function isOneSize(Size $size): bool
+    {
+        return $size->is_one_size;
     }
 
     /** @return array{result: 'unknown', message: string} */

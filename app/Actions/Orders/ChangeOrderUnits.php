@@ -10,9 +10,7 @@ use App\Models\OrderLine;
 use App\Models\OrderLineSize;
 use App\Models\Product;
 use App\Models\ProductSizeStock;
-use App\Models\SizeList;
 use App\Services\Orders\OrderMessages;
-use App\Services\Products\SizeLists;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -36,8 +34,6 @@ use InvalidArgumentException;
 final readonly class ChangeOrderUnits
 {
     private const MAX_SHELF = 1000000;
-
-    public function __construct(private SizeLists $lists) {}
 
     /**
      * @param  array<string, int>  $unitsByCell  "<colour id>:<size id>" → units (1 or more)
@@ -64,7 +60,8 @@ final readonly class ChangeOrderUnits
             $shelf = $change === OrderUnitsChange::Cancel ? collect() : ProductSizeStock::query()
                 ->where('product_id', $product->id)->orderBy('id')->lockForUpdate()->get()
                 ->keyBy(fn (ProductSizeStock $row): string => "{$row->colour_id}:{$row->size_id}");
-            $oneSize = $this->lists->list((int) $locked->size_list_id)->code === SizeList::ONE_SIZE;
+            // How the line counts is the line's own (a line recorded before sizes names no size), whatever its product has become.
+            $oneSize = ! $locked->countsBySize();
 
             $this->check($change, $rows, $shelf, $unitsByCell, $oneSize);
 

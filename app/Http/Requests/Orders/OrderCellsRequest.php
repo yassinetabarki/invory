@@ -8,9 +8,7 @@ use App\Enums\OrderUnitsChange;
 use App\Models\Order;
 use App\Models\OrderLine;
 use App\Models\OrderLineSize;
-use App\Models\SizeList;
 use App\Services\Orders\OrderMessages;
-use App\Services\Products\SizeLists;
 use Illuminate\Auth\Access\Response;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Database\Eloquent\Collection;
@@ -122,7 +120,7 @@ final class OrderCellsRequest extends FormRequest
 
     private function oneSize(): bool
     {
-        return app(SizeLists::class)->list((int) $this->orderLine()->size_list_id)->code === SizeList::ONE_SIZE;
+        return ! $this->orderLine()->countsBySize();
     }
 
     private function orderLine(): OrderLine

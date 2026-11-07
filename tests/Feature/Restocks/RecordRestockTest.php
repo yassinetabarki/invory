@@ -7,7 +7,6 @@ use App\Models\Product;
 use App\Models\ProductRestock;
 use App\Models\ProductRestockLine;
 use App\Models\Sale;
-use App\Models\SizeList;
 use App\Models\StockMovement;
 use App\Models\Workshop;
 use App\Services\Workshops\CurrentWorkshop;
@@ -39,7 +38,7 @@ function fieldKey(string $key): string
             return (string) ($colour = demoColour($match[1])->id);
         }
 
-        return (string) array_key_first(sizeIds([$match[1] => 0], $match[1] === 'One size' ? SizeList::ONE_SIZE : SizeList::S_TO_XL));
+        return (string) array_key_first(sizeIds([$match[1] => 0], $match[1] === 'One size' ? 'one_size' : 's_to_xl'));
     }, $key);
 }
 

@@ -17,6 +17,7 @@ import {
     setFormState,
     setPageProps,
 } from '@/test/inertia';
+import { sizeOptionsFixture } from '@/test/fixtures/products';
 import type { ReferenceOption, ReferenceRow } from '@/types/domain';
 
 vi.mock('@inertiajs/react', async (importOriginal) => {
@@ -29,6 +30,20 @@ vi.mock('@inertiajs/react', async (importOriginal) => {
 
 vi.mock('sonner', () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 
+/** Product categories also receive what they suggest and the workshop's sizes (INV-18). */
+function ProductCategoriesPage({ categories }: { categories: ReferenceRow[] }) {
+    return (
+        <ProductCategories
+            categories={categories.map((row) => ({
+                suggested_size_ids: [16],
+                suggests: 'One size',
+                ...row,
+            }))}
+            sizes={sizeOptionsFixture}
+        />
+    );
+}
+
 type Suite = {
     Page: ComponentType<{ categories: ReferenceRow[] }>;
     /** The page heading and the table's name. */
@@ -37,6 +52,10 @@ type Suite = {
     base: string;
     options: ReferenceOption[];
     usedBy: { one: string; many: string };
+    /** What an edit also puts: the suggested sizes of product categories. */
+    editExtra: Record<string, unknown>;
+    /** Columns between Code and Used by: only product categories have Suggests. */
+    extraHeaders: string[];
 };
 
 const suites: Suite[] = [
@@ -47,19 +66,32 @@ const suites: Suite[] = [
         base: '/settings/material-categories',
         options: referenceMaterialCategories,
         usedBy: { one: 'material', many: 'materials' },
+        editExtra: {},
+        extraHeaders: [],
     },
     {
-        Page: ProductCategories,
+        Page: ProductCategoriesPage,
         title: 'Product categories',
         singular: 'product category',
         base: '/settings/product-categories',
         options: referenceProductCategories,
         usedBy: { one: 'product', many: 'products' },
+        editExtra: { suggested_sizes: [16] },
+        extraHeaders: ['Suggests'],
     },
 ];
 
 describe.each(suites)('settings/$title page', (suite) => {
-    const { Page, title, singular, base, options, usedBy } = suite;
+    const {
+        Page,
+        title,
+        singular,
+        base,
+        options,
+        usedBy,
+        editExtra,
+        extraHeaders,
+    } = suite;
     const first = options[0]; // id 1
     const second = options[1]; // id 2
 
@@ -104,7 +136,14 @@ describe.each(suites)('settings/$title page', (suite) => {
                 within(table())
                     .getAllByRole('columnheader')
                     .map((header) => header.textContent),
-            ).toEqual(['Name', 'Code', 'Used by', 'Status', 'Actions']);
+            ).toEqual([
+                'Name',
+                'Code',
+                ...extraHeaders,
+                'Used by',
+                'Status',
+                'Actions',
+            ]);
         });
 
         it('shows code, usage and status per row', () => {
@@ -468,7 +507,162 @@ describe.each(suites)('settings/$title page', (suite) => {
             expect(inertiaMock.submissions[0].data).toEqual({
                 name: 'Renamed',
                 position: '2',
+                ...editExtra,
             });
         });
+    });
+});
+
+describe('settings/Product categories: suggested sizes', () => {
+    const base = '/settings/product-categories';
+    const apparel = {
+        ...referenceRow(referenceProductCategories[0], 2),
+        suggested_size_ids: [1, 2, 3, 4],
+        suggests: 'S, M, L, XL',
+    };
+    const other = {
+        ...referenceRow(referenceProductCategories[5]),
+        suggested_size_ids: [16],
+        suggests: 'One size',
+    };
+
+    beforeEach(() => {
+        resetInertiaMock();
+        setPageProps({}, { url: base });
+    });
+
+    function renderPage() {
+        render(
+            <ProductCategories
+                categories={[apparel, other]}
+                sizes={sizeOptionsFixture}
+            />,
+        );
+    }
+
+    async function openEdit(name: string) {
+        const user = userEvent.setup();
+
+        renderPage();
+        await user.click(
+            within(
+                screen.getByRole('table', { name: 'Product categories' }),
+            ).getByRole('button', { name: `Edit ${name}` }),
+        );
+
+        return {
+            user,
+            dialog: within(
+                screen.getByRole('dialog', { name: `Edit ${name}` }),
+            ),
+        };
+    }
+
+    it('shows the Suggests line of each category, in the table and the phone cards', () => {
+        renderPage();
+
+        const table = within(
+            screen.getByRole('table', { name: 'Product categories' }),
+        );
+        const cards = within(
+            screen.getByRole('list', { name: 'Product categories' }),
+        );
+
+        expect(
+            table.getAllByRole('columnheader').map((cell) => cell.textContent),
+        ).toContain('Suggests');
+        expect(table.getByText('S, M, L, XL')).toBeInTheDocument();
+        expect(table.getByText('One size')).toBeInTheDocument();
+        expect(cards.getByText('S, M, L, XL')).toBeInTheDocument();
+    });
+
+    it('has the Suggested sizes field in Edit with the chosen sizes pressed, and not in Add', async () => {
+        const { user, dialog } = await openEdit('Apparel');
+
+        expect(
+            dialog.getByRole('group', { name: /^Suggested sizes/ }),
+        ).toHaveAccessibleDescription(
+            'Add product pre-selects these sizes when you choose this category.',
+        );
+        expect(dialog.getByRole('button', { name: 'M' })).toHaveAttribute(
+            'aria-pressed',
+            'true',
+        );
+        expect(dialog.getByRole('button', { name: '36' })).toHaveAttribute(
+            'aria-pressed',
+            'false',
+        );
+        expect(dialog.getByText('4 sizes chosen')).toBeInTheDocument();
+
+        await user.click(dialog.getByRole('button', { name: 'Cancel' }));
+        await user.click(
+            screen.getByRole('button', { name: 'Add product category' }),
+        );
+
+        expect(
+            screen.queryByText('Suggested sizes', { exact: false }),
+        ).not.toBeInTheDocument();
+    });
+
+    it('puts suggested_sizes with the name', async () => {
+        const { user, dialog } = await openEdit('Apparel');
+
+        await user.click(dialog.getByRole('button', { name: 'XL' }));
+        await user.click(dialog.getByRole('button', { name: '36' }));
+        await user.click(
+            dialog.getByRole('button', { name: 'Save product category' }),
+        );
+
+        expect(inertiaMock.submissions[0]).toMatchObject({
+            action: `${base}/1`,
+            method: 'put',
+        });
+        expect(inertiaMock.submissions[0].data).toEqual({
+            name: 'Apparel',
+            position: '1',
+            suggested_sizes: [1, 2, 3, 5],
+        });
+    });
+
+    it('shows the suggested_sizes error under the field and focuses its first button', async () => {
+        setFormState({
+            errors: { suggested_sizes: 'Choose at least one size.' },
+        });
+
+        const { dialog } = await openEdit('Apparel');
+
+        expect(
+            dialog.getByText('Choose at least one size.'),
+        ).toBeInTheDocument();
+        expect(
+            dialog.getByRole('group', { name: /^Suggested sizes/ }),
+        ).toHaveAccessibleDescription(
+            expect.stringContaining('Choose at least one size.'),
+        );
+        expect(dialog.getByRole('button', { name: 'S' })).toHaveFocus();
+    });
+
+    it('keeps the title and the buttons in view: the window is capped at the screen and only the fields scroll', async () => {
+        const { dialog } = await openEdit('Apparel');
+
+        const scrolling = dialog
+            .getByLabelText(/^Name/)
+            .closest('.overflow-y-auto');
+
+        expect(screen.getByRole('dialog')).toHaveClass(
+            'max-h-[calc(100dvh-2rem)]',
+        );
+        expect(scrolling).not.toBeNull();
+        expect(scrolling).toContainElement(
+            dialog.getByRole('group', { name: /^Suggested sizes/ }),
+        );
+
+        for (const outside of [
+            dialog.getByRole('heading', { name: 'Edit Apparel' }),
+            dialog.getByRole('button', { name: 'Cancel' }),
+            dialog.getByRole('button', { name: 'Save product category' }),
+        ]) {
+            expect(scrolling).not.toContainElement(outside);
+        }
     });
 });

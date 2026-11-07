@@ -8,12 +8,12 @@ use App\Actions\Products\UpdateFinishedStock;
 use App\Models\Product;
 use App\Models\Size;
 use App\Services\Orders\OrderMessages;
-use App\Services\Products\SizeLists;
+use App\Services\Products\ProductSizes;
 use App\Services\Products\SizeNames;
 use Illuminate\Auth\Access\Response;
 use Illuminate\Contracts\Validation\Validator;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
 
 /**
@@ -111,13 +111,13 @@ final class UpdateFinishedStockRequest extends FormRequest
     }
 
     /**
-     * The sizes of the product's list, from the request's cached lists.
+     * The sizes of the product, from the request's cached read.
      *
      * @return Collection<int, Size>
      */
     private function productSizes(): Collection
     {
-        return app(SizeLists::class)->category($this->product()->category_id)->sizeList->sizes;
+        return app(ProductSizes::class)->of($this->product())->sizes;
     }
 
     private function product(): Product

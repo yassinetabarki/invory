@@ -22,7 +22,8 @@ vi.mock('@inertiajs/react', async (importOriginal) => {
     );
 });
 
-const denim = { id: 1, name: 'Denim Jacket' };
+const denim = { id: 1, name: 'Denim Jacket', one_size: false };
+const tote = { id: 2, name: 'Denim Jacket', one_size: true };
 const changedMessage =
     'The sizes or colours of Denim Jacket have changed. Enter the stock again.';
 const [black, indigo, lightWash] = ['Black', 'Indigo', 'Light wash'].map(
@@ -58,7 +59,13 @@ function refuse(errors: Record<string, string>) {
 }
 
 /** The page's "Update stock" button, which opens the window and gets the focus back. */
-function Page({ stock }: { stock: FinishedStock }) {
+function Page({
+    stock,
+    product = denim,
+}: {
+    stock: FinishedStock;
+    product?: { id: number; name: string; one_size: boolean };
+}) {
     const [open, setOpen] = useState(false);
     const buttonRef = useRef<HTMLButtonElement>(null);
 
@@ -68,7 +75,7 @@ function Page({ stock }: { stock: FinishedStock }) {
                 Update stock
             </button>
             <UpdateStockDialog
-                product={denim}
+                product={product}
                 stock={stock}
                 open={open}
                 onOpenChange={setOpen}
@@ -78,15 +85,16 @@ function Page({ stock }: { stock: FinishedStock }) {
     );
 }
 
-async function openWindow(stock = denimStockByColour) {
+async function openWindow(stock = denimStockByColour, product = denim) {
     const user = userEvent.setup();
-    const view = render(<Page stock={stock} />);
+    const view = render(<Page stock={stock} product={product} />);
 
     await user.click(screen.getByRole('button', { name: 'Update stock' }));
 
     return {
         user,
-        show: (next: FinishedStock) => view.rerender(<Page stock={next} />),
+        show: (next: FinishedStock) =>
+            view.rerender(<Page stock={next} product={product} />),
     };
 }
 
@@ -329,8 +337,27 @@ describe('<UpdateStockDialog>', () => {
         expect(band()).toHaveTextContent('20 units');
     });
 
+    it('keeps the size field for a product whose only size is M, which is not One size (AC-7)', async () => {
+        const onlyM = { ...sizeListSToXl, sizes: [sizeListSToXl.sizes[1]] };
+        await openWindow(
+            stockByColour(onlyM, [
+                ['Black', [3]],
+                ['Indigo', [2]],
+            ]),
+            denim,
+        );
+
+        expect(
+            within(dialog()).getByRole('group', {
+                name: 'Units in stock per size · Black',
+            }),
+        ).toBeInTheDocument();
+        expect(within(dialog()).getAllByRole('textbox')).toHaveLength(1);
+        expect(field('M')).toHaveValue('3');
+    });
+
     it('has no pills for a "One size" product: a field per colour, named by the colour (AC-3)', async () => {
-        const { user } = await openWindow(toteStockByColour);
+        const { user } = await openWindow(toteStockByColour, tote);
 
         expect(within(dialog()).queryByRole('radiogroup')).toBeNull();
         expect(

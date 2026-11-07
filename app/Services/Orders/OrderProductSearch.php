@@ -7,10 +7,10 @@ namespace App\Services\Orders;
 use App\Enums\ProductStatus;
 use App\Models\Product;
 use App\Models\Size;
-use App\Models\SizeList;
 use App\Services\Products\FinishedStock;
 use App\Services\Products\FinishedStockLevel;
-use App\Services\Products\SizeLists;
+use App\Services\Products\ProductSizes;
+use App\Services\Products\ProductSizeSet;
 use App\Services\Restocks\RestockBarcodeLookup;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
@@ -31,7 +31,7 @@ final readonly class OrderProductSearch
     /** A search is cut to this many characters. */
     public const MAX_TERM = 64;
 
-    public function __construct(private FinishedStock $finishedStock, private SizeLists $sizeLists, private RestockBarcodeLookup $barcodes) {}
+    public function __construct(private FinishedStock $finishedStock, private ProductSizes $productSizes, private RestockBarcodeLookup $barcodes) {}
 
     /**
      * @return array{total: int, products: list<array{product: Product, sizes: list<Size>, one_size: bool, stock: FinishedStockLevel}>}
@@ -55,21 +55,21 @@ final readonly class OrderProductSearch
      * stock of every product is read in one query.
      *
      * @param  iterable<Product>  $products
-     * @param  array<int, SizeList>  $lists  a list to use instead of the product's, by product id (Edit order: the list a saved line
-     *                                       counts by, "One size" for a line recorded before sizes)
+     * @param  array<int, ProductSizeSet>  $sizes  the sizes to use instead of the product's, by product id (Edit order: the sizes a saved
+     *                                             line counts by, "One size" for a line recorded before sizes)
      * @return list<array{product: Product, sizes: list<Size>, one_size: bool, stock: FinishedStockLevel}>
      */
-    public function lines(iterable $products, array $lists = []): array
+    public function lines(iterable $products, array $sizes = []): array
     {
         $stock = $this->finishedStock->ofMany($products);
         $lines = [];
 
         foreach ($products as $product) {
-            $sizeList = $lists[$product->id] ?? $this->sizeLists->category($product->category_id)->sizeList;
+            $set = $sizes[$product->id] ?? $this->productSizes->of($product);
             $lines[] = [
                 'product' => $product,
-                'sizes' => array_values($sizeList->sizes->all()),
-                'one_size' => $sizeList->code === SizeList::ONE_SIZE,
+                'sizes' => array_values($set->sizes->all()),
+                'one_size' => $set->oneSize,
                 'stock' => $stock[$product->id],
             ];
         }

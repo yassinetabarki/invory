@@ -127,6 +127,19 @@ class Product extends Model
     }
 
     /**
+     * The sizes the product comes in, in list order: position, then id (INV-18, ADR-0028). Readers go through `ProductSizes`, which keeps
+     * them once per request; this is the relation its writers use. The link row carries the workshop.
+     *
+     * @return BelongsToMany<Size, $this>
+     */
+    public function sizes(): BelongsToMany
+    {
+        return $this->belongsToMany(Size::class, 'product_sizes')
+            ->withPivot('workshop_id')
+            ->orderBy('sizes.position')->orderBy('sizes.id');
+    }
+
+    /**
      * The recorded sales of this product (a sale outlives a soft-deleted product, D-3).
      *
      * @return HasMany<Sale, $this>

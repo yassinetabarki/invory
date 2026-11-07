@@ -10,6 +10,7 @@ use App\Models\Colour;
 use App\Models\Material;
 use App\Models\Product;
 use App\Models\ProductCategory;
+use App\Services\Products\ProductSizes;
 use Database\Seeders\Concerns\ResolvesDemoWorkshop;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
@@ -160,7 +161,7 @@ class DemoProductsSeeder extends Seeder
         ],
     ];
 
-    public function run(SyncProductComponents $syncComponents, SyncProductColours $syncColours): void
+    public function run(SyncProductComponents $syncComponents, SyncProductColours $syncColours, ProductSizes $productSizes): void
     {
         $workshopId = $this->demoWorkshopId();
         $existing = Product::query()->withTrashed()->where('workshop_id', $workshopId)->whereIn('sku', array_column(self::PRODUCTS, 'sku'))->pluck('sku')->all();
@@ -181,7 +182,7 @@ class DemoProductsSeeder extends Seeder
                 continue;
             }
 
-            DB::transaction(function () use ($demo, $categories, $materials, $syncComponents, $syncColours, $white, $workshopId): void {
+            DB::transaction(function () use ($demo, $categories, $materials, $syncComponents, $syncColours, $productSizes, $white, $workshopId): void {
                 $product = new Product([
                     ...array_diff_key($demo, ['category' => true, 'lines' => true]),
                     'category_id' => $categories[$demo['category']],
@@ -208,6 +209,9 @@ class DemoProductsSeeder extends Seeder
                 if ($white !== null) {
                     $syncColours->handle($product, [$white]);
                 }
+
+                // INV-18: every new demo product has what its category suggests in the workshop (One size for a category with no suggestion).
+                $product->sizes()->syncWithPivotValues($productSizes->startingSizes($product->category_id, $workshopId), ['workshop_id' => $workshopId]);
             });
         }
     }

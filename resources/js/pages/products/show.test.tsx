@@ -408,7 +408,7 @@ describe('products/show page', () => {
                 within(card).getByRole('link', {
                     name: 'Manage sizes & colours',
                 }),
-            ).toHaveAttribute('href', '/products/1/edit#colours');
+            ).toHaveAttribute('href', '/products/1/edit#sizes');
         });
 
         it('shows placeholders while the stock loads, the card with its heading at once, apart from the rest of the page', () => {
@@ -564,7 +564,9 @@ describe('products/show page', () => {
             id: 2,
             name: 'Leather Tote',
             sku: 'PRD-TOT-001',
-            size_list: sizeListOneSize,
+            sizes: sizeListOneSize.sizes,
+            one_size: true,
+            sizes_line: 'One size',
         };
         it.each([
             {

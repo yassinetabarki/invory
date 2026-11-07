@@ -4,9 +4,7 @@ use App\Actions\Products\UpdateFinishedStock;
 use App\Models\Colour;
 use App\Models\Material;
 use App\Models\Product;
-use App\Models\ProductCategory;
 use App\Models\ProductSizeStock;
-use App\Models\SizeList;
 use App\Models\StockMovement;
 use App\Models\Workshop;
 use App\Services\Products\FinishedStock;
@@ -40,7 +38,7 @@ beforeEach(function () {
  * @param  array<string, array<string, int|string>>  $byColour
  * @return array<int, array<int, int|string|null>>
  */
-function stockBody(array $byColour, string $list = SizeList::S_TO_XL): array
+function stockBody(array $byColour, string $list = 's_to_xl'): array
 {
     $body = [];
 
@@ -64,7 +62,7 @@ function shelfOf(Product $product): array
 }
 
 /** Puts finished units on the shelf, `['S' => 3]`, straight in the table: in White unless a colour code is named. */
-function stockShelf(Product $product, array $byLabel, string $list = SizeList::S_TO_XL, string $colour = 'WHT'): void
+function stockShelf(Product $product, array $byLabel, string $list = 's_to_xl', string $colour = 'WHT'): void
 {
     foreach (sizeIds($byLabel, $list) as $sizeId => $units) {
         ProductSizeStock::factory()->create(['product_id' => $product->id, 'colour_id' => demoColour($colour)->id, 'size_id' => $sizeId, 'units' => $units]);
@@ -107,7 +105,7 @@ it('refuses a bad count with the message of its size on its own colour and size,
     $before = ProductSizeStock::query()->orderBy('id')->get()->toArray();
     $product = demoProduct($sku);
     $isJacket = $product->is($this->jacket);
-    $list = $isJacket ? SizeList::S_TO_XL : SizeList::EU_36_TO_46;
+    $list = $isJacket ? 's_to_xl' : 'eu_36_to_46';
     $sizeId = array_key_first(sizeIds([$isJacket ? 'M' : '36' => ''], $list));
     $body = $isJacket
         ? stockBody(['White' => ['XS' => '0', 'S' => '3', 'M' => '0', 'L' => '5', 'XL' => '2', 'XXL' => '0', 'XXXL' => '0'], 'Indigo' => ['XS' => '0', 'S' => '0', 'M' => '0', 'L' => '0', 'XL' => '0', 'XXL' => '0', 'XXXL' => '0']])
@@ -147,7 +145,7 @@ it('refuses colours or sizes that are not exactly the product\'s with one messag
         'a colour the product does not have' => stockBody(['White' => $white, 'Indigo' => $indigo, 'Black' => $indigo]),
         'a colour of another workshop' => stockBody(['White' => $white]) + [$foreignIndigo => sizeIds($indigo)],
         'a size missing' => stockBody(['White' => $white, 'Indigo' => ['S' => '0', 'M' => '4', 'L' => '0']]),
-        'a size of another list' => array_replace_recursive(stockBody(['White' => $white, 'Indigo' => $indigo]), [demoColour('IND')->id => sizeIds(['36' => '1'], SizeList::EU_36_TO_46)]),
+        'a size of another list' => array_replace_recursive(stockBody(['White' => $white, 'Indigo' => $indigo]), [demoColour('IND')->id => sizeIds(['36' => '1'], 'eu_36_to_46')]),
         'no stock at all' => [],
     };
 
@@ -177,9 +175,9 @@ it('checks the colours and sizes again under the product\'s lock, and saves noth
 
     expect(fn () => app(UpdateFinishedStock::class)->handle($stale, $body()))->toThrow(ValidationException::class, STOCK_CHANGED);
 
-    // The category moved to another size list after the request was checked.
+    // A size was taken off the product after the request was checked (a product's sizes are its own, INV-18).
     $this->jacket->colours()->attach(demoColour('IND')->id, ['workshop_id' => $this->jacket->workshop_id]);
-    $this->jacket->update(['category_id' => ProductCategory::query()->where('code', 'footwear')->value('id')]);
+    $this->jacket->sizes()->detach(sizeId('XXXL', $this->jacket));
 
     expect(fn () => app(UpdateFinishedStock::class)->handle($stale, $body()))->toThrow(ValidationException::class, STOCK_CHANGED)
         ->and(ProductSizeStock::query()->orderBy('id')->get()->toArray())->toBe($before);
@@ -189,7 +187,7 @@ it('deletes the finished stock of every colour of a product with the product, an
     $tote = demoProduct('PRD-TOT-004');
     stockShelf($this->jacket, ['S' => 3, 'M' => 4, 'L' => 5, 'XL' => 2]);
     stockShelf($this->jacket, ['S' => 1, 'XL' => 6], colour: 'IND');
-    stockShelf($tote, ['One size' => 4], SizeList::ONE_SIZE);
+    stockShelf($tote, ['One size' => 4], 'one_size');
     $others = fn (): array => [
         Material::query()->orderBy('id')->get()->toArray(),
         StockMovement::query()->orderBy('id')->get()->toArray(),

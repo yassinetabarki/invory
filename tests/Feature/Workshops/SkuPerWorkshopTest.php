@@ -3,6 +3,7 @@
 use App\Models\Colour;
 use App\Models\Material;
 use App\Models\Product;
+use App\Models\Size;
 use App\Models\User;
 use App\Models\Workshop;
 use Illuminate\Support\Facades\DB;
@@ -39,7 +40,8 @@ function skuSubject(string $kind): array
         'model' => $material ? Material::class : Product::class,
         'create' => static fn (string $sku): array => $material
             ? validMaterialPayload(['sku' => $sku, 'name' => 'Denim of Sami'])
-            : [...$productPayload, 'sku' => $sku, 'name' => 'Jacket of Sami', 'colours' => [Colour::query()->where('workshop_id', test()->sami->workshop_id)->ordered()->value('id')]],
+            : [...$productPayload, 'sku' => $sku, 'name' => 'Jacket of Sami', 'colours' => [Colour::query()->where('workshop_id', test()->sami->workshop_id)->ordered()->value('id')],
+                'sizes' => [Size::query()->where('workshop_id', test()->sami->workshop_id)->where('is_one_size', true)->value('id')]],
         'post' => fn (array $payload) => test()->post(route($material ? 'materials.store' : 'products.store'), $payload),
         'put' => fn (Material|Product $item, array $payload) => test()->put(route($material ? 'materials.update' : 'products.update', $item), $payload),
         'delete' => fn (Material|Product $item) => test()->delete(route($material ? 'materials.destroy' : 'products.destroy', $item)),

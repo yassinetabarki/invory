@@ -1,6 +1,5 @@
 <?php
 
-use App\Models\Size;
 use App\Models\Workshop;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
@@ -24,7 +23,9 @@ it('keeps a number once per workshop, one barcode per name, colour and size, and
     [$mine, $other] = [Workshop::factory()->create(), Workshop::factory()->create()];
     [$white, $ecru] = DB::table('colours')->where('workshop_id', $mine->id)->orderBy('position')->limit(2)->pluck('id')->all();
     $otherWhite = DB::table('colours')->where('workshop_id', $other->id)->orderBy('position')->value('id');
-    [$small, $medium] = [Size::query()->where('label', 'S')->value('id'), Size::query()->where('label', 'M')->value('id')];
+    // Each workshop has its own sizes (INV-18): mine for my barcodes, the other's for the other workshop's.
+    [$small, $medium] = [DB::table('sizes')->where('workshop_id', $mine->id)->where('label', 'S')->value('id'), DB::table('sizes')->where('workshop_id', $mine->id)->where('label', 'M')->value('id')];
+    $otherSmall = DB::table('sizes')->where('workshop_id', $other->id)->where('label', 'S')->value('id');
 
     $barcode = fn (int $workshop, string $number, int $colour, int $size): int => DB::table('barcodes')->insertGetId([
         'workshop_id' => $workshop, 'number' => $number, 'colour_id' => $colour, 'size_id' => $size, 'created_at' => now(), 'updated_at' => now(),
@@ -37,7 +38,7 @@ it('keeps a number once per workshop, one barcode per name, colour and size, and
     $name($mine->id, $first, 'denim jacket', $white, $small);
 
     // Two workshops can each have 2000000000015.
-    $barcode($other->id, '2000000000015', $otherWhite, $small);
+    $barcode($other->id, '2000000000015', $otherWhite, $otherSmall);
 
     // A savepoint, so the rejected row doesn't abort the surrounding transaction; the message names what fired.
     expect(fn () => DB::transaction(fn () => $write($mine->id, $first, $barcode, $name, $white, $ecru, $small, $medium, $other->id)))

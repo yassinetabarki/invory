@@ -12,7 +12,7 @@ use Database\Factories\Concerns\DefaultWorkshop;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * Valid by default: a barcode of the current workshop for its first colour (list order) and the first size, with a valid EAN-13 number
+ * Valid by default: a barcode of the current workshop for its first colour (list order) and the first size of its workshop's list, with a valid EAN-13 number
  * of its own. The default number starts with 590, outside the in-store range (it starts with 2), so it never meets a number the
  * workshop's counter gives; a test about the in-store numbers passes `number` ({@see Ean13::inStore()}). It stands for no name yet:
  * use `BarcodeName::factory()` for that.
@@ -31,7 +31,7 @@ class BarcodeFactory extends Factory
             'number' => $digits.Ean13::checkDigit($digits),
             // After `workshop_id`: a closure sees the attributes resolved before it.
             'colour_id' => static fn (array $attributes): mixed => Colour::query()->where('workshop_id', $attributes['workshop_id'])->ordered()->value('id'),
-            'size_id' => static fn (): mixed => Size::query()->orderBy('id')->value('id'),
+            'size_id' => static fn (array $attributes): mixed => Size::query()->where('workshop_id', $attributes['workshop_id'])->ordered()->value('id'),
         ];
     }
 }

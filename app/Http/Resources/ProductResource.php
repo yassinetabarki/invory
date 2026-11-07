@@ -4,15 +4,18 @@ declare(strict_types=1);
 
 namespace App\Http\Resources;
 
+use App\Domain\Sizes\SizeLine;
 use App\Models\Product;
 use App\Models\ProductComponent;
+use App\Models\Size;
+use App\Services\Products\ProductSizes;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use LogicException;
 
 /**
  * `Product`: the detail of one product with its cost breakdown, margin, capacity and composition. The product must carry its
- * category (with its size list and the sizes, from `SizeLists`), its composition (with the materials), its colours and the attribute the
+ * category, its composition (with the materials), its colours and the attribute the
  * controller sets (`costing`).
  *
  * @mixin Product
@@ -24,6 +27,9 @@ final class ProductResource extends JsonResource
     {
         $costing = $this->costing;
         $margin = $costing->margin;
+        $sizes = app(ProductSizes::class);
+        $set = $sizes->of($this->resource);
+        $labels = array_values($set->sizes->map(fn (Size $size): string => $size->label)->all());
 
         return [
             'id' => $this->id,
@@ -31,7 +37,13 @@ final class ProductResource extends JsonResource
             'name' => $this->name,
             'category' => $this->category->code,
             'category_label' => $this->category->name,
-            'size_list' => (new SizeListResource($this->category->sizeList))->resolve($request),
+            'sizes' => array_values($set->sizes->map(fn (Size $size): array => ['id' => $size->id, 'label' => $size->label])->all()),
+            'one_size' => $set->oneSize,
+            'sizes_line' => SizeLine::badge(
+                $labels,
+                fn (): array => array_values($sizes->workshop()->map(fn (Size $size): string => $size->label)->all()),
+                $set->oneSize,
+            ),
             'status' => $this->status->value,
             'status_label' => $this->status->label(),
             'description' => $this->description,

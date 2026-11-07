@@ -10,13 +10,12 @@ use App\Models\Barcode;
 use App\Models\BarcodeName;
 use App\Models\Colour;
 use App\Models\Product;
-use App\Models\Size;
-use App\Models\SizeList;
 use App\Models\User;
 use App\Models\Workshop;
 use App\Services\Barcodes\GeneratedBarcodes;
 use App\Services\Products\ProductBarcodes;
-use App\Services\Products\SizeLists;
+use App\Services\Products\ProductSizes;
+use App\Services\Products\ProductSizeSet;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -31,7 +30,7 @@ use Illuminate\Validation\ValidationException;
  */
 final readonly class GenerateBarcodes
 {
-    public function __construct(private SizeLists $sizeLists, private ProductBarcodes $barcodes) {}
+    public function __construct(private ProductSizes $productSizes, private ProductBarcodes $barcodes) {}
 
     /** The only refusal there is: the request and the check under the lock say the same thing, on `variants`. */
     public static function refusal(): string
@@ -50,7 +49,7 @@ final readonly class GenerateBarcodes
             // The product's row lock first (ADR-0017): a colour change or a category change can't land between the check and the save.
             $locked = Product::query()->lockForUpdate()->findOrFail($product->id);
             $colours = $locked->colours()->get()->keyBy('id');
-            $sizes = $this->sizeLists->category($locked->category_id)->sizeList;
+            $sizes = $this->productSizes->fresh($locked);
             $ordered = $this->inOrder($variants, array_values($colours->keys()->all()), $sizes);
 
             // The workshop's row lock, then the counter under it.
@@ -109,10 +108,10 @@ final readonly class GenerateBarcodes
      * @param  list<int|string>  $colourIds  the product's colours in list order
      * @return non-empty-list<array{colour_id: int, size_id: int}>
      */
-    private function inOrder(array $variants, array $colourIds, SizeList $sizeList): array
+    private function inOrder(array $variants, array $colourIds, ProductSizeSet $sizes): array
     {
         $colourRank = array_flip(array_map('intval', $colourIds));
-        $sizeRank = array_flip($sizeList->sizes->map(fn (Size $size): int => $size->id)->all());
+        $sizeRank = array_flip($sizes->ids());
         $seen = [];
 
         foreach ($variants as $variant) {
@@ -158,11 +157,11 @@ final readonly class GenerateBarcodes
     }
 
     /** "Light wash S", "Light wash size 36", "Camel": the way the toast names one variant. */
-    private function variantName(Colour $colour, SizeList $sizeList, int $sizeId): string
+    private function variantName(Colour $colour, ProductSizeSet $sizes, int $sizeId): string
     {
-        $size = $sizeList->sizes->firstWhere('id', $sizeId);
+        $size = $sizes->sizes->firstWhere('id', $sizeId);
 
-        return VariantNames::one($colour->name, $sizeList->code === SizeList::ONE_SIZE || $size === null ? null : $size->label);
+        return VariantNames::one($colour->name, $sizes->oneSize || $size === null ? null : $size->label);
     }
 
     /**

@@ -4,7 +4,6 @@ use App\Actions\Orders\UpdateOrder;
 use App\Models\Order;
 use App\Models\OrderLine;
 use App\Models\OrderLineSize;
-use App\Models\SizeList;
 use App\Services\Orders\OrderMessages;
 use Illuminate\Validation\ValidationException;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -44,7 +43,7 @@ function startedEditBody(array $lines): array
             },
             'units' => $line[0] === 'tshirt'
                 ? orderUnits($id, ['M' => (string) $line[1]])
-                : orderUnits($id, ['One size' => (string) $line[1]], list: SizeList::ONE_SIZE),
+                : orderUnits($id, ['One size' => (string) $line[1]], list: 'one_size'),
         ], $lines),
     ]);
 }
@@ -81,7 +80,7 @@ function savedStages(Order $order): array
 /** A dataset's error key: 'jacket cell' is the one cell of the jacket's line (first colour, "One size"); anything else as given. */
 function startedKey(string $key): string
 {
-    return $key === 'jacket cell' ? unitsKey(0, orderUnits(pid(1), ['One size' => 0], list: SizeList::ONE_SIZE)) : $key;
+    return $key === 'jacket cell' ? unitsKey(0, orderUnits(pid(1), ['One size' => 0], list: 'one_size')) : $key;
 }
 
 dataset('started line refusals', [
@@ -196,7 +195,7 @@ it('names a size of digits "size 36" when it cannot go below its started units, 
     $order = Order::factory()->create();
     OrderLine::factory()->sized(['36' => 10, '37' => 8], ['36' => [$started, 0]])->create(['order_id' => $order->id, 'product_id' => demoProduct('PRD-SNK-003')->id, 'position' => 0]);
     $before = sizedFigures($order);
-    $size = array_key_first(sizeIds(['36' => 0], SizeList::EU_36_TO_46));
+    $size = array_key_first(sizeIds(['36' => 0], 'eu_36_to_46'));
 
     actingAs($this->user)->from(route('orders.edit', $order))
         ->put(route('orders.update', $order), validOrderPayload(['lines' => [['product_id' => pid(3), 'units' => orderUnits(pid(3), ['36' => '0', '37' => '8'])]]]))

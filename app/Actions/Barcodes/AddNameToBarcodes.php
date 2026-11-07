@@ -6,8 +6,7 @@ namespace App\Actions\Barcodes;
 
 use App\Models\BarcodeName;
 use App\Models\Product;
-use App\Models\Size;
-use App\Services\Products\SizeLists;
+use App\Services\Products\ProductSizes;
 use Illuminate\Database\Query\JoinClause;
 
 /**
@@ -16,15 +15,15 @@ use Illuminate\Database\Query\JoinClause;
  * of the old name keep it and labels already printed still scan. A colour taken off before or in the same save is not carried: under the
  * new name it shows "No barcode yet". Capitals or spaces only is the same key: nothing is written.
  *
- * Call it inside the transaction that saves the product, after its colours and category are saved and after `RenameClash` has said the
+ * Call it inside the transaction that saves the product, after its colours, sizes (INV-18-f) and category are saved and after `RenameClash` has said the
  * rename is free of clashes (a colour and size with a different number under each name is therefore never met here).
  */
 final readonly class AddNameToBarcodes
 {
-    public function __construct(private SizeLists $sizeLists) {}
+    public function __construct(private ProductSizes $productSizes) {}
 
     /**
-     * @param  Product  $product  saved with its new name, colours and category
+     * @param  Product  $product  saved with its new name, colours, sizes and category
      * @param  string  $oldKey  the `name_key` it had before the save
      */
     public function handle(Product $product, string $oldKey): void
@@ -34,7 +33,7 @@ final readonly class AddNameToBarcodes
         }
 
         $colourIds = $product->colours()->pluck('colours.id')->map(fn (mixed $id): int => (int) $id)->all();
-        $sizeIds = $this->sizeLists->category($product->category_id)->sizeList->sizes->map(fn (Size $size): int => $size->id)->all();
+        $sizeIds = $this->productSizes->fresh($product)->ids();
 
         // The old name's rows that the new name lacks, in the product's colours and sizes (ONE query; the new name's row is what the left join misses).
         $missing = BarcodeName::query()

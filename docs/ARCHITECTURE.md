@@ -161,21 +161,24 @@ Indexes: `materials_sku_unique` on `(workshop_id, sku)` (partial unique `WHERE d
 Defaults are inserted by the migration (frozen snapshot, `insertOrIgnore` by code). Writes go through `App\Actions\Reference\*`, which bump the
 `reference` once-prop version (shared with signed-in users; [ADR-0009](adr/0009-spa-data-loading-on-inertia.md)).
 
-### `size_lists` and `sizes` (S-58, [ADR-0015](adr/0015-sizes-come-from-the-product-category.md))
+### `sizes`, `product_sizes` and `product_category_sizes` (INV-18, [ADR-0028](adr/0028-sizes-chosen-per-product.md))
 
-| Table / column                    | Columns and rules                                                                                                              |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `size_lists`                      | id, `code` string(32) unique (immutable), `name` string(64) (what the screens show), timestamps                                |
-| `sizes`                           | id, `size_list_id` FK `restrictOnDelete`, `label` string(16), `position`, timestamps; unique per list on label and on position |
-| `product_categories.size_list_id` | FK → size_lists, NOT NULL, `restrictOnDelete`, indexed                                                                         |
+| Table                    | Columns and rules                                                                                             |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| `sizes`                  | id, `workshop_id` FK `cascadeOnDelete`, `label` string(16), `position`, `is_one_size` bool, timestamps        |
+| `product_sizes`          | id, `workshop_id`, `product_id` FK `cascadeOnDelete`, `size_id` FK `restrictOnDelete`; unique (product, size) |
+| `product_category_sizes` | id, `workshop_id`, `product_category_id` FK `cascadeOnDelete`, `size_id` FK `restrictOnDelete`                |
 
-Installation-wide, filled by the migration (frozen snapshot by code): `s_to_xl` "XS to XXXL" (XS, S, M, L, XL, XXL, XXXL; S … XL
-until `2026_11_02_100000` added XS, XXL and XXXL around them, keeping their ids), `eu_36_to_46` "36 to 46" (36 … 46),
-`one_size` "One size". No screen edits them and they carry no `workshop_id` (allow-listed in the workshop arch test). The migration links
-each category by **code** (apparel → `s_to_xl`, footwear → `eu_36_to_46`, every other code → `one_size`); `CreateProductCategory` gives a
-new category `one_size`; rename, archive and restore never touch the link. A product stores no sizes: it has its category's list. A
-product on an order that isn't deleted can't move to a category with another list (`ProductSizeLock`, checked in `UpdateProductRequest`
-and again in `UpdateProduct` under the product's row lock). Sizes never reach `App\Domain\Costing`.
+Keys: `sizes` unique per workshop on `lower(label)` and one `is_one_size` row per workshop (partial unique); `product_category_sizes`
+unique per workshop, category and size. Each workshop has its own sizes (19 to start: XS … XXXL, 36 … 46, One size, at positions 10 … 190;
+`CreateDefaultSizes` at sign-up), listed by position, then id (`Size::ordered()`). "One size" is the flag, never the name. A product has
+its own sizes (`product_sizes`, at least one; the flagged one only alone), read through the one reader
+`App\Services\Products\ProductSizes` (once per request, in batch, `fresh()` under the product's row lock for writers). A category only
+**suggests** sizes, per workshop (`product_category_sizes`; no row = the workshop's One size), which Add product pre-selects;
+`CreateProduct` without sizes takes the suggestion. Changing a category changes no product's sizes. PostgreSQL only: composite keys
+(`workshop_id`, `size_id`) → `sizes (workshop_id, id)` on every table that names a size. The migration `2026_11_08_100000` gave every
+product exactly its category's former list; the installation-wide `size_lists` and `product_categories.size_list_id` are gone (ADR-0015 is
+superseded). Sizes never reach `App\Domain\Costing`.
 
 ### `colours` and `product_colours` (INV-1, [ADR-0018](adr/0018-colours-per-workshop.md))
 
@@ -284,7 +287,7 @@ client's name, copied by the Actions (a client is never renamed).
 | quantity                           | unsigned integer            | whole units, 1 … 1 000 000 (CHECK on PostgreSQL)                          |
 | position                           | unsignedSmallInteger        | the order entered                                                         |
 | delivered, cancelled               | unsigned integer, default 0 | INV-14 (ADR-0026): To deliver = quantity − the two, never stored          |
-| size_list_id                       | FK → size_lists             | `restrictOnDelete`; the list the line counts by (S-60); NOT NULL on PG    |
+| by_size                            | boolean, default false      | the line counts by size (INV-18, ADR-0028; was `size_list_id`, S-60)      |
 | timestamps                         |                             |                                                                           |
 
 Constraints: `unique(order_id, product_id)` (one line per product per order, at most 50 lines), `index(product_id)`. PostgreSQL only:
@@ -302,7 +305,7 @@ delivered takes units off `product_size_stocks`, its move back puts them on it, 
 | workshop_id | FK → workshops   | the product's workshop (composite FK to `products` on PostgreSQL)                                                                 |
 | product_id  | FK → products    | `cascadeOnDelete` (fires only on a hard delete: products are soft-deleted)                                                        |
 | colour_id   | FK → colours     | `restrictOnDelete`, indexed; a colour of the product (composite FK (`product_id`, `colour_id`) → `product_colours` on PostgreSQL) |
-| size_id     | FK → sizes       | `restrictOnDelete`, indexed; a size of the product's category list                                                                |
+| size_id     | FK → sizes       | `restrictOnDelete`, indexed; a size of the product (INV-18)                                                                       |
 | units       | unsigned integer | finished units on the shelf in this colour and size, at least 1 (CHECK `units >= 1` on PostgreSQL)                                |
 | timestamps  |                  |                                                                                                                                   |
 
@@ -363,7 +366,7 @@ them as `barcodes`, deferred in the group `stock` with `finished_stock`, rescued
 | workshop_id                        | FK → workshops              | the line's workshop (composite FK to `order_lines` on PostgreSQL)              |
 | order_line_id                      | FK → order_lines            | `cascadeOnDelete`                                                              |
 | colour_id                          | FK → colours                | `restrictOnDelete`, indexed, NOT NULL; INV-13: the colour ordered              |
-| size_id                            | FK → sizes                  | `restrictOnDelete`, indexed; a size of the line's `size_list_id`               |
+| size_id                            | FK → sizes                  | `restrictOnDelete`, indexed; a size of the product                             |
 | quantity                           | unsigned integer            | units ordered in this size, 1 … 1 000 000 (CHECK on PostgreSQL)                |
 | delivered, cancelled               | unsigned integer, default 0 | INV-14: counts per colour and size; To deliver derived (`HasDeliveryCounts`)   |
 | timestamps                         |                             |                                                                                |

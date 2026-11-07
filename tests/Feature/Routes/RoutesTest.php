@@ -3,7 +3,6 @@
 use App\Models\Material;
 use App\Models\Order;
 use App\Models\Sale;
-use App\Models\SizeList;
 use App\Models\User;
 use App\Policies\MaterialPolicy;
 use Illuminate\Auth\Access\Response;
@@ -118,10 +117,10 @@ function routePayload(string $kind): array
         'order' => validOrderPayload(),
         // INV-13: Boutique Lina's booked lines were recorded before sizes, so their units go on "One size" in their first colour.
         'order edit' => validOrderPayload(['lines' => [
-            ['product_id' => pid(1), 'units' => orderUnits(pid(1), ['One size' => '50'], list: SizeList::ONE_SIZE)],
-            ['product_id' => pid(5), 'units' => orderUnits(pid(5), ['One size' => '30'], list: SizeList::ONE_SIZE)],
+            ['product_id' => pid(1), 'units' => orderUnits(pid(1), ['One size' => '50'], list: 'one_size')],
+            ['product_id' => pid(5), 'units' => orderUnits(pid(5), ['One size' => '30'], list: 'one_size')],
         ]]),
-        'cancel' => ['cells' => orderUnits(pid(1), ['One size' => '1'], list: SizeList::ONE_SIZE)],
+        'cancel' => ['cells' => orderUnits(pid(1), ['One size' => '1'], list: 'one_size')],
         default => [],
     };
 }

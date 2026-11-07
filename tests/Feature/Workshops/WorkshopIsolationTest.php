@@ -2,6 +2,7 @@
 
 use App\Models\Material;
 use App\Models\Product;
+use App\Models\Size;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Tests\TestCase;
@@ -52,6 +53,7 @@ function samiAddsTheCanvasTote(TestCase $test): void
         'sku' => 'B-TOT-001', 'name' => 'Canvas Tote', 'category' => 'bag', 'status' => 'active',
         'labor_cost' => '5', 'overhead_cost' => '',
         'colours' => [demoColour('WHT')->id], // Sami is signed in: his own workshop's White
+        'sizes' => [Size::query()->where('is_one_size', true)->value('id')], // and his One size
         'components' => [['material_id' => Material::query()->where('sku', 'B-CAN-001')->firstOrFail()->id, 'quantity' => '0.8', 'waste_percent' => '0']],
     ])->assertSessionHasNoErrors();
 }

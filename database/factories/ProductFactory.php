@@ -9,6 +9,9 @@ use App\Models\Material;
 use App\Models\Product;
 use App\Models\ProductCategory;
 use App\Models\ProductComponent;
+use App\Models\Size;
+use App\Services\Products\ProductSizes;
+use App\Services\Workshops\CurrentWorkshop;
 use Database\Factories\Concerns\DefaultWorkshop;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use InvalidArgumentException;
@@ -59,6 +62,40 @@ class ProductFactory extends Factory
             'overhead_cost' => $this->decimal(fake()->numberBetween(1, 5), fake()->numberBetween(0, 9999)),
             'selling_price' => $this->decimal(fake()->numberBetween(40, 220), fake()->numberBetween(0, 9999)),
         ];
+    }
+
+    /**
+     * Like a product made on Add product (ADR-0028): once it exists it has what its category suggests in its workshop, or that workshop's
+     * One size ({@see withSizes()} says otherwise).
+     */
+    public function configure(): static
+    {
+        return $this->afterCreating(function (Product $product): void {
+            $product->sizes()->syncWithPivotValues(
+                app(ProductSizes::class)->startingSizes($product->category_id, $product->workshop_id),
+                ['workshop_id' => $product->workshop_id],
+            );
+        });
+    }
+
+    /**
+     * The sizes the product comes in, by label, of its own workshop (`withSizes(['S', 'M', 'L', 'XL'])`): they replace what its category
+     * suggested. A label the workshop doesn't have fails the test.
+     *
+     * @param  list<string>  $labels
+     */
+    public function withSizes(array $labels): static
+    {
+        return $this->afterCreating(function (Product $product) use ($labels): void {
+            $ids = CurrentWorkshop::run($product->workshop_id, fn (): array => Size::query()->whereIn('label', $labels)->pluck('id', 'label')->all());
+            $missing = array_diff($labels, array_keys($ids));
+
+            if ($missing !== []) {
+                throw new InvalidArgumentException('The workshop has no size '.implode(', ', $missing).'.');
+            }
+
+            $product->sizes()->syncWithPivotValues(array_values($ids), ['workshop_id' => $product->workshop_id]);
+        });
     }
 
     public function draft(): static

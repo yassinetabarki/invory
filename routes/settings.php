@@ -14,6 +14,7 @@ use App\Http\Controllers\Settings\RestoreMaterialCategoryController;
 use App\Http\Controllers\Settings\RestoreProductCategoryController;
 use App\Http\Controllers\Settings\RestoreUnitController;
 use App\Http\Controllers\Settings\SecurityController;
+use App\Http\Controllers\Settings\SizeController;
 use App\Http\Controllers\Settings\UnitController;
 use Illuminate\Auth\Middleware\RequirePassword;
 use Illuminate\Support\Facades\Route;
@@ -61,6 +62,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('settings/colours', [ColourController::class, 'index'])->name('settings.colours.index');
     Route::post('settings/colours', [ColourController::class, 'store'])->name('settings.colours.store');
     Route::put('settings/colours/{colour}', [ColourController::class, 'update'])->where('colour', '[0-9]{1,18}')->name('settings.colours.update');
+
+    // The workshop's sizes (INV-18, ADR-0028): list, add, edit. A size is never deleted, archived or restored, so there is no more.
+    Route::get('settings/sizes', [SizeController::class, 'index'])->name('settings.sizes.index');
+    Route::post('settings/sizes', [SizeController::class, 'store'])->name('settings.sizes.store');
+    Route::put('settings/sizes/{size}', [SizeController::class, 'update'])->where('size', '[0-9]{1,18}')->name('settings.sizes.update');
 
     // How the workshop's work tickets print (INV-15-g, ADR-0024); INV-9 adds its label settings to the same page.
     Route::get('settings/labels', [LabelSettingsController::class, 'edit'])->name('settings.labels.edit');

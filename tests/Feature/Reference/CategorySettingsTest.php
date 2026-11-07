@@ -93,7 +93,10 @@ it('lists the categories by position then name, with their usage', function (arr
 it('sends exactly the contract keys and types on every row', function (array $kind) {
     $row = actingAs($this->user)->get(route("{$kind['route']}.index"))->inertiaProps('categories.0');
 
-    expect(array_keys($row))->toBe(['id', 'code', 'name', 'position', 'archived', 'usage_count'])
+    // Product categories also say what they suggest on Add product (INV-18-i).
+    $suggestion = $kind['route'] === 'settings.product-categories' ? ['suggested_size_ids', 'suggests'] : [];
+
+    expect(array_keys($row))->toBe(['id', 'code', 'name', 'position', 'archived', 'usage_count', ...$suggestion])
         ->and($row['id'])->toBeInt()
         ->and($row['code'])->toBeString()
         ->and($row['name'])->toBeString()

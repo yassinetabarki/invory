@@ -164,7 +164,7 @@ function ProductDetails({
                         <ProductHero
                             capacity={product.capacity}
                             unitCost={product.cost.unit_cost}
-                            multipleSizes={product.size_list.sizes.length > 1}
+                            multipleSizes={product.sizes.length > 1}
                             stock={
                                 <Deferred
                                     data="finished_stock"
@@ -214,7 +214,7 @@ function ProductDetails({
                             product={product}
                             stock={finishedStock}
                             barcodes={barcodes}
-                            manageHref={`${editHref}#colours`}
+                            manageHref={`${editHref}#sizes`}
                             lastRestock={lastRestock}
                         />
                     )}
@@ -258,7 +258,7 @@ function ProductDetails({
                                 {barcodesKept(
                                     product.name,
                                     barcodes,
-                                    product.size_list.sizes.length === 1,
+                                    product.one_size,
                                     locale,
                                 )}
                             </p>

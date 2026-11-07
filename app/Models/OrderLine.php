@@ -24,7 +24,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int $product_id
  * @property int $quantity Whole units, 1 to 1 000 000: the sum of the line's sizes.
  * @property int $position Display order: the order the lines were entered in.
- * @property int|null $size_list_id The size list the line counts by (ADR-0016). Never null in PostgreSQL; never mass-assignable: the Actions set it.
+ * @property bool $by_size Whether the line was recorded by size (ADR-0028, replaces the size list of ADR-0016): a new line counts by size unless its
+ *                         product is One size. Never mass-assignable: the Actions set it.
  * @property int $delivered Units delivered (INV-14): the sum of the line's rows. To deliver is derived: see `to_deliver`.
  * @property int $cancelled Units cancelled. The two counts never add up to more than the quantity.
  * @property CarbonInterface $created_at
@@ -36,6 +37,13 @@ class OrderLine extends Model
     /** @use HasFactory<OrderLineFactory> */
     use BelongsToWorkshop, HasDeliveryCounts, HasFactory;
 
+    /**
+     * The database default, so a freshly created line reads like a stored one without a refresh.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = ['by_size' => false];
+
     /** @return array<string, string> */
     protected function casts(): array
     {
@@ -44,6 +52,7 @@ class OrderLine extends Model
             'position' => 'integer',
             'delivered' => 'integer',
             'cancelled' => 'integer',
+            'by_size' => 'boolean',
         ];
     }
 
@@ -70,7 +79,7 @@ class OrderLine extends Model
     }
 
     /**
-     * The colour and size rows of this line, by colour in list order (position, name, id; INV-13), then in the size list's order. The
+     * The colour and size rows of this line, by colour in list order (position, name, id; INV-13), then by size in list order (position, then id). The
      * order is made of subselects, not joins: the rows keep their columns (strict models), it runs the same on SQLite and PostgreSQL,
      * and it survives eager loading.
      *
@@ -82,13 +91,14 @@ class OrderLine extends Model
             ->orderBy(Colour::query()->select('position')->whereColumn('colours.id', 'order_line_sizes.colour_id'))
             ->orderBy(Colour::query()->select('name')->whereColumn('colours.id', 'order_line_sizes.colour_id'))
             ->orderBy('order_line_sizes.colour_id')
-            ->orderBy(Size::query()->select('position')->whereColumn('sizes.id', 'order_line_sizes.size_id'));
+            ->orderBy(Size::query()->select('position')->whereColumn('sizes.id', 'order_line_sizes.size_id'))
+            ->orderBy('order_line_sizes.size_id');
     }
 
-    /** @return BelongsTo<SizeList, $this> */
-    public function sizeList(): BelongsTo
+    /** Whether this line counts its units per size (ADR-0016, ADR-0028): the flag stored on the line, the one place that knows. */
+    public function countsBySize(): bool
     {
-        return $this->belongsTo(SizeList::class);
+        return (bool) $this->by_size;
     }
 
     /**

@@ -9,6 +9,7 @@ import {
     materialOptions,
     productCategories,
     productStatuses,
+    sizeOptionsFixture,
 } from '@/test/fixtures/products';
 import {
     archived,
@@ -35,6 +36,7 @@ vi.mock('@inertiajs/react', async (importOriginal) => {
 const props: ProductCreateProps = {
     statuses: productStatuses,
     category_sizes: categorySizesFixture,
+    sizes: sizeOptionsFixture,
     colours: defaultColours,
 };
 
@@ -71,47 +73,6 @@ describe('products/create page', () => {
                 .getAllByRole('option')
                 .map((option) => option.textContent),
         ).toEqual(productCategories.map((option) => option.label));
-    });
-
-    it('shows the sizes of the chosen category under "Category", and none before', async () => {
-        const user = userEvent.setup();
-
-        render(<ProductsCreate {...props} />);
-
-        const category = screen.getByLabelText(/^Category/);
-
-        expect(screen.queryByText(/^Sizes/)).not.toBeInTheDocument();
-        expect(screen.queryByText('One size')).not.toBeInTheDocument();
-        expect(
-            screen.queryByText('Sizes come with the category.'),
-        ).not.toBeInTheDocument();
-
-        await user.click(category);
-        await user.click(screen.getByRole('option', { name: 'Apparel' }));
-
-        expect(screen.getByText('Sizes: S, M, L, XL')).toBeInTheDocument();
-        expect(
-            screen.getByText('Sizes come with the category.'),
-        ).toBeInTheDocument();
-        expect(category).toHaveAccessibleDescription(
-            expect.stringContaining('Sizes: S, M, L, XL'),
-        );
-
-        await user.click(category);
-        await user.click(screen.getByRole('option', { name: 'Footwear' }));
-
-        expect(screen.getByText('Sizes: 36 to 46')).toBeInTheDocument();
-        expect(
-            screen.queryByText('Sizes: S, M, L, XL'),
-        ).not.toBeInTheDocument();
-
-        await user.click(category);
-        await user.click(screen.getByRole('option', { name: 'Bag' }));
-
-        expect(screen.getByText('One size')).toBeInTheDocument();
-        expect(category).toHaveAccessibleDescription(
-            expect.stringContaining('One size'),
-        );
     });
 
     it('asks the server for materials only when a picker opens', async () => {

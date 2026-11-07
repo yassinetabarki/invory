@@ -15,7 +15,7 @@ use App\Models\User;
 use App\Services\Production\BatchNames;
 use App\Services\Production\ProductionMessages;
 use App\Services\Production\ProductionPath;
-use App\Services\Products\SizeLists;
+use App\Services\Products\ProductSizes;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -29,7 +29,7 @@ final readonly class PutBatchInStock
 {
     public function __construct(
         private RecordRestock $recordRestock,
-        private SizeLists $sizeLists,
+        private ProductSizes $productSizes,
         private BatchNames $names,
     ) {}
 
@@ -62,9 +62,11 @@ final readonly class PutBatchInStock
 
             // The product's whole grid, 0 everywhere but the batch's colour and size: what RecordRestock expects.
             $grid = [];
+            // RecordRestock takes the product's lock inside this transaction; the sizes are read again here for the grid it checks.
+            $sizes = $this->productSizes->fresh($product)->sizes;
 
             foreach ($product->colours()->pluck('colours.id') as $colourId) {
-                foreach ($this->sizeLists->category($product->category_id)->sizeList->sizes as $size) {
+                foreach ($sizes as $size) {
                     $grid[$colourId][$size->id] = $colourId === $locked->colour_id && $size->id === $locked->size_id ? $units : 0;
                 }
             }

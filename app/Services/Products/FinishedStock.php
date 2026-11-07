@@ -11,12 +11,12 @@ use Illuminate\Database\Query\JoinClause;
 
 /**
  * Reads the finished stock of a product (S-56, ADR-0017; per colour since INV-2, ADR-0019): ONE query for its colours with their stock
- * rows (a colour with no row still comes back, once), the sizes from the request's size lists, and every total added up here (whole
+ * rows (a colour with no row still comes back, once), the sizes from {@see ProductSizes}, and every total added up here (whole
  * numbers). A colour and size without a row holds 0.
  */
 final class FinishedStock
 {
-    public function __construct(private readonly SizeLists $sizeLists) {}
+    public function __construct(private readonly ProductSizes $productSizes) {}
 
     public function of(Product $product): FinishedStockLevel
     {
@@ -67,10 +67,11 @@ final class FinishedStock
             }
         }
 
+        $sizes = $this->productSizes->forProducts($byId);
         $levels = [];
 
         foreach ($byId as $productId => $product) {
-            $levels[$productId] = $this->level($product, $colours[$productId], $units[$productId] ?? []);
+            $levels[$productId] = $this->level($sizes[$productId], $colours[$productId], $units[$productId] ?? []);
         }
 
         return $levels;
@@ -80,9 +81,9 @@ final class FinishedStock
      * @param  array<int, Colour>  $colours  in list order
      * @param  array<int, array<int, int>>  $units  colour id → size id → units
      */
-    private function level(Product $product, array $colours, array $units): FinishedStockLevel
+    private function level(ProductSizeSet $set, array $colours, array $units): FinishedStockLevel
     {
-        $sizes = $this->sizeLists->category($product->category_id)->sizeList->sizes;
+        $sizes = $set->sizes;
         $perSize = array_fill_keys($sizes->map(fn (Size $size): int => $size->id)->all(), 0);
 
         $byColour = [];

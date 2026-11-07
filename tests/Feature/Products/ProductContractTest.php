@@ -5,6 +5,7 @@ use App\Models\BarcodeName;
 use App\Models\Product;
 use App\Models\ProductSizeStock;
 use App\Models\Size;
+use Illuminate\Support\Arr;
 
 use function Pest\Laravel\actingAs;
 
@@ -110,15 +111,16 @@ it('sends Product with its exact keys, order and types', function () {
         $product = loadedPageProp($response, 'product');
 
         expect(keysOf($product))->toBe([
-            'id', 'sku', 'name', 'category', 'category_label', 'size_list', 'status', 'status_label', 'description', 'photo_url',
+            'id', 'sku', 'name', 'category', 'category_label', 'sizes', 'one_size', 'sizes_line', 'status', 'status_label', 'description', 'photo_url',
             'labor_cost', 'overhead_cost', 'selling_price', 'cost', 'margin', 'capacity', 'colours', 'components', 'created_at', 'updated_at',
         ])
             ->and($product['id'])->toBeInt()
             ->and($product['labor_cost'])->toMatch(SCALE_4)
             ->and($product['overhead_cost'])->toMatch(SCALE_4)
-            ->and(keysOf($product['size_list']))->toBe(['code', 'name', 'sizes'])
-            ->and(keysOf($product['size_list']['sizes'][0]))->toBe(['id', 'label'])
-            ->and($product['size_list']['sizes'][0]['id'])->toBeInt()
+            ->and(keysOf($product['sizes'][0]))->toBe(['id', 'label'])
+            ->and($product['sizes'][0]['id'])->toBeInt()
+            ->and($product['one_size'])->toBeBool()
+            ->and($product['sizes_line'])->toBeString()
             ->and(keysOf($product['cost']))->toBe(['material_cost', 'labor_cost', 'overhead_cost', 'unit_cost'])
             ->and($product['created_at'])->toMatch('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$/')
             ->and($product['updated_at'])->toMatch('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$/');
@@ -151,6 +153,49 @@ it('sends Product with its exact keys, order and types', function () {
                 ->and($line['notes'])->toBeString();
         }
     }
+});
+
+it('sends the sizes of the Denim Jacket and the size props of Add and Edit product (INV-18-g)', function () {
+    $ids = fn (array $labels): array => Size::query()->whereIn('label', $labels)->ordered()->pluck('id')->map(fn ($id): int => (int) $id)->all();
+    $oneSize = Size::query()->where('is_one_size', true)->firstOrFail();
+
+    $show = loadedPageProp(actingAs($this->user)->get(route('products.show', pid(1))), 'product');
+
+    expect(array_column($show['sizes'], 'id'))->toBe($ids(['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']))
+        ->and($show['one_size'])->toBeFalse()
+        ->and($show['sizes_line'])->toBe('Sizes XS to XXXL')
+        ->and(loadedPageProp(actingAs($this->user)->get(route('products.show', pid(4))), 'product.sizes_line'))->toBe('One size');
+
+    // Add product: every size of the workshop in list order, the flagged One size last; the suggestions as ids.
+    $create = actingAs($this->user)->get(route('products.create'))->assertOk();
+
+    expect($create->inertiaProps('sizes'))->toHaveCount(19)
+        ->and(keysOf($create->inertiaProps('sizes')[0]))->toBe(['id', 'label', 'one_size'])
+        ->and(array_column($create->inertiaProps('sizes'), 'one_size'))->toBe([...array_fill(0, 18, false), true])
+        ->and(Arr::last($create->inertiaProps('sizes'))['id'])->toBe($oneSize->id)
+        ->and($create->inertiaProps('category_sizes.apparel'))->toBe($ids(['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']))
+        ->and($create->inertiaProps('category_sizes.bag'))->toBe([$oneSize->id])
+        ->and($create->inertiaProps())->not->toHaveKey('size_locks');
+
+    // Edit product: the same, plus what locks the sizes of this product. The demo jacket has no stock, order or barcode on a size.
+    $edit = actingAs($this->user)->get(route('products.edit', pid(1)))->assertOk();
+
+    expect($edit->inertiaProps('sizes'))->toBe($create->inertiaProps('sizes'))
+        ->and($edit->inertiaProps('size_locks'))->toBe([])
+        ->and($edit->inertiaProps('one_size_lock'))->toBeNull()
+        ->and($edit->inertiaProps('other_sizes_lock'))->toBeNull();
+});
+
+it('sends the locks of a product whose sizes are in use on Edit product (INV-18-g)', function () {
+    $sizeId = fn (string $label): int => (int) Size::query()->where('label', $label)->value('id');
+    ProductSizeStock::factory()->create(['product_id' => pid(1), 'size_id' => $sizeId('M'), 'units' => 3]);
+
+    $edit = actingAs($this->user)->get(route('products.edit', pid(1)))->assertOk();
+
+    expect($edit->inertiaProps('size_locks'))->toBe([$sizeId('M') => "Can't be taken off: it has units in stock."])
+        ->and($edit->inertiaProps('one_size_lock'))->toBe("M is in use, so One size can't be chosen.")
+        ->and($edit->inertiaProps('other_sizes_lock'))->toBeNull()
+        ->and(actingAs($this->user)->get(route('products.edit', pid(4)))->inertiaProps('other_sizes_lock'))->toBeNull();
 });
 
 it('sends the other props of the show page as before', function () {
@@ -239,7 +284,7 @@ it('sends the props of the create and edit pages (S-25: statuses, plus the produ
     }
 
     expect(actingAs($this->user)->get(route('products.create'))->inertiaProps())->not->toHaveKey('product')
-        ->and(keysOf(actingAs($this->user)->get(route('products.edit', pid(1)))->inertiaProps('product')))->toHaveCount(20);
+        ->and(keysOf(actingAs($this->user)->get(route('products.edit', pid(1)))->inertiaProps('product')))->toHaveCount(22);
 });
 
 it('sends the product-shaped props of the dashboard, the sales form and the material page as before', function () {

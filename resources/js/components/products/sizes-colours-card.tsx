@@ -144,10 +144,10 @@ export function SizesColoursCard({
     manageHref,
     lastRestock,
 }: {
-    product: Pick<Product, 'id' | 'name' | 'sku' | 'size_list'>;
+    product: Pick<Product, 'id' | 'name' | 'sku' | 'sizes' | 'one_size'>;
     stock: FinishedStock;
     barcodes: ProductBarcodes;
-    /** Edit product with `#colours`. */
+    /** Edit product with `#sizes`. */
     manageHref: string;
     /** INV-3: the newest restock not undone of this product; null "Not restocked yet."; absent: no line. */
     lastRestock?: ProductShowProps['last_restock'];
@@ -190,11 +190,12 @@ export function SizesColoursCard({
     }, []);
 
     const { colours } = stock;
-    const sizeCount = product.size_list.sizes.length;
-    const oneSize = sizeCount === 1;
+    const sizeCount = product.sizes.length;
+    // A single size that isn't One size keeps its size column (INV-18, AC-7).
+    const oneSize = product.one_size;
     const variants = colours.length * sizeCount;
     const line = `${plural(colours.length, 'colour', 'colours')} × ${
-        oneSize ? product.size_list.name : `${sizeCount} sizes`
+        oneSize ? product.sizes[0].label : plural(sizeCount, 'size', 'sizes')
     } = ${plural(variants, 'variant', 'variants')}. Each variant has its own stock and its own barcode.`;
     const showTotals = colours.length > 1;
     // Every cell is a grey 0 when nothing is on the shelf: nothing to explain then.

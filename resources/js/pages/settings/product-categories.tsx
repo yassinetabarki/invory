@@ -25,6 +25,7 @@ const formUrls = {
 
 export default function ProductCategories({
     categories,
+    sizes,
 }: ProductCategoriesSettingsProps) {
     return (
         <>
@@ -38,6 +39,7 @@ export default function ProductCategories({
                 emptyDescription="Add the categories you group products by, such as apparel or footwear."
                 emptyIcon={Tags}
                 rows={categories}
+                columns={[{ header: 'Suggests', cell: (row) => row.suggests }]}
                 usedBy={{ singular: 'product', plural: 'products' }}
                 urls={urls}
                 renderDialog={(dialog) => (
@@ -46,6 +48,7 @@ export default function ProductCategories({
                         singular="product category"
                         codeMaxLength={32}
                         urls={formUrls}
+                        sizes={sizes}
                     />
                 )}
             />

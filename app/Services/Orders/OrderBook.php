@@ -9,10 +9,9 @@ use App\Models\Colour;
 use App\Models\Order;
 use App\Models\OrderLine;
 use App\Models\Product;
-use App\Models\ProductCategory;
 use App\Models\Size;
-use App\Models\SizeList;
-use App\Services\Products\SizeLists;
+use App\Services\Products\ProductSizes;
+use App\Services\Products\ProductSizeSet;
 use Closure;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\Relation;
@@ -23,7 +22,7 @@ use Illuminate\Database\Eloquent\Relations\Relation;
  */
 final readonly class OrderBook
 {
-    public function __construct(private SizeLists $sizeLists) {}
+    public function __construct(private ProductSizes $productSizes, private OrderLineSizing $sizing) {}
 
     /** The columns of a product the order resources read (`status` and `deleted_at` included, strict models); `category_id` for its sizes; `photo_path` for Edit order's photos (INV-13). */
     private const PRODUCT_COLUMNS = ['id', 'sku', 'name', 'status', 'deleted_at', 'category_id', 'photo_path'];
@@ -90,17 +89,16 @@ final readonly class OrderBook
 
     /**
      * What the order resources read of the lines, in a fixed number of queries however many orders and lines there are: the lines, their
-     * products (narrowed) and the size rows. The sizes' labels and the number of sizes of the line's and of the product's list
-     * (`OrderLineSizing`) are subselects of those queries, not queries of their own, so an order page stays within the query budget.
+     * products (narrowed) and the size rows. The sizes' labels and whether the product is One size (`OrderLineSizing`) are subselects
+     * of those queries, not queries of their own, so an order page stays within the query budget.
      *
      * @return array<string, Closure(Relation<*, *, *>): mixed>
      */
     private function lineRelations(): array
     {
         return [
-            'lines' => fn (Relation $lines) => $lines->addSelect([OrderLineSizing::SIZES_IN_LIST => Size::query()->selectRaw('count(*)')->whereColumn('sizes.size_list_id', 'order_lines.size_list_id')]),
             'lines.product' => fn (Relation $products) => $products->select(self::PRODUCT_COLUMNS)
-                ->addSelect([OrderLineSizing::SIZES_IN_LIST => Size::query()->selectRaw('count(*)')->whereIn('size_list_id', $this->productListId())]),
+                ->addSelect([OrderLineSizing::IS_ONE_SIZE => $this->productIsOneSize()]),
             // INV-13-a: the colour's code, name and swatch are subselects too (`colour_code`, `colour_name`, `colour_swatch`), not a query.
             'lines.sizes' => fn (Relation $sizes) => $sizes->addSelect([
                 'size_label' => Size::query()->select('label')->whereColumn('sizes.id', 'order_line_sizes.size_id'),
@@ -113,31 +111,38 @@ final readonly class OrderBook
 
     /**
      * Edit order's products (INV-13): the product of each line of an order loaded by `load()`, in line order, deleted ones included,
-     * each with the list the line counts by (a line recorded before sizes keeps its "One size" list), for `OrderProductSearch::lines()`.
-     * No query: the lines and their products are already loaded.
+     * each with the sizes the line counts by (INV-18-b: the product's, or for a line recorded before sizes its own "One size"), for
+     * `OrderProductSearch::lines()`. No query: the lines and their products are already loaded.
      *
-     * @return array{products: list<Product>, lists: array<int, SizeList>}
+     * @return array{products: list<Product>, lists: array<int, ProductSizeSet>} `lists` is the sizes by product id
      */
     public function lineProducts(Order $order): array
     {
         $products = [];
-        $lists = [];
+        $sets = [];
+
+        // One read for every product of the lines (the finished stock below asks for all of them, whatever a line counts by).
+        $this->productSizes->forProducts($order->lines->map(fn (OrderLine $line): Product => $line->product));
 
         foreach ($order->lines as $line) {
             $products[] = $line->product;
-            $lists[$line->product_id] = $this->sizeLists->list((int) $line->size_list_id);
+            $sets[$line->product_id] = $line->countsBySize() ? $this->productSizes->of($line->product) : $this->sizing->ownSizes($line);
         }
 
-        return ['products' => $products, 'lists' => $lists];
+        return ['products' => $products, 'lists' => $sets];
     }
 
     /**
-     * The id of the size list of the category of a product, as a subselect of a query on `products`.
+     * 1 when the product's only size is the workshop's flagged One size, else 0: a subselect of a query on `products` (what
+     * `OrderLineSizing::forProduct()` reads, from `product_sizes` and `sizes.is_one_size`).
      *
-     * @return Builder<ProductCategory>
+     * @return Builder<Size>
      */
-    private function productListId(): Builder
+    private function productIsOneSize(): Builder
     {
-        return ProductCategory::query()->select('size_list_id')->whereColumn('product_categories.id', 'products.category_id');
+        return Size::query()->selectRaw('count(*)')
+            ->join('product_sizes', 'product_sizes.size_id', '=', 'sizes.id')
+            ->whereColumn('product_sizes.product_id', 'products.id')
+            ->where('sizes.is_one_size', true);
     }
 }

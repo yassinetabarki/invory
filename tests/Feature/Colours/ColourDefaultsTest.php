@@ -47,6 +47,7 @@ it('writes the 20 defaults into every workshop that exists, in order, and none i
     $ids = Workshop::factory()->count($workshops)->create()->pluck('id')->all();
 
     // On PostgreSQL `product_colours` points at `colours`, so it goes first and comes back last.
+    sizesPerWorkshopMigration()->down();
     deliveryCountsMigration()->down();
     orderLineColoursMigration()->down();
     labelSettingsMigration()->down();
@@ -72,6 +73,7 @@ it('writes the 20 defaults into every workshop that exists, in order, and none i
     labelSettingsMigration()->up();
     orderLineColoursMigration()->up();
     deliveryCountsMigration()->up();
+    sizesPerWorkshopMigration()->up();
 
     expect(Colour::query()->count())->toBe(20 * $workshops);
 

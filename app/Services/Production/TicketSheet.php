@@ -32,6 +32,8 @@ final readonly class TicketSheet
             ->get()
             ->keyBy('id');
 
+        $this->names->preload($batches);
+
         $path = ProductionPath::current();
         $names = [...array_column($path->steps, 'name'), ProductionMessages::PUT_IN_STOCK];
         $refs = array_column($path->steps, 'ref');

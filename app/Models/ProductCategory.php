@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Services\Workshops\CurrentWorkshop;
 use Carbon\CarbonInterface;
 use Database\Factories\ProductCategoryFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -11,7 +12,7 @@ use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
@@ -21,12 +22,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $code
  * @property string $name
  * @property int $position
- * @property int $size_list_id
  * @property CarbonInterface|null $archived_at
  * @property CarbonInterface $created_at
  * @property CarbonInterface $updated_at
  */
-#[Fillable(['code', 'name', 'position', 'archived_at', 'size_list_id'])]
+#[Fillable(['code', 'name', 'position', 'archived_at'])]
 class ProductCategory extends Model
 {
     /** @use HasFactory<ProductCategoryFactory> */
@@ -52,13 +52,17 @@ class ProductCategory extends Model
     }
 
     /**
-     * The fixed sizes of the category (ADR-0015). Set when the category is created, never by a rename, archive or restore.
+     * The sizes this category suggests on Add product in the current workshop, in list order (INV-18, ADR-0028 decision 3). The category
+     * is shared by every workshop, the suggestion is not: no row means the workshop's One size. Nothing reads it to find a product's sizes.
      *
-     * @return BelongsTo<SizeList, $this>
+     * @return BelongsToMany<Size, $this>
      */
-    public function sizeList(): BelongsTo
+    public function suggestedSizes(): BelongsToMany
     {
-        return $this->belongsTo(SizeList::class);
+        return $this->belongsToMany(Size::class, 'product_category_sizes')
+            ->withPivot('workshop_id')
+            ->wherePivot('workshop_id', CurrentWorkshop::id())
+            ->orderBy('sizes.position')->orderBy('sizes.id');
     }
 
     public function isArchived(): bool

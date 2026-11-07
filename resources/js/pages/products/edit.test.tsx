@@ -10,6 +10,7 @@ import {
     choreJacket,
     denimJacket,
     productStatuses,
+    sizeOptionsFixture,
 } from '@/test/fixtures/products';
 import {
     archived,
@@ -40,6 +41,10 @@ function props(product: Product = denimJacket): ProductEditProps {
         product,
         statuses: productStatuses,
         category_sizes: categorySizesFixture,
+        sizes: sizeOptionsFixture,
+        size_locks: {},
+        one_size_lock: null,
+        other_sizes_lock: null,
         colours: defaultColours,
     };
 }
@@ -75,15 +80,6 @@ describe('products/edit page', () => {
                 screen.getByRole('group', { name: /^Row 2:/ }),
             ).getByLabelText('Quantity per unit for Metal shank button 17mm'),
         ).toHaveValue('8');
-    });
-
-    it('shows the sizes of its category at once', () => {
-        render(<ProductsEdit {...props()} />);
-
-        expect(screen.getByText('Sizes: S, M, L, XL')).toBeInTheDocument();
-        expect(
-            screen.getByText('Sizes come with the category.'),
-        ).toBeInTheDocument();
     });
 
     it('shows the saved rows with their units without asking the server for materials', () => {

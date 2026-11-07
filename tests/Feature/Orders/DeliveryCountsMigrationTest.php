@@ -4,7 +4,6 @@ use App\Models\Colour;
 use App\Models\Order;
 use App\Models\OrderLine;
 use App\Models\Product;
-use App\Models\Size;
 use App\Models\Workshop;
 use App\Services\Workshops\CurrentWorkshop;
 use Illuminate\Database\QueryException;
@@ -25,10 +24,14 @@ beforeEach(function () {
     $this->travelTo('2026-11-07 09:00:00');
 });
 
-/** The id of a size of the Apparel list. */
+/** The id of an Apparel size: in the Apparel list while the lists exist (before INV-18-c), in the oldest workshop's own list after. */
 function apparelSize(string $label): int
 {
-    return (int) Size::query()->where('label', $label)->whereIn('size_list_id', DB::table('size_lists')->where('code', 's_to_xl')->select('id'))->value('id');
+    $size = DB::table('sizes')->where('label', $label);
+
+    return (int) (Schema::hasTable('size_lists')
+        ? $size->whereIn('size_list_id', DB::table('size_lists')->where('code', 's_to_xl')->select('id'))->value('id')
+        : $size->where('workshop_id', DB::table('workshops')->min('id'))->value('id'));
 }
 
 /** A line of the jacket in the old shape: `[colour code, size, quantity, in cutting, ready to ship, shipped]` per row. */
@@ -65,9 +68,11 @@ it('turns Shipped into Delivered and the rest into To deliver, and puts Ready to
     setFinishedStock($jacket, ['Indigo' => [0, 2, 0, 0, 0, 0, 0]]);
     $order = Order::factory()->create(['client' => 'Boutique Lina']);
 
+    sizesPerWorkshopMigration()->down();
     deliveryCountsMigration()->down();
     $lineId = oldShapeLine($order, $jacket, [['IND', 'S', 10, 0, 10, 0], ['IND', 'XL', 5, 0, 0, 5], ['IND', 'M', 20, 4, 0, 0]]);
     deliveryCountsMigration()->up();
+    sizesPerWorkshopMigration()->up();
 
     $line = OrderLine::query()->findOrFail($lineId);
     $restock = DB::table('product_restocks')->where('reference', 'Orders')->sole();
@@ -92,10 +97,12 @@ it('makes a shelf row and links the colour when there was none, keeps workshops 
         return [$product->workshop_id, $product, Order::factory()->create()];
     });
 
+    sizesPerWorkshopMigration()->down();
     deliveryCountsMigration()->down();
     oldShapeLine($order, $jeans, [['BLK', 'M', 3, 0, 3, 0]]);
     CurrentWorkshop::run(Workshop::query()->findOrFail($other), fn () => oldShapeLine($otherOrder, $otherProduct, [['WHT', 'L', 4, 0, 0, 4]]));
     deliveryCountsMigration()->up();
+    sizesPerWorkshopMigration()->up();
 
     expect(DB::table('product_restocks')->where('reference', 'Orders')->pluck('workshop_id')->all())->toBe([$jeans->workshop_id])
         ->and(DB::table('product_colours')->where(['product_id' => $jeans->id, 'colour_id' => demoColour('BLK')->id])->exists())->toBeTrue()
@@ -108,6 +115,7 @@ it('stops, naming the variant, when the shelf would pass 1,000,000 units', funct
     setFinishedStock($jacket, ['Indigo' => [0, 999995, 0, 0, 0, 0, 0]]);
     $order = Order::factory()->create();
 
+    sizesPerWorkshopMigration()->down();
     deliveryCountsMigration()->down();
     oldShapeLine($order, $jacket, [['IND', 'S', 10, 0, 10, 0]]);
 
@@ -117,6 +125,7 @@ it('stops, naming the variant, when the shelf would pass 1,000,000 units', funct
 it('brings the stage counts back on down(), Shipped = Delivered', function () {
     $line = OrderLine::factory()->sized(['S' => 10, 'M' => 4], ['M' => [3, 1]])->create(['product_id' => demoProduct('PRD-JKT-001')->id]);
 
+    sizesPerWorkshopMigration()->down();
     deliveryCountsMigration()->down();
 
     $rows = DB::table('order_line_sizes')->where('order_line_id', $line->id)->orderBy('id')->get(['quantity', 'in_cutting', 'ready_to_ship', 'shipped'])
@@ -126,6 +135,7 @@ it('brings the stage counts back on down(), Shipped = Delivered', function () {
         ->and(Schema::hasColumn('order_lines', 'delivered'))->toBeFalse();
 
     deliveryCountsMigration()->up();
+    sizesPerWorkshopMigration()->up();
 });
 
 it('refuses negative counts and counts above the quantity (PostgreSQL)', function () {

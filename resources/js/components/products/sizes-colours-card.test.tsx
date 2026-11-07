@@ -23,13 +23,13 @@ import {
     stockByColour,
     toteBarcodes,
     toteStockByColour,
+    type SizeList,
 } from '@/test/fixtures/products';
 import { inertiaMock, resetInertiaMock, setPageProps } from '@/test/inertia';
 import type {
     FinishedStock,
     ProductBarcodes,
     ProductShowProps,
-    SizeList,
 } from '@/types/domain';
 
 // The phone layout of the buttons (INV-3): `useIsMobile` reads the viewport once, so the tests set it here.
@@ -56,10 +56,16 @@ function renderCard(
 ) {
     return render(
         <SizesColoursCard
-            product={{ id: 1, name, sku: 'PRD-JKT-001', size_list: list }}
+            product={{
+                id: 1,
+                name,
+                sku: 'PRD-JKT-001',
+                sizes: list.sizes,
+                one_size: list === sizeListOneSize,
+            }}
             stock={stock}
             barcodes={barcodes}
-            manageHref="/products/1/edit#colours"
+            manageHref="/products/1/edit#sizes"
             lastRestock={lastRestock}
         />,
     );
@@ -154,11 +160,12 @@ describe('<SizesColoursCard>', () => {
                         id: 1,
                         name: 'Denim Jacket',
                         sku: 'PRD-JKT-001',
-                        size_list: sizeListSToXl,
+                        sizes: sizeListSToXl.sizes,
+                        one_size: false,
                     }}
                     stock={denimStockByColour}
                     barcodes={denimBarcodes}
-                    manageHref="/products/1/edit#colours"
+                    manageHref="/products/1/edit#sizes"
                 />
             </>,
         );
@@ -287,6 +294,36 @@ describe('<SizesColoursCard>', () => {
         ).toBeInTheDocument();
     });
 
+    it('keeps the size column of a product with one size that is not "One size"', () => {
+        const mediumOnly: SizeList = {
+            code: 'm_only',
+            name: 'M',
+            sizes: [sizeListSToXl.sizes[1]],
+        };
+
+        renderCard(
+            stockByColour(mediumOnly, [['Black', [2]]]),
+            mediumOnly,
+            'Denim Jacket',
+            denimBarcodes,
+        );
+
+        const card = screen.getByRole('region', { name: 'Sizes & colours' });
+        const rows = within(
+            within(card).getByRole('table', { name: TABLE_NAME }),
+        ).getAllByRole('row');
+
+        expect(
+            within(card).getByText(
+                '1 colour × 1 size = 1 variant. Each variant has its own stock and its own barcode.',
+            ),
+        ).toBeInTheDocument();
+        expect(rows.map(cellsOf)).toEqual([
+            ['Colour', 'M', 'Total'],
+            ['Black', '2', '2'],
+        ]);
+    });
+
     it('gives a "One size" product the columns Colour and In stock, and a Total row for two colours', () => {
         renderCard(toteStockByColour, sizeListOneSize, 'Leather Tote');
 
@@ -380,14 +417,14 @@ describe('<SizesColoursCard>', () => {
         }
     });
 
-    it('has Manage sizes & colours go to Edit product at #colours, and Update stock open the window', async () => {
+    it('has Manage sizes & colours go to Edit product at #sizes, and Update stock open the window', async () => {
         const user = userEvent.setup();
 
         renderCard();
 
         expect(
             screen.getByRole('link', { name: 'Manage sizes & colours' }),
-        ).toHaveAttribute('href', '/products/1/edit#colours');
+        ).toHaveAttribute('href', '/products/1/edit#sizes');
         // Manage first, then Update stock: the DOM order is the keyboard order and the visual order.
         const manage = screen.getByRole('link', {
             name: 'Manage sizes & colours',

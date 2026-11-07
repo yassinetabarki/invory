@@ -1,8 +1,8 @@
 # ADR-0028 — Sizes chosen per product, from the workshop's own list
 
-- **Status:** Proposed · 2026-11-06 (tech-lead; from the human's decisions of 2026-11-06 on INV-18). It becomes Accepted when the human
-  approves it with INV-18's Technical work. Until then the costing skill is **not** changed: its amendment is staged in the appendix
-  below and is applied, word for word, in the commit of step INV-18-c.
+- **Status:** Accepted · 2026-11-07 (proposed 2026-11-06 by the tech-lead from the human's decisions on INV-18; approved with INV-18's
+  Technical work on 2026-11-06). Its amendment of the costing skill (appendix below) is applied, word for word, in the commit of step
+  INV-18-c, with one addition: `CreateProduct` without sizes takes the category's suggestion.
 - **Supersedes:** ADR-0015 "Sizes come from the product category, as fixed size lists" (Accepted 2026-10-21; its file left `docs/adr/`
   on 2026-10-31, commit `1b1dfde`, and is read from git history). This ADR stands in for the amendment of ADR-0015: a new number,
   because the old file is no longer in the vault.

@@ -8,7 +8,6 @@ use App\Models\Material;
 use App\Models\Order;
 use App\Models\OrderLine;
 use App\Models\Product;
-use App\Models\ProductCategory;
 use App\Models\ProductSizeStock;
 use App\Models\Sale;
 use App\Models\Size;
@@ -29,6 +28,15 @@ use function Pest\Laravel\actingAs;
 
 /** The most queries any page may run (the plan's budget, ≤ 10). */
 const QUERY_BUDGET = 10;
+
+/**
+ * The budget of one page: Edit product reads, besides the product, the four grouped queries of its size locks (INV-18-g: stock, orders,
+ * barcodes and production, one each whatever the sizes), so it may run exactly 4 more.
+ */
+function queryBudgetOf(string $uri): int
+{
+    return QUERY_BUDGET + (preg_match('#/products/\d+/edit$#', parse_url($uri, PHP_URL_PATH) ?: '') === 1 ? 4 : 0);
+}
 
 beforeEach(function () {
     $this->user = prepareDemo($this);
@@ -75,7 +83,7 @@ it('stays within the query budget and runs the same queries however many materia
 
     $many = queryLog(fn () => $this->get($uri)->assertOk());
 
-    expect(count($few))->toBeLessThanOrEqual(QUERY_BUDGET, implode(PHP_EOL, $few))
+    expect(count($few))->toBeLessThanOrEqual(queryBudgetOf($uri), implode(PHP_EOL, $few))
         ->and(count($many))->toBe(count($few), implode(PHP_EOL, $many));
 })->with('pages');
 
@@ -124,7 +132,7 @@ it('stays within the query budget and runs the same queries with 3 and with 30 p
 
     $many = queryLog(fn () => $this->get($uri)->assertOk());
 
-    expect(count($few))->toBeLessThanOrEqual(QUERY_BUDGET, implode(PHP_EOL, $few))
+    expect(count($few))->toBeLessThanOrEqual(queryBudgetOf($uri), implode(PHP_EOL, $few))
         ->and(count($many))->toBe(count($few), implode(PHP_EOL, $many));
 })->with('productPages');
 
@@ -312,7 +320,7 @@ it('stays within the query budget when the stock group of the product page loads
     $arrange = function (Product $product, int $colours, int $sharing): void {
         $colourIds = Colour::query()->ordered()->limit($colours)->pluck('id')->all();
         $product->colours()->syncWithPivotValues($colourIds, ['workshop_id' => $product->workshop_id]);
-        $sizeIds = Size::query()->whereIn('size_list_id', ProductCategory::query()->whereKey($product->category_id)->select('size_list_id'))->orderBy('position')->pluck('id')->all();
+        $sizeIds = sizesOf($product)->pluck('id')->all();
         $rows = [];
 
         foreach ($colourIds as $colourId) {

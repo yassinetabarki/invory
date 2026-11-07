@@ -144,11 +144,14 @@ describe('products create and edit', function () {
         );
 
         // The route-model binding of the product, its lines, ONE read of the materials (those of the lines) and their units
-        // (eager-loaded), the three size-list reads (categories, size_lists, sizes; S-58) that replace the old `load('category')`, and the
-        // one read of the workshop's colours that also flags the product's own (INV-1: 7 -> 8; the picker list and the product's colours share it).
+        // (eager-loaded), the categories (the shared reference read, which replaces the old `load('category')`), the product's own sizes
+        // (INV-18-c: one read of `product_sizes`, whose LEFT JOIN also brings the workshop's list for the badge of a product with seven
+        // sizes or more, INV-18-g; the other size reads belong to the `category_sizes` prop, which this reload doesn't ask for: 8 -> 7)
+        // and the one read of the workshop's colours that also flags the product's own (INV-1; the picker list and the product's colours
+        // share it).
         expect(queriesMatching($queries, 'from "materials"'))->toHaveCount(1)
             ->and(queriesMatching($queries, 'from "colours"'))->toHaveCount(1)
-            ->and($queries)->toHaveCount(8);
+            ->and($queries)->toHaveCount(7);
     });
 
     it('loads nothing on the edit page when only the status list is requested', function () {

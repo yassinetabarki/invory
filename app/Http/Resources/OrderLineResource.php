@@ -11,7 +11,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
  * `OrderLine` in resources/js/types/domain.ts. The line must carry its `product` (soft-deleted ones included) and its `sizes` (each with
- * its `size_label`), and the `sizes_in_list` count on itself and its product so that `OrderLineSizing` costs no query: see `OrderBook`.
+ * its `size_label`), and the `is_one_size` count on its product so that `OrderLineSizing` costs no query: see `OrderBook`.
  * `delivered` and `cancelled` are columns; `to_deliver` is worked out from them by the model (INV-14), never by the screen.
  *
  * @mixin OrderLine

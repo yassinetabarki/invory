@@ -9,10 +9,9 @@ use App\Models\Product;
 use App\Models\ProductRestock;
 use App\Models\ProductRestockLine;
 use App\Models\Size;
-use App\Models\SizeList;
 use App\Services\Products\FinishedStock;
 use App\Services\Products\FinishedStockLevel;
-use App\Services\Products\SizeLists;
+use App\Services\Products\ProductSizes;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
@@ -24,7 +23,7 @@ use Illuminate\Support\Collection;
  */
 final readonly class RestockBook
 {
-    public function __construct(private UndoCheck $undoCheck, private SizeLists $sizeLists, private FinishedStock $finishedStock) {}
+    public function __construct(private UndoCheck $undoCheck, private ProductSizes $productSizes, private FinishedStock $finishedStock) {}
 
     /**
      * The Restocks page (AC-2): matching the search (reference, note, or a product's name, deleted products included) and the product,
@@ -98,22 +97,25 @@ final readonly class RestockBook
 
     /**
      * A restock's detail (AC-5): its products in the order added, each with the colours that got units (list order) and every size of
-     * the list those units were in, the totals, who recorded and undid it, and why it can't be undone (null when it can, or is undone).
+     * the product has (plus any size its lines hold, so no line is ever hidden), the totals, who recorded and undid it, and why it can't
+     * be undone (null when it can, or is undone).
      *
      * @return array{restock: ProductRestock, products: list<array{product: Product, units: int}>, blocks: list<array{product: Product, sizes: list<Size>, one_size: bool, units: int, rows: list<array{colour: Colour, units: list<int>, total: int}>, totals: list<int>|null}>, undo_refusal: string|null}
      */
     public function detail(ProductRestock $restock): array
     {
         $restock->loadMissing(['recorder:id,name', 'undoer:id,name']);
-        $lines = $restock->lines()->with(['product', 'colour', 'size.sizeList.sizes'])->get();
+        $lines = $restock->lines()->with(['product', 'colour', 'size'])->get();
+        $sets = $this->productSizes->forProducts($lines->map(fn (ProductRestockLine $line): Product => $line->product)->unique('id'));
 
         $blocks = [];
 
         foreach ($lines->groupBy('product_id')->sortBy(fn (Collection $group): int => (int) $group->min('position')) as $group) {
             /** @var ProductRestockLine $first */
             $first = $group->first();
-            $sizeList = $first->size->sizeList;
-            $sizes = array_values($sizeList->sizes->sortBy('position')->all());
+            $set = $sets[$first->product_id];
+            $sizes = array_values($set->sizes->concat($group->map(fn (ProductRestockLine $line): Size => $line->size))
+                ->unique('id')->sortBy([['position', 'asc'], ['id', 'asc']])->all());
             $rows = [];
 
             foreach ($group->groupBy('colour_id')->sortBy(fn (Collection $byColour): array => [
@@ -133,7 +135,7 @@ final readonly class RestockBook
             $blocks[] = [
                 'product' => $first->product,
                 'sizes' => $sizes,
-                'one_size' => $sizeList->code === SizeList::ONE_SIZE,
+                'one_size' => $set->oneSize,
                 'units' => array_sum(array_column($rows, 'total')),
                 'rows' => $rows,
                 'totals' => $totals,
@@ -157,12 +159,12 @@ final readonly class RestockBook
      */
     public function line(Product $product): array
     {
-        $sizeList = $this->sizeLists->category($product->category_id)->sizeList;
+        $set = $this->productSizes->of($product);
 
         return [
             'product' => $product,
-            'sizes' => array_values($sizeList->sizes->all()),
-            'one_size' => $sizeList->code === SizeList::ONE_SIZE,
+            'sizes' => array_values($set->sizes->all()),
+            'one_size' => $set->oneSize,
             'stock' => $this->finishedStock->of($product),
         ];
     }

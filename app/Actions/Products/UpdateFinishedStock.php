@@ -5,9 +5,8 @@ declare(strict_types=1);
 namespace App\Actions\Products;
 
 use App\Models\Product;
-use App\Models\ProductCategory;
 use App\Models\ProductSizeStock;
-use App\Models\Size;
+use App\Services\Products\ProductSizes;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -18,6 +17,8 @@ use Illuminate\Validation\ValidationException;
  */
 final readonly class UpdateFinishedStock
 {
+    public function __construct(private ProductSizes $productSizes) {}
+
     /**
      * The product row is locked (the lock `UpdateProduct` takes), then its colours and its size list are read under it and the
      * submitted ones are checked against them: either may have changed since the request was checked. One transaction writes every
@@ -32,8 +33,7 @@ final readonly class UpdateFinishedStock
         DB::transaction(function () use ($product, $units): void {
             $locked = Product::query()->lockForUpdate()->findOrFail($product->id);
             $colourIds = $locked->colours()->pluck('colours.id')->map(fn (mixed $id): int => (int) $id)->all();
-            $sizeIds = ProductCategory::query()->with('sizeList.sizes')->findOrFail($locked->category_id)
-                ->sizeList->sizes->map(fn (Size $size): int => $size->id)->all();
+            $sizeIds = $this->productSizes->fresh($locked)->ids();
 
             if (! self::matches($units, $colourIds, $sizeIds)) {
                 throw ValidationException::withMessages(['stock' => self::stockChanged($locked->name)]);

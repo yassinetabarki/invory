@@ -14,12 +14,11 @@ use App\Models\ProductionBatch;
 use App\Models\ProductionBatchMove;
 use App\Models\ProductionCounter;
 use App\Models\ProductionCut;
-use App\Models\SizeList;
 use App\Models\User;
 use App\Services\Orders\CuttingPreview;
 use App\Services\Orders\OrderMessages;
 use App\Services\Production\ProductionMessages;
-use App\Services\Products\SizeLists;
+use App\Services\Products\ProductSizes;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use LogicException;
@@ -37,7 +36,7 @@ final readonly class StartBatch
     public function __construct(
         private CuttingPreview $preview,
         private AppendStockMovement $appendMovement,
-        private SizeLists $sizeLists,
+        private ProductSizes $productSizes,
     ) {}
 
     /**
@@ -57,10 +56,11 @@ final readonly class StartBatch
             }
 
             $colours = $product->colours()->get();
-            $sizeList = $this->sizeLists->category($product->category_id)->sizeList;
-            $sizes = $sizeList->sizes;
+            // The product is locked: its sizes are read again, never taken from what the request cached before the lock.
+            $sizeSet = $this->productSizes->fresh($product);
+            $sizes = $sizeSet->sizes;
 
-            if (! UpdateFinishedStock::matches($grid, $colours->modelKeys(), $sizes->modelKeys())) {
+            if (! UpdateFinishedStock::matches($grid, $colours->modelKeys(), $sizeSet->ids())) {
                 throw ValidationException::withMessages(['units' => ProductionMessages::startChanged($product->name)]);
             }
 
@@ -119,7 +119,7 @@ final readonly class StartBatch
                 $remembered->save();
             }
 
-            $oneSize = $sizeList->code === SizeList::ONE_SIZE;
+            $oneSize = $sizeSet->oneSize;
             $started = [];
 
             foreach ($variants as $variant) {

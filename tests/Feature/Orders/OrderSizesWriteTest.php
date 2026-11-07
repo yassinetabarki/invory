@@ -5,8 +5,6 @@ use App\Models\Order;
 use App\Models\OrderLine;
 use App\Models\OrderLineSize;
 use App\Models\Product;
-use App\Models\ProductCategory;
-use App\Models\SizeList;
 use App\Models\StockMovement;
 use Illuminate\Validation\ValidationException;
 
@@ -113,7 +111,7 @@ it('refuses a colour the product doesn\'t have, a size of another list, or no un
     expect(Order::query()->count())->toBe(0);
 })->with([
     'a colour of another product' => [fn () => ['units' => [demoColour('RED')->id => sizeIds(['M' => '5'])]]],
-    'a shoe size' => [fn () => ['units' => [array_key_first(orderUnits(pid(1), [])) => sizeIds(['40' => '5'], SizeList::EU_36_TO_46)]]],
+    'a shoe size' => [fn () => ['units' => [array_key_first(orderUnits(pid(1), [])) => sizeIds(['40' => '5'], 'eu_36_to_46')]]],
     'the old shape' => [fn () => ['quantity' => '50', 'sizes' => sizeIds(['M' => '50'])]],
 ]);
 
@@ -165,11 +163,11 @@ it('keeps a line recorded before sizes on its single size, one field per colour 
     $line = $order->lines()->firstOrFail();
 
     actingAs($this->user)->put(route('orders.update', $order), validOrderPayload(['lines' => [
-        ['product_id' => pid(1), 'units' => orderUnits(pid(1), ['One size' => '60'], list: SizeList::ONE_SIZE)],
+        ['product_id' => pid(1), 'units' => orderUnits(pid(1), ['One size' => '60'], list: 'one_size')],
     ]]))->assertSessionHasNoErrors();
 
     expect(sizedFigures($order))->toBe([pid(1) => ['One size' => [60, 0, 0]]])
-        ->and($line->fresh()->size_list_id)->toBe(SizeList::query()->where('code', SizeList::ONE_SIZE)->value('id'))
+        ->and($line->fresh()->by_size)->toBeFalse()
         ->and(pageProp(actingAs($this->user)->get(route('orders.show', $order))->assertOk(), 'order.lines.0.size_mode'))->toBe('before_sizes');
 
     // The product's own sizes don't fit the line any more.
@@ -209,8 +207,8 @@ it('refuses a line whose product changed sizes after the request was checked, an
     $order = Order::factory()->create();
     $units = orderUnits(pid(1), ['M' => '5']);
 
-    // The request saw the Denim Jacket with XS to XXXL; before the lock is taken it moves to Footwear (36 to 46).
-    Product::query()->whereKey(pid(1))->update(['category_id' => ProductCategory::query()->where('code', 'footwear')->value('id')]);
+    // The request saw the Denim Jacket with XS to XXXL; before the lock is taken its M comes off (a product's sizes are its own, INV-18).
+    Product::query()->findOrFail(pid(1))->sizes()->detach(sizeId('M'));
 
     expect(syncRefusal($order, [['product_id' => pid(1), 'units' => $units]]))
         ->toBe(['lines.0.units' => ['The colours or sizes of Denim Jacket have changed. Enter its quantities again.']])

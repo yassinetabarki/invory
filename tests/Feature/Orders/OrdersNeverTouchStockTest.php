@@ -3,7 +3,7 @@
 use App\Models\Material;
 use App\Models\Order;
 use App\Models\OrderLineCut;
-use App\Models\SizeList;
+use App\Models\Size;
 use App\Models\StockMovement;
 use Tests\Support\DemoHistory;
 
@@ -83,5 +83,5 @@ it('no longer has the cutting routes of an order (INV-14 AC-2)', function () {
     actingAs($this->user)->post("/orders/{$order->id}/lines/{$line->id}/moves", ['move' => 'start_cutting', 'units' => 5])->assertNotFound();
     actingAs($this->user)->get("/orders/{$order->id}/lines/{$line->id}/moves/preview?move=start_cutting&units=5")->assertNotFound();
 
-    expect(SizeList::query()->count())->toBe(3);
+    expect(Size::query()->count())->toBe(19);
 });

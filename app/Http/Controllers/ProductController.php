@@ -17,16 +17,18 @@ use App\Http\Resources\ProductBarcodesResource;
 use App\Http\Resources\ProductListResource;
 use App\Http\Resources\ProductResource;
 use App\Http\Resources\SaleResource;
-use App\Http\Resources\SizeListResource;
 use App\Models\Colour;
 use App\Models\Product;
-use App\Models\SizeList;
+use App\Models\ProductCategory;
+use App\Models\Size;
 use App\Models\User;
 use App\Services\Costing\ProductCostingService;
 use App\Services\Products\FinishedStock;
 use App\Services\Products\ProductBarcodes;
 use App\Services\Products\ProductIndexQuery;
-use App\Services\Products\SizeLists;
+use App\Services\Products\ProductSizeLock;
+use App\Services\Products\ProductSizes;
+use App\Services\Reference\ReferenceData;
 use App\Services\Restocks\RestockBook;
 use App\Services\Sales\SalesReport;
 use ArrayObject;
@@ -68,13 +70,14 @@ final class ProductController extends Controller
         ]);
     }
 
-    public function create(SizeLists $sizes): Response
+    public function create(): Response
     {
         Gate::authorize('create', Product::class);
 
         return Inertia::render('products/create', [
             'statuses' => ProductStatus::options(),
-            'category_sizes' => fn (): ArrayObject => $this->categorySizes($sizes),
+            'category_sizes' => fn (): ArrayObject => $this->categorySizes(),
+            'sizes' => fn (): array => $this->sizeOptions(),
             'colours' => fn (): array => $this->colourRows(Colour::query()->ordered()->get()),
         ]);
     }
@@ -88,17 +91,17 @@ final class ProductController extends Controller
         return to_route('products.show', $product);
     }
 
-    public function show(Product $product, ProductCostingService $costing, SalesReport $sales, SizeLists $sizes): Response
+    public function show(Product $product, ProductCostingService $costing, SalesReport $sales): Response
     {
         Gate::authorize('view', $product);
 
         return Inertia::render('products/show', [
             // RL-02: all three props are deferred in one group: the first response carries none of them (no costing work, so the
             // navigation is instant) and one follow-up request brings them all.
-            'product' => Inertia::defer(function () use ($product, $costing, $sizes): ProductResource {
+            'product' => Inertia::defer(function () use ($product, $costing): ProductResource {
                 $product->load(['colours', 'components.material' => fn ($materials) => $materials->without('category')]);
 
-                return $this->resource($product, $costing, $sizes);
+                return $this->resource($product, $costing);
             }),
             'sales_last_30_days' => Inertia::defer(fn (): array => $sales->lastThirtyDays($product)),
             'recent_sales' => Inertia::defer(fn (): array => SaleResource::collection($sales->recentOf($product))->resolve()),
@@ -120,7 +123,7 @@ final class ProductController extends Controller
         ]);
     }
 
-    public function edit(Product $product, ProductCostingService $costing, SizeLists $sizes): Response
+    public function edit(Product $product, ProductCostingService $costing): Response
     {
         Gate::authorize('update', $product);
 
@@ -133,16 +136,29 @@ final class ProductController extends Controller
                 ->get();
         };
 
+        // INV-18-g: ONE read of the lock reasons (four grouped queries) serves the three lock props, whichever a partial reload asks for.
+        $reasons = null;
+        $lock = function () use ($product, &$reasons): array {
+            return $reasons ??= app(ProductSizeLock::class)->reasons($product);
+        };
+
         return Inertia::render('products/edit', [
             'statuses' => ProductStatus::options(),
-            'category_sizes' => fn (): ArrayObject => $this->categorySizes($sizes),
+            'category_sizes' => fn (): ArrayObject => $this->categorySizes(),
+            'sizes' => fn (): array => $this->sizeOptions(),
+            'size_locks' => fn (): ArrayObject => new ArrayObject(array_map(
+                fn (array $why): string => app(ProductSizeLock::class)->tooltip($why),
+                $lock(),
+            )),
+            'one_size_lock' => fn (): ?string => app(ProductSizeLock::class)->oneSizeLock($product, $lock()),
+            'other_sizes_lock' => fn (): ?string => app(ProductSizeLock::class)->otherSizesLock($product, $lock()),
             'colours' => fn (): array => $this->colourRows($colours()),
             // The picker searches the materials itself (`materials.options`, S-25): only the materials of the lines are loaded here.
-            'product' => function () use ($product, $costing, $sizes, $colours): ProductResource {
+            'product' => function () use ($product, $costing, $colours): ProductResource {
                 $product->load(['components.material' => fn ($materials) => $materials->without('category')]);
                 $product->setRelation('colours', $colours()->filter(fn (Colour $colour): bool => (bool) $colour->getAttribute('on_product'))->values());
 
-                return $this->resource($product, $costing, $sizes);
+                return $this->resource($product, $costing);
             },
         ]);
     }
@@ -167,10 +183,11 @@ final class ProductController extends Controller
         return to_route('products.index');
     }
 
-    /** A product with its composition loaded, its category (and the sizes of it) and its cost, ready for `ProductResource`. */
-    private function resource(Product $product, ProductCostingService $costing, SizeLists $sizes): ProductResource
+    /** A product with its composition loaded, its category and its cost, ready for `ProductResource` (which reads its sizes itself). */
+    private function resource(Product $product, ProductCostingService $costing): ProductResource
     {
-        $product->setRelation('category', $sizes->category($product->category_id));
+        // The categories are read once per request (the shared `reference` prop reads the same rows).
+        $product->setRelation('category', app(ReferenceData::class)->productCategories()->get($product->category_id) ?? ProductCategory::query()->findOrFail($product->category_id));
         $product->setAttribute('costing', $costing->cost($product));
 
         return new ProductResource($product);
@@ -188,17 +205,29 @@ final class ProductController extends Controller
     }
 
     /**
-     * `category_sizes`: the size list of every category by code. Always a JSON object, also when every code is made of digits
-     * (PHP would turn `['2027' => …]` into a list).
+     * `category_sizes`: the ids of the sizes every category suggests, by category code (archived ones included), in list order: what the
+     * category suggests in this workshop (`product_category_sizes`), the workshop's One size when it suggests nothing. Always a JSON object,
+     * also when every code is made of digits (PHP would turn `['2027' => …]` into a list). Shares its one query with the `sizes` prop.
      *
-     * @return ArrayObject<string, array<mixed>>
+     * @return ArrayObject<string, list<int>>
      */
-    private function categorySizes(SizeLists $sizes): ArrayObject
+    private function categorySizes(): ArrayObject
     {
-        return new ArrayObject(array_map(
-            fn (SizeList $list): array => (new SizeListResource($list))->resolve(),
-            $sizes->byCategoryCode(),
-        ));
+        return new ArrayObject(app(ProductSizes::class)->suggestedIds());
+    }
+
+    /**
+     * `sizes`: the workshop's sizes as the form's picker takes them (`SizeOption[]`), in list order.
+     *
+     * @return list<array{id: int, label: string, one_size: bool}>
+     */
+    private function sizeOptions(): array
+    {
+        return array_values(app(ProductSizes::class)->workshop()->map(fn (Size $size): array => [
+            'id' => $size->id,
+            'label' => $size->label,
+            'one_size' => (bool) $size->is_one_size,
+        ])->all());
     }
 
     /** The signed-in user, for the audit columns. The `auth` middleware and the request authorization guarantee one. */

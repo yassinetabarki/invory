@@ -9,10 +9,10 @@ use App\Models\Order;
 use App\Models\OrderLine;
 use App\Models\OrderLineSize;
 use App\Models\Product;
-use App\Models\SizeList;
 use App\Services\Orders\OrderLineSizing;
 use App\Services\Orders\OrderMessages;
-use App\Services\Products\SizeLists;
+use App\Services\Products\ProductSizes;
+use App\Services\Products\ProductSizeSet;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -20,7 +20,7 @@ use Illuminate\Validation\ValidationException;
 
 final readonly class SyncOrderLines
 {
-    public function __construct(private OrderLineSizing $sizing, private SizeLists $lists) {}
+    public function __construct(private OrderLineSizing $sizing, private ProductSizes $productSizes) {}
 
     /**
      * Make the order's lines equal to the submitted ones, in one transaction: lines are matched by product (a product still listed
@@ -72,7 +72,7 @@ final readonly class SyncOrderLines
 
                     // Never mass-assignable: a line belongs to its order's workshop, whatever the request says.
                     $new->workshop_id = $order->workshop_id;
-                    $new->size_list_id = $units[$key]['list']->id;
+                    $new->by_size = ! $this->productSizes->fresh($products->get((int) $line['product_id']) ?? throw new ModelNotFoundException)->oneSize;
                     $new->save();
                     $this->writeRows($new, $units[$key]['rows'], new Collection);
                 } else {
@@ -93,17 +93,20 @@ final readonly class SyncOrderLines
     }
 
     /**
-     * How a line of this product counts, and by which list: a saved line by its own (it was recorded with it, whatever its product
-     * has become), a new line by its product's. The form request and `handle()` both ask here.
+     * How a line of this product counts, and by which sizes (INV-18-b): the product's, except a line recorded before sizes, which keeps
+     * its own "One size" whatever its product has become. The form request and `handle()` both ask here; `handle()` passes `$locked`
+     * (the product row is locked) and reads the product's sizes again.
      *
      * @param  OrderLine|null  $saved  the order's saved line of this product, with its `product` loaded; null for a new line
-     * @return array{OrderLineSizeMode, SizeList}
+     * @return array{OrderLineSizeMode, ProductSizeSet}
      */
-    public function counting(Product $product, ?OrderLine $saved): array
+    public function counting(Product $product, ?OrderLine $saved, bool $locked = false): array
     {
+        // Read first: under the lock, `fresh()` refreshes what the sizing below reads.
+        $sizes = $locked ? $this->productSizes->fresh($product) : $this->productSizes->of($product);
         $mode = $saved === null ? $this->sizing->forProduct($product) : $this->sizing->forLine($saved);
 
-        return [$mode, $this->lists->list($saved->size_list_id ?? $this->lists->category($product->category_id)->size_list_id)];
+        return [$mode, $saved !== null && $mode === OrderLineSizeMode::BeforeSizes ? $this->sizing->ownSizes($saved) : $sizes];
     }
 
     /**
@@ -159,7 +162,7 @@ final readonly class SyncOrderLines
 
             [$key, $line] = $submitted[$productId];
             $typed = is_array($line['units'] ?? null) ? $line['units'] : [];
-            $oneSize = $this->lists->list((int) $saved->size_list_id)->code === SizeList::ONE_SIZE;
+            $oneSize = ! $saved->countsBySize();
 
             foreach ($saved->sizes as $row) {
                 $value = is_array($typed[$row->colour_id] ?? null) ? ($typed[$row->colour_id][$row->size_id] ?? 0) : 0;
@@ -189,13 +192,13 @@ final readonly class SyncOrderLines
     }
 
     /**
-     * For every submitted line, the list it counts by and its units by cell ("colour id:size id", only cells of 1 unit or more),
+     * For every submitted line, the sizes it counts by and its units by cell ("colour id:size id", only cells of 1 unit or more),
      * worked out under the product locks. Colours or sizes that no longer fit the product refuse the whole save.
      *
      * @param  array<int|string, array<string, mixed>>  $lines
      * @param  Collection<int, OrderLine>  $stale
      * @param  Collection<int, Product>  $products
-     * @return array<int|string, array{list: SizeList, rows: array<string, int>}>
+     * @return array<int|string, array{sizes: ProductSizeSet, rows: array<string, int>}>
      *
      * @throws ValidationException
      */
@@ -208,8 +211,8 @@ final readonly class SyncOrderLines
             $productId = (int) $line['product_id'];
             $product = $products->get($productId) ?? throw (new ModelNotFoundException)->setModel(Product::class, [$productId]);
             $saved = $stale->get($productId);
-            [, $list] = $this->counting($product, $saved);
-            $rows = $this->typedCells($line, $list, $this->allowedColours($product, $saved));
+            [, $sizes] = $this->counting($product, $saved, locked: true);
+            $rows = $this->typedCells($line, $sizes, $this->allowedColours($product, $saved));
 
             if ($rows === null) {
                 $refusals["lines.{$key}.units"][] = OrderMessages::orderSizesChanged($product->name);
@@ -217,7 +220,7 @@ final readonly class SyncOrderLines
                 $refusals["lines.{$key}.units"][] = OrderMessages::atLeastOneUnit($product->name);
             }
 
-            $plans[$key] = ['list' => $list, 'rows' => $rows ?? []];
+            $plans[$key] = ['sizes' => $sizes, 'rows' => $rows ?? []];
         }
 
         if ($refusals !== []) {
@@ -228,19 +231,19 @@ final readonly class SyncOrderLines
     }
 
     /**
-     * The units typed per cell, or null when `units` is missing or names a colour the line may not hold or a size not of the list.
+     * The units typed per cell, or null when `units` is missing or names a colour the line may not hold or a size not of the line's sizes.
      *
      * @param  array<string, mixed>  $line
      * @param  array<int, string>  $colours  colour id → name
      * @return array<string, int>|null
      */
-    private function typedCells(array $line, SizeList $list, array $colours): ?array
+    private function typedCells(array $line, ProductSizeSet $sizes, array $colours): ?array
     {
         if (! is_array($line['units'] ?? null)) {
             return null;
         }
 
-        $sizeIds = $list->sizes->pluck('id')->all();
+        $sizeIds = $sizes->ids();
         $rows = [];
 
         foreach ($line['units'] as $colourId => $sizes) {

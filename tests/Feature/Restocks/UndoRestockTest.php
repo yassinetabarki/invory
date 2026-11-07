@@ -1,7 +1,6 @@
 <?php
 
 use App\Models\ProductRestock;
-use App\Models\SizeList;
 use App\Models\User;
 use App\Models\Workshop;
 use App\Services\Restocks\UndoCheck;
@@ -88,7 +87,7 @@ it('names the first short variant in order, and "1 unit" for one', function () {
 it('names a "One size" product by its colour alone', function () {
     actingAs($this->user)->post(route('restocks.store'), restockBody([restockLine($this->tote, ['Camel' => ['One size' => 6]])]))->assertSessionHasNoErrors();
     $tote = ProductRestock::query()->latest('id')->firstOrFail();
-    setShelf($this->tote, ['Camel' => ['One size' => 5]], SizeList::ONE_SIZE);
+    setShelf($this->tote, ['Camel' => ['One size' => 5]], 'one_size');
 
     expect(app(UndoCheck::class)->refusal($tote))
         ->toBe("This restock can't be undone: Leather Tote in Camel has 5 units on the shelf, fewer than the 6 it added. Set the right count with Update stock instead.");

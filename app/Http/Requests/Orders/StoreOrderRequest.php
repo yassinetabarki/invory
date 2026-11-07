@@ -11,7 +11,6 @@ use App\Models\Client;
 use App\Models\Order;
 use App\Models\OrderLine;
 use App\Models\Product;
-use App\Models\SizeList;
 use App\Services\Orders\OrderMessages;
 use App\Validation\ClientFieldRules;
 use Closure;
@@ -206,7 +205,7 @@ class StoreOrderRequest extends FormRequest
 
     /**
      * The units of one line (INV-13): `units`, colour id → size id → as typed. Every colour must be one of the product's (or, on Edit
-     * order, one the line already holds) and every size one of the line's list, else the form was built for other colours or sizes and
+     * order, one the line already holds) and every size one of the line's sizes (the product's), else the form was built for other colours or sizes and
      * the line is refused as a whole. Each cell is empty or a whole number from 0 to 1,000,000 ("Indigo M: Enter a whole number from 0
      * to 1,000,000."), then the line's total runs from 1 to 1,000,000.
      *
@@ -215,10 +214,10 @@ class StoreOrderRequest extends FormRequest
     private function checkUnits(Validator $validator, string $field, array $line, Product $product): void
     {
         $saved = $this->savedLine($product->id);
-        [, $list] = app(SyncOrderLines::class)->counting($product, $saved);
+        [, $sizes] = app(SyncOrderLines::class)->counting($product, $saved);
         $colours = app(SyncOrderLines::class)->allowedColours($product, $saved);
-        $oneSize = $list->code === SizeList::ONE_SIZE;
-        $labels = $list->sizes->pluck('label', 'id')->all();
+        $oneSize = $sizes->oneSize;
+        $labels = $sizes->sizes->pluck('label', 'id')->all();
         $units = $line['units'] ?? null;
         $total = 0;
         $foreign = ! is_array($units);

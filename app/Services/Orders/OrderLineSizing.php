@@ -7,32 +7,31 @@ namespace App\Services\Orders;
 use App\Enums\OrderLineSizeMode;
 use App\Models\OrderLine;
 use App\Models\Product;
-use App\Services\Products\SizeLists;
+use App\Services\Products\ProductSizes;
+use App\Services\Products\ProductSizeSet;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 
 /**
- * How an order line counts its units (S-60, ADR-0016), the one place that decides it.
+ * How an order line counts its units (S-60, ADR-0016; INV-18, ADR-0028), the one place that decides it.
  *
- * - The line's size list has several sizes: `BySize`.
- * - The line's list is "One size" and its product's list is too: `OneSize`.
- * - The line's list is "One size" but its product has several sizes: `BeforeSizes` (the line was recorded before sizes).
+ * - The line counts by size (`OrderLine::countsBySize()`, the flag stored on the line): `BySize`.
+ * - It does not, and its product is "One size": `OneSize`.
+ * - It does not, but its product has other sizes: `BeforeSizes` (the line was recorded before sizes).
  *
- * A model that carries `sizes_in_list` (the number of sizes of its list: the order pages' queries add it, see `OrderBook`) is answered
- * without a query, so a page of many lines costs none per line. Any other model reads the lists through the request-scoped `SizeLists`.
+ * A new line counts by size unless its product is "One size" (`ProductSizes`). A product that carries `is_one_size` (the order pages'
+ * queries add it, see `OrderBook`) is answered without a query, so a page of many lines costs none per line.
  */
 final readonly class OrderLineSizing
 {
-    public const SIZES_IN_LIST = 'sizes_in_list';
+    public const IS_ONE_SIZE = 'is_one_size';
 
-    public function __construct(private SizeLists $lists) {}
+    public function __construct(private ProductSizes $productSizes) {}
 
     /** The line's `product` must be loaded (soft-deleted ones included). */
     public function forLine(OrderLine $line): OrderLineSizeMode
     {
-        $several = $this->loaded($line)
-            ?? ($line->size_list_id !== null && $this->lists->list($line->size_list_id)->sizes->count() > 1);
-
-        if ($several) {
+        if ($line->countsBySize()) {
             return OrderLineSizeMode::BySize;
         }
 
@@ -42,15 +41,25 @@ final readonly class OrderLineSizing
     /** What a line recorded now for this product would count by: `BySize` or `OneSize`. */
     public function forProduct(Product $product): OrderLineSizeMode
     {
-        $several = $this->loaded($product)
-            ?? $this->lists->category($product->category_id)->sizeList->sizes->count() > 1;
+        $oneSize = $this->loadedOneSize($product) ?? $this->productSizes->of($product)->oneSize;
 
-        return $several ? OrderLineSizeMode::BySize : OrderLineSizeMode::OneSize;
+        return $oneSize ? OrderLineSizeMode::OneSize : OrderLineSizeMode::BySize;
     }
 
-    /** Whether the list has several sizes, when the model carries the count; null when it does not. */
-    private function loaded(Model $model): ?bool
+    /**
+     * The sizes of a line that does not count by size: the workshop's One size, whatever its product has become (a line recorded before
+     * sizes keeps its "One size": its rows point at it). Read once per request.
+     */
+    public function ownSizes(OrderLine $line): ProductSizeSet
     {
-        return array_key_exists(self::SIZES_IN_LIST, $model->getAttributes()) ? (int) $model->getAttribute(self::SIZES_IN_LIST) > 1 : null;
+        $one = $this->productSizes->oneSizeOf($line->workshop_id);
+
+        return new ProductSizeSet(new Collection($one === null ? [] : [$one]), oneSize: true);
+    }
+
+    /** Whether the product is "One size", when the model carries it (the order pages' queries add `is_one_size`); null when it does not. */
+    private function loadedOneSize(Model $model): ?bool
+    {
+        return array_key_exists(self::IS_ONE_SIZE, $model->getAttributes()) ? (int) $model->getAttribute(self::IS_ONE_SIZE) > 0 : null;
     }
 }

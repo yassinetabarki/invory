@@ -91,7 +91,7 @@ final class ReferenceData
 
     /**
      * Every product category by id, archived ones included, in display order. Read once per request, like {@see self::units()}: the
-     * shared `reference` prop and `SizeLists` (which adds the size lists to these same rows) share the one query.
+     * shared `reference` prop and the product form's `category_sizes` share the one query.
      *
      * @return Collection<int, ProductCategory>
      */

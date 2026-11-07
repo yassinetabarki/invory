@@ -9,10 +9,9 @@ use App\Domain\Barcodes\VariantNames;
 use App\Models\BarcodeName;
 use App\Models\Colour;
 use App\Models\Product;
-use App\Models\ProductCategory;
 use App\Models\Size;
-use App\Models\SizeList;
-use App\Services\Products\SizeLists;
+use App\Services\Products\ProductSizes;
+use App\Services\Products\ProductSizeSet;
 use Illuminate\Database\Query\JoinClause;
 
 /**
@@ -29,7 +28,7 @@ use Illuminate\Database\Query\JoinClause;
  */
 final class RenameClash
 {
-    public function __construct(private readonly SizeLists $sizeLists) {}
+    public function __construct(private readonly ProductSizes $productSizes) {}
 
     /**
      * The sentence for the Name field, or null when nothing stops the rename: "Trucker Jacket already has its own barcodes for Indigo S
@@ -38,9 +37,9 @@ final class RenameClash
      *
      * @param  Product  $product  as saved: its name is the OLD name, its `name_key` the old key
      * @param  list<int>  $colourIds  the colours the product has once the save is done
-     * @param  ProductCategory  $category  the category it has once the save is done (its size list decides the sizes)
+     * @param  list<int>|null  $leftSizeIds  the sizes the product has once the save is done (INV-18-f); null when the save keeps its sizes (read again, as this runs under the row lock too)
      */
-    public function refusal(Product $product, string $newName, array $colourIds, ProductCategory $category): ?string
+    public function refusal(Product $product, string $newName, array $colourIds, ?array $leftSizeIds = null): ?string
     {
         $newKey = NameKey::of($newName);
 
@@ -48,8 +47,8 @@ final class RenameClash
             return null;
         }
 
-        $sizeList = $this->sizeLists->of($category);
-        $sizeIds = $sizeList->sizes->map(fn (Size $size): int => $size->id)->all();
+        $sizeSet = $leftSizeIds === null ? $this->productSizes->fresh($product) : $this->setOf($leftSizeIds);
+        $sizeIds = $sizeSet->ids();
 
         // The colour and size where both names have a number and the numbers differ (ONE query: the old name's rows joined to the new
         // name's rows of the same workshop, colour and size).
@@ -76,14 +75,14 @@ final class RenameClash
             $bySize[(int) $clash->colour_id][(int) $clash->size_id] = true;
         }
 
-        $oneSize = $sizeList->code === SizeList::ONE_SIZE;
+        $oneSize = $sizeSet->oneSize;
         $variants = [];
 
         // The colours in list order (ONE query), each with its clashing sizes in size order.
         foreach (Colour::query()->whereIn('id', array_keys($bySize))->ordered()->get(['id', 'name']) as $colour) {
             $variants[] = [
                 'colour' => $colour->name,
-                'sizes' => array_values($sizeList->sizes->filter(fn (Size $size): bool => isset($bySize[$colour->id][$size->id]))->map(fn (Size $size): string => $size->label)->all()),
+                'sizes' => array_values($sizeSet->sizes->filter(fn (Size $size): bool => isset($bySize[$colour->id][$size->id]))->map(fn (Size $size): string => $size->label)->all()),
             ];
         }
 
@@ -92,5 +91,17 @@ final class RenameClash
         $names = VariantNames::list($variants, $oneSize, 3);
 
         return "{$new} already has its own {$barcodes} for {$names}, so {$product->name} can't take that name. Choose another name.";
+    }
+
+    /**
+     * The sizes a save is about to leave the product with, in list order (the ids were validated as the workshop's).
+     *
+     * @param  list<int>  $sizeIds
+     */
+    private function setOf(array $sizeIds): ProductSizeSet
+    {
+        $sizes = Size::query()->whereIn('id', $sizeIds)->ordered()->get()->toBase();
+
+        return new ProductSizeSet($sizes, $sizes->count() === 1 && (bool) $sizes->first()?->is_one_size);
     }
 }

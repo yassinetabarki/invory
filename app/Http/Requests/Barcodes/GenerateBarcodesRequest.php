@@ -6,8 +6,7 @@ namespace App\Http\Requests\Barcodes;
 
 use App\Actions\Barcodes\GenerateBarcodes;
 use App\Models\Product;
-use App\Models\Size;
-use App\Services\Products\SizeLists;
+use App\Services\Products\ProductSizes;
 use Illuminate\Auth\Access\Response;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
@@ -38,7 +37,7 @@ final class GenerateBarcodesRequest extends FormRequest
     public function rules(): array
     {
         $colourIds = $this->product()->colours()->pluck('colours.id')->map(fn (mixed $id): int => (int) $id)->all();
-        $sizeIds = app(SizeLists::class)->category($this->product()->category_id)->sizeList->sizes->map(fn (Size $size): int => $size->id)->all();
+        $sizeIds = app(ProductSizes::class)->of($this->product())->ids();
 
         return [
             'variants' => ['required', 'array', 'min:1', 'max:'.(count($colourIds) * count($sizeIds))],

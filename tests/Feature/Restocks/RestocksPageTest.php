@@ -2,7 +2,6 @@
 
 use App\Models\Product;
 use App\Models\ProductRestock;
-use App\Models\SizeList;
 use App\Models\User;
 use App\Models\Workshop;
 use App\Services\Workshops\CurrentWorkshop;
@@ -188,7 +187,7 @@ it('opens New restock empty, or with a product\'s line from its page (AC-3, AC-7
 
     expect($preset['product']['name'])->toBe('Leather Tote')
         ->and($preset['one_size'])->toBeTrue()
-        ->and($preset['sizes'])->toBe([['id' => array_key_first(sizeIds(['One size' => 0], SizeList::ONE_SIZE)), 'label' => 'One size']])
+        ->and($preset['sizes'])->toBe([['id' => array_key_first(sizeIds(['One size' => 0], 'one_size')), 'label' => 'One size']])
         ->and(array_map(fn (array $row): array => [$row['colour']['name'], $row['units']], $preset['stock']['colours']))->toBe([['Camel', 10], ['Black', 0]]);
 });
 

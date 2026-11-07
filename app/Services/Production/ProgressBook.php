@@ -9,8 +9,7 @@ use App\Models\Product;
 use App\Models\ProductionBatch;
 use App\Models\ProductSizeStock;
 use App\Models\Size;
-use App\Models\SizeList;
-use App\Services\Products\SizeLists;
+use App\Services\Products\ProductSizes;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -27,7 +26,7 @@ final readonly class ProgressBook
 
     public const BATCHES_PER_PAGE = 25;
 
-    public function __construct(private SizeLists $sizeLists) {}
+    public function __construct(private ProductSizes $productSizes) {}
 
     /**
      * The tiles: the units in production per step of the path (In cutting first), with the filters.
@@ -89,10 +88,12 @@ final readonly class ProgressBook
         $sizes = Size::query()->whereIn('id', $groups->pluck('size_id')->unique()->all())->get()->keyBy('id');
         $shelf = $this->shelf(array_values(array_map('intval', $ids)));
         $refs = array_column($path->steps, 'ref');
+        // One read for the whole page: each product asks for its sizes below.
+        $this->productSizes->forProducts($page->items());
 
         return $page->through(function (Product $product) use ($groups, $colours, $sizes, $shelf, $refs): array {
             $mine = $groups->where('product_id', $product->id);
-            $oneSize = $this->sizeLists->category($product->category_id)->sizeList->code === SizeList::ONE_SIZE;
+            $oneSize = $this->productSizes->of($product)->oneSize;
             $rows = [];
             $total = array_fill(0, count($refs), 0);
 
@@ -173,6 +174,8 @@ final readonly class ProgressBook
 
         $shelf = $this->shelf(array_values(array_unique(array_map(static fn (ProductionBatch $batch): int => $batch->product_id, $page->items()))));
         $today = today();
+        // One read for the whole page: each batch asks for its product's sizes below.
+        $this->productSizes->forProducts(array_map(static fn (ProductionBatch $batch): Product => $batch->product, $page->items()));
 
         return [
             'units' => (int) ($stats->units ?? 0),
@@ -181,7 +184,7 @@ final readonly class ProgressBook
             'oldest_since' => $stats?->oldest === null ? null : substr((string) $stats->oldest, 0, 10),
             'batches' => $page->through(fn (ProductionBatch $batch): array => [
                 'batch' => $batch,
-                'one_size' => $this->sizeLists->category($batch->product->category_id)->sizeList->code === SizeList::ONE_SIZE,
+                'one_size' => $this->productSizes->of($batch->product)->oneSize,
                 'since_days' => (int) $batch->phase_since->diffInDays($today),
                 'on_shelf' => $shelf[$batch->product_id][$batch->colour_id][$batch->size_id] ?? 0,
             ]),

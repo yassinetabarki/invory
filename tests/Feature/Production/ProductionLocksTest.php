@@ -12,8 +12,8 @@ use function Pest\Laravel\actingAs;
 | Edit product while units are in production (INV-5-g, AC-7)
 |--------------------------------------------------------------------------
 |
-| A colour with units in production can't be taken off its product, and a product with units in production can't move to a category
-| with other sizes. The shelf sentence wins when a colour has both (the human's answer, 2026-11-02); the existing refusals stay.
+| A colour with units in production can't be taken off its product. The shelf sentence wins when a colour has both (the human's answer,
+| 2026-11-02); the existing refusals stay. (The category lock for sizes went with INV-18-c: a category changes none of a product's sizes.)
 | INV-3's catalogue: the Denim Jacket in Black, Indigo and Light wash, Light wash with nothing on the shelf.
 */
 
@@ -69,17 +69,4 @@ it('takes off a colour whose batches were all put in stock or undone', function 
     saveJacket($this, ['Black', 'Indigo'])->assertSessionHasNoErrors();
 
     expect($this->jacket->colours()->pluck('colours.name')->all())->not->toContain('Light wash');
-});
-
-it('refuses a category with other sizes while units are in production (AC-7)', function () {
-    $jeans = demoProduct('PRD-JNS-005');
-    ProductionBatch::factory()->create(['product_id' => $jeans->id, 'colour_id' => demoColour('IND')->id, 'units' => 5]);
-
-    actingAs($this->user)
-        ->from(route('products.edit', $jeans))
-        ->put(route('products.update', $jeans), validProductPayload([
-            'sku' => $jeans->sku, 'name' => $jeans->name, 'status' => 'active', 'category' => 'footwear',
-            'colours' => $jeans->colours()->pluck('colours.id')->all(),
-        ]))
-        ->assertSessionHasErrors(['category' => "Denim Jeans 5-pocket has units in production, so its category can't change to one with other sizes. Keep a category with sizes XS to XXXL."]);
 });

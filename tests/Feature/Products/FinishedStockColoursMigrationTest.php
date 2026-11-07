@@ -29,7 +29,7 @@ function oldStockRow(Product $product, string $size, int $units): array
 {
     return [
         'workshop_id' => $product->workshop_id, 'product_id' => $product->id, 'units' => $units, 'created_at' => now(), 'updated_at' => now(),
-        'size_id' => Size::query()->where('label', $size)->whereIn('size_list_id', DB::table('product_categories')->where('id', $product->category_id)->select('size_list_id'))->value('id'),
+        'size_id' => sizeId($size, $product),
     ];
 }
 

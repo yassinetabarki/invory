@@ -4,7 +4,6 @@ use App\Enums\ProductStatus;
 use App\Models\Order;
 use App\Models\OrderLine;
 use App\Models\Product;
-use App\Models\SizeList;
 use App\Models\Workshop;
 use App\Services\Workshops\CurrentWorkshop;
 
@@ -58,7 +57,7 @@ function orderBody(array $overrides = []): array
 
             return [
                 'product_id' => $productId,
-                'units' => orderUnits($productId, [($oneSize ? 'One size' : 'M') => $line['quantity']], list: $beforeSizes ? SizeList::ONE_SIZE : null),
+                'units' => orderUnits($productId, [($oneSize ? 'One size' : 'M') => $line['quantity']], list: $beforeSizes ? 'one_size' : null),
             ];
         }, $overrides['lines']);
     }
@@ -69,13 +68,12 @@ function orderBody(array $overrides = []): array
 /** Every line of the order that counts as one size ("One size" product, or recorded before sizes) holds one row equal to the line (ADR-0016). */
 function expectLinesCountedAsOneSize(Order $order): void
 {
-    $oneSize = SizeList::query()->where('code', SizeList::ONE_SIZE)->firstOrFail();
-    $lines = $order->lines()->with('sizes.size')->get()->where('size_list_id', $oneSize->id);
+    $lines = $order->lines()->with('sizes.size')->get()->where('by_size', false);
 
     expect($lines)->not->toBeEmpty();
 
     foreach ($lines as $line) {
-        expect($line->size_list_id)->toBe($oneSize->id)
+        expect($line->by_size)->toBeFalse()
             ->and($line->sizes->map(fn ($row): array => [$row->size->label, $row->quantity, $row->delivered, $row->cancelled])->all())
             ->toBe([['One size', $line->quantity, 0, 0]]);
     }

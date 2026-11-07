@@ -39,8 +39,10 @@ If a rule here is wrong or incomplete, stop and ask the tech-lead to update it (
 | Batch | Units of one product in one colour and one size, made together for the shelf, numbered per workshop ("B-0147", never reused). In production it is In cutting or in one phase, since a day; it moves one phase at a time, and moving part of it splits off a new batch. Put in stock (all its units) or Undo batch (only In cutting) ends it. Never tied to an order (INV-5, ADR-0023) | `ProductionBatch` / `production_batches`, `ProductionBatchStatus` |
 | Production cut | What one Start batch took out of stock for all its batches, per material, like a Cut of an order line; Undo batch gives back from it (INV-5, ADR-0023) | `ProductionCut` / `production_cuts` |
 | Order line size | One size of an order line: the units ordered in that size and its stage counts (In cutting, Ready to ship, Shipped; To start derived). Only sizes ordered have one. The line's quantity and stage counts are the sums of its sizes. A line recorded before sizes holds one "One size" row (S-60, S-61, ADR-0016) | `OrderLineSize` / `order_line_sizes`, `OrderLineSizeMode` |
-| Size list | The fixed sizes of a product category, in order, with the name the screens show: "S, M, L, XL" (Apparel), "36 to 46" (Footwear), "One size" (every other category). Installation-wide; no screen edits them (S-58, ADR-0015) | `SizeList` / `size_lists` |
-| Size | One size of a size list ("S", "36", "One size"). A product has every size of its category; later stories count orders, production and finished stock by size id | `Size` / `sizes` |
+| Size | One size of the workshop's list ("S", "36", "One size"): a name (at most 12 characters, unique in the workshop ignoring capitals) and a position. Never removed; renamed and moved in Settings › Sizes. Listed by position, then creation order. Every workshop starts with 19: XS, S, M, L, XL, XXL, XXXL, 36 … 46, One size, at 10, 20 … 190 (INV-18, ADR-0028) | `Size` / `sizes` |
+| One size | The one size of each workshop flagged `is_one_size`, whatever its name: a product that has it has no other size, no size in its variant SKU and one field per colour | `sizes.is_one_size` |
+| Product sizes | The sizes a product comes in, chosen on Add and Edit product, at least one, in list order | `product_sizes`, `ProductSizes` |
+| Suggested sizes | The sizes a category pre-selects on Add product, per workshop; none set = One size | `product_category_sizes` |
 | Finished stock | The finished units of a product on the shelf, counted per colour and size (per size before INV-2). Set by "Update stock" (a count, not a plus or minus; the last save wins); a Restock of finished products adds to it (INV-3); S-57 adds cancelled units. Never changes "Can produce now", the unit cost, the materials, sales, orders or the Inventory value (S-56, ADR-0017) | `ProductSizeStock` / `product_size_stocks`, `FinishedStock` |
 | Colour | One colour of the workshop's list: a name (at most 32 characters, unique in the workshop ignoring capitals), a code (2 to 4 capitals or digits, unique in the workshop, never changed; INV-2 builds variant SKUs from it), a swatch (`#RRGGBB`, capitals) and a position. Never removed. Every workshop starts with 20 defaults. A product has at least one colour, from its own workshop (INV-1, ADR-0018) | `Colour` / `colours`, `product_colours` |
 | Variant | One colour of a product in one size ("the Denim Jacket in Indigo, size M"). Not stored on its own: a product, a colour and a size, with its own finished stock (INV-2, ADR-0019) | product id + colour id + size id |
@@ -246,25 +248,31 @@ Worked example: Boutique Lina (Denim Jacket 50: To start 20, In cutting 20, Read
 Concept Store Nour (Classic White T-shirt 120 to start) and Hotel Dar Said (Leather Tote 12, all shipped) → Open orders 2, To start
 170, In cutting 20, Ready to ship 10. Marking 5 of Boutique Lina's jackets ready → In cutting 15, Ready to ship 15.
 
-### Sizes (added 2026-10-21, S-58, ADR-0015)
+### Sizes (added 2026-11-06, INV-18, ADR-0028; replaces S-58, ADR-0015)
 
 ```
-size_list(category)   = by the category's immutable code: apparel → s_to_xl "S, M, L, XL" (S, M, L, XL)
-                                                           footwear → eu_36_to_46 "36 to 46" (36, 37 … 46)
-                                                           every other code, and every category added in Settings → one_size "One size"
-sizes(P)              = sizes(size_list(P.category))       in position order; nothing is stored per product
+sizes(W)              = the sizes of workshop W, by position, then id
+sizes(P)              = the sizes chosen for product P, in the order of sizes(P.workshop);  |sizes(P)| ≥ 1
+one_size(P)           = sizes(P) is exactly W's flagged One size
+suggested(W, C)       = the sizes category C suggests in workshop W, in list order; none set → W's One size
+used_by(z)            = number of non-deleted products, any status, with size z
+locked(P, z)          = reasons, in order: stock (finished(P, ·, z) ≥ 1 in a colour) · orders (a row of a non-deleted order,
+                        delivered and cancelled included) · barcodes (a barcode of name_key(P), a colour of P and z) ·
+                        production (a batch of P in z In production) · [INV-16: material quantities]
 ```
-- Renaming, archiving or restoring a category never changes its size list. "One size" is a real size row, not a null.
-- Sizes change **no figure**: every size of a product uses the same composition, so unit cost, "Can produce", the bottleneck, next
-  limit, margin, sales and every dashboard figure are as before. A sale has no size.
-- **Lock (AC-4):** a product on any order that isn't deleted (fully shipped ones included) can't move to a category with another size
-  list. "The same sizes" means the same list: Bag → Accessory, or → a category added in Settings, is always allowed; a product on no
-  order can move anywhere. Add product has no lock. The refusal sits on `category`:
-  "<product> is on orders, so its category can't change to one with other sizes." + "Keep a category with sizes <list name>." (a list
-  with several sizes) or "Keep a "One size" category." (a one-size list).
-- Screens: the product page shows "Sizes " + name ("Sizes S, M, L, XL"), or the name alone for one size ("One size"); "Can produce now"
-  adds ", any mix of sizes" after "from current stock" when there is more than one size. The product form shows "Sizes: " + name, or
-  "One size", with the hint "Sizes come with the category.". The server names the list; the frontend never works out a range.
+- A size taken off a product while `locked` is refused: "XL can't be taken off Denim Jacket: it has units in stock, is on orders and has
+  barcodes." (one sentence per size, list order; "Size 36 can't …" for a digits-only name; "it" always before the first reason, "…: it
+  is on orders."). With a size locked, One size can't be chosen ("XL is in use, …", "Sizes 36, 37 and 38 are in use, so One size can't
+  be chosen."); with One size locked, no other size can ("One size is in use, so other sizes can't be chosen."). Several sizes or none → "Choose at least
+  one size."; One size with another → "One size can't be combined with other sizes. Choose it alone, or choose other sizes.".
+- Changing a product's category changes none of its sizes; a category no longer locks anything. A new size is on no product.
+- A product added without sizes (`CreateProduct` with no `sizes` key) gets `suggested(W, its category)`.
+- Renaming a size changes the variant SKUs that name it and no barcode.
+- Sizes change **no figure**: unit cost, "Can produce", the bottleneck, next limit, margin, sales and the dashboard are as before.
+- Screens: the badge "One size" (the flagged size's name) · "Size M" · "Sizes S, M, L, XL" (2 to 6) · "Sizes XS to XXXL" (7 or more in an
+  unbroken run of sizes(W)) · "Sizes XS, S, M and 4 more" (7 or more with gaps). "Can produce now" adds ", any mix of sizes" when
+  |sizes(P)| > 1. Settings › Product categories' Suggests line uses the same rule without "Sizes" / "Size" ("XS to XXXL", "S, M, L,
+  XL", "One size"). The server writes them; the frontend never works out a range.
 
 ### Orders by size (added 2026-10-22, S-60, S-61, ADR-0016)
 
@@ -272,11 +280,11 @@ sizes(P)              = sizes(size_list(P.category))       in position order; no
 quantity(L)           = Σ quantity(z)       over the size rows z of line L        (whole units; only sizes ordered have a row)
 stage(L)              = Σ stage(z)          for In cutting, Ready to ship and Shipped
 to_start(z)           = quantity(z) − in_cutting(z) − ready_to_ship(z) − shipped(z)    (as on the line; never stored)
-size_mode(L)          = by_size        when L's size list has several sizes
-                      = one_size       when L's product is "One size"
-                      = before_sizes   when L counts as "One size" but its product now has several sizes (recorded before sizes)
+size_mode(L)          = by_size        when L was recorded by size (L.by_size)
+                      = one_size       when L wasn't and one_size(L.product)
+                      = before_sizes   otherwise (recorded before sizes; its product now has sizes)
 ```
-- Every line counts by a size list, stored on the line: a new line takes its product's; lines recorded before sizes keep "One size"
+- A new line counts by size unless its product is One size; the flag is stored on the line; lines recorded before sizes keep "One size"
   for good (one row holding their quantity and stages). `one_size` and `before_sizes` lines keep the single "Quantity" field, the
   single "How many units?" field, and today's messages.
 - **Saving an order** (`by_size`): each size takes a whole number 0 … 1 000 000 or nothing (nothing and 0 mean no row): "Enter a
@@ -325,9 +333,6 @@ update_stock(P, n_z)  : finished(P, z)' = n_z for every size z of sizes(P)     n
   longer match what was submitted: "The sizes of <product> have changed. Enter the stock again." and nothing is saved.
 - **Changes no figure.** "Can produce now", the bottleneck, the unit cost, margin, the materials and their history, the Inventory value,
   sales and the dashboard are as before. Recording a sale or an order never changes finished stock.
-- **Locks the category.** A product with units in stock can't move to a category with another size list: "<product> has units in stock,
-  so its category can't change to one with other sizes." + the S-58 ending ("Keep a category with sizes <list name>." or "Keep a "One
-  size" category."). When the product is also on an order the S-58 message shows instead; at 0 in stock the S-58 rule applies alone.
 - **Deleting a product deletes its finished stock.**
 - Every writer (Update stock, Update product, Delete product, S-57's cancel) takes the product's row lock first.
 
@@ -352,7 +357,7 @@ variants(P)           = |colours(P)| × |sizes(P)|
 - **A colour with stock stays on its product:** taking it off on Edit product saves nothing and reads "<colour> has N units in stock, so
   it can't be removed from <product>. Set its stock to 0 first." ("1 unit" for one), one sentence per such colour in list order. A
   colour at 0 comes off as before; added back later, it starts at 0.
-- The category lock counts a unit in any colour; deleting a product deletes every colour's stock; every writer takes the product's row
+- Deleting a product deletes every colour's stock; every writer takes the product's row
   lock first. **Changes no figure**, as before: costing, "Can produce now" (every colour uses the same composition), sales, orders and
   the dashboard.
 
@@ -566,3 +571,7 @@ Variant checks:
 - Added 2026-10-31 (INV-8, ADR-0020): `App\Domain\Barcodes\{Ean13,NameKey,VariantSku,VariantNames}`, `App\Models\{Barcode,BarcodeName}`,
   `App\Services\Products\ProductBarcodes`, `App\Actions\Barcodes\{GenerateBarcodes,AddNameToBarcodes}`, `App\Services\Barcodes\RenameClash`,
   `ProductBarcodesResource`; frontend `lib/ean13.ts` and `components/shared/barcode.tsx` (the picture only).
+- Added 2026-11-06 (INV-18, ADR-0028): `App\Models\Size` per workshop
+  (`ordered()`, `is_one_size`), `product_sizes`, `product_category_sizes`, `App\Services\Products\ProductSizes` (the one reader),
+  `App\Domain\Sizes\SizeLine` (badge and Suggests line), `App\Services\Products\ProductSizeLock` (per size), `App\Actions\Sizes\{CreateSize,
+  UpdateSize,CreateDefaultSizes}`, `App\Actions\Products\SyncProductSizes`; `SizeList`, `SizeLists` and `SizeListResource` are gone.

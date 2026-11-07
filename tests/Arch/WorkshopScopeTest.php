@@ -25,7 +25,6 @@ use App\Models\ProductRestockLine;
 use App\Models\ProductSizeStock;
 use App\Models\Sale;
 use App\Models\Size;
-use App\Models\SizeList;
 use App\Models\StockMovement;
 use App\Models\Unit;
 use App\Models\User;
@@ -45,7 +44,7 @@ use App\Models\WorkshopLabelSetting;
 const WORKSHOP_ADR = 'docs/adr/0013-one-workshop-per-account.md';
 
 /** The tables of workshop data (S-45 adds units and the two category tables). */
-const WORKSHOP_TABLES = ['clients', 'materials', 'products', 'product_components', 'stock_movements', 'sales', 'orders', 'order_lines', 'order_line_cuts', 'order_line_cut_materials', 'order_line_sizes', 'product_size_stocks', 'colours', 'product_colours', 'barcodes', 'barcode_names', 'product_restocks', 'product_restock_lines', 'production_counters', 'production_phases', 'production_cuts', 'production_cut_materials', 'production_batches', 'production_batch_moves', 'workshop_label_settings'];
+const WORKSHOP_TABLES = ['clients', 'materials', 'products', 'product_components', 'stock_movements', 'sales', 'orders', 'order_lines', 'order_line_cuts', 'order_line_cut_materials', 'order_line_sizes', 'product_size_stocks', 'sizes', 'product_sizes', 'product_category_sizes', 'colours', 'product_colours', 'barcodes', 'barcode_names', 'product_restocks', 'product_restock_lines', 'production_counters', 'production_phases', 'production_cuts', 'production_cut_materials', 'production_batches', 'production_batch_moves', 'workshop_label_settings'];
 
 /**
  * Every PHP file under `app/`, as [path relative to the project root, source without comments]: a comment that talks about
@@ -99,8 +98,8 @@ function applicationFilesMatching(string $pattern): array
 
 it('puts BelongsToWorkshop on every model of workshop data', function () {
     // User and Workshop are the owners, not owned. Units and categories stay shared until S-45 gives each workshop its own lists.
-    // SizeList and Size are fixed, installation-wide reference data that a migration fills and no screen edits (ADR-0015 decision 1).
-    $allowed = [User::class, Workshop::class, Unit::class, MaterialCategory::class, ProductCategory::class, SizeList::class, Size::class];
+    // Size is the workshop's own list since INV-18 (ADR-0028): it belongs to a workshop like colours do.
+    $allowed = [User::class, Workshop::class, Unit::class, MaterialCategory::class, ProductCategory::class];
     $missing = [];
 
     foreach (applicationSources() as [$path, $code]) {
@@ -136,7 +135,7 @@ it('validates against a table of workshop data only through WorkshopRule in app/
     // Both spellings of each: the table (`materials`) and the model class (`Material::class`, `App\Models\Material`).
     $targets = array_merge(WORKSHOP_TABLES, array_map(
         static fn (string $model): string => '(?:\\\\?App\\\\{1,2}Models\\\\{1,2})?'.class_basename($model).'(?:::class)?',
-        [Material::class, Product::class, ProductComponent::class, StockMovement::class, Sale::class, Order::class, OrderLine::class, OrderLineCut::class, OrderLineCutMaterial::class, OrderLineSize::class, ProductSizeStock::class, Colour::class, Barcode::class, BarcodeName::class, ProductRestock::class, ProductRestockLine::class, ProductionCounter::class, ProductionPhase::class, ProductionCut::class, ProductionCutMaterial::class, ProductionBatch::class, ProductionBatchMove::class, WorkshopLabelSetting::class],
+        [Material::class, Product::class, ProductComponent::class, StockMovement::class, Sale::class, Order::class, OrderLine::class, OrderLineCut::class, OrderLineCutMaterial::class, OrderLineSize::class, ProductSizeStock::class, Size::class, Colour::class, Barcode::class, BarcodeName::class, ProductRestock::class, ProductRestockLine::class, ProductionCounter::class, ProductionPhase::class, ProductionCut::class, ProductionCutMaterial::class, ProductionBatch::class, ProductionBatchMove::class, WorkshopLabelSetting::class],
     ));
     $named = '(?:'.implode('|', $targets).')\b';
     $found = [];

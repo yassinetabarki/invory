@@ -3,7 +3,6 @@
 use App\Enums\ProductionBatchStatus;
 use App\Enums\TicketSize;
 use App\Models\ProductionBatch;
-use App\Models\SizeList;
 use App\Models\Workshop;
 use App\Models\WorkshopLabelSetting;
 use App\Services\Production\TicketQr;
@@ -86,7 +85,7 @@ it('prints "Split from B-0149" on a split batch, and its own QR code', function 
 it('prints a one-size product with its colour only', function () {
     $batch = ProductionBatch::factory()->create([
         'product_id' => $this->tote->id, 'colour_id' => demoColour('CAM')->id,
-        'size_id' => array_key_first(sizeIds(['One size' => 0], SizeList::ONE_SIZE)), 'units' => 3,
+        'size_id' => array_key_first(sizeIds(['One size' => 0], 'one_size')), 'units' => 3,
     ]);
 
     printTickets($this, [$batch])->assertOk()->assertInertia(fn (AssertableInertia $page) => $page

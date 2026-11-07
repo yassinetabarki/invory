@@ -32,7 +32,7 @@ import { formatCount } from '@/lib/format';
 import type { FinishedStock, Product } from '@/types/domain';
 
 type UpdateStockDialogProps = {
-    product: Pick<Product, 'id' | 'name'>;
+    product: Pick<Product, 'id' | 'name' | 'one_size'>;
     /** Today's count per colour and size; follows the reload of `finished_stock`. */
     stock: FinishedStock;
     open: boolean;
@@ -59,7 +59,8 @@ function UpdateStockForm({
     const uid = useId();
     const messageId = `${uid}-message`;
     const { colours } = stock;
-    const oneSize = stock.sizes.length === 1;
+    // "One size" is the workshop's flagged size, not any product with a single size.
+    const oneSize = product.one_size;
     const oneColour = colours.length === 1;
     // What was typed belongs to the colours and sizes it was typed for: when the
     // product's colours or sizes change under the window, the fields start again
