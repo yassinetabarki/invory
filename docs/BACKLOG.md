@@ -5,7 +5,7 @@
 > **Phases & Goals:** [ROADMAP.md](ROADMAP.md) · **Progress:** [STATUS.md](STATUS.md)
 
 > [!history] Last Cleaned: 2026-11-06
-> - **Added 2026-11-08:** `INV-21` (Material stock per colour) — an idea from the human, decisions recorded as **D-30**; UI card `Approved` the same day, no development card yet.
+> - **Added 2026-11-08:** `INV-21` (Material stock per colour) — an idea from the human, decisions recorded as **D-30**; UI card `Approved` and development card `Ready` the same day.
 >   Place decided by the human: right after `INV-16`, before `INV-17` (see Item Details). Next free ID is now **INV-22**.
 > - **INV-14 Done** (accepted 2026-11-03; on `PI-DEV`: `7af1a63`; card `432731b`, Technical work `753c611`). Orders are served from the shelf: tracker, Mark delivered, Cancel units; orders no longer cut. It left the open list. **Next (D-26): INV-3's acceptance, then INV-9.**
 > - **INV-13 Done** (accepted 2026-11-03 by the human; on `PI-DEV`: `39647ce`; card `f07ef4e`, Technical work `7bf05bb`). Order lines hold colour and size; Search products shows the shelf stock (no "Can produce now", the human's answer). It left the open list. **INV-14 is next.**
@@ -79,7 +79,7 @@
 - **Card:** Full story cards (story, AC with examples, visual scope, out of scope, questions) live in `docs/stories/<id>-<slug>.md`. This backlog displays the short version.
 - **IDs & History:**
   - Everything new since **2026-10-24 (D-20, D-21)** is numbered **INV-n** (including technical items without UI cards). Next free ID: **INV-22**.
-  - `INV-21`: Material stock per colour (stock and cost per colour for materials such as fabric). Added 2026-11-08 (D-30); UI card `Approved` 2026-11-08, no development card yet.
+  - `INV-21`: Material stock per colour (stock and cost per colour for materials such as fabric). Added 2026-11-08 (D-30); UI card `Approved` 2026-11-08; development card `Ready` (approved 2026-11-08).
   - `INV-18`: Sizes chosen per product, managed in Settings (done 2026-11-07, `e069997`).
   - `INV-19`, `INV-20`: tech-debt items proposed by the tech-lead on 2026-11-07 (the stale orders browser test; one package manager and lock file), see [TECH-DEBT.md](TECH-DEBT.md).
   - `INV-17`: Per-unit QR codes, moving units one by one besides whole batches. Added 2026-11-06 (D-28), placed after `INV-16` and before `INV-9`. UI card `Approved` 2026-11-06, development card `Ready` 2026-11-06 (see Item Details).
@@ -125,7 +125,7 @@
 | ID         | What it brings                                               | Type    | Status                        | Priority / Size    |
 | ---------- | ------------------------------------------------------------ | ------- | ----------------------------- | ------------------ |
 | **INV-16** | Material use per size and colour, "Can produce" per colour   | Feature | `Ready`, replan first         | Must / L           |
-| **INV-21** | Material stock per colour: stock and cost per colour         | Feature | `UI approved` 2026-11-08        | Must / L (to size) |
+| **INV-21** | Material stock per colour: stock and cost per colour         | Feature | `Ready` 2026-11-08              | Must / L (to size) |
 | **INV-17** | Per-unit QR codes: move units one by one, besides batches    | Feature | `Ready`                       | Should / L         |
 | **INV-9**  | Print barcode labels                                         | Feature | `Ready`                       | Must / M           |
 | **INV-7**  | Bigger tap targets on Settings pages                         | Feature | `Idea`                        | Could / S–M        |
@@ -212,7 +212,7 @@
 - **Links:** depends on the colour and size work already done (`INV-1`, `INV-2`) and sits downstream of the costing domain's BOM rules.
 
 #### `INV-21` · Material stock per colour
-- **Type:** Feature | **Priority:** Must | **Size:** L, to be sized by the tech-lead and probably split | **Status:** `UI approved` (2026-11-08); no development card yet.
+- **Type:** Feature | **Priority:** Must | **Size:** L, to be sized by the tech-lead and probably split | **Status:** `Ready`: UI card `Approved` and development card `Ready` (both 2026-11-08). The human chose to keep it as **one card**; the tech-lead cuts the build into steps.
 - **Place in the order (decided by the human, 2026-11-08):** right after `INV-16`, before `INV-17`: `INV-16` → `INV-21` → `INV-17` → `INV-9` → `INV-7`. `INV-16`'s steps a to d are approved and e is being built, so this stays one contained change on top of `INV-16`.
 - **What it brings:** a material can be set to **stock per colour**: its quantity on hand is kept for each colour (Indigo 250 m, Black 40 m), instead of the workshop making one material per colour ("Denim 12oz Indigo", "Denim 12oz Black") as it does today. A product's colour then uses the stock of the same colour of the material. Materials that don't vary by colour (buttons, thread) stay as they are.
 - **Decided by the human (2026-11-08, D-30):**
@@ -241,7 +241,7 @@
   18. A per-colour material's status: **Low stock** when any colour is at or under the reorder level (0 counts); **Out of stock** only when every colour is at 0. The dashboard's "Needs restock" counts materials and names the colours.
   19. A colour added to a cost-per-colour material needs its unit cost typed when it is added (on the form and in "Add Light wash to Denim 12oz"); no price is guessed.
   20. On a per-colour restock the "use this price as the new unit cost" checkbox stays checked by default, as today (it changes only colours that received a quantity).
-- **UI card `Approved` (2026-11-08, validated by the human):** [UI card](stories/INV-21-material-stock-per-colour-ui.md) · design spec [INV-21-material-stock-per-colour](design/specs/INV-21-material-stock-per-colour.md) · boards `Inv21Stock`, `Inv21Restock`, `Inv21MaterialForm`, `Inv21Readers`, `Inv21Phone` (Invory App UI canvas). No development card yet: **the next step is the development card, written by the product-owner from this UI card**, and the tech-lead's sizing and new ADR, in the order the human chooses. Its wording replaces some of INV-16's (bottleneck sentence, Start batch shortfall, the grid sheet's muted line, "Varies"); INV-16's cards stay as approved.
+- **UI card `Approved` (2026-11-08, validated by the human):** [UI card](stories/INV-21-material-stock-per-colour-ui.md) · design spec [INV-21-material-stock-per-colour](design/specs/INV-21-material-stock-per-colour.md) · boards `Inv21Stock`, `Inv21Restock`, `Inv21MaterialForm`, `Inv21Readers`, `Inv21Phone` (Invory App UI canvas). **Development card `Ready` (approved by the human 2026-11-08):** [Development card](stories/INV-21-material-stock-per-colour.md) (19 criteria in build order; size L, kept as one card by the human's choice). **Next:** the tech-lead's sizing, the new ADR and the costing-domain rules, then its Technical work, when its turn comes (after `INV-16`). Nothing is built before that. Its wording replaces some of INV-16's (bottleneck sentence, Start batch shortfall, the grid sheet's muted line, "Varies"); INV-16's cards stay as approved.
 - **Still to do (the human asked to design first):** the tech-lead's sizing (probably a split), the new ADR and the costing-domain rules are still pending; they come before the development card's Technical work.
 
 #### `INV-17` · Per-unit QR codes: move units one by one, besides batches
