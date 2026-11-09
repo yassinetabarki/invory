@@ -1,7 +1,7 @@
 # Invory — product roadmap
 
-> Owner: **product-owner** · Last updated: 2026-11-06 (INV-3 done)
-> INV-10 is done (`76b1770`), so new cards can be added again. INV-2 is done (`46af1cc`, `ab313eb`, `4088200`). INV-8 is done (`9f93175` … `3b55319`). INV-4 is done, with INV-12 (accepted 2026-11-02, on `PI-DEV`). INV-5 is done (accepted 2026-11-02, on `PI-DEV`). INV-15 is done (accepted 2026-11-03, on `PI-DEV`). INV-3 is done (accepted 2026-11-06; `2575dd0` … `cbdae79`, `aeee262`). Next: INV-18, then INV-16 (on hold until INV-18 is done), then INV-17 (development card `Ready`, approved 2026-11-06; its Technical work waits for its turn), then INV-9 (D-27, D-28, D-29). Next free ID: INV-19.
+> Owner: **product-owner** · Last updated: 2026-11-09 (INV-16 done)
+> INV-10 is done (`76b1770`), so new cards can be added again. INV-2 is done (`46af1cc`, `ab313eb`, `4088200`). INV-8 is done (`9f93175` … `3b55319`). INV-4 is done, with INV-12 (accepted 2026-11-02, on `PI-DEV`). INV-5 is done (accepted 2026-11-02, on `PI-DEV`). INV-15 is done (accepted 2026-11-03, on `PI-DEV`). INV-3 is done (accepted 2026-11-06; `2575dd0` … `cbdae79`, `aeee262`). INV-18 is done (2026-11-07, `e069997`) and INV-16 is done (accepted 2026-11-09 without a click-through; `e01b2ea`). Next: INV-21 (material stock per colour; UI card `Approved` and development card `Ready`, 2026-11-08, D-30), then INV-17 (development card `Ready`, approved 2026-11-06; its Technical work waits for its turn), then INV-9, then INV-7 (D-27, D-28, D-29, D-30, D-31). Next free ID: INV-26.
 
 ## Product goal
 A small fashion workshop knows, at any moment, what each product costs to make, how many it can make from the stock
@@ -23,7 +23,8 @@ Work goes one item at a time, in the order below. A UI card comes first, then th
 | INV-5  | Production for the shelf: a progress page          | `Done`        | See where every batch is in production     |
 | INV-3  | Restock of finished products                       | `Done`        | Add finished units to the shelf at once    |
 | INV-18 | Sizes chosen per product, managed in Settings      | `Done`        | Each product has the sizes it really has   |
-| INV-16 | Material use per size and colour                   | `Ready`, replan first | Each size and colour uses its own material |
+| INV-16 | Material use per colour and size                   | `Done`        | Each size and colour uses its own material |
+| INV-21 | Material stock per colour                          | `Ready`       | A material has its own stock per colour    |
 | INV-17 | Per-unit QR codes, moved one by one                | `Ready`       | Follow each unit, not only its batch       |
 | INV-9  | Print barcode labels                               | `Ready`       | Print a label for a variant, or a sheet    |
 | INV-15 | Work tickets and the Scan page                     | `Done`        | Move a batch on by scanning its ticket     |
@@ -39,6 +40,8 @@ the order.
 - D-20 (2026-10-24): the card flow is paused for this rework. Every older open story is on hold.
 - D-21 (2026-10-24): the order is INV-1, INV-2, INV-3, INV-4, INV-5.
 - D-29 (2026-11-06): INV-18 (sizes chosen per product, managed in Settings) came first and is done (2026-11-07); INV-16 was on hold until then. Decided with it: one workshop-wide size list, the category pre-selects sizes on Add product, existing products keep their sizes, a size is never deleted and a used size can't be taken off a product, at least one size per product, order by position in Settings.
+- D-31 (2026-11-09): INV-16 accepted without a click-through; decided with its UX review: a blank switch opens the first colour, the Composition footer badge follows the list badge, a One size grid field is "Indigo, One size", "Choose a material first." on a line with no material, a quiet line when a colour with quantities is taken off, a straight switch back restores the typed quantity, the Capacity by colour skeleton stays; polish goes to INV-25. Order: INV-21, INV-17, INV-9, INV-7.
+- D-30 (2026-11-08): INV-21 (material stock per colour, optional cost per colour) is registered and comes right after INV-16, before INV-17.
 - D-27 (2026-11-06): INV-16 comes first, ahead of INV-9 and INV-7.
 - D-28 (2026-11-06): INV-17 (per-unit QR codes, alongside batch tracking; the user chooses the mode) comes after INV-16 and before INV-9. Its UI card is `Approved` and its development card is `Ready` (approved 2026-11-06, [INV-17-per-unit-qr.md](stories/INV-17-per-unit-qr.md)); it also changes INV-5's splitting: every move joins the batch of the same start already in the phase (batches already side by side are left as they are; the next move joins the lowest-numbered one).
 - D-24 (2026-11-02): INV-5 comes next, ahead of INV-3's acceptance and INV-9; INV-15 (work tickets and Scan) is split from it and follows INV-9.

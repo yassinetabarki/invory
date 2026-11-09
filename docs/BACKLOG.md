@@ -4,9 +4,10 @@
 > **Owner:** `product-owner` (order, wording, acceptance criteria) · **Technical Detail:** `tech-lead` ([TECH-DEBT.md](TECH-DEBT.md), [plans/](plans/README.md))
 > **Phases & Goals:** [ROADMAP.md](ROADMAP.md) · **Progress:** [STATUS.md](STATUS.md)
 
-> [!history] Last Cleaned: 2026-11-06
+> [!history] Last Cleaned: 2026-11-09
+> - **INV-16 Done** (accepted 2026-11-09 by the human **without a click-through**: the 10-step click-through script was not run; one code commit `e01b2ea` covers steps INV-16-a … INV-16-m and the fix round of the UX review's ten items; docs `7548753`: cards, ADR-0027 accepted, tech debt INV-22 to INV-24 proposed). A composition line is **Same for every variant** or **By colour and size**; "Can produce now" shows guaranteed beside best, with Capacity by colour; cost and margin are ranges; Start batch and Undo batch work per colour and size; a size with saved quantities is locked. It left the open list. **Next (D-31): INV-21, then INV-17, INV-9, INV-7.** **Decided with the UX review (D-31):** a blank switch opens the first colour; the Composition table's footer badge follows the list badge ("16–112 units", "0–112 units" in warning, "Can't produce" only when best is 0); a One size field is named "Indigo, One size"; "Choose a material first." on a line with no material; taking a colour off shows a quiet line under Colours; switching straight back restores the typed quantity and asks nothing; the Capacity by colour skeleton stays as built; the summary's "only" rule and the Capacity by colour caption are left as polish. **Open gaps, none blocking** (collected in `INV-25`, [TECH-DEBT.md](TECH-DEBT.md)): the read-only grid's term/value list, the Sheet's first focus, the line-level error naming its cell, below-cost screen-reader text, "Edit grid for <material>", "Short by less than 0.0001 m", link target size, the Sheet's close X size, the disabled state's timing, the INV-18 focus gap, and 320 px wrapping still to be checked in a browser. The dev database `laravel` has the INV-16 migration applied; its one product "JEBA" has a By colour and size line of 21 cells (the human's own data; agents never seed or reset it).
 > - **Added 2026-11-08:** `INV-21` (Material stock per colour) — an idea from the human, decisions recorded as **D-30**; UI card `Approved` and development card `Ready` the same day.
->   Place decided by the human: right after `INV-16`, before `INV-17` (see Item Details). Next free ID is now **INV-22**.
+>   Place decided by the human: right after `INV-16`, before `INV-17` (see Item Details). Next free ID is now **INV-26** (INV-22 to INV-25 are tech-debt items, see below).
 > - **INV-14 Done** (accepted 2026-11-03; on `PI-DEV`: `7af1a63`; card `432731b`, Technical work `753c611`). Orders are served from the shelf: tracker, Mark delivered, Cancel units; orders no longer cut. It left the open list. **Next (D-26): INV-3's acceptance, then INV-9.**
 > - **INV-13 Done** (accepted 2026-11-03 by the human; on `PI-DEV`: `39647ce`; card `f07ef4e`, Technical work `7bf05bb`). Order lines hold colour and size; Search products shows the shelf stock (no "Can produce now", the human's answer). It left the open list. **INV-14 is next.**
 > - **D-26 (2026-11-03, human):** `INV-13` then `INV-14` come next, ahead of INV-3's acceptance and `INV-9`. INV-13's development card is approved (`Ready`, 2026-11-03) and its Technical work too (`Planned`, 2026-11-03: 8 steps, INV-13-a … INV-13-h; "Can produce now" left out of the search and the order, the human's answer).
@@ -36,8 +37,8 @@
 >   md breakpoint; (4) a locked size's reason has no touch route (hover and focus only); (5) Cancel and Save in the reference dialog
 >   aren't 44 px on phones; (6) not click-tested on the running app at 375 px and in dark mode. **INV-16 is next**, but its Technical
 >   work must be replanned by the tech-lead on per-product sizes (ADR-0028) before the build.
-> - **Current Order** (D-29 carried out): `INV-16` (Technical work to be replanned on ADR-0028) → `INV-17` → `INV-9` → `INV-7`. Next
->   free ID (2026-11-08): **INV-22**; `INV-21` is "Material stock per colour": `INV-19` (the stale orders browser test) and `INV-20` (the package manager and lock file) are tech-debt items
+> - **Current Order** (D-29, D-30, D-31 carried out): `INV-21` → `INV-17` → `INV-9` → `INV-7` (`INV-16` done 2026-11-09). Next
+>   free ID (2026-11-09): **INV-26**; `INV-21` is "Material stock per colour"; `INV-22` to `INV-25` are tech-debt items; `INV-19` (the stale orders browser test) and `INV-20` (the package manager and lock file) are tech-debt items
 >   the tech-lead proposed on 2026-11-07 in [TECH-DEBT.md](TECH-DEBT.md); they don't collide with INV-17 (per-unit QR codes), which keeps
 >   its number. INV-11 is the tech-debt item raised in the INV-8 review; INV-15 is the real, done "Work tickets and the Scan page".
 > - **Added 2026-11-06:** `INV-17` (Per-unit QR codes) — a new idea from the human: keep batch progress and add progress per unit, with
@@ -78,7 +79,8 @@
 - **Size:** `S` ($\le 1$ day agent work) · `M` · `L` *(needs split)*
 - **Card:** Full story cards (story, AC with examples, visual scope, out of scope, questions) live in `docs/stories/<id>-<slug>.md`. This backlog displays the short version.
 - **IDs & History:**
-  - Everything new since **2026-10-24 (D-20, D-21)** is numbered **INV-n** (including technical items without UI cards). Next free ID: **INV-22**.
+  - Everything new since **2026-10-24 (D-20, D-21)** is numbered **INV-n** (including technical items without UI cards). Next free ID: **INV-26**.
+  - `INV-22`, `INV-23`, `INV-24`: tech-debt items proposed by the tech-lead on 2026-11-08, outside the order (list load time on a throttled host; the mirrored tie-break and the cells read twice; `ProductionCutMaterialFactory` and `unit_id` under strict models). `INV-25`: the polish and gaps collected from INV-16's UX review (2026-11-09). See [TECH-DEBT.md](TECH-DEBT.md).
   - `INV-21`: Material stock per colour (stock and cost per colour for materials such as fabric). Added 2026-11-08 (D-30); UI card `Approved` 2026-11-08; development card `Ready` (approved 2026-11-08).
   - `INV-18`: Sizes chosen per product, managed in Settings (done 2026-11-07, `e069997`).
   - `INV-19`, `INV-20`: tech-debt items proposed by the tech-lead on 2026-11-07 (the stale orders browser test; one package manager and lock file), see [TECH-DEBT.md](TECH-DEBT.md).
@@ -93,7 +95,7 @@
   - `INV-10`: PostgreSQL test fix (done, `76b1770`).
   - `INV-11`: Small barcode clean-ups from the INV-8 review (MINOR tech debt, in [TECH-DEBT.md](TECH-DEBT.md); proposed for when barcodes are next touched, INV-9).
   - `INV-12`, `INV-13`, `INV-14`: Refactor the order (client first · product search with stock · order tracker and no cutting on orders). Added 2026-11-01 as `INV-12`, split into three the same day.
-  - `INV-16`: Material use per size and colour, and "Can produce" per colour. Added 2026-11-06 (first as "INV-15", renumbered once the `PI-DEV` merge showed that number taken). Moved to the front of the queue by the human (D-27, 2026-11-06); UI card `Approved`, development card `Ready` (2026-11-06) (see Item Details).
+  - `INV-16`: Material use per colour and size, and "Can produce" per colour (done 2026-11-09, `e01b2ea`). Added 2026-11-06 (first as "INV-15", renumbered once the `PI-DEV` merge showed that number taken).
   - Old `S-` and `F-` IDs are retained and never reused (last story ID: `S-74`).
   - Technical items register: See [TECH-DEBT.md](TECH-DEBT.md).
 
@@ -115,7 +117,8 @@
 8. **INV-14** (Order tracker, served from the shelf) — `#done` *(Accepted 2026-11-03)*
 9. **INV-3** (Restock of finished products) — `#done` *(Accepted 2026-11-06)*
 10. **INV-18** (Sizes chosen per product, managed in Settings) — `#done` *(Accepted 2026-11-07, `e069997`)*
-11. **Next Sequence (D-29, D-30):** `INV-16` *(Technical work to be replanned on ADR-0028)* ➔ `INV-21` *(Material stock per colour)* ➔ `INV-17` ➔ `INV-9` ➔ `INV-7`
+11. **INV-16** (Material use per colour and size) — `#done` *(Accepted 2026-11-09, `e01b2ea`, without a click-through)*
+12. **Next Sequence (D-29, D-30, D-31):** `INV-21` *(Material stock per colour)* ➔ `INV-17` ➔ `INV-9` ➔ `INV-7`
 8. **Card Structure:** Each feature receives a UI card first (`INV-n-<slug>-ui.md`), followed by a development card (`INV-n-<slug>.md`).
 9. **Shared UI Cards:** `INV-2`, `INV-8`, and `INV-9` share the same UI card but are accepted individually; so do `INV-5` and `INV-15`.
 10. **Phase 7 Tech Allowance:** `F-43` · `F-46` · `F-52` · `F-53`
@@ -124,7 +127,6 @@
 
 | ID         | What it brings                                               | Type    | Status                        | Priority / Size    |
 | ---------- | ------------------------------------------------------------ | ------- | ----------------------------- | ------------------ |
-| **INV-16** | Material use per size and colour, "Can produce" per colour   | Feature | `Ready`, replan first         | Must / L           |
 | **INV-21** | Material stock per colour: stock and cost per colour         | Feature | `Ready` 2026-11-08              | Must / L (to size) |
 | **INV-17** | Per-unit QR codes: move units one by one, besides batches    | Feature | `Ready`                       | Should / L         |
 | **INV-9**  | Print barcode labels                                         | Feature | `Ready`                       | Must / M           |
@@ -181,39 +183,9 @@
 - **Type:** Feature | **Priority:** Could | **Size:** S–M | **Status:** `Idea`
 - **Details:** Increases button/field heights on phone/tablet from 32-36 px to 44 px. Related to `S-68` (order screen tap targets). Runs after `INV-14`.
 
-#### `INV-16` · Material use per size and colour, "Can produce" per colour
-- **Type:** Feature | **Priority:** Must | **Status:** `Ready` (card approved 2026-11-06), **next in the queue**: `INV-18` is done
-  (2026-11-07), so the hold of D-29 is lifted, but its Technical work must be replanned by the tech-lead on per-product sizes
-  (ADR-0028) before the build (the UI card is `Approved`; first logged as "INV-15" on 2026-11-06, renumbered once the `PI-DEV` merge showed that number taken by
-  the done "Work tickets and Scan" item)
-- **Cards:** [Development card](stories/INV-16-material-per-variant.md) (`Ready`, 2026-11-06) · [UI card: material use per colour and size](stories/INV-16-material-per-variant-ui.md) (`Approved`, 2026-11-06) · design
-  spec [INV-16-material-per-variant](design/specs/INV-16-material-per-variant.md) · ADR [ADR-0027](adr/0027-material-use-per-colour-and-size.md).
-- **The request, from the human (2026-11-06):**
-  1. The system removes the correct amount of material depending on the size (and maybe the colour) made — the user sets up how
-     much material an L uses, separately from M or XL.
-  2. A new screen shows how much material is in stock and how many units can be made, **per colour**.
-- **Why this needed decisions first, not a card:** today every size and every colour of a product shares one composition — "Sizes
-  change no figure: every size of a product uses the same composition" and the same for colours. Point 1 changes that for sizes (and
-  colours); point 2 asks for capacity split by colour. This was a business-rule change, not a screen, so it needed an ADR and the
-  tech-lead's agreement on the costing rules before any card. **Settled:** ADR-0027 and the UI card above.
-- **Decided by the human (2026-11-06):** quantity varies by **both size and colour** (a full grid); the input is a **flat quantity
-  per size/colour combination** (not a multiplier on today's one quantity per material); "per colour" capacity means
-  **colour-specific material stock** (each colour's fabric etc. is its own stocked material with its own quantity on hand), not the
-  same stock sliced by what you'd cut.
-- **Queue:** the human decided (D-27, 2026-11-06) to prioritize `INV-16` ahead of `INV-9` and `INV-7`. Then (D-29, 2026-11-06) the
-  human chose to build **sizes chosen per product (`INV-18`) first**: `INV-16` stayed `Ready` and waited. Its card keeps the 4-size
-  Denim Jacket (S · M · L · XL) as its example; since `INV-18` the jacket is simply given those sizes.
-- **What changes now that it resumes (for the tech-lead, who replans the Technical work, and the product-owner):** the category no longer
-  decides a product's sizes, so the grid's sizes are the product's own list, and the **category lock** (Edit product) is replaced by
-  a lock per size ("a size with saved quantities can't be taken off a product", reason "has material quantities"); on the form, taking
-  a size off while quantities are typed asks "Take XL off this product?" (both now written into INV-16's cards, from INV-18's UI
-  card). The card's Technical work (built on category
-  sizes: step INV-16-e and the `ProductSizeLock` change) must be replanned before the build; nothing else in the card changes.
-- **Links:** depends on the colour and size work already done (`INV-1`, `INV-2`) and sits downstream of the costing domain's BOM rules.
-
 #### `INV-21` · Material stock per colour
 - **Type:** Feature | **Priority:** Must | **Size:** L, to be sized by the tech-lead and probably split | **Status:** `Ready`: UI card `Approved` and development card `Ready` (both 2026-11-08). The human chose to keep it as **one card**; the tech-lead cuts the build into steps.
-- **Place in the order (decided by the human, 2026-11-08):** right after `INV-16`, before `INV-17`: `INV-16` → `INV-21` → `INV-17` → `INV-9` → `INV-7`. `INV-16`'s steps a to d are approved and e is being built, so this stays one contained change on top of `INV-16`.
+- **Place in the order (decided by the human, 2026-11-08):** right after `INV-16`, before `INV-17`: `INV-16` → `INV-21` → `INV-17` → `INV-9` → `INV-7`. `INV-16` is done (2026-11-09), so this is one contained change on top of it.
 - **What it brings:** a material can be set to **stock per colour**: its quantity on hand is kept for each colour (Indigo 250 m, Black 40 m), instead of the workshop making one material per colour ("Denim 12oz Indigo", "Denim 12oz Black") as it does today. A product's colour then uses the stock of the same colour of the material. Materials that don't vary by colour (buttons, thread) stay as they are.
 - **Decided by the human (2026-11-08, D-30):**
   1. A material has a setting the user chooses: **stock per colour**, or **default** (as today: one stock for all colours). Buttons, thread and the like stay one material on the default setting; fabric and the like can be set to per colour.
@@ -286,7 +258,7 @@
   Finishing.", "… and joined batch B-0155.", "1 unit of Denim Jacket · Indigo S put in stock."), and the note's last sentence is dropped
   when all units of a batch move; (3) batches of one start that already sit side by side in a phase are **left as they are** (nothing
   is merged), and the next move into that phase joins the lowest-numbered one (written into AC-5 and "How it works today").
-- **Next:** the tech-lead adds the Technical work and sizes it, but only when INV-17's turn comes (`INV-18` → `INV-16` → `INV-17`).
+- **Next:** the tech-lead adds the Technical work and sizes it, but only when INV-17's turn comes (`INV-16` done → `INV-21` → `INV-17`).
 
 > [!abstract] Unscheduled Idea
 > **Production for the shelf:** A batch with no attached client moving through production phases, ending with "Put in stock". *(No ID assigned yet.)* Since 2026-11-01 this is no longer an idea apart: it is how Progress works, and it is now `INV-5`'s rewritten card.
@@ -301,6 +273,7 @@
 ## 🏛️ Decisions That Shape the Backlog
 
 > [!summary] Core Operational Rules
+> - **D-31 (2026-11-09, human):** INV-16 accepted without a click-through, and the decisions of its UX review: a blank switch to By colour and size opens the first colour; the Composition table's footer badge follows the Products list badge ("16–112 units", "0–112 units" in warning, "Can't produce" only when best is 0); a One size product's field is named "Indigo, One size"; a line with no material can't be switched ("Choose a material first."); taking a colour off while quantities exist shows a quiet line under Colours, with no question; pressing By colour and size and straight back restores the typed quantity and asks nothing; the Capacity by colour skeleton stays as built; the summary's "only" rule and the Capacity by colour caption stay as polish (INV-25). Order: `INV-21` → `INV-17` → `INV-9` → `INV-7`.
 > - **D-30 (2026-11-08, human):** materials get **stock per colour** (a per-material setting, default = one stock as today), matched to product colours by colour, with an optional **cost per colour**, per-colour restock, no merge of existing per-colour-named materials, and a simple per-colour stock screen. Registered as `INV-21` (`Idea`). **Order decided the same day: `INV-16` → `INV-21` → `INV-17` → `INV-9` → `INV-7`.** Also decided: cost per colour only exists with stock per colour; switching on asks for the colour that gets the existing stock; switching off asks for confirmation (and which cost to keep); a missing colour shows 0 can produce with "Add <colour> to this material"; the free-text Colour field stays a plain description; one restock covers several colours; one reorder level per material, applied to each colour. Also decided: each variant takes from its own colour's stock on "same for every variant" lines; a colour leaves a material only while its stock is 0 and it has no history; inventory value is the sum of quantity × that colour's cost; no hint for look-alike materials. All twelve questions are settled. **On the UI card (same day):** the material is Low when any colour is at or under the level and Out only when every colour is 0 (the dashboard counts materials and names the colours); a new colour on a cost-per-colour material needs its cost; the restock price checkbox stays checked by default. The UI card was validated by the human the same day (`Approved`). This lifts the "can be added later" line of ADR-0027's rejected alternatives.
 > - **D-29 (2026-11-06, human):** sizes chosen per product and managed in Settings, like units, come **first** as `INV-18` (an `Idea`; the human's answer on `INV-16`). `INV-16` stays `Ready` but is **on hold until `INV-18` is done**; its Technical work is replanned then (category lock → "a size with cells can't be taken off", sizes from the product's own list). Order: `INV-18` → `INV-16` → `INV-17` → `INV-9` → `INV-7`. **Carried out: INV-18 done 2026-11-07 (`e069997`).**
 > - **D-28 (2026-11-06):** `INV-17` (per-unit QR codes) is registered and placed after `INV-16`, before `INV-9`: `INV-16` → `INV-17` → `INV-9` → `INV-7`. Scope: unit QR codes **alongside** batch tracking; both modes supported, the user chooses. The interaction model was decided the same day (see Item Details). Development card approved (`Ready`) 2026-11-06: one L card; toasts as written; old side-by-side batches of a start are left as they are and the next move joins the lowest-numbered one.

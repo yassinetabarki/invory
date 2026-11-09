@@ -1,6 +1,6 @@
 # Invory — project status report
 
-> Owner: **product-owner** (updated at every phase boundary and after every accepted story) · Report date: **2026-11-06**
+> Owner: **product-owner** (updated at every phase boundary and after every accepted story) · Report date: **2026-11-09**
 > Sources: every plan in [docs/plans/](plans/README.md), the [backlog archive](archive/backlog-2026-10-14.md) and `git log` on `main`.
 > Gate results: run by the main session on 2026-10-14 for this first report. Later updates quote the tech-lead's latest delivery report
 > (the product-owner never runs gates).
@@ -41,9 +41,13 @@ Settings › Labels and its Ticket size. **INV-13 "Search products, order lines 
 yourself; `2575dd0` … `cbdae79`, docs `194534a`, `c8c4716`, browser golden path `aeee262`): the Restocks page, New restock (colour ×
 size grid, scan or type a barcode), the restock detail, Undo restock, and "Restock" on the product page. **INV-18 "Sizes chosen per
 product, managed in Settings" is `Done`** (accepted 2026-11-07 without a click-through, UX defects fixed; one squashed code commit
-`e069997`, docs `6954983`): one size list in Settings, each product picks its own sizes, the category only suggests them. **Next:
-INV-16** "Material use per colour and size" (card `Ready`; its Technical work is replanned by the tech-lead on per-product sizes,
-ADR-0028, before the build), then INV-21 "Material stock per colour" (UI card `Approved` and development card `Ready`, both 2026-11-08, D-30), then INV-17 "Per-unit QR codes" (UI card `Approved` and development card `Ready`, both 2026-11-06, D-28),
+`e069997`, docs `6954983`): one size list in Settings, each product picks its own sizes, the category only suggests them. **INV-16
+"Material use per colour and size" is `Done`** (accepted 2026-11-09 without a click-through; code `e01b2ea`, docs `7548753`): a
+composition line is Same for every variant or By colour and size; the product page shows "Can produce now" as guaranteed beside best,
+with Capacity by colour; cost and margin read as ranges; Start batch and Undo batch work per colour and size; a size with saved
+quantities can't be taken off. Quality per the tech-lead's delivery report of 2026-11-08 (before its fix round): composer test 3,079
+passed, Vitest 1,573, PostgreSQL parity 3,167, `types:check` at its known 21-error baseline (INV-20), load test within budget; no
+browser check was done. **Next:** INV-21 "Material stock per colour" (UI card `Approved` and development card `Ready`, both 2026-11-08, D-30), then INV-17 "Per-unit QR codes" (UI card `Approved` and development card `Ready`, both 2026-11-06, D-28),
 then INV-9 "Print barcode labels" (card `Ready`), then INV-7.
 **Phase 5: Customer orders** (started 2026-10-15, D-12; on hold since 2026-10-24). **Done:** S-48 (accepted 2026-10-15), and **F-41, S-49
 and S-53** (accepted 2026-10-21 after your one click-through; built in one build and landed on `main` together, `e99615e` … `8ab9df8`,
@@ -66,6 +70,21 @@ Phases 6, 7 and 8 are on hold too (D-20).
 ---
 
 ## 2. Decisions needed from you
+
+**Decided on 2026-11-09 (D-31): INV-16 accepted, without a click-through.** You accepted "Material use per colour and size" and it is
+committed (code `e01b2ea`, docs `7548753`; tech-lead verdict APPROVED; the 10-step click-through script was not run). **Decided with
+the designer's UX review:** a blank switch to By colour and size opens the first colour; the Composition table's footer badge follows
+the Products list badge ("16–112 units", "0–112 units" in warning, "Can't produce" only when best is 0); a One size product's grid field
+is "Indigo, One size"; a line with no material can't be switched ("Choose a material first."); taking a colour off while quantities exist
+shows a quiet line under Colours; switching straight back restores the typed quantity and asks nothing; the Capacity by colour skeleton
+stays as built; the summary's "only" rule and the Capacity by colour caption stay as polish. **Open gaps you accepted, none blocking**
+(all collected in tech debt INV-25): the read-only grid's term/value list, the Sheet's first focus, the line-level error naming its
+cell, below-cost screen-reader text, "Edit grid for <material>", "Short by less than 0.0001 m", link target size, the Sheet's close X
+size, the disabled state's timing, the INV-18 focus gap, and 320 px wrapping still to be checked in a browser (phone width, 44 px and
+dark mode were never seen on screen). Tech debt proposed by the tech-lead on 2026-11-08, outside the order: INV-22 (list load time on a
+throttled host), INV-23 (mirrored tie-break; Show and Edit read the cells twice), INV-24 (`ProductionCutMaterialFactory` and `unit_id`).
+**Dev database `laravel`:** the INV-16 migration is applied; its one product "JEBA" has a By colour and size line of 21 cells (your own
+data; nothing is seeded or reset). **Next: INV-21, then INV-17, INV-9, INV-7.** Next free ID: INV-26; next decision: D-32.
 
 **Decided on 2026-11-08 (D-30): INV-21 "Material stock per colour" registered, its UI card `Approved`.** A material can be set to
 **stock per colour** (Denim 12oz with Indigo 250 m and Black 40 m) or stay on one stock for all colours (buttons, thread). Colours come
@@ -421,7 +440,7 @@ All phase branches (`phase/1-materials`, `phase/2-ui-first-preview`, `phase/3-pe
 3. Done: orders per colour and size was settled and built within INV-5/INV-13.
 4. Done 2026-10-31: INV-2's development card (stock per colour and size) was built and accepted, with the rule "a colour with stock
    can't be taken off a product". INV-8 was built and accepted on 2026-11-01. **INV-3 is `Done`** (2026-11-06); `INV-18` (sizes
-   per product, D-29) is `Done` (2026-11-07, `e069997`); INV-16 (card `Ready`, Technical work to be replanned on ADR-0028) is next, then INV-21 (material stock per colour; UI card `Approved` and development card `Ready`, both 2026-11-08, D-30), then INV-17 (UI card `Approved` and development card `Ready`, both 2026-11-06, D-28; Technical work when its turn comes),
+   per product, D-29) is `Done` (2026-11-07, `e069997`); INV-16 is `Done` (2026-11-09, `e01b2ea`, accepted without a click-through); next is INV-21 (material stock per colour; UI card `Approved` and development card `Ready`, both 2026-11-08, D-30), then INV-17 (UI card `Approved` and development card `Ready`, both 2026-11-06, D-28; Technical work when its turn comes),
    then INV-9 (card `Ready`), then INV-7.
 5. Product-owner, at the next grooming: INV-7 (bigger tap targets on the Settings pages, a Could) gets its card when you ask.
 6. Done 2026-10-24: the process documents describe the new way of working (UI card, then development card, INV IDs; `e2be378`).

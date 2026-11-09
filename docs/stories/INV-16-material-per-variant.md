@@ -5,7 +5,7 @@ type: feature
 phase: Colour × size variants
 priority: Must
 size: L
-status: Planned
+status: Done
 created: 2026-11-06
 tags:
   - story
@@ -54,7 +54,7 @@ price TND 89.000. Button, thread and label are **Same for every variant**: Metal
 The Indigo line has cells under Indigo only, the Black line under Black only. Can produce, per variant: Indigo S 112 · M 112 · L 112 ·
 XL 103; Black S 22 · M 20 · L 18 · XL 16.
 
-- [ ] **AC-1 · Choose how a line counts.** In Add product and in Edit product, each composition line keeps its material, waste % and
+- [x] **AC-1 · Choose how a line counts.** ✅ 2026-11-09 · e01b2ea In Add product and in Edit product, each composition line keeps its material, waste % and
   notes and gains the control **Same for every variant** (selected on every line that exists today and on a new line) and **By colour and size**.
   - **Same for every variant** shows today's quantity field and unit, unchanged.
   - **By colour and size** replaces the field with a summary and **Edit grid**: "4 of 8 cells · Indigo only" (a line with cells in
@@ -83,7 +83,7 @@ XL 103; Black S 22 · M 20 · L 18 · XL 16.
     quantities you set for One size across its materials." with **Keep One size** and **Take One size off**.
   - On a phone the control is full width under the line, and every field and button is 44 px high.
 
-- [ ] **AC-2 · The quantity grid.** **Edit grid** opens a side panel titled "Denim 12oz Indigo", with the composition list still
+- [x] **AC-2 · The quantity grid.** ✅ 2026-11-09 · e01b2ea **Edit grid** opens a side panel titled "Denim 12oz Indigo", with the composition list still
   behind it, "Quantity by colour and size, in m. A blank cell means that colour and size doesn't use this material.", **Find colour**
   (filters the product's own colours as you type), "1 of 2 colours used", **Expand all** and **Collapse all**.
   - One row per colour, in the product's colour order, closed except any colour that already has a cell; when no colour has a cell
@@ -100,7 +100,7 @@ XL 103; Black S 22 · M 20 · L 18 · XL 16.
     the bottom; nothing scrolls sideways at 320 px. With 20 colours and 11 sizes the list scrolls and **Find colour** narrows it.
   - Read-only: on the product page, **View grid** (see AC-4) opens the same panel with the cells shown and none editable.
 
-- [ ] **AC-3 · Saving, and keeping the grid true.**
+- [x] **AC-3 · Saving, and keeping the grid true.** ✅ 2026-11-09 · e01b2ea
   - **Save product**, on Add product and on Edit product, saves the page and its grids together; the toast reads "Product
     updated." on Edit and "Product created." on Add.
   - Refused, nothing saved: a cell that isn't a number from 0 to 1,000,000 with up to 4 decimals, under that cell: "Enter a number
@@ -120,7 +120,7 @@ XL 103; Black S 22 · M 20 · L 18 · XL 16.
     The three category locks are gone, since the category no longer decides sizes (INV-18).
   - A material used by any line, in either mode, can't be deleted and its unit can't change, as today.
 
-- [ ] **AC-4 · Guaranteed and best on the product page.** Opening the Denim Jacket:
+- [x] **AC-4 · Guaranteed and best on the product page.** ✅ 2026-11-09 · e01b2ea Opening the Denim Jacket:
   - **Can produce now** reads "16 units" with "from current stock, any mix of colours and sizes." ("any mix of colours" for one size).
   - The bottleneck callout reads "Bottleneck: Denim 12oz Black (Black, size XL)." and "40 m in stock covers 16 units of Black,
     size XL — the smallest across every colour and size.", then in a quieter line "Best case: 112 units, in Indigo — limited there by
@@ -148,7 +148,7 @@ XL 103; Black S 22 · M 20 · L 18 · XL 16.
     **View grid** link; waste % and the material's stock stay single values.
   - The guaranteed and best figures and the bottleneck are exact: 40 ÷ 2.42 gives 16, never rounded up.
 
-- [ ] **AC-5 · Cost and margin as a range.** Wherever one unit cost or margin stood, the Denim Jacket shows its lowest to highest:
+- [x] **AC-5 · Cost and margin as a range.** ✅ 2026-11-09 · e01b2ea Wherever one unit cost or margin stood, the Denim Jacket shows its lowest to highest:
   - Cost breakdown: Materials "TND 18.384–23.994", Unit cost "TND 33.884–39.494", Margin "TND 49.506–55.116 · 55.62–61.93%"; Labor
     "TND 12.000" and Overhead "TND 3.500" stay single. The hero **Unit cost** reads "TND 33.884–39.494" with "varies by colour and
     size" in place of "same for every size". On a phone each range wraps onto its own line under its label.
@@ -162,7 +162,7 @@ XL 103; Black S 22 · M 20 · L 18 · XL 16.
     place reads exactly as today: "TND 35.754", "112 units".
   - Money keeps its currency's decimals (TND 3); every figure comes from the server and the screen computes none.
 
-- [ ] **AC-6 · Start batch and Undo batch on a mixed grid.**
+- [x] **AC-6 · Start batch and Undo batch on a mixed grid.** ✅ 2026-11-09 · e01b2ea
   - In the Start batch window, "Can produce now" shows the guaranteed figure (16) in the same words as today.
   - Start batch of Indigo M 6 · Indigo L 10 · Black S 5 (21 units) takes 33.8800 m Denim 12oz Indigo (6 × 1.98 + 10 × 2.2), 8.8000 m
     Denim 12oz Black (5 × 1.76), 168 pc button, 2,646 m thread and 21 pc label, and starts three batches In cutting. "Can produce
@@ -178,7 +178,7 @@ XL 103; Black S 22 · M 20 · L 18 · XL 16.
     of the Black denim. Undoing all three batches gives back exactly what the start took. On a phone the message wraps full width
     above the disabled button and the "Short by" rows stay above it.
 
-- [ ] **AC-7 · Nothing changes where nothing varies, and the other screens follow.**
+- [x] **AC-7 · Nothing changes where nothing varies, and the other screens follow.** ✅ 2026-11-09 · e01b2ea
   - A product with no **By colour and size** line keeps today's figures and words everywhere: the Denim Jacket with every line
     **Same for every variant** reads 112, "TND 35.754", "Limited by Metal shank button 17mm" and "from current stock, any mix of
     sizes". Existing products are not touched when this ships.
