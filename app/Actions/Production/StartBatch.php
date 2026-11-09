@@ -14,9 +14,10 @@ use App\Models\ProductionBatch;
 use App\Models\ProductionBatchMove;
 use App\Models\ProductionCounter;
 use App\Models\ProductionCut;
+use App\Models\ProductionCutVariant;
+use App\Models\ProductionCutVariantMaterial;
 use App\Models\User;
 use App\Services\Orders\CuttingPreview;
-use App\Services\Orders\OrderMessages;
 use App\Services\Production\ProductionMessages;
 use App\Services\Products\ProductSizes;
 use Illuminate\Support\Facades\DB;
@@ -24,12 +25,13 @@ use Illuminate\Validation\ValidationException;
 use LogicException;
 
 /**
- * Start batch (INV-5-c, ADR-0023): takes the product's materials out of stock for the whole total, as one production cut, and writes
- * one batch per colour and size with units, In cutting since today. One transaction, all or nothing.
+ * Start batch (INV-5-c, ADR-0023; per colour and size since INV-16, ADR-0027): takes the product's materials out of stock for the whole
+ * grid, as one production cut with a row per colour and size and what each unit of it took, and writes one batch per colour and size
+ * with units, In cutting since today. One transaction, all or nothing.
  *
  * Lock order (ADR-0023 decision 6): the workshop's production counter, the product (the lock Update product, Update stock and Delete
- * product take), then its materials in ascending id (inside {@see CuttingPreview::plan()}). The plan is made on the stock read under
- * those locks, with ADR-0014's maths, so the window and the refusal can't disagree; every figure written is the plan's.
+ * product take), then its materials in ascending id, then the cells of its composition (inside {@see CuttingPreview::plan()}). The
+ * plan is made on the stock read under those locks, so the window and the refusal can't disagree; every figure written is the plan's.
  */
 final readonly class StartBatch
 {
@@ -66,6 +68,7 @@ final readonly class StartBatch
 
             // Colours in list order, sizes in size order: the order the batches are numbered in.
             $variants = [];
+            $cutGrid = [];
 
             foreach ($colours as $colour) {
                 foreach ($sizes as $size) {
@@ -73,6 +76,7 @@ final readonly class StartBatch
 
                     if ($units > 0) {
                         $variants[] = ['colour' => $colour, 'size' => $size, 'units' => $units];
+                        $cutGrid[$colour->id][$size->id] = $units;
                     }
                 }
             }
@@ -83,15 +87,35 @@ final readonly class StartBatch
                 throw ValidationException::withMessages(['units' => ProductionMessages::nothingToStart()]);
             }
 
-            ['plan' => $plan, 'materials' => $materials] = $this->preview->plan($product, $total, lock: true);
+            ['plan' => $plan, 'materials' => $materials] = $this->preview->plan($product, $cutGrid, lock: true);
 
             if (! $plan->allowed) {
-                throw ValidationException::withMessages(['units' => OrderMessages::notEnoughStock($plan)]);
+                throw ValidationException::withMessages(['units' => ProductionMessages::notEnoughStock($plan)]);
             }
 
             $cut = new ProductionCut(['units' => $total, 'units_returned' => 0]);
             $cut->forceFill(['workshop_id' => $product->workshop_id, 'product_id' => $product->id, 'user_id' => $actor->id])->save();
             $today = today()->toDateString();
+            $now = now();
+
+            // What each colour and size took per unit (ADR-0027 decision 7): the only source of Undo batch for a start.
+            foreach ($plan->variants as $group) {
+                $row = new ProductionCutVariant(['colour_id' => $group->colourId, 'size_id' => $group->sizeId, 'units' => $group->units, 'units_returned' => 0]);
+                $row->forceFill(['workshop_id' => $cut->workshop_id, 'production_cut_id' => $cut->id])->save();
+
+                ProductionCutVariantMaterial::query()->insert(array_map(
+                    static fn (int $materialId, string $perUnit): array => [
+                        'workshop_id' => $cut->workshop_id,
+                        'production_cut_variant_id' => $row->id,
+                        'material_id' => $materialId,
+                        'quantity_per_unit' => $perUnit,
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ],
+                    array_keys($group->perUnit),
+                    array_values($group->perUnit),
+                ));
+            }
 
             foreach ($plan->takes as $take) {
                 $material = $materials[$take->materialId];
@@ -112,7 +136,7 @@ final readonly class StartBatch
                 $remembered = $cut->materials()->make([
                     'material_id' => $material->id,
                     'unit_id' => $material->unit_id,
-                    'quantity_per_unit' => $take->perUnitExact,
+                    'quantity_per_unit' => null, // every new cut remembers its amounts per colour and size (ADR-0027 decision 7), also when nothing varies
                     'quantity_taken' => $take->needed,
                 ]);
                 $remembered->workshop_id = $cut->workshop_id;

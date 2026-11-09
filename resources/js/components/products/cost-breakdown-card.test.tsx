@@ -6,6 +6,7 @@ import {
     denimJacket,
     denimJacketBelowCost,
     denimJacketGiveaway,
+    denimJacketVarying,
     jacketWithoutComposition,
 } from '@/test/fixtures/products';
 import { resetInertiaMock, setPageProps } from '@/test/inertia';
@@ -73,6 +74,23 @@ describe('<CostBreakdownCard>', () => {
         expect(valueOf('Labor')).toHaveTextContent('TND 12.000');
         expect(valueOf('Selling price')).toHaveTextContent('TND 89.000');
         expect(valueOf('Margin')).toHaveTextContent('TND 53.246 · 59.83%');
+    });
+
+    it('shows the lowest to highest of a product that varies, with labor and overhead single (INV-16)', () => {
+        setPageProps({
+            app: { currency: 'TND', locale: 'en', today: '2026-11-08' },
+        });
+        renderCard(denimJacketVarying);
+
+        expect(
+            valueOf('Materials (5 lines, waste included)'),
+        ).toHaveTextContent('TND 18.384–23.994');
+        expect(valueOf('Labor')).toHaveTextContent(/^TND 12.000$/);
+        expect(valueOf('Overhead')).toHaveTextContent(/^TND 3.500$/);
+        expect(valueOf('Unit cost')).toHaveTextContent('TND 33.884–39.494');
+        expect(valueOf('Margin')).toHaveTextContent(
+            'TND 49.506–55.116 · 55.62–61.93%',
+        );
     });
 
     it('keeps the Overhead row and shows a zero overhead as TND 0.000', () => {

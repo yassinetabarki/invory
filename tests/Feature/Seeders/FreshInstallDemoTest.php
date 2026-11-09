@@ -42,11 +42,11 @@ it('a fresh install shows the demo workshop', function () {
 
     expect(pageProp($products, 'products.meta.total'))->toBe(7)
         ->and($jacket['name'])->toBe('Denim Jacket')
-        ->and($jacket['cost']['unit_cost'])->toBe('35.7540')
+        ->and($jacket['cost']['unit_cost'])->toBe(['min' => '35.7540', 'max' => '35.7540'])
         ->and($jacket['capacity']['max_producible'])->toBe(112)
         ->and($jacket['capacity']['bottleneck']['name'])->toBe('Metal shank button 17mm')
         ->and($jacket['selling_price'])->toBe('89.0000')
-        ->and($jacket['margin']['percent'])->toBe('59.83');
+        ->and($jacket['margin']['percent'])->toBe(['min' => '59.83', 'max' => '59.83']);
 
     // Sales: 60 in all (the log defaults to the last 30 days, so ask for the year).
     $sales = $this->get(route('sales.index', ['period' => 'this_year']))->assertOk();

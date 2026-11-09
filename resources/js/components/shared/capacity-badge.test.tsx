@@ -98,6 +98,42 @@ describe('<CapacityBadge>', () => {
         expect(new Set(icons.map((icon) => icon.innerHTML)).size).toBe(3);
     });
 
+    it.each([
+        [
+            'guaranteed below best',
+            16,
+            112,
+            '16–112 units',
+            'range',
+            'bg-success',
+        ],
+        [
+            'guaranteed 0, best above',
+            0,
+            112,
+            '0–112 units',
+            'short',
+            'bg-warning',
+        ],
+        ['best 0', 0, 0, "Can't produce", 'zero', 'bg-danger'],
+        ['equal ends', 112, 112, '112 units', 'available', 'bg-success'],
+        [
+            'no best given',
+            112,
+            undefined,
+            '112 units',
+            'available',
+            'bg-success',
+        ],
+    ])('reads %s as "%s"', (_, value, best, label, state, tone) => {
+        render(<CapacityBadge value={value} best={best} />);
+
+        const badge = screen.getByText(label);
+
+        expect(badge).toHaveAttribute('data-capacity', state);
+        expect(badge).toHaveClass(tone);
+    });
+
     it('accepts an extra class name', () => {
         render(<CapacityBadge value={3} className="text-base" />);
 

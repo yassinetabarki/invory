@@ -69,6 +69,7 @@ class UpdateProductRequest extends FormRequest
     {
         return [
             fn (Validator $validator) => StoreProductRequest::oneSizeAlone($this, $validator),
+            fn (Validator $validator) => StoreProductRequest::quantityGrid($this, $validator),
             $this->colourLock(...),
             $this->sizeLock(...),
             $this->renameClash(...),

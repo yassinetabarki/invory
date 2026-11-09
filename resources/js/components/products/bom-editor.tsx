@@ -1,11 +1,17 @@
 import { Info, Plus } from 'lucide-react';
 import { useEffect, useId, useRef, useState } from 'react';
 import { BOM_GRID, BomEditorRow } from '@/components/products/bom-editor-row';
-import { errorsForRow, newBomRow } from '@/components/products/bom-rows';
-import type { BomRow } from '@/components/products/bom-rows';
+import {
+    cellErrorsForRow,
+    errorsForRow,
+    newBomRow,
+} from '@/components/products/bom-rows';
+import type { BomRow, BomRowFields } from '@/components/products/bom-rows';
+import { QuantityGridSheet } from '@/components/products/quantity-grid-sheet';
 import { Button } from '@/components/ui/button';
+import { EMPTY_VALUE } from '@/lib/format';
 import { cn } from '@/lib/utils';
-import type { MaterialOption, ProductComponentFormRow } from '@/types/domain';
+import type { Colour, MaterialOption, SizeOption } from '@/types/domain';
 
 type BomEditorProps = {
     rows: BomRow[];
@@ -20,6 +26,10 @@ type BomEditorProps = {
      * `components.N.field` for a row's field (`N` is the row's position, from 0).
      */
     errors: Record<string, string | undefined>;
+    /** The colours ticked on the form, in list order: the colours of every grid. */
+    colours: readonly Colour[];
+    /** The sizes pressed on the form, in list order: the sizes of every grid. */
+    sizes: readonly SizeOption[];
     onChange: (rows: BomRow[]) => void;
 };
 
@@ -32,6 +42,8 @@ export function BomEditor({
     rows,
     knownMaterials = [],
     errors,
+    colours,
+    sizes,
     onChange,
 }: BomEditorProps) {
     const idPrefix = useId();
@@ -43,6 +55,8 @@ export function BomEditor({
     const containerRef = useRef<HTMLElement>(null);
     // The picker that is open (one at a time), by row uid.
     const [openUid, setOpenUid] = useState<string | null>(null);
+    // The row whose quantity grid is open, by row uid.
+    const [gridUid, setGridUid] = useState<string | null>(null);
     // Where focus goes after the next render (a reorder or a removal moves
     // the focused element).
     const pendingFocus = useRef<string | null>(null);
@@ -64,7 +78,7 @@ export function BomEditor({
         }
     });
 
-    function updateRow(uid: string, patch: Partial<ProductComponentFormRow>) {
+    function updateRow(uid: string, patch: Partial<BomRowFields>) {
         onChange(
             rows.map((row) => (row.uid === uid ? { ...row, ...patch } : row)),
         );
@@ -131,6 +145,12 @@ export function BomEditor({
         row.material_id === '' ? [] : [row.material_id],
     );
     const countLabel = `${rows.length} ${rows.length === 1 ? 'material' : 'materials'}`;
+    const gridIndex = rows.findIndex((row) => row.uid === gridUid);
+    const gridRow = gridIndex === -1 ? null : rows[gridIndex];
+    const gridMaterial =
+        gridRow && gridRow.material_id !== ''
+            ? catalog.get(gridRow.material_id)
+            : undefined;
 
     return (
         <section
@@ -211,6 +231,11 @@ export function BomEditor({
                                         )
                                     }
                                     errors={errorsForRow(errors, index)}
+                                    cellErrors={cellErrorsForRow(errors, index)}
+                                    colours={colours}
+                                    sizes={sizes}
+                                    gridOpen={gridUid === row.uid}
+                                    onEditGrid={() => setGridUid(row.uid)}
                                     pickerOpen={openUid === row.uid}
                                     onPickerOpenChange={(open) =>
                                         setOpenUid((current) =>
@@ -253,6 +278,21 @@ export function BomEditor({
                     when you save.
                 </p>
             </div>
+
+            {gridRow && (
+                <QuantityGridSheet
+                    title={gridMaterial?.name ?? 'New material'}
+                    unit={gridMaterial?.unit ?? EMPTY_VALUE}
+                    colours={colours}
+                    sizes={sizes}
+                    grid={gridRow.quantities}
+                    errors={cellErrorsForRow(errors, gridIndex)}
+                    onChange={(quantities) =>
+                        updateRow(gridRow.uid, { quantities })
+                    }
+                    onClose={() => setGridUid(null)}
+                />
+            )}
         </section>
     );
 }

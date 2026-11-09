@@ -4,11 +4,16 @@ declare(strict_types=1);
 
 namespace App\Http\Resources;
 
+use App\Domain\Costing\LineCost;
 use App\Domain\Sizes\SizeLine;
+use App\Enums\ComponentQuantityMode;
 use App\Models\Product;
 use App\Models\ProductComponent;
+use App\Models\ProductComponentQuantity;
 use App\Models\Size;
+use App\Services\Costing\ProductCosting;
 use App\Services\Products\ProductSizes;
+use App\Services\Products\ProductSizeSet;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use LogicException;
@@ -26,10 +31,11 @@ final class ProductResource extends JsonResource
     public function toArray(Request $request): array
     {
         $costing = $this->costing;
-        $margin = $costing->margin;
         $sizes = app(ProductSizes::class);
         $set = $sizes->of($this->resource);
         $labels = array_values($set->sizes->map(fn (Size $size): string => $size->label)->all());
+        // The position of each colour and each size in the product's lists: the order of the cells of a By colour and size line.
+        $cellOrder = ['colours' => $this->colours->pluck('id')->flip()->all(), 'sizes' => $set->sizes->pluck('id')->flip()->all()];
 
         return [
             'id' => $this->id,
@@ -52,19 +58,99 @@ final class ProductResource extends JsonResource
             'overhead_cost' => $this->overhead_cost,
             'selling_price' => $this->selling_price,
             'cost' => (new CostBreakdownResource($this->resource))->resolve($request),
-            'margin' => $margin === null ? null : ['amount' => $margin->amount, 'percent' => $margin->percent],
+            'margin' => $costing->marginRange(),
             'capacity' => (new CapacityResource($this->resource))->resolve($request),
+            'capacity_by_colour' => $this->capacityByColour($request, $costing, $set),
             'colours' => ColourResource::collection($this->colours)->resolve($request),
             'components' => $this->components
                 ->values()
-                ->map(fn (ProductComponent $component, int $index): array => (new ProductComponentResource(
-                    $component,
-                    $costing->result->cost->lines[$index] ?? throw new LogicException('The costing has one line per component.'),
-                    $index + 1,
-                ))->resolve($request))
+                ->map(fn (ProductComponent $component, int $index): array => $this->line($request, $component, $index, $costing, $cellOrder))
                 ->all(),
             'created_at' => $this->created_at->toIso8601String(),
             'updated_at' => $this->updated_at->toIso8601String(),
         ];
+    }
+
+    /**
+     * What each colour can make, in the product's colour order; null unless a line is By colour and size. A colour that uses no material
+     * comes back with every figure null ("No composition"). The colours are the product's own (the costing loads them), the binding size
+     * is one of its sizes (null for a "One size" product) and the bottleneck is a material of its lines: nothing here queries.
+     *
+     * @return list<array<string, mixed>>|null
+     */
+    private function capacityByColour(Request $request, ProductCosting $costing, ProductSizeSet $set): ?array
+    {
+        $variants = $costing->variants;
+
+        if ($variants === null || ! $variants->varies) {
+            return null;
+        }
+
+        $byColour = [];
+
+        foreach ($variants->colours as $capacity) {
+            $byColour[$capacity->colourId] = $capacity;
+        }
+
+        $materials = $this->components->mapWithKeys(static fn (ProductComponent $component): array => [$component->material_id => $component->material]);
+        $rows = [];
+
+        foreach ($this->colours as $colour) {
+            $capacity = $byColour[$colour->id] ?? null;
+
+            if ($capacity === null) {
+                continue;
+            }
+
+            $size = $set->oneSize || $capacity->bindingSizeId === null ? null : $set->sizes->firstWhere('id', $capacity->bindingSizeId);
+            $material = $capacity->bottleneckMaterialId === null ? null : $materials->get($capacity->bottleneckMaterialId);
+
+            $rows[] = (new ColourCapacityResource($capacity, $colour, $size, $material))->resolve($request);
+        }
+
+        return $rows;
+    }
+
+    /**
+     * One line of the composition. A product that varies by colour and size is costed per variant, and the costing the product carries
+     * is its binding variant's, which holds the `same` lines and only the By colour and size lines that variant uses: a `same` line is
+     * found there by its material (its figures are the same in every variant), and a By colour and size line has no figures of its own.
+     *
+     * @param  array{colours: array<int, int>, sizes: array<int, int>}  $cellOrder
+     * @return array<string, mixed>
+     */
+    private function line(Request $request, ProductComponent $component, int $index, ProductCosting $costing, array $cellOrder): array
+    {
+        if ($component->quantity_mode === ComponentQuantityMode::ByVariant) {
+            $line = null;
+            $isBottleneck = $costing->result->capacity->bottleneckMaterialId === $component->material_id;
+        } else {
+            $line = collect($costing->result->cost->lines)->first(fn (LineCost $cost): bool => $cost->materialId === $component->material_id)
+                ?? throw new LogicException('The costing has a line for every Same for every variant component.');
+            $isBottleneck = $line->isBottleneck;
+        }
+
+        return (new ProductComponentResource($component, $line, $index + 1, $isBottleneck, $this->cells($component, $cellOrder)))->resolve($request);
+    }
+
+    /**
+     * The cells of a By colour and size line, colours in the product's list order, then sizes in theirs. A `same` line has none (and
+     * its cells are not loaded unless the product has a By colour and size line).
+     *
+     * @param  array{colours: array<int, int>, sizes: array<int, int>}  $cellOrder
+     * @return list<array{colour_id: int, size_id: int, quantity: string}>
+     */
+    private function cells(ProductComponent $component, array $cellOrder): array
+    {
+        if ($component->quantity_mode !== ComponentQuantityMode::ByVariant) {
+            return [];
+        }
+
+        $position = fn (ProductComponentQuantity $cell): array => [$cellOrder['colours'][$cell->colour_id] ?? PHP_INT_MAX, $cellOrder['sizes'][$cell->size_id] ?? PHP_INT_MAX];
+
+        return array_values($component->quantities
+            ->sort(fn (ProductComponentQuantity $a, ProductComponentQuantity $b): int => $position($a) <=> $position($b))
+            ->map(fn (ProductComponentQuantity $cell): array => ['colour_id' => $cell->colour_id, 'size_id' => $cell->size_id, 'quantity' => $cell->quantity])
+            ->all());
     }
 }

@@ -4,16 +4,23 @@ import { BomTable } from '@/components/products/bom-table';
 import { EmptyState } from '@/components/shared/empty-state';
 import { Button } from '@/components/ui/button';
 import type {
-    Decimal,
+    Colour,
+    DecimalRange,
     MaterialRef,
     ProductComponentLine,
+    SizeOption,
 } from '@/types/domain';
 
 type CompositionCardProps = {
     lines: ProductComponentLine[];
-    materialsTotal: Decimal;
+    materialsTotal: DecimalRange;
     capacity: number | null;
+    /** `capacity.best` (INV-16); defaults to `capacity`. */
+    best?: number | null;
     materialHref: (material: MaterialRef) => string;
+    /** The product's colours and sizes, in list order (View grid). */
+    colours: readonly Colour[];
+    sizes: readonly SizeOption[];
     /** The product's edit page, where the composition is changed. */
     editHref: string;
 };
@@ -23,7 +30,10 @@ export function CompositionCard({
     lines,
     materialsTotal,
     capacity,
+    best,
     materialHref,
+    colours,
+    sizes,
     editHref,
 }: CompositionCardProps) {
     return (
@@ -70,7 +80,10 @@ export function CompositionCard({
                     lines={lines}
                     materialsTotal={materialsTotal}
                     capacity={capacity}
+                    best={best}
                     materialHref={materialHref}
+                    colours={colours}
+                    sizes={sizes}
                 />
             )}
         </section>

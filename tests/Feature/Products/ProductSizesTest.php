@@ -46,7 +46,7 @@ it('shows each demo product its own sizes and leaves its figures alone', functio
         ->and($product)->not->toHaveKey('size_list');
 
     if ($figures !== null) {
-        expect([$product['cost']['unit_cost'], $product['capacity']['max_producible'], $product['capacity']['bottleneck']['name']])->toBe($figures);
+        expect([$product['cost']['unit_cost']['max'], $product['capacity']['max_producible'], $product['capacity']['bottleneck']['name']])->toBe($figures);
     }
 })->with([
     'Denim Jacket' => [1, 'Sizes XS to XXXL', false, ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'], ['35.7540', 112, 'Metal shank button 17mm']],

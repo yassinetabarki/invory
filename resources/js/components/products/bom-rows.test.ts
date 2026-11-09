@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vite-plus/test';
 import {
+    countTypedCells,
     createRowUid,
     errorsForRow,
     newBomRow,
+    sameCells,
     toSubmittedRow,
 } from '@/components/products/bom-rows';
 import type { BomRow } from '@/components/products/bom-rows';
@@ -26,6 +28,8 @@ describe('createRowUid / newBomRow', () => {
             quantity: '',
             waste_percent: '0',
             notes: '',
+            quantity_mode: 'same',
+            quantities: {},
         });
     });
 });
@@ -76,19 +80,48 @@ describe('toSubmittedRow', () => {
             quantity: '1.80',
             waste_percent: '10',
             notes: 'Body',
+            quantity_mode: 'same',
+            quantities: {},
         };
 
-        expect(toSubmittedRow(row)).toEqual({
+        expect(toSubmittedRow(row, [10], [1, 2])).toEqual({
             material_id: 4,
+            quantity_mode: 'same',
             quantity: '1.80',
             waste_percent: '10',
             notes: 'Body',
         });
-        expect(toSubmittedRow(row)).not.toHaveProperty('uid');
+        expect(toSubmittedRow(row, [10], [1, 2])).not.toHaveProperty('uid');
     });
 
     it('keeps a blank material as an empty string for the server to reject', () => {
-        expect(toSubmittedRow(newBomRow()).material_id).toBe('');
+        expect(toSubmittedRow(newBomRow(), [], []).material_id).toBe('');
+    });
+});
+
+describe('countTypedCells', () => {
+    const line = (quantities: BomRow['quantities']): BomRow => ({
+        ...newBomRow(),
+        quantity_mode: 'by_variant',
+        quantities,
+    });
+    // Colour 8 holds sizes 1 (typed), 2 (0, no cell) and 4 (typed); colour 9 size 4 (typed).
+    const rows: BomRow[] = [
+        line({ 8: { 1: '1.6', 2: '0.0000', 4: '2.2' }, 9: { 4: '2' } }),
+        line({ 8: { 4: '' }, 9: { 4: '0.5' } }),
+        // A "Same for every variant" line never counts, whatever its grid holds.
+        { ...newBomRow(), quantity: '1', quantities: { 8: { 4: '9' } } },
+    ];
+
+    it('counts the filled cells of the sizes asked, over every line', () => {
+        expect(countTypedCells(rows, [4])).toBe(3);
+        expect(countTypedCells(rows, [1, 4])).toBe(4);
+        expect(countTypedCells(rows, [2])).toBe(0);
+        expect(countTypedCells(rows, [])).toBe(0);
+    });
+
+    it('leaves out the colours that are not on the form', () => {
+        expect(countTypedCells(rows, [4], [9])).toBe(2);
     });
 });
 
@@ -113,5 +146,18 @@ describe('matchesSearch (the material picker)', () => {
 
     it('does not match scattered letters', () => {
         expect(matchesSearch('Metal zipper 18cm MAT-ZIP-018', 'zzzz')).toBe(0);
+    });
+});
+
+describe('sameCells', () => {
+    it('compares the filled cells as text; an empty cell and a missing one are alike', () => {
+        expect(
+            sameCells({ 1: { 2: '1.8' } }, { 1: { 2: ' 1.8 ', 3: '' } }),
+        ).toBe(true);
+        expect(sameCells({}, { 1: { 2: '0' } })).toBe(true);
+        expect(sameCells({ 1: { 2: '1.8' } }, { 1: { 2: '1.80' } })).toBe(
+            false,
+        );
+        expect(sameCells({ 1: { 2: '1.8' } }, {})).toBe(false);
     });
 });

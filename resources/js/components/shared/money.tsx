@@ -1,7 +1,7 @@
 import { useAppSettings } from '@/hooks/use-app-settings';
-import { formatMoney } from '@/lib/format';
+import { formatMoney, formatMoneyRange } from '@/lib/format';
 import { cn } from '@/lib/utils';
-import type { Decimal } from '@/types/domain';
+import type { Decimal, DecimalRange } from '@/types/domain';
 
 type MoneyProps = {
     value: Decimal | null | undefined;
@@ -16,6 +16,25 @@ export function Money({ value, precise = false, className }: MoneyProps) {
     return (
         <span className={cn('tabular-nums', className)}>
             {formatMoney(value, { currency, locale, precise })}
+        </span>
+    );
+}
+
+type MoneyRangeProps = {
+    value: DecimalRange | null | undefined;
+    className?: string;
+};
+
+/**
+ * A unit cost or margin from its lowest to its highest (INV-16): one figure
+ * when the ends read the same, `TND 33.884–39.494` (currency once) otherwise.
+ */
+export function MoneyRange({ value, className }: MoneyRangeProps) {
+    const { currency, locale } = useAppSettings();
+
+    return (
+        <span className={cn('tabular-nums', className)}>
+            {formatMoneyRange(value, { currency, locale })}
         </span>
     );
 }

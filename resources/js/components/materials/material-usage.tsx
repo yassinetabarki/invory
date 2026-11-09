@@ -20,7 +20,7 @@ import {
 import { useAppSettings } from '@/hooks/use-app-settings';
 import { formatCount, formatQuantity } from '@/lib/format';
 import { cn } from '@/lib/utils';
-import type { Material, MaterialUsage } from '@/types/domain';
+import type { CountRange, Material, MaterialUsage } from '@/types/domain';
 
 type MaterialUsageCardProps = {
     material: Material;
@@ -34,6 +34,32 @@ function useUnitsLabel(): (count: number) => string {
 
     return (count) =>
         `${formatCount(count, locale)} ${count === 1 ? 'unit' : 'units'}`;
+}
+
+/** "112 units" when nothing varies, "16–22 units" (en dash) when it does. */
+function useRangeLabel(): (range: CountRange) => string {
+    const { locale } = useAppSettings();
+    const unitsLabel = useUnitsLabel();
+
+    return ({ min, max }) =>
+        min === max
+            ? unitsLabel(min)
+            : `${formatCount(min, locale)}–${unitsLabel(max)}`;
+}
+
+/** The material's need per unit in the material's unit, or "Varies" for a product that uses it differently per colour and size. */
+function NeedsPerUnit({
+    row,
+    unit,
+}: {
+    row: MaterialUsage;
+    unit: Material['unit'];
+}) {
+    return row.effective_quantity === null ? (
+        'Varies'
+    ) : (
+        <Quantity value={row.effective_quantity} unit={unit} />
+    );
 }
 
 /** The product's name (a link), a status badge unless it is active, and its SKU. */
@@ -114,6 +140,7 @@ function Suggestion({ row }: { row: MaterialUsage }) {
 /** >= md: Product, Needs per unit, This stock covers, Can make now, Limited by. */
 function UsageTable({ material, usage }: MaterialUsageCardProps) {
     const unitsLabel = useUnitsLabel();
+    const rangeLabel = useRangeLabel();
 
     return (
         <div className="hidden md:block">
@@ -154,13 +181,10 @@ function UsageTable({ material, usage }: MaterialUsageCardProps) {
                                 <ProductCell row={row} />
                             </TableCell>
                             <TableCell className="px-4 text-right tabular-nums">
-                                <Quantity
-                                    value={row.effective_quantity}
-                                    unit={material.unit}
-                                />
+                                <NeedsPerUnit row={row} unit={material.unit} />
                             </TableCell>
                             <TableCell className="px-4 text-right tabular-nums">
-                                {unitsLabel(row.units_covered)}
+                                {rangeLabel(row.units_covered)}
                             </TableCell>
                             <TableCell className="px-4 text-right text-base font-bold tabular-nums">
                                 {unitsLabel(row.max_producible)}
@@ -179,6 +203,7 @@ function UsageTable({ material, usage }: MaterialUsageCardProps) {
 /** < md: one card per product with the same four figures. */
 function UsageCards({ material, usage }: MaterialUsageCardProps) {
     const unitsLabel = useUnitsLabel();
+    const rangeLabel = useRangeLabel();
 
     return (
         <ul
@@ -201,10 +226,7 @@ function UsageCards({ material, usage }: MaterialUsageCardProps) {
                                 Needs per unit
                             </dt>
                             <dd className="tabular-nums">
-                                <Quantity
-                                    value={row.effective_quantity}
-                                    unit={material.unit}
-                                />
+                                <NeedsPerUnit row={row} unit={material.unit} />
                             </dd>
                         </div>
                         <div>
@@ -212,7 +234,7 @@ function UsageCards({ material, usage }: MaterialUsageCardProps) {
                                 This stock covers
                             </dt>
                             <dd className="tabular-nums">
-                                {unitsLabel(row.units_covered)}
+                                {rangeLabel(row.units_covered)}
                             </dd>
                         </div>
                         <div>
@@ -245,7 +267,11 @@ function UsageCards({ material, usage }: MaterialUsageCardProps) {
 export function MaterialUsageCard({ material, usage }: MaterialUsageCardProps) {
     const titleId = useId();
     const { locale } = useAppSettings();
-    const bottlenecks = usage.filter((row) => row.is_bottleneck);
+    // A product with a By colour and size line has no next limit to suggest
+    // (the server says so with `product_varies`): it gets no sentence.
+    const suggestions = usage.filter(
+        (row) => row.is_bottleneck && !row.product_varies,
+    );
     const count = usage.length;
     const stock = formatQuantity(material.quantity_on_hand, {
         locale,
@@ -280,9 +306,9 @@ export function MaterialUsageCard({ material, usage }: MaterialUsageCardProps) {
                 </>
             )}
 
-            {bottlenecks.length > 0 && (
+            {suggestions.length > 0 && (
                 <div className="flex flex-col gap-3 border-t p-5">
-                    {bottlenecks.map((row) => (
+                    {suggestions.map((row) => (
                         <Suggestion key={row.product.id} row={row} />
                     ))}
                 </div>

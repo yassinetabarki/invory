@@ -3,7 +3,10 @@ import { useEffect, useId, useRef, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { BomEditor } from '@/components/products/bom-editor';
 import {
+    clearSizeCells,
+    countTypedCells,
     createRowUid,
+    gridFromCells,
     materialOptionFromLine,
 } from '@/components/products/bom-rows';
 import type { BomRow } from '@/components/products/bom-rows';
@@ -12,6 +15,12 @@ import { ColoursField } from '@/components/products/colours-field';
 import { DecimalInput } from '@/components/products/decimal-input';
 import { trimDecimal } from '@/components/products/decimals';
 import { FormField } from '@/components/products/form-field';
+import {
+    replaceQuestion,
+    SizeQuantitiesDialog,
+    takeOffQuestion,
+} from '@/components/products/size-quantities-dialog';
+import type { SizeQuestion } from '@/components/products/size-quantities-dialog';
 import { SizesField } from '@/components/products/sizes-field';
 import { PhotoField } from '@/components/shared/photo-field';
 import { Button } from '@/components/ui/button';
@@ -116,7 +125,10 @@ function toFormState(product: Product | undefined): ProductFormState {
         components: product.components.map((line) => ({
             uid: createRowUid(),
             material_id: line.material.id,
-            quantity: trimDecimal(line.quantity),
+            quantity_mode: line.quantity_mode,
+            // A by-colour-and-size line has no single quantity: it carries its cells, as sent.
+            quantity: line.quantity === null ? '' : trimDecimal(line.quantity),
+            quantities: gridFromCells(line.quantities),
             waste_percent: trimDecimal(line.waste_percent),
             notes: line.notes ?? '',
         })),
@@ -256,6 +268,13 @@ export function ProductForm({
     const [keptCategory, setKeptCategory] = useState<ProductCategory | null>(
         null,
     );
+    // A change of the sizes waiting for her answer: the question, the sizes whose
+    // cells it clears, and the change itself.
+    const [pending, setPending] = useState<{
+        question: SizeQuestion;
+        clear: number[];
+        apply: () => void;
+    } | null>(null);
 
     const symbol = currencySymbol(currency, locale);
     const id = (name: string) => `${uid}-${name}`;
@@ -300,6 +319,24 @@ export function ProductForm({
         }),
     ].filter((sentence): sentence is string => Boolean(sentence));
 
+    // A colour taken off while a line holds quantities for it: those quantities
+    // are left out when she saves. One quiet line each, in the colours list order.
+    const clearedNotes = colours.flatMap((colour) => {
+        if (form.data.colours.includes(colour.id)) {
+            return [];
+        }
+
+        const count = countTypedCells(form.data.components, form.data.sizes, [
+            colour.id,
+        ]);
+
+        return count > 0
+            ? [
+                  `Taking ${colour.name} off clears its ${count} ${count === 1 ? 'quantity' : 'quantities'} across its materials when you save.`,
+              ]
+            : [];
+    });
+
     /** The sizes a category suggests, in list order. */
     function suggestedSizes(category: ProductCategory): number[] {
         const ids = categorySizes[category] ?? [];
@@ -308,6 +345,10 @@ export function ProductForm({
     }
 
     const keptSuggestion = keptCategory ? suggestedSizes(keptCategory) : [];
+    const keptCategoryName =
+        categories.find((option) => option.value === keptCategory)?.label ??
+        keptCategory ??
+        '';
     const sizesKept =
         keptCategory !== null &&
         (keptSuggestion.length !== form.data.sizes.length ||
@@ -321,7 +362,15 @@ export function ProductForm({
             return;
         }
 
-        if (sizesTouched) {
+        // Her own sizes stay once she changed them, or as soon as a line holds a quantity per size.
+        if (
+            sizesTouched ||
+            countTypedCells(
+                form.data.components,
+                form.data.sizes,
+                form.data.colours,
+            ) > 0
+        ) {
             setKeptCategory(category);
 
             return;
@@ -329,6 +378,107 @@ export function ProductForm({
 
         form.setData('sizes', suggestedSizes(category));
         form.clearErrors(...Object.keys(errors).filter(isSizesKey));
+    }
+
+    /**
+     * Changes the sizes to `next`, asking first when that would clear typed
+     * quantities: the cells of the sizes that come off, over every line.
+     */
+    function changeSizes(
+        next: number[],
+        ask: (count: number) => SizeQuestion,
+        apply: () => void,
+    ) {
+        const clear = form.data.sizes.filter(
+            (sizeId) => !next.includes(sizeId),
+        );
+        const count = countTypedCells(
+            form.data.components,
+            clear,
+            form.data.colours,
+        );
+
+        if (count === 0) {
+            apply();
+
+            return;
+        }
+
+        setPending({ question: ask(count), clear, apply });
+    }
+
+    function applySizes(ids: number[]) {
+        form.setData('sizes', ids);
+        setSizesTouched(true);
+
+        // "Choose at least one size." (and a wrong id) are answered
+        // as soon as there is a size; a lock sentence goes when its
+        // own size is back. Never call clearErrors() with no names.
+        const stale =
+            ids.length > 0 ? Object.keys(errors).filter(isSizesKey) : [];
+        const back = Object.keys(errors).filter((name) => {
+            const removed = removedSizeId(name);
+
+            return removed !== null && ids.includes(removed);
+        }) as (keyof typeof errors)[];
+
+        if (stale.length + back.length > 0) {
+            form.clearErrors(...stale, ...back);
+        }
+    }
+
+    /** A size pressed in the Sizes field: off, on, or One size (which turns the others off). */
+    function pressSizes(ids: number[]) {
+        const [leaving] = sizes.filter(
+            (size) =>
+                form.data.sizes.includes(size.id) && !ids.includes(size.id),
+        );
+        const entering = sizes.find(
+            (size) =>
+                size.one_size &&
+                ids.includes(size.id) &&
+                !form.data.sizes.includes(size.id),
+        );
+
+        changeSizes(
+            ids,
+            (count) =>
+                entering
+                    ? replaceQuestion(entering.label, entering.label, count)
+                    : takeOffQuestion(leaving.label, count),
+            () => applySizes(ids),
+        );
+    }
+
+    /** "Use the sizes of Footwear": replaces the sizes with the kept category's. */
+    function useKeptSizes(categoryName: string) {
+        changeSizes(
+            keptSuggestion,
+            (count) =>
+                replaceQuestion(
+                    `the sizes of ${categoryName}`,
+                    `${categoryName} sizes`,
+                    count,
+                ),
+            () => {
+                form.setData('sizes', keptSuggestion);
+                setSizesTouched(false);
+                setKeptCategory(null);
+            },
+        );
+    }
+
+    function confirmPending() {
+        if (!pending) {
+            return;
+        }
+
+        form.setData(
+            'components',
+            clearSizeCells(form.data.components, pending.clear),
+        );
+        pending.apply();
+        setPending(null);
     }
 
     // "Manage sizes & colours" opens this page at #colours (the focus goes to the
@@ -373,7 +523,9 @@ export function ProductForm({
 
         form.transform((data) => ({
             ...data,
-            components: data.components.map(toSubmittedRow),
+            components: data.components.map((row) =>
+                toSubmittedRow(row, data.colours, data.sizes),
+            ),
             ...(spoofPut ? { _method: 'put' } : {}),
         }));
 
@@ -566,57 +718,22 @@ export function ProductForm({
                                         sizesKept && keptCategory
                                             ? {
                                                   categoryName:
-                                                      categories.find(
-                                                          (option) =>
-                                                              option.value ===
-                                                              keptCategory,
-                                                      )?.label ?? keptCategory,
-                                                  onUse: () => {
-                                                      form.setData(
-                                                          'sizes',
-                                                          keptSuggestion,
-                                                      );
-                                                      setSizesTouched(false);
-                                                      setKeptCategory(null);
-                                                  },
+                                                      keptCategoryName,
+                                                  onUse: () =>
+                                                      useKeptSizes(
+                                                          keptCategoryName,
+                                                      ),
                                               }
                                             : null
                                     }
-                                    onChange={(ids) => {
-                                        form.setData('sizes', ids);
-                                        setSizesTouched(true);
-
-                                        // "Choose at least one size." (and a wrong id) are answered
-                                        // as soon as there is a size; a lock sentence goes when its
-                                        // own size is back. Never call clearErrors() with no names.
-                                        const stale =
-                                            ids.length > 0
-                                                ? Object.keys(errors).filter(
-                                                      isSizesKey,
-                                                  )
-                                                : [];
-                                        const back = Object.keys(errors).filter(
-                                            (name) => {
-                                                const removed =
-                                                    removedSizeId(name);
-
-                                                return (
-                                                    removed !== null &&
-                                                    ids.includes(removed)
-                                                );
-                                            },
-                                        ) as (keyof typeof errors)[];
-
-                                        if (stale.length + back.length > 0) {
-                                            form.clearErrors(...stale, ...back);
-                                        }
-                                    }}
+                                    onChange={pressSizes}
                                 />
                                 <ColoursField
                                     id={id('colours')}
                                     colours={colours}
                                     value={form.data.colours}
                                     error={coloursError}
+                                    notes={clearedNotes}
                                     className="col-span-full"
                                     onChange={(ids) => {
                                         form.setData('colours', ids);
@@ -772,10 +889,22 @@ export function ProductForm({
                 rows={form.data.components}
                 knownMaterials={knownMaterials}
                 errors={errors}
+                colours={colours.filter((colour) =>
+                    form.data.colours.includes(colour.id),
+                )}
+                sizes={sizes.filter((size) =>
+                    form.data.sizes.includes(size.id),
+                )}
                 onChange={(rows) => form.setData('components', rows)}
             />
 
             <div className="flex justify-end">{buttons}</div>
+
+            <SizeQuantitiesDialog
+                question={pending?.question ?? null}
+                onKeep={() => setPending(null)}
+                onConfirm={confirmPending}
+            />
         </form>
     );
 }

@@ -156,7 +156,8 @@ it('shows no record of the other workshop on any signed-in page', function (stri
         'clients.lookup' => [['phone' => $theirClient->phone], ['name' => $theirClient->name]],
         'orders.create' => [['client' => $theirClient->id]],
         'progress.index' => [['product' => $other['product']->id], ['phase' => $own['batch']->phase_id], ['phase' => 'cutting']],
-        'progress.products.materials' => [['units' => 3]],
+        // INV-16-k: the window's grid, 3 units of the own product's colour and size (the own batch's, which the factory made the product's own).
+        'progress.products.materials' => [['units' => [$own['batch']->colour_id => [$own['batch']->size_id => 3]]]],
         // INV-15: the own batch's tickets; the other workshop's batch by number and by its QR link is never found.
         'progress.tickets' => [['batches' => [$own['batch']->id]]],
         'scan.lookup' => [['q' => $other['batch']->label], ['q' => route('scan.ticket', $other['batch']->fresh()->ticket_code)]],

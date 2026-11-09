@@ -23,6 +23,18 @@ use function Pest\Laravel\actingAs;
 
 beforeEach(fn () => $this->user = prepareDemo($this));
 
+/** A figure that does not vary by colour and size, as the range it is sent as (INV-16-j): one number twice. */
+function sameEnds(string $figure): array
+{
+    return ['min' => $figure, 'max' => $figure];
+}
+
+/** The margin of a product whose cost does not vary. */
+function pageMargin(?string $amount, ?string $percent): ?array
+{
+    return $amount === null ? null : ['amount' => sameEnds($amount), 'percent' => $percent === null ? null : sameEnds($percent)];
+}
+
 /**
  * The plan's "Expected" products table:
  * [id, sku, name, category, status, selling price, material cost, unit cost, max producible, bottleneck SKU,
@@ -101,11 +113,13 @@ describe('index', function () {
                 ->where('status', $status)
                 ->where('status_label', ucfirst($status))
                 ->where('components_count', $components)
-                ->where('unit_cost', $unitCost)
+                ->where('unit_cost', sameEnds($unitCost))
                 ->where('selling_price', $price)
-                ->where('margin', $marginAmount === null ? null : ['amount' => $marginAmount, 'percent' => $marginPercent])
+                ->where('margin', pageMargin($marginAmount, $marginPercent))
                 ->where('capacity', [
                     'max_producible' => $maxProducible,
+                    'best' => $maxProducible,
+                    'by_variant' => null,
                     'bottleneck' => ['id' => $bottleneck->id, 'sku' => $bottleneckSku, 'name' => $bottleneck->name, 'unit' => $bottleneck->unit->code],
                 ])
                 ->where('units_sold_last_30_days', $sold)
@@ -267,12 +281,13 @@ describe('show', function () {
                 ->loadDeferredProps('default', fn (Assert $reloaded) => $reloaded
                     ->has('product', fn (Assert $product) => $product->hasAll([
                         'id', 'sku', 'name', 'category', 'category_label', 'sizes', 'one_size', 'sizes_line', 'status', 'status_label', 'description', 'photo_url',
-                        'labor_cost', 'overhead_cost', 'selling_price', 'cost', 'margin', 'capacity', 'colours', 'components',
+                        'labor_cost', 'overhead_cost', 'selling_price', 'cost', 'margin', 'capacity', 'capacity_by_colour', 'colours', 'components',
                         'created_at', 'updated_at',
                     ]))
                     ->has('product.cost', fn (Assert $cost) => $cost->hasAll(['material_cost', 'labor_cost', 'overhead_cost', 'unit_cost']))
                     ->has('product.margin', fn (Assert $margin) => $margin->hasAll(['amount', 'percent']))
-                    ->has('product.capacity', fn (Assert $capacity) => $capacity->hasAll(['max_producible', 'bottleneck']))
+                    ->has('product.capacity', fn (Assert $capacity) => $capacity->hasAll(['max_producible', 'best', 'by_variant', 'bottleneck']))
+                    ->where('product.capacity_by_colour', null)
                     ->has('sales_last_30_days', fn (Assert $sales) => $sales->hasAll(['units_sold', 'revenue']))
                     ->has('recent_sales', 5)));
     });
@@ -294,9 +309,9 @@ describe('show', function () {
                     ->where('product.name', $name)
                     ->where('product.status', $status)
                     ->where('product.selling_price', $price)
-                    ->where('product.cost.material_cost', $materialCost)
-                    ->where('product.cost.unit_cost', $unitCost)
-                    ->where('product.margin', $marginAmount === null ? null : ['amount' => $marginAmount, 'percent' => $marginPercent])
+                    ->where('product.cost.material_cost', sameEnds($materialCost))
+                    ->where('product.cost.unit_cost', sameEnds($unitCost))
+                    ->where('product.margin', pageMargin($marginAmount, $marginPercent))
                     ->where('product.capacity.max_producible', $maxProducible)
                     ->where('product.capacity.bottleneck.sku', $bottleneckSku)
                     ->where('product.capacity.bottleneck.name', $bottleneck->name)
@@ -315,10 +330,10 @@ describe('show', function () {
             ->where('product.labor_cost', '12.0000')
             ->where('product.overhead_cost', '3.5000')
             ->where('product.cost', [
-                'material_cost' => '20.2540',
+                'material_cost' => sameEnds('20.2540'),
                 'labor_cost' => '12.0000',
                 'overhead_cost' => '3.5000',
-                'unit_cost' => '35.7540',
+                'unit_cost' => sameEnds('35.7540'),
             ])
             ->where('product.description', 'Classic trucker jacket in 12oz indigo denim with metal shank buttons.')
             ->where('product.category_label', 'Apparel')
@@ -361,6 +376,8 @@ describe('show', function () {
                     'stock_status' => 'in_stock',
                     'reorder_level' => '100.0000',
                 ])
+                ->where('quantity_mode', 'same')
+                ->where('quantities', [])
                 ->where('quantity', '1.8000')
                 ->where('waste_percent', '10.00')
                 ->where('effective_quantity', '1.9800')
@@ -431,14 +448,14 @@ describe('show', function () {
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page->loadDeferredProps('default', fn (Assert $reloaded) => $reloaded
                 ->where('product.components', [])
-                ->where('product.capacity', ['max_producible' => null, 'bottleneck' => null])
+                ->where('product.capacity', ['max_producible' => null, 'best' => null, 'by_variant' => null, 'bottleneck' => null])
                 ->where('product.cost', [
-                    'material_cost' => '0.0000',
+                    'material_cost' => sameEnds('0.0000'),
                     'labor_cost' => '12.0000',
                     'overhead_cost' => '3.5000',
-                    'unit_cost' => '15.5000',
+                    'unit_cost' => sameEnds('15.5000'),
                 ])
-                ->where('product.margin', ['amount' => '73.5000', 'percent' => '82.58'])));
+                ->where('product.margin', pageMargin('73.5000', '82.58'))));
     });
 
     it('costs a line whose material was soft-deleted like any other (a delete that bypassed the guard)', function () {
@@ -451,7 +468,7 @@ describe('show', function () {
                 ->has('product.components', 4)
                 ->where('product.capacity.max_producible', 112)
                 ->where('product.capacity.bottleneck.sku', 'MAT-BTN-017')
-                ->where('product.cost.unit_cost', '35.7540')));
+                ->where('product.cost.unit_cost', sameEnds('35.7540'))));
     });
 
     it('sends the lines in position order after the composition was reordered', function () {
@@ -535,7 +552,7 @@ describe('create and edit', function () {
                 ->has('statuses', 3)
                 ->where('product.id', pid(4))
                 ->where('product.name', 'Leather Tote')
-                ->where('product.cost.unit_cost', '101.0300')
+                ->where('product.cost.unit_cost', sameEnds('101.0300'))
                 ->has('product.components', 6));
     });
 });
@@ -579,7 +596,8 @@ it('reads the materials table once per page and answers within a bounded number 
     // INV-3-f: "Last restock" reads the newest restock of the product with its units, one query: show 13 -> 14.
     // INV-18-g: Edit product adds the four grouped queries of its size locks (stock, orders, barcodes, production): edit 7 -> 11. The workshop's
     // sizes are ONE read for the picker's `sizes`, the suggestions of `category_sizes` and the badge of a product with seven sizes or more.
-    $budget = ['index' => 6, 'show' => 14, 'create' => 3, 'edit' => 11];
+    // INV-16-e: fifth size-lock query (material quantities): edit 11 -> 12.
+    $budget = ['index' => 6, 'show' => 14, 'create' => 3, 'edit' => 12];
     $materialReads = ['index' => 1, 'show' => 1, 'create' => 0, 'edit' => 1];
 
     $baseline = array_map($count, $urls);

@@ -1,7 +1,14 @@
 import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { BomTable } from '@/components/products/bom-table';
-import { canvasLowSneaker, denimJacket } from '@/test/fixtures/products';
+import {
+    canvasLowSneaker,
+    denimBlackByVariantLine,
+    denimJacket,
+    denimJacketVarying,
+    sizeOptionsFixture,
+} from '@/test/fixtures/products';
 import { resetInertiaMock, setPageProps } from '@/test/inertia';
 import type { MaterialRef, Product } from '@/types/domain';
 
@@ -14,6 +21,7 @@ vi.mock('@inertiajs/react', async (importOriginal) => {
 });
 
 const materialHref = (material: MaterialRef) => `/materials/${material.id}`;
+const sizes = sizeOptionsFixture.slice(0, 4); // S, M, L, XL
 
 function renderTable(product: Product = denimJacket) {
     return render(
@@ -22,6 +30,8 @@ function renderTable(product: Product = denimJacket) {
             materialsTotal={product.cost.material_cost}
             capacity={product.capacity.max_producible}
             materialHref={materialHref}
+            colours={product.colours}
+            sizes={sizes}
         />,
     );
 }
@@ -158,6 +168,109 @@ describe('<BomTable>', () => {
                     name: 'Denim 12oz Indigo',
                 }),
             ).toHaveAttribute('href', '/materials/4');
+        });
+    });
+
+    describe('a line by colour and size', () => {
+        const mixed = [denimBlackByVariantLine, denimJacket.components[1]];
+
+        function renderMixed() {
+            return render(
+                <BomTable
+                    lines={mixed}
+                    materialsTotal={denimJacket.cost.material_cost}
+                    capacity={denimJacket.capacity.max_producible}
+                    materialHref={materialHref}
+                    colours={denimJacketVarying.colours}
+                    sizes={sizes}
+                />,
+            );
+        }
+
+        it('reads Varies under Quantity, Effective qty, Line cost and Units possible, on the table and the cards', () => {
+            renderMixed();
+
+            const denim = within(row(/Denim 12oz Black/)).getAllByRole('cell');
+
+            // Material, Qty, Waste, Effective qty, Unit cost, Line cost, In stock, Units possible.
+            for (const index of [1, 3, 5, 7]) {
+                expect(denim[index]).toHaveTextContent('Varies');
+            }
+
+            expect(denim[2]).toHaveTextContent('10%');
+            expect(denim[6]).toHaveTextContent('40 m');
+
+            // The same line beside it keeps its figures.
+            const button = within(row(/Metal shank button/));
+
+            expect(button.getAllByText('8 pc')).toHaveLength(2);
+            expect(button.getByText('€2.80')).toBeInTheDocument();
+            expect(button.getByText('112')).toBeInTheDocument();
+            expect(button.queryByText('Varies')).not.toBeInTheDocument();
+
+            const card = within(
+                within(
+                    screen.getByRole('list', { name: 'Composition' }),
+                ).getAllByRole('listitem')[0],
+            );
+
+            for (const label of [
+                'Qty per unit',
+                'Effective qty',
+                'Line cost',
+                'Units possible',
+            ]) {
+                expect(card.getByText(label).parentElement).toHaveTextContent(
+                    'Varies',
+                );
+            }
+
+            expect(card.getByText('Waste').parentElement).toHaveTextContent(
+                '10%',
+            );
+        });
+    });
+
+    describe('View grid', () => {
+        it("opens the line's cells read-only, with no field to edit", async () => {
+            const user = userEvent.setup();
+
+            render(
+                <BomTable
+                    lines={[
+                        denimBlackByVariantLine,
+                        ...denimJacket.components.slice(0, 1),
+                    ]}
+                    materialsTotal={denimJacket.cost.material_cost}
+                    capacity={denimJacket.capacity.max_producible}
+                    materialHref={materialHref}
+                    colours={denimJacketVarying.colours}
+                    sizes={sizes}
+                />,
+            );
+
+            // Only the by-colour-and-size line has the link (the table and the cards each draw it).
+            expect(
+                screen.getAllByRole('button', { name: /^View grid for/ }),
+            ).toHaveLength(2);
+
+            await user.click(
+                within(table()).getByRole('button', {
+                    name: 'View grid for Denim 12oz Black',
+                }),
+            );
+
+            const dialog = within(
+                screen.getByRole('dialog', { name: 'Denim 12oz Black' }),
+            );
+
+            expect(dialog.getByText('1.6000 m')).toBeInTheDocument();
+            expect(dialog.getByText('2.2000 m')).toBeInTheDocument();
+            expect(dialog.getByText('Indigo')).toBeInTheDocument();
+            expect(
+                dialog.queryByLabelText(/^Black, size/),
+            ).not.toBeInTheDocument();
+            expect(dialog.getByText('4 of 8 cells filled')).toBeInTheDocument();
         });
     });
 

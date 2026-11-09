@@ -238,7 +238,7 @@ it('changes nothing but the count: capacity, cost, materials, history, dashboard
 
     $page = $jacketPage();
     expect($page['product']['capacity']['max_producible'])->toBe(112)
-        ->and($page['product']['cost']['unit_cost'])->toBe('35.7540')
+        ->and($page['product']['cost']['unit_cost'])->toBe(['min' => '35.7540', 'max' => '35.7540'])
         ->and($page['finished_stock']['units'])->toBe(14)
         ->and($materials())->toBe($stock)
         ->and($movements())->toBe($history)

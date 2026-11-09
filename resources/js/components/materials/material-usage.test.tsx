@@ -230,7 +230,13 @@ describe('<MaterialUsageCard>', () => {
         });
 
         it('uses the singular for a single unit', () => {
-            renderUsage([{ ...jacket, units_covered: 1, max_producible: 1 }]);
+            renderUsage([
+                {
+                    ...jacket,
+                    units_covered: { min: 1, max: 1 },
+                    max_producible: 1,
+                },
+            ]);
 
             expect(table().getAllByText('1 unit')).toHaveLength(2);
             expect(table().queryByText('1 units')).not.toBeInTheDocument();
@@ -240,7 +246,9 @@ describe('<MaterialUsageCard>', () => {
             setPageProps({
                 app: { currency: 'EUR', locale: 'de', today: '2026-10-08' },
             });
-            renderUsage([{ ...jeans, units_covered: 12345 }]);
+            renderUsage([
+                { ...jeans, units_covered: { min: 12345, max: 12345 } },
+            ]);
 
             expect(table().getByText('12.345 units')).toBeInTheDocument();
         });
@@ -375,6 +383,79 @@ describe('<MaterialUsageCard>', () => {
 
             expect(items[0]).toHaveAttribute('data-bottleneck', 'true');
             expect(items[1]).not.toHaveAttribute('data-bottleneck');
+        });
+    });
+
+    describe('a product that varies by colour and size', () => {
+        const varying = (overrides: Partial<MaterialUsage>): MaterialUsage => ({
+            ...jacket,
+            effective_quantity: null,
+            max_producible: 16,
+            next_limit: null,
+            product_varies: true,
+            ...overrides,
+        });
+        const blackDenim = varying({
+            units_covered: { min: 16, max: 22 },
+            bottleneck: jacket.bottleneck,
+            is_bottleneck: true,
+        });
+        const indigoDenim = varying({
+            product: { ...jacket.product, id: 2, name: 'Denim Jacket' },
+            units_covered: { min: 103, max: 142 },
+            bottleneck: jeans.bottleneck,
+            is_bottleneck: false,
+        });
+
+        it('reads Varies and a range on the Black denim, with the guaranteed figure and the bottleneck badge, and no suggestion', () => {
+            renderUsage([blackDenim]);
+
+            for (const view of [
+                within(table().getAllByRole('row')[1]),
+                within(cards().getAllByRole('listitem')[0]),
+            ]) {
+                expect(view.getByText('Varies')).toBeInTheDocument();
+                expect(view.getByText('16–22 units')).toBeInTheDocument();
+                expect(view.getByText('16 units')).toBeInTheDocument();
+                expect(
+                    view.getByText('This material (bottleneck)'),
+                ).toBeInTheDocument();
+            }
+            expect(screen.queryByText('Suggestion:')).not.toBeInTheDocument();
+        });
+
+        it('gives no suggestion to a varying product the button limits, even with equal ends and a single need', () => {
+            renderUsage([
+                varying({
+                    effective_quantity: '8.0000',
+                    max_producible: 112,
+                    units_covered: { min: 112, max: 112 },
+                }),
+            ]);
+
+            expect(screen.queryByText('Suggestion:')).not.toBeInTheDocument();
+            expect(screen.queryByText(/only material/)).not.toBeInTheDocument();
+        });
+
+        it('reads the range on the Indigo denim, which is not the bottleneck', () => {
+            renderUsage([indigoDenim]);
+
+            expect(table().getByText('Varies')).toBeInTheDocument();
+            expect(table().getByText('103–142 units')).toBeInTheDocument();
+            expect(
+                table().queryByText('This material (bottleneck)'),
+            ).not.toBeInTheDocument();
+        });
+
+        it('keeps reading as today for a product with no By colour and size line', () => {
+            renderUsage([jacket]);
+
+            const row = within(table().getAllByRole('row')[1]);
+
+            expect(row.getByText('8 pc')).toBeInTheDocument();
+            expect(row.queryByText('Varies')).not.toBeInTheDocument();
+            expect(row.getAllByText('112 units')).toHaveLength(2);
+            expect(screen.getByText('Suggestion:')).toBeInTheDocument();
         });
     });
 });

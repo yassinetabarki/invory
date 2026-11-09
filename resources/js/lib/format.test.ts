@@ -5,7 +5,9 @@ import {
     formatDate,
     formatMoney,
     formatMoneyParts,
+    formatMoneyRange,
     formatPercent,
+    formatPercentRange,
     formatQuantity,
 } from './format';
 
@@ -314,6 +316,95 @@ describe('formatPercent', () => {
     it.each([null, undefined, '', 'x'])('renders %j as an em dash', (value) => {
         expect(formatPercent(value, 'en')).toBe(EMPTY_VALUE);
     });
+});
+
+describe('formatMoneyRange', () => {
+    it.each([
+        [
+            'TND (3 decimals), the currency once',
+            'TND',
+            '33.8840',
+            '39.4940',
+            'TND 33.884–39.494',
+        ],
+        ['EUR (2 decimals)', 'EUR', '33.8840', '39.4940', '€33.88–39.49'],
+        ['JPY (0 decimals)', 'JPY', '33.8840', '39.4940', '¥34–39'],
+        [
+            'equal ends: exactly the single value',
+            'TND',
+            '35.7540',
+            '35.7540',
+            'TND 35.754',
+        ],
+        [
+            'ends that read the same once formatted',
+            'TND',
+            '35.7540',
+            '35.7541',
+            'TND 35.754',
+        ],
+        ['thousands', 'TND', '999.5000', '1250.2500', 'TND 999.500–1,250.250'],
+        [
+            'a negative end: both ends in full',
+            'EUR',
+            '-5.7540',
+            '3.0000',
+            '-€5.75–€3.00',
+        ],
+    ])('%s', (_, currency, min, max, expected) => {
+        // NBSP between the TND code and the amount, as formatMoney writes it.
+        expect(formatMoneyRange({ min, max }, { currency, locale: 'en' })).toBe(
+            expected.replace(' ', currency === 'TND' ? ' ' : ' '),
+        );
+    });
+
+    it('writes the currency after the amount where the locale does', () => {
+        expect(
+            formatMoneyRange(
+                { min: '33.8840', max: '39.4940' },
+                { currency: 'EUR', locale: 'de' },
+            ),
+        ).toBe('33,88–39,49 €');
+    });
+
+    it.each([
+        null,
+        undefined,
+        { min: '', max: '1.0000' },
+        { min: '1.0000', max: 'x' },
+    ])('renders %j as an em dash', (range) => {
+        expect(formatMoneyRange(range, eur)).toBe(EMPTY_VALUE);
+    });
+});
+
+describe('formatPercentRange', () => {
+    it.each([
+        [
+            'two ends, one percent sign, an en dash',
+            '55.62',
+            '61.93',
+            'en',
+            '55.62–61.93%',
+        ],
+        ['whole percent points', '10.00', '12.50', 'en', '10–12.5%'],
+        ['equal ends: the single value', '59.83', '59.83', 'en', '59.83%'],
+        [
+            'a negative end: both ends in full',
+            '-19.18',
+            '5.00',
+            'en',
+            '-19.18%–5%',
+        ],
+    ])('%s', (_, min, max, locale, expected) => {
+        expect(formatPercentRange({ min, max }, locale)).toBe(expected);
+    });
+
+    it.each([null, undefined, { min: 'x', max: '1.00' }])(
+        'renders %j as an em dash',
+        (range) => {
+            expect(formatPercentRange(range, 'en')).toBe(EMPTY_VALUE);
+        },
+    );
 });
 
 describe('formatDate', () => {

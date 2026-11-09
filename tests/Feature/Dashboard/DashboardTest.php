@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
+use Tests\Support\VariantJacket;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\get;
@@ -236,6 +237,28 @@ describe('stock-driven figures', function () {
             ->and(data_get($loaded, 'alerts.*.bottleneck.sku'))->toBe(['MAT-SOL-042', 'MAT-BTN-017'])
             ->and(data_get($loaded, 'alerts.*.bottleneck.stock_status'))->toBe(['out', 'low'])
             ->and(data_get($loaded, 'stats.unproducible_count'))->toBe(2);
+    });
+
+    it('counts a product that varies by colour and size only when its best is 0 (INV-16-d)', function () {
+        $jacket = VariantJacket::create();
+        $sku = $jacket->product->sku;
+        $unproducible = function () use ($sku): array {
+            $loaded = loadedPageProps(actingAs($this->user)->get(dashboardUrl()));
+
+            return [data_get($loaded, 'stats.unproducible_count'), in_array($sku, data_get($loaded, 'alerts.*.product.sku'), true)];
+        };
+
+        // The Sneaker is the demo's one product that can't be made. Black denim at 0 m: guaranteed 0, but Indigo still makes 112.
+        $jacket->materials['black_denim']->update(['quantity_on_hand' => '0.0000']);
+
+        expect($unproducible())->toBe([1, false]);
+
+        // Every material it uses at 0: no colour and size can be made, so it counts and its bottleneck is named.
+        foreach ($jacket->materials as $material) {
+            $material->update(['quantity_on_hand' => '0.0000']);
+        }
+
+        expect($unproducible())->toBe([2, true]);
     });
 
     it('does not count a product without a composition as one that can\'t be produced', function () {

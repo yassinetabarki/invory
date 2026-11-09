@@ -15,6 +15,12 @@
             <directory>tests/Arch</directory>
         </testsuite>
     </testsuites>
+    <!-- The load tests (tests/Feature/Products/VariantCostingLoadTest.php) are run on purpose, see the header of that file. -->
+    <groups>
+        <exclude>
+            <group>load</group>
+        </exclude>
+    </groups>
     <source>
         <include>
             <directory>app</directory>

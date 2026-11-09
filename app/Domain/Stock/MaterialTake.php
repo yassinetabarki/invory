@@ -11,7 +11,7 @@ final readonly class MaterialTake
         public int $materialId,
         public string $materialName,
         public string $unit,
-        public string $perUnitExact,  // exact need per unit (at most 8 decimals); stored as-is in the cut
+        public ?string $perUnitExact, // exact need per unit (at most 8 decimals); null when it differs between the variants of a plan
         public string $needed,        // round4(perUnitExact × units), HalfUp, scale 4
         public string $inStock,       // scale 4
         public ?string $after,        // inStock − needed, scale 4; null when short

@@ -75,7 +75,7 @@ function expectTheDemoWorkshopUnchanged(TestCase $test): void
         ->and(pageProp($sales, 'sales.meta.total'))->toBe(60)
         ->and(pageProp($sales, 'products.*.name'))->not->toContain('Canvas Tote')
         ->and($dashboard['stats'])->toMatchArray(['materials_count' => 12, 'inventory_value' => '10544.3000', 'needs_restock_count' => 4, 'products_count' => 7])
-        ->and($jacket['cost']['unit_cost'])->toBe('35.7540')
+        ->and($jacket['cost']['unit_cost'])->toBe(['min' => '35.7540', 'max' => '35.7540'])
         ->and($jacket['capacity']['max_producible'])->toBe(112)
         ->and($jacket['capacity']['bottleneck']['name'])->toBe('Metal shank button 17mm');
 }
@@ -114,7 +114,7 @@ it('shows Sami only his own records, and the demo workshop only its own (AC-2)',
 
     expect(pageProp($materials, 'materials.data.*.name'))->toBe(['Cotton canvas natural'])
         ->and(pageProp($materials, 'summary'))->toBe(['materials_count' => 1, 'inventory_value' => '240.0000'])
-        ->and($tote['cost']['unit_cost'])->toBe('9.8000')
+        ->and($tote['cost']['unit_cost'])->toBe(['min' => '9.8000', 'max' => '9.8000'])
         ->and($tote['capacity']['max_producible'])->toBe(50)
         ->and($tote['capacity']['bottleneck']['name'])->toBe('Cotton canvas natural')
         // The composition picker searches `materials.options`; "Record a sale" and the sales filter read the `products` prop of the sales page.

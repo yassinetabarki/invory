@@ -53,6 +53,8 @@ function typedVariants(line: StartBatchLine, typed: Typed) {
             return units > 0
                 ? [
                       {
+                          colourId: colour.id,
+                          sizeId: size.id,
                           name: variantName(colour.name, size, line.one_size),
                           units,
                       },
@@ -60,6 +62,19 @@ function typedVariants(line: StartBatchLine, typed: Typed) {
                 : [];
         }),
     );
+}
+
+/** What the materials preview is asked for: `units[colourId][sizeId]=n`, only the fields above 0. */
+type Grid = Record<string, Record<string, number>>;
+
+function gridOf(variants: ReturnType<typeof typedVariants>): Grid {
+    const grid: Grid = {};
+
+    for (const { colourId, sizeId, units } of variants) {
+        grid[colourId] = { ...grid[colourId], [sizeId]: units };
+    }
+
+    return grid;
 }
 
 /** The grid as the server expects it: every colour × size, '' unless typed. */
@@ -117,21 +132,24 @@ function useStartLine(productId: number | null) {
     };
 }
 
-function usePreview(productId: number | null, total: number) {
+function usePreview(productId: number | null, grid: Grid) {
     const { get, cancel } = useHttp<Record<string, never>, StartBatchPreview>();
-    const units = useDebouncedValue(total, 250);
+    // One string per grid, so the wait and the answer are tied to what was typed.
+    const typedKey = JSON.stringify(grid);
+    const settledKey = useDebouncedValue(typedKey, 250);
     const [state, setState] = useState<{
         key: string;
         preview: StartBatchPreview;
     } | null>(null);
-    const key = `${productId}:${units}`;
+    const key = `${productId}:${settledKey}`;
 
     useEffect(() => {
-        if (productId === null || units < 1) {
+        if (productId === null || settledKey === '{}') {
             return;
         }
 
         let current = true;
+        const units = JSON.parse(settledKey) as Grid;
 
         get(materialsRoute.url(productId, { query: { units } })).then(
             (data) =>
@@ -146,9 +164,9 @@ function usePreview(productId: number | null, total: number) {
             current = false;
             cancel();
         };
-    }, [get, cancel, productId, units, key]);
+    }, [get, cancel, productId, settledKey, key]);
 
-    return state !== null && state.key === key && units === total
+    return state !== null && state.key === key && settledKey === typedKey
         ? state.preview
         : null;
 }
@@ -328,7 +346,9 @@ function StartForm({
     const { line, failed, retry } = useStartLine(product?.id ?? null);
     const variants = line ? typedVariants(line, typed) : [];
     const total = variants.reduce((sum, variant) => sum + variant.units, 0);
-    const preview = usePreview(line ? line.product.id : null, total);
+    const preview = usePreview(line ? line.product.id : null, gridOf(variants));
+    // A short message disables Start batch: aria-disabled, so it stays focusable and says why.
+    const shortMessage = preview?.short_message ?? null;
 
     function setField(colourId: number, sizeId: number, value: string) {
         setTyped((current) => ({
@@ -339,6 +359,10 @@ function StartForm({
 
     function submit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
+
+        if (shortMessage !== null) {
+            return;
+        }
 
         setProcessing(true);
         router.post(
@@ -559,16 +583,17 @@ function StartForm({
                 {preview && total > 0 && (
                     <MaterialsTable preview={preview} compact={isMobile} />
                 )}
-
-                {(errors.units || preview?.short_message) && (
-                    <p
-                        role="alert"
-                        className="text-sm text-destructive-foreground"
-                    >
-                        {errors.units ?? preview?.short_message}
-                    </p>
-                )}
             </div>
+
+            {(errors.units || shortMessage) && (
+                <p
+                    id={`${uid}-message`}
+                    role="alert"
+                    className="shrink-0 text-sm text-destructive-foreground"
+                >
+                    {errors.units ?? shortMessage}
+                </p>
+            )}
 
             <DialogFooter className="shrink-0 max-sm:sticky max-sm:bottom-0 max-sm:bg-background max-sm:pt-2">
                 <Button
@@ -583,7 +608,16 @@ function StartForm({
                 <Button
                     type="submit"
                     disabled={processing}
-                    className="max-sm:h-11"
+                    aria-disabled={shortMessage !== null ? true : undefined}
+                    aria-describedby={
+                        shortMessage !== null ? `${uid}-message` : undefined
+                    }
+                    onClick={(event) => {
+                        if (shortMessage !== null) {
+                            event.preventDefault();
+                        }
+                    }}
+                    className="aria-disabled:cursor-not-allowed aria-disabled:opacity-50 max-sm:h-11"
                 >
                     {processing && <Spinner />}
                     Start batch

@@ -1,7 +1,7 @@
 import { isNegativeDecimal } from '@/components/products/decimals';
-import { Money } from '@/components/shared/money';
+import { Money, MoneyRange } from '@/components/shared/money';
 import { useAppSettings } from '@/hooks/use-app-settings';
-import { formatPercent } from '@/lib/format';
+import { formatPercentRange } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { Decimal, Margin } from '@/types/domain';
 
@@ -16,7 +16,9 @@ type PriceMarginProps = {
  * The selling price with the margin percentage under it. A product without a
  * selling price shows an em dash. A negative margin is red and carries its
  * minus sign and a screen-reader note, so it never relies on colour alone.
- * Without a percentage (a zero selling price) the margin amount is shown.
+ * Without a percentage (a zero selling price) the margin amount is shown. Margin
+ * and percentage are ranges when the product varies by colour and size; a
+ * margin is below cost when its lowest end is.
  */
 export function PriceMargin({
     sellingPrice,
@@ -34,7 +36,7 @@ export function PriceMargin({
         );
     }
 
-    const negative = margin !== null && isNegativeDecimal(margin.amount);
+    const negative = margin !== null && isNegativeDecimal(margin.amount.min);
 
     return (
         <span className={cn('flex flex-col', className)}>
@@ -49,9 +51,9 @@ export function PriceMargin({
                     )}
                 >
                     {margin.percent !== null ? (
-                        formatPercent(margin.percent, locale)
+                        formatPercentRange(margin.percent, locale)
                     ) : (
-                        <Money value={margin.amount} />
+                        <MoneyRange value={margin.amount} />
                     )}
                     <span className="sr-only">
                         {negative ? ' margin, below cost' : ' margin'}

@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Actions\Products\CreateProduct;
 use App\Actions\Products\DeleteProduct;
 use App\Actions\Products\UpdateProduct;
+use App\Enums\ComponentQuantityMode;
 use App\Enums\ProductStatus;
 use App\Http\Requests\Products\IndexProductRequest;
 use App\Http\Requests\Products\StoreProductRequest;
@@ -20,6 +21,7 @@ use App\Http\Resources\SaleResource;
 use App\Models\Colour;
 use App\Models\Product;
 use App\Models\ProductCategory;
+use App\Models\ProductComponent;
 use App\Models\Size;
 use App\Models\User;
 use App\Services\Costing\ProductCostingService;
@@ -136,7 +138,7 @@ final class ProductController extends Controller
                 ->get();
         };
 
-        // INV-18-g: ONE read of the lock reasons (four grouped queries) serves the three lock props, whichever a partial reload asks for.
+        // INV-18-g: ONE read of the lock reasons (five grouped queries) serves the three lock props, whichever a partial reload asks for.
         $reasons = null;
         $lock = function () use ($product, &$reasons): array {
             return $reasons ??= app(ProductSizeLock::class)->reasons($product);
@@ -189,6 +191,11 @@ final class ProductController extends Controller
         // The categories are read once per request (the shared `reference` prop reads the same rows).
         $product->setRelation('category', app(ReferenceData::class)->productCategories()->get($product->category_id) ?? ProductCategory::query()->findOrFail($product->category_id));
         $product->setAttribute('costing', $costing->cost($product));
+
+        // INV-16-e: the cells of the By colour and size lines, in one query, and only for a product that has such a line.
+        if ($product->components->contains(fn (ProductComponent $component): bool => $component->quantity_mode === ComponentQuantityMode::ByVariant)) {
+            $product->components->load('quantities');
+        }
 
         return new ProductResource($product);
     }

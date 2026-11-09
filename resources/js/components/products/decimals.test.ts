@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vite-plus/test';
-import { isNegativeDecimal, trimDecimal } from '@/components/products/decimals';
+import {
+    compareDecimals,
+    isNegativeDecimal,
+    trimDecimal,
+} from '@/components/products/decimals';
 
 describe('trimDecimal', () => {
     it.each([
@@ -40,4 +44,24 @@ describe('isNegativeDecimal', () => {
             expect(isNegativeDecimal(v)).toBe(false);
         },
     );
+});
+
+describe('compareDecimals (lowest and highest of typed cells, without numbers)', () => {
+    it.each([
+        ['1.6', '1.6000', 0],
+        ['1.6000', '2.2000', -1],
+        ['2.2000', '1.6000', 1],
+        ['10', '9.9999', 1],
+        ['9.9999', '10', -1],
+        ['2', '10', -1],
+        ['0.5', '.5', 0],
+        ['007.50', '7.5', 0],
+        ['0.0001', '0', 1],
+        ['-1', '1', -1],
+        ['-2', '-1', -1],
+        ['-0', '0', 0],
+        ['abc', 'abd', -1],
+    ] as const)('compares %s with %s as %i', (a, b, expected) => {
+        expect(compareDecimals(a, b)).toBe(expected);
+    });
 });

@@ -4,7 +4,9 @@ import { BottleneckCallout } from '@/components/products/bottleneck-callout';
 import {
     canvasLowSneaker,
     choreJacket,
+    denimBlackByVariantLine,
     denimJacket,
+    denimJacketVarying,
     jacketWithoutComposition,
     materialRef,
 } from '@/test/fixtures/products';
@@ -25,6 +27,7 @@ function renderCallout(product: Product) {
             productName={product.name}
             capacity={product.capacity}
             components={product.components}
+            singleColour={product.colours.length === 1}
             materialHref={(material: MaterialRef) =>
                 `/materials/${material.id}`
             }
@@ -39,7 +42,12 @@ function renderCallout(product: Product) {
  */
 const buttonShort: Product = {
     ...denimJacket,
-    capacity: { max_producible: 0, bottleneck: materialRef('button') },
+    capacity: {
+        max_producible: 0,
+        bottleneck: materialRef('button'),
+        best: 0,
+        by_variant: null,
+    },
     components: denimJacket.components.map((line) =>
         line.is_bottleneck
             ? { ...line, stock_on_hand: '7.0000', units_possible: 0 }
@@ -100,7 +108,11 @@ describe('<BottleneckCallout>', () => {
         it('says "1 unit" when the stock covers a single unit', () => {
             renderCallout({
                 ...denimJacket,
-                capacity: { ...denimJacket.capacity, max_producible: 1 },
+                capacity: {
+                    ...denimJacket.capacity,
+                    max_producible: 1,
+                    best: 1,
+                },
             });
 
             expect(screen.getByRole('note')).toHaveTextContent(
@@ -159,10 +171,140 @@ describe('<BottleneckCallout>', () => {
         });
     });
 
+    describe('with a By colour and size line (INV-16)', () => {
+        const example = denimJacketVarying.capacity;
+        const byVariant = example.by_variant;
+
+        if (!byVariant) {
+            throw new Error('The varying fixture needs by_variant');
+        }
+
+        const binding = byVariant.binding;
+
+        it('names the colour and size, what the stock covers, and the best case', () => {
+            renderCallout(denimJacketVarying);
+
+            const callout = screen.getByRole('note');
+
+            expect(callout).toHaveAttribute('data-tone', 'warning');
+            expect(callout).toHaveTextContent(
+                'Bottleneck: Denim 12oz Black (Black, size XL).',
+            );
+            expect(callout).toHaveTextContent(
+                '40 m in stock covers 16 units of Black, size XL — the smallest across every colour and size.',
+            );
+            expect(callout).toHaveTextContent(
+                'Best case: 112 units, in Indigo — limited there by Metal shank button 17mm.',
+            );
+            expect(
+                screen.getByRole('link', { name: 'Metal shank button 17mm' }),
+            ).toHaveAttribute('href', '/materials/5');
+            expect(
+                screen.getByRole('link', { name: 'Open material' }),
+            ).toHaveAttribute('href', '/materials/13');
+        });
+
+        it.each([
+            {
+                name: 'out of stock: says the variant can not be made',
+                max: 0,
+                line: { stock_on_hand: '0.0000' },
+                body: "Denim 12oz Black is out of stock, so Black, size XL can't be made.",
+                absent: 'in stock covers',
+            },
+            {
+                name: 'less than one unit: shows what is in stock',
+                max: 0,
+                line: { stock_on_hand: '0.5000' },
+                body: "Denim 12oz Black doesn't cover one unit of Black, size XL. 0.5 m in stock.",
+                absent: 'in stock covers',
+            },
+            {
+                name: 'below its reorder level: adds the reorder sentence',
+                max: 16,
+                line: {
+                    stock_on_hand: '40.0000',
+                    material: {
+                        ...denimBlackByVariantLine.material,
+                        stock_status: 'low' as const,
+                        reorder_level: '50.0000',
+                    },
+                },
+                body: "40 m in stock covers 16 units of Black, size XL — the smallest across every colour and size. It's also below its reorder level of 50 m.",
+                absent: "can't be made",
+            },
+        ])('$name', ({ max, line: change, body, absent }) => {
+            renderCallout({
+                ...denimJacketVarying,
+                capacity: { ...example, max_producible: max },
+                components: denimJacketVarying.components.map((line) =>
+                    line.id === denimBlackByVariantLine.id
+                        ? { ...line, ...change }
+                        : line,
+                ),
+            });
+
+            const callout = screen.getByRole('note');
+
+            expect(callout).toHaveTextContent(
+                'Bottleneck: Denim 12oz Black (Black, size XL).',
+            );
+            expect(callout).toHaveTextContent(body);
+            expect(callout).not.toHaveTextContent(absent);
+            expect(callout).toHaveTextContent(
+                'Best case: 112 units, in Indigo — limited there by Metal shank button 17mm.',
+            );
+            expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+        });
+
+        it('leaves the size out for a One size product', () => {
+            renderCallout({
+                ...denimJacketVarying,
+                capacity: {
+                    ...example,
+                    by_variant: {
+                        ...byVariant,
+                        binding: { ...binding, size: null },
+                    },
+                },
+            });
+
+            const callout = screen.getByRole('note');
+
+            expect(callout).toHaveTextContent(
+                'Bottleneck: Denim 12oz Black (Black).',
+            );
+            expect(callout).toHaveTextContent(
+                '40 m in stock covers 16 units of Black — the smallest across every colour.',
+            );
+        });
+
+        it('leaves the colour out for a one-colour product', () => {
+            renderCallout({
+                ...denimJacketVarying,
+                colours: [binding.colour],
+            });
+
+            const callout = screen.getByRole('note');
+
+            expect(callout).toHaveTextContent(
+                'Bottleneck: Denim 12oz Black (size XL).',
+            );
+            expect(callout).toHaveTextContent(
+                '40 m in stock covers 16 units of size XL — the smallest across every size.',
+            );
+        });
+    });
+
     it('renders nothing when there is a capacity but no bottleneck to show', () => {
         const { container } = renderCallout({
             ...denimJacket,
-            capacity: { max_producible: 5, bottleneck: null },
+            capacity: {
+                max_producible: 5,
+                bottleneck: null,
+                best: 5,
+                by_variant: null,
+            },
         });
 
         expect(container).toBeEmptyDOMElement();

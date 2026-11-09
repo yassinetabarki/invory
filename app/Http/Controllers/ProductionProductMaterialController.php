@@ -11,8 +11,9 @@ use App\Services\Orders\CuttingPreview;
 use Illuminate\Support\Facades\Gate;
 
 /**
- * The Start batch window's materials table (INV-5-c, AC-2; ADR-0009 rule 5): what starting N units would take, on the stock saved now,
- * read without locks. Start batch redoes the same plan under the locks. A deleted or other workshop's product is a 404.
+ * The Start batch window's materials table (INV-5-c, AC-2; ADR-0009 rule 5): what starting the window's grid (`units[colourId][sizeId]`,
+ * INV-16-k) would take, on the stock saved now, read without locks. Start batch redoes the same plan under the locks. A deleted or other
+ * workshop's product is a 404.
  */
 final class ProductionProductMaterialController extends Controller
 {

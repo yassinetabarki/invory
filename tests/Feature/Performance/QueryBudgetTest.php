@@ -30,12 +30,12 @@ use function Pest\Laravel\actingAs;
 const QUERY_BUDGET = 10;
 
 /**
- * The budget of one page: Edit product reads, besides the product, the four grouped queries of its size locks (INV-18-g: stock, orders,
- * barcodes and production, one each whatever the sizes), so it may run exactly 4 more.
+ * The budget of one page: Edit product reads, besides the product, the five grouped queries of its size locks (INV-18-g, INV-16-e: stock, orders,
+ * barcodes, production and material quantities, one each whatever the sizes), so it may run exactly 5 more.
  */
 function queryBudgetOf(string $uri): int
 {
-    return QUERY_BUDGET + (preg_match('#/products/\d+/edit$#', parse_url($uri, PHP_URL_PATH) ?: '') === 1 ? 4 : 0);
+    return QUERY_BUDGET + (preg_match('#/products/\d+/edit$#', parse_url($uri, PHP_URL_PATH) ?: '') === 1 ? 5 : 0);
 }
 
 beforeEach(function () {

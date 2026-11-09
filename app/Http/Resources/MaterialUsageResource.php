@@ -28,10 +28,11 @@ final class MaterialUsageResource extends JsonResource
                 'status_label' => $this->product->status->label(),
             ],
             'effective_quantity' => $this->effectiveQuantity,
-            'units_covered' => $this->unitsCovered,
+            'units_covered' => ['min' => $this->unitsCoveredMin, 'max' => $this->unitsCoveredMax],
             'max_producible' => $this->maxProducible,
             'bottleneck' => (new MaterialRefResource($this->bottleneck))->resolve($request),
             'is_bottleneck' => $this->isBottleneck,
+            'product_varies' => $this->productVaries,
             'next_limit' => $this->nextLimit === null ? null : [
                 'material' => (new MaterialRefResource($this->nextLimit['material']))->resolve($request),
                 'max_producible' => $this->nextLimit['max_producible'],

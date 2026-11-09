@@ -50,6 +50,16 @@ class ProductionCut extends Model
         return $this->hasMany(ProductionCutMaterial::class);
     }
 
+    /**
+     * The colours and sizes of the start (INV-16). A cut made before INV-16 has none.
+     *
+     * @return HasMany<ProductionCutVariant, $this>
+     */
+    public function variants(): HasMany
+    {
+        return $this->hasMany(ProductionCutVariant::class);
+    }
+
     /** @return HasMany<ProductionBatch, $this> */
     public function batches(): HasMany
     {

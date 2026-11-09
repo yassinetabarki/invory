@@ -143,21 +143,54 @@ export type ProductRef = {
     photo_url: string | null;
 };
 
-export type Capacity = {
-    max_producible: number | null; // null = no composition
-    bottleneck: MaterialRef | null; // null when max_producible is null
+/** A colour and a size of a product (INV-16). */
+export type VariantRef = { colour: Colour; size: Size | null }; // size null for a "One size" product
+
+/** What one colour of a product can make now. The figures are null for a colour that uses no material ("No composition"). */
+export type ColourCapacity = {
+    colour: Colour;
+    guaranteed: number | null; // the smallest over the colour's sizes
+    best: number | null; // the largest
+    bottleneck: MaterialRef | null; // what limits `guaranteed`, at `binding_size`
+    binding_size: Size | null; // the size that gives `guaranteed` ("(XL)"); null for a "One size" product too
 };
 
+/** Where the guaranteed and the best figures are reached on a product with a By colour and size line (INV-16). */
+export type CapacityByVariant = {
+    binding: VariantRef; // the colour and size that limit `max_producible`: "(Black, size XL)"
+    best_at: { colour: Colour; bottleneck: MaterialRef }; // "Best case: …, in Indigo — limited there by …"
+};
+
+export type Capacity = {
+    max_producible: number | null; // null = no composition. The guaranteed figure: any mix of colours and sizes can be made
+    bottleneck: MaterialRef | null; // null when max_producible is null. What limits the guaranteed figure
+    best: number | null; // the most one colour and size can make on its own; = max_producible without a By colour and size line; null without a composition
+    by_variant: CapacityByVariant | null; // null without a By colour and size line, and when no colour and size has a composition
+};
+
+/** A figure from its lowest to its highest over every colour and size (INV-16); min = max when nothing varies. */
+export type DecimalRange = { min: Decimal; max: Decimal };
+
 export type Margin = {
-    amount: Decimal; // selling_price − unit_cost, may be negative
-    percent: Decimal | null; // amount ÷ selling_price × 100 (scale 2); null when selling_price is 0
+    amount: DecimalRange; // selling_price − unit_cost: min = selling price − highest unit cost, may be negative
+    percent: DecimalRange | null; // amount ÷ selling_price × 100 (scale 2); null when selling_price is 0
 };
 
 export type CostBreakdown = {
-    material_cost: Decimal;
+    material_cost: DecimalRange;
     labor_cost: Decimal;
     overhead_cost: Decimal;
-    unit_cost: Decimal;
+    unit_cost: DecimalRange;
+};
+
+/** How a composition line gets its quantity (INV-16): one quantity for every colour and size, or one per colour and size. */
+export type ComponentQuantityMode = 'same' | 'by_variant';
+
+/** One filled cell of a `by_variant` line: > 0, in the material's unit. A colour and size with no cell don't use the material. */
+export type QuantityCell = {
+    colour_id: number;
+    size_id: number;
+    quantity: Decimal;
 };
 
 export type ProductComponentLine = {
@@ -168,13 +201,15 @@ export type ProductComponentLine = {
         stock_status: StockStatus;
         reorder_level: Decimal | null;
     };
-    quantity: Decimal; // per unit of product, in the material's unit
+    quantity_mode: ComponentQuantityMode;
+    quantities: QuantityCell[]; // [] on a `same` line; colour list order, then size order
+    quantity: Decimal | null; // per unit of product, in the material's unit; null ("Varies") on a `by_variant` line
     waste_percent: Decimal; // scale 2
-    effective_quantity: Decimal;
+    effective_quantity: Decimal | null; // null on a `by_variant` line
     unit_cost: Decimal; // the material's unit cost
-    line_cost: Decimal;
+    line_cost: Decimal | null; // null on a `by_variant` line
     stock_on_hand: Decimal;
-    units_possible: number;
+    units_possible: number | null; // null on a `by_variant` line
     is_bottleneck: boolean;
     notes: string | null; // placement, e.g. "Front placket"
 };
@@ -189,7 +224,7 @@ export type ProductListItem = {
     status_label: string;
     photo_url: string | null;
     components_count: number;
-    unit_cost: Decimal;
+    unit_cost: DecimalRange;
     selling_price: Decimal | null;
     margin: Margin | null; // null when selling_price is null
     capacity: Capacity;
@@ -252,6 +287,7 @@ export type Product = {
     cost: CostBreakdown;
     margin: Margin | null; // null when selling_price is null
     capacity: Capacity;
+    capacity_by_colour: ColourCapacity[] | null; // one row per colour, in colour list order; null without a By colour and size line
     components: ProductComponentLine[]; // ordered by position
     colours: Colour[]; // in list order; at least one for every product saved through the form
     created_at: string; // ISO-8601
@@ -286,7 +322,9 @@ export type MaterialOption = MaterialRef & {
 
 export type ProductComponentFormRow = {
     material_id: number | '';
-    quantity: string;
+    quantity_mode: ComponentQuantityMode;
+    quantity: string; // the `same` quantity; '' on a `by_variant` line
+    quantities: Record<number, Record<number, string>>; // by colour id, then size id; '' = no cell; {} on a `same` line
     waste_percent: string;
     notes: string;
 };
@@ -737,15 +775,19 @@ export type RestockFormData = {
 
 export type NextLimit = { material: MaterialRef; max_producible: number };
 
+/** The lowest and highest of a whole number over colours and sizes; min = max when nothing varies (INV-16). */
+export type CountRange = { min: number; max: number };
+
 /** One product that uses the material shown ("What you can make with it"). */
 export type MaterialUsage = {
     product: ProductRef & { status: ProductStatus; status_label: string };
-    effective_quantity: Decimal; // needed per unit, waste included, in this material's unit
-    units_covered: number; // units this material's stock covers on its own
-    max_producible: number; // units of the product that can be made now (whole composition)
-    bottleneck: MaterialRef; // the material that limits the product
+    effective_quantity: Decimal | null; // needed per unit, waste included, in this material's unit; null ("Varies") only when the need differs across the variants that use this material
+    units_covered: CountRange; // units this material's stock covers on its own; the lowest and highest over the colours and sizes that use it
+    max_producible: number; // units of the product that can be made now (whole composition; the guaranteed figure when the product varies)
+    bottleneck: MaterialRef; // the material that limits the product (the binding colour and size's when it varies)
     is_bottleneck: boolean; // true when that material is this one
-    next_limit: NextLimit | null; // only when is_bottleneck; null if it is the product's only material
+    product_varies: boolean; // the product has a By colour and size line: no next limit or suggestion
+    next_limit: NextLimit | null; // only when is_bottleneck; null if it is the product's only material, and always null when the product varies
 };
 
 export type TopProduct = {
@@ -921,17 +963,18 @@ export type ProductionPhaseFormData = { name: string };
 
 /** `GET progress.products.line`: the Start batch window's grid of one product, with its shelf ("Shelf 2") and "Can produce now 112". */
 export type StartBatchLine = RestockLine & {
-    can_produce: number | null; // null when the product has no composition
+    can_produce: number | null; // null when the product has no composition; the guaranteed figure of a product that varies by colour and size
     bottleneck: string | null; // the material that stops it
 };
-/** `GET progress.products.materials` (`?units=16`): the table "Materials for 16 units" (Material · Taken · In stock · After). */
+/** `GET progress.products.materials` (`?units[colourId][sizeId]=n`, only the fields above 0): "Materials for 16 units" (Material · Taken · In stock · After). */
 export type StartBatchPreview = {
     units: number;
     rows: MaterialMoveRow[]; // by material name; `quantity` is "Taken", `short_by` only when stock is short
     has_composition: boolean; // false: nothing is taken
-    max_cuttable: number | null;
-    // only when the units exceed max_cuttable, the same text as the refusal under `units`:
+    max_cuttable: number | null; // null also for a mixed grid (several colours and sizes of a product with a By colour and size line)
+    // only when the stock is short, the same text as the refusal under `units`:
     //   "Not enough stock to cut 20 units. You can cut at most 12 now: Metal shank button 17mm runs short. Restock it first, or cut 12 or fewer."
+    //   mixed grid: "Short on Denim 12oz Black and Metal shank button 17mm. Restock them first, or lower the units."
     short_message: string | null;
 };
 /** Flash `batches_started` after Start batch: "2 batches started" · "16 units of Denim Jacket started. …" and the tickets' lines. */

@@ -20,9 +20,10 @@ use Illuminate\Validation\ValidationException;
 use LogicException;
 
 /**
- * Undo batch (INV-5-e, AC-6, ADR-0023): only while the batch is In cutting. Under the production lock, then the batch, its cut and
- * the cut's materials in ascending id: gives back what {@see ProductionReturns} works out, writes one `cutting_return` entry per
- * material that gets something back, counts the units on the cut and marks the batch undone. Every figure written is the plan's.
+ * Undo batch (INV-5-e, AC-6, ADR-0023; per colour and size since INV-16): only while the batch is In cutting. Under the production
+ * lock, then the batch, its cut, the cut's rows per colour and size and the cut's materials in ascending id: gives back what
+ * {@see ProductionReturns} works out, writes one `cutting_return` entry per material that gets something back, counts the units on the
+ * cut and on its row of the batch's colour and size, and marks the batch undone. Every figure written is the plan's.
  */
 final readonly class UndoBatch
 {
@@ -42,7 +43,7 @@ final readonly class UndoBatch
                 throw ValidationException::withMessages(['undo' => ProductionMessages::undoMovedOn($locked->label)]);
             }
 
-            ['plan' => $plan, 'materials' => $materials, 'cut' => $cut] = $this->returns->plan($locked, lock: true);
+            ['plan' => $plan, 'materials' => $materials, 'cut' => $cut, 'variant' => $variant] = $this->returns->plan($locked, lock: true);
             $today = today()->toDateString();
 
             foreach ($plan->returns as $return) {
@@ -68,6 +69,8 @@ final readonly class UndoBatch
 
             // A counter of units, not money: the batch's own units, added to the locked row.
             $cut->increment('units_returned', $plan->unitsCovered);
+            // The cut's row of this colour and size (none on a cut made before INV-16), locked with the cut.
+            $variant?->increment('units_returned', $plan->unitsCovered);
 
             $locked->forceFill([
                 'status' => ProductionBatchStatus::Undone,

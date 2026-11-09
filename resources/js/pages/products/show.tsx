@@ -5,6 +5,10 @@ import MaterialController from '@/actions/App/Http/Controllers/MaterialControlle
 import ProductController from '@/actions/App/Http/Controllers/ProductController';
 import SaleController from '@/actions/App/Http/Controllers/SaleController';
 import { BottleneckCallout } from '@/components/products/bottleneck-callout';
+import {
+    CapacityByColourCard,
+    CapacityByColourCardLoading,
+} from '@/components/products/capacity-by-colour-card';
 import { CompositionCard } from '@/components/products/composition-card';
 import { CostBreakdownCard } from '@/components/products/cost-breakdown-card';
 import {
@@ -165,6 +169,7 @@ function ProductDetails({
                             capacity={product.capacity}
                             unitCost={product.cost.unit_cost}
                             multipleSizes={product.sizes.length > 1}
+                            multipleColours={product.colours.length > 1}
                             stock={
                                 <Deferred
                                     data="finished_stock"
@@ -188,9 +193,18 @@ function ProductDetails({
                             productName={product.name}
                             capacity={product.capacity}
                             components={product.components}
+                            singleColour={product.colours.length === 1}
                             materialHref={materialHref}
                             editHref={editHref}
                         />
+                        {product.capacity_by_colour && (
+                            <CapacityByColourCard
+                                rows={product.capacity_by_colour}
+                                guaranteed={product.capacity.max_producible}
+                                best={product.capacity.best}
+                                materialHref={materialHref}
+                            />
+                        )}
                         <CostBreakdownCard
                             cost={product.cost}
                             linesCount={product.components.length}
@@ -224,7 +238,13 @@ function ProductDetails({
                     lines={product.components}
                     materialsTotal={product.cost.material_cost}
                     capacity={product.capacity.max_producible}
+                    best={product.capacity.best}
                     materialHref={materialHref}
+                    colours={product.colours}
+                    sizes={product.sizes.map((size) => ({
+                        ...size,
+                        one_size: product.one_size,
+                    }))}
                     editHref={editHref}
                 />
 
@@ -287,6 +307,7 @@ function ProductPageSkeleton() {
                 <SkeletonStat label="In stock" />
                 <SkeletonStat label="Unit cost" />
             </div>
+            <CapacityByColourCardLoading />
             <SkeletonCard
                 title="Cost breakdown"
                 label="cost breakdown"

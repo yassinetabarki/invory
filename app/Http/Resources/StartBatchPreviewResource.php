@@ -6,13 +6,14 @@ namespace App\Http\Resources;
 
 use App\Domain\Stock\CutPlan;
 use App\Models\Material;
-use App\Services\Orders\OrderMessages;
+use App\Services\Production\ProductionMessages;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
  * `StartBatchPreview` in resources/js/types/domain.ts (INV-5-c, AC-2): the table "Materials for 16 units" (Material · Taken · In stock
  * · After, and "Short by" when stock is short), by material name, with the refusal the save would give. Every figure is the plan's.
+ * `max_cuttable` is null for a mixed grid (INV-16-k), and `short_message` then names the short materials instead.
  *
  * @property array{plan: CutPlan, materials: array<int, Material>} $resource
  */
@@ -36,7 +37,7 @@ final class StartBatchPreviewResource extends JsonResource
             'rows' => array_map(static fn (array $row): array => (new MaterialMoveRowResource($row))->resolve($request), $rows),
             'has_composition' => $plan->hasComposition(),
             'max_cuttable' => $plan->maxCuttable,
-            'short_message' => $plan->allowed ? null : OrderMessages::notEnoughStock($plan),
+            'short_message' => $plan->allowed ? null : ProductionMessages::notEnoughStock($plan),
         ];
     }
 }

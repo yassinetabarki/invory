@@ -391,14 +391,45 @@ function orderUnits(?int $productId, array $byLabel, ?string $colour = null, ?st
 }
 
 /**
+ * The quantity cells migration object (INV-16-a): `product_components.quantity_mode`, `product_component_quantities` and the
+ * per-colour-and-size cut tables, which point at `sizes`, `product_sizes` and `colours`. It is the newest of the hand-kept list (F-60):
+ * a test that rolls any older migration back rolls this one back first (before `sizesPerWorkshopMigration()`), and brings it back up
+ * last (after it). The older rollback tests don't call it: `sizesPerWorkshopMigration()` carries it.
+ */
+function quantityCellsMigration(): Migration
+{
+    return require database_path('migrations/2026_11_09_100000_add_quantity_cells_to_compositions.php');
+}
+
+/**
  * The sizes per workshop and product migration object (INV-18-c): `workshop_id` and `is_one_size` on `sizes`, `product_sizes`,
- * `product_category_sizes` and `order_lines.by_size`; the size lists and every `size_list_id` are gone. It is the newest of the hand-kept
- * list (F-60): a test that rolls any older migration back rolls this one back first (before `deliveryCountsMigration()`), and brings it
- * back up last (after it).
+ * `product_category_sizes` and `order_lines.by_size`; the size lists and every `size_list_id` are gone. It is the second newest of the
+ * hand-kept list (F-60), below `quantityCellsMigration()`: a test that rolls any older migration back rolls this one back first (before
+ * `deliveryCountsMigration()`), and brings it back up last (after it). Because the INV-16-a tables point at the tables this one changes,
+ * the object returned here carries INV-16-a too: its `down()` rolls INV-16-a back, then this migration; its `up()` the other way round.
+ * So the older rollback tests need no edit.
  */
 function sizesPerWorkshopMigration(): Migration
 {
-    return require database_path('migrations/2026_11_08_100000_sizes_per_workshop_and_product.php');
+    $sizes = require database_path('migrations/2026_11_08_100000_sizes_per_workshop_and_product.php');
+    $cells = quantityCellsMigration();
+
+    return new class($sizes, $cells) extends Migration
+    {
+        public function __construct(private readonly Migration $sizes, private readonly Migration $cells) {}
+
+        public function up(): void
+        {
+            $this->sizes->up();
+            $this->cells->up();
+        }
+
+        public function down(): void
+        {
+            $this->cells->down();
+            $this->sizes->down();
+        }
+    };
 }
 
 /**

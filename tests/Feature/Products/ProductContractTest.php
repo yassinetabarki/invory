@@ -2,10 +2,14 @@
 
 use App\Models\Barcode;
 use App\Models\BarcodeName;
+use App\Models\Colour;
+use App\Models\Material;
 use App\Models\Product;
+use App\Models\ProductComponent;
 use App\Models\ProductSizeStock;
 use App\Models\Size;
 use Illuminate\Support\Arr;
+use Tests\Support\VariantJacket;
 
 use function Pest\Laravel\actingAs;
 
@@ -44,15 +48,19 @@ function expectMaterialRef(array $ref): void
 /** @param  array<string, mixed>  $capacity  a `Capacity` */
 function expectCapacity(array $capacity): void
 {
-    expect(keysOf($capacity))->toBe(['max_producible', 'bottleneck']);
+    expect(keysOf($capacity))->toBe(['max_producible', 'bottleneck', 'best', 'by_variant'])
+        ->and($capacity['by_variant'])->toBeNull(); // the demo has no By colour and size line
 
     if ($capacity['max_producible'] === null) {
-        expect($capacity['bottleneck'])->toBeNull();
+        expect($capacity['bottleneck'])->toBeNull()
+            ->and($capacity['best'])->toBeNull();
 
         return;
     }
 
-    expect($capacity['max_producible'])->toBeInt();
+    // Without a By colour and size line the best figure is the capacity itself.
+    expect($capacity['max_producible'])->toBeInt()
+        ->and($capacity['best'])->toBe($capacity['max_producible']);
     expectMaterialRef($capacity['bottleneck']);
 }
 
@@ -63,9 +71,22 @@ function expectMargin(?array $margin): void
         return;
     }
 
-    expect(keysOf($margin))->toBe(['amount', 'percent'])
-        ->and($margin['amount'])->toMatch(SCALE_4)
-        ->and($margin['percent'])->toMatch(SCALE_2);
+    expect(keysOf($margin))->toBe(['amount', 'percent']);
+    expectRange($margin['amount'], SCALE_4);
+    expectRange($margin['percent'], SCALE_2);
+}
+
+/**
+ * @param  array{min: string, max: string}  $range  a `DecimalRange`
+ * @param  non-empty-string  $scale  the pattern both ends match
+ */
+function expectRange(array $range, string $scale): void
+{
+    expect(keysOf($range))->toBe(['min', 'max'])
+        ->and($range['min'])->toMatch($scale)
+        ->and($range['max'])->toMatch($scale)
+        // Nothing varies on the demo data: one number, twice.
+        ->and($range['max'])->toBe($range['min']);
 }
 
 it('sends ProductListItem with its exact keys, order and types', function () {
@@ -81,11 +102,11 @@ it('sends ProductListItem with its exact keys, order and types', function () {
             ->and($row['id'])->toBeInt()
             ->and($row['components_count'])->toBeInt()
             ->and($row['units_sold_last_30_days'])->toBeInt()
-            ->and($row['unit_cost'])->toMatch(SCALE_4)
             ->and($row['status'])->toBeIn(['draft', 'active', 'archived']);
 
         expect($row['selling_price'] === null || preg_match(SCALE_4, $row['selling_price']) === 1)->toBeTrue();
         expect($row['photo_url'] === null || is_string($row['photo_url']))->toBeTrue();
+        expectRange($row['unit_cost'], SCALE_4);
         expectMargin($row['margin']);
         expectCapacity($row['capacity']);
     }
@@ -112,8 +133,9 @@ it('sends Product with its exact keys, order and types', function () {
 
         expect(keysOf($product))->toBe([
             'id', 'sku', 'name', 'category', 'category_label', 'sizes', 'one_size', 'sizes_line', 'status', 'status_label', 'description', 'photo_url',
-            'labor_cost', 'overhead_cost', 'selling_price', 'cost', 'margin', 'capacity', 'colours', 'components', 'created_at', 'updated_at',
+            'labor_cost', 'overhead_cost', 'selling_price', 'cost', 'margin', 'capacity', 'capacity_by_colour', 'colours', 'components', 'created_at', 'updated_at',
         ])
+            ->and($product['capacity_by_colour'])->toBeNull()
             ->and($product['id'])->toBeInt()
             ->and($product['labor_cost'])->toMatch(SCALE_4)
             ->and($product['overhead_cost'])->toMatch(SCALE_4)
@@ -122,12 +144,13 @@ it('sends Product with its exact keys, order and types', function () {
             ->and($product['one_size'])->toBeBool()
             ->and($product['sizes_line'])->toBeString()
             ->and(keysOf($product['cost']))->toBe(['material_cost', 'labor_cost', 'overhead_cost', 'unit_cost'])
+            ->and($product['cost']['labor_cost'])->toMatch(SCALE_4)
+            ->and($product['cost']['overhead_cost'])->toMatch(SCALE_4)
             ->and($product['created_at'])->toMatch('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$/')
             ->and($product['updated_at'])->toMatch('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$/');
 
-        foreach ($product['cost'] as $figure) {
-            expect($figure)->toMatch(SCALE_4);
-        }
+        expectRange($product['cost']['material_cost'], SCALE_4);
+        expectRange($product['cost']['unit_cost'], SCALE_4);
 
         expectMargin($product['margin']);
         expectCapacity($product['capacity']);
@@ -135,8 +158,8 @@ it('sends Product with its exact keys, order and types', function () {
 
         foreach ($product['components'] as $index => $line) {
             expect(keysOf($line))->toBe([
-                'id', 'position', 'material', 'quantity', 'waste_percent', 'effective_quantity', 'unit_cost', 'line_cost',
-                'stock_on_hand', 'units_possible', 'is_bottleneck', 'notes',
+                'id', 'position', 'material', 'quantity_mode', 'quantities', 'quantity', 'waste_percent', 'effective_quantity', 'unit_cost',
+                'line_cost', 'stock_on_hand', 'units_possible', 'is_bottleneck', 'notes',
             ])
                 ->and($line['id'])->toBeInt()
                 ->and($line['position'])->toBe($index + 1)
@@ -284,7 +307,7 @@ it('sends the props of the create and edit pages (S-25: statuses, plus the produ
     }
 
     expect(actingAs($this->user)->get(route('products.create'))->inertiaProps())->not->toHaveKey('product')
-        ->and(keysOf(actingAs($this->user)->get(route('products.edit', pid(1)))->inertiaProps('product')))->toHaveCount(22);
+        ->and(keysOf(actingAs($this->user)->get(route('products.edit', pid(1)))->inertiaProps('product')))->toHaveCount(23);
 });
 
 it('sends the product-shaped props of the dashboard, the sales form and the material page as before', function () {
@@ -311,10 +334,12 @@ it('sends the product-shaped props of the dashboard, the sales form and the mate
     expect($usage)->toHaveCount(3);
 
     foreach ($usage as $row) {
-        expect(keysOf($row))->toBe(['product', 'effective_quantity', 'units_covered', 'max_producible', 'bottleneck', 'is_bottleneck', 'next_limit'])
+        expect(keysOf($row))->toBe(['product', 'effective_quantity', 'units_covered', 'max_producible', 'bottleneck', 'is_bottleneck', 'product_varies', 'next_limit'])
             ->and(keysOf($row['product']))->toBe(['id', 'sku', 'name', 'photo_url', 'status', 'status_label'])
             ->and($row['effective_quantity'])->toMatch(SCALE_4)
-            ->and($row['units_covered'])->toBeInt()
+            ->and(keysOf($row['units_covered']))->toBe(['min', 'max'])
+            ->and($row['units_covered']['min'])->toBeInt()
+            ->and($row['units_covered']['max'])->toBeInt()
             ->and($row['max_producible'])->toBeInt();
         expectMaterialRef($row['bottleneck']);
     }
@@ -331,4 +356,136 @@ it('sends MaterialResource with the same keys, now with a real used_in_count', f
 
     expect(keysOf($material))->toBe(materialContractKeys())
         ->and($material['used_in_count'])->toBe(3);
+});
+
+/*
+|--------------------------------------------------------------------------
+| Guaranteed and best (INV-16-h)
+|--------------------------------------------------------------------------
+*/
+
+/** @return array{id: int, code: string, name: string, swatch: string} a `Colour` as the contract sends it */
+function capacityColour(int $id): array
+{
+    $colour = Colour::query()->findOrFail($id);
+
+    return ['id' => $colour->id, 'code' => $colour->code, 'name' => $colour->name, 'swatch' => $colour->swatch];
+}
+
+/** @return array{id: int, sku: string, name: string, unit: string} a `MaterialRef` */
+function capacityMaterial(Material $material): array
+{
+    return ['id' => $material->id, 'sku' => $material->sku, 'name' => $material->name, 'unit' => $material->unit->code];
+}
+
+it('sends the guaranteed and best capacity of the card\'s Denim Jacket and its capacity by colour', function () {
+    $jacket = VariantJacket::create();
+
+    $product = loadedPageProp(actingAs($this->user)->get(route('products.show', $jacket->product)), 'product');
+    $xl = ['id' => $jacket->sizes['XL'], 'label' => 'XL'];
+
+    // Guaranteed 16 (Black XL, 40 m / 2.42 m, never rounded up); best 112 (Indigo S, limited by the button).
+    expect($product['capacity'])->toBe([
+        'max_producible' => 16,
+        'bottleneck' => capacityMaterial($jacket->materials['black_denim']),
+        'best' => 112,
+        'by_variant' => [
+            'binding' => ['colour' => capacityColour($jacket->colours['Black']), 'size' => $xl],
+            'best_at' => ['colour' => capacityColour($jacket->colours['Indigo']), 'bottleneck' => capacityMaterial($jacket->materials['button'])],
+        ],
+    ])->and($product['capacity_by_colour'])->toBe([
+        [
+            'colour' => capacityColour($jacket->colours['Indigo']),
+            'guaranteed' => 103,
+            'best' => 112,
+            'bottleneck' => capacityMaterial($jacket->materials['indigo_denim']),
+            'binding_size' => $xl,
+        ],
+        [
+            'colour' => capacityColour($jacket->colours['Black']),
+            'guaranteed' => 16,
+            'best' => 22,
+            'bottleneck' => capacityMaterial($jacket->materials['black_denim']),
+            'binding_size' => $xl,
+        ],
+    ]);
+});
+
+it('sends a colour that uses no material with every figure null, and counts it for neither capacity', function () {
+    $jacket = VariantJacket::create();
+    $jacket->product->colours()->attach($jacket->colours['Light wash'], ['workshop_id' => $jacket->workshop->id]);
+
+    // Only the two denim lines are left, each under its own colour: Light wash has no line at all.
+    ProductComponent::query()->whereIn('material_id', array_map(
+        fn (string $key): int => $jacket->materials[$key]->id,
+        ['button', 'thread', 'label'],
+    ))->get()->each->delete();
+
+    $product = loadedPageProp(actingAs($this->user)->get(route('products.show', $jacket->product)), 'product');
+
+    expect($product['capacity_by_colour'])->toHaveCount(3)
+        ->and($product['capacity_by_colour'][2])->toBe([
+            'colour' => capacityColour($jacket->colours['Light wash']),
+            'guaranteed' => null,
+            'best' => null,
+            'bottleneck' => null,
+            'binding_size' => null,
+        ])
+        ->and([$product['capacity']['max_producible'], $product['capacity']['best']])->toBe([16, 142])
+        ->and($product['capacity']['by_variant']['best_at']['bottleneck']['name'])->toBe('Denim 12oz Indigo');
+});
+
+it('sends best as the capacity itself and no per-variant figures for a product with no By colour and size line', function () {
+    $product = loadedPageProp(actingAs($this->user)->get(route('products.show', pid(1))), 'product');
+
+    expect($product['capacity']['max_producible'])->toBe(112)
+        ->and($product['capacity']['best'])->toBe(112)
+        ->and($product['capacity']['by_variant'])->toBeNull()
+        ->and($product['capacity_by_colour'])->toBeNull();
+});
+
+it('sends the unit cost and margin of the Denim Jacket of the INV-16 card as ranges, on the product page and in the list', function () {
+    $jacket = VariantJacket::create();
+
+    $show = loadedPageProp(actingAs($this->user)->get(route('products.show', $jacket->product)), 'product');
+    $row = collect(actingAs($this->user)->get(route('products.index'))->inertiaProps('products.data'))->firstWhere('id', $jacket->product->id);
+
+    // Lowest (Indigo or Black S, 1.76 m) to highest (XL, 2.42 m); the margin amount's min is the price less the highest unit cost.
+    $margin = ['amount' => ['min' => '49.5060', 'max' => '55.1160'], 'percent' => ['min' => '55.62', 'max' => '61.93']];
+
+    expect($show['cost'])->toBe([
+        'material_cost' => ['min' => '18.3840', 'max' => '23.9940'],
+        'labor_cost' => '12.0000',
+        'overhead_cost' => '3.5000',
+        'unit_cost' => ['min' => '33.8840', 'max' => '39.4940'],
+    ])->and($show['margin'])->toBe($margin)
+        ->and($row['unit_cost'])->toBe(['min' => '33.8840', 'max' => '39.4940'])
+        ->and($row['margin'])->toBe($margin);
+});
+
+it('counts a colour with no composition in the range, and sends one number twice when nothing varies', function () {
+    $jacket = VariantJacket::create();
+    $jacket->product->colours()->attach($jacket->colours['Light wash'], ['workshop_id' => $jacket->workshop->id]);
+
+    // Light wash uses no material once the shared lines are gone: labor and overhead only, TND 15.500.
+    ProductComponent::query()->whereIn('material_id', array_map(
+        fn (string $key): int => $jacket->materials[$key]->id,
+        ['button', 'thread', 'label'],
+    ))->get()->each->delete();
+
+    $withEmpty = loadedPageProp(actingAs($this->user)->get(route('products.show', $jacket->product)), 'product');
+
+    expect($withEmpty['cost']['material_cost']['min'])->toBe('0.0000')
+        ->and($withEmpty['cost']['unit_cost']['min'])->toBe('15.5000')
+        ->and($withEmpty['margin']['amount']['max'])->toBe('73.5000');
+
+    $plain = loadedPageProp(actingAs($this->user)->get(route('products.show', pid(1))), 'product');
+    $row = collect(actingAs($this->user)->get(route('products.index'))->inertiaProps('products.data'))->firstWhere('id', pid(1));
+    $same = ['min' => '35.7540', 'max' => '35.7540'];
+
+    expect($plain['cost']['material_cost'])->toBe(['min' => '20.2540', 'max' => '20.2540'])
+        ->and($plain['cost']['unit_cost'])->toBe($same)
+        ->and($plain['margin'])->toBe(['amount' => ['min' => '53.2460', 'max' => '53.2460'], 'percent' => ['min' => '59.83', 'max' => '59.83']])
+        ->and($row['unit_cost'])->toBe($same)
+        ->and($row['margin'])->toBe($plain['margin']);
 });

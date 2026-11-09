@@ -221,10 +221,10 @@ describe('store', function () {
 
         // The golden values of the costing skill.
         $response->assertInertia(fn (Assert $page) => $page->loadDeferredProps('default', fn (Assert $reloaded) => $reloaded
-            ->where('product.cost', ['material_cost' => '20.2540', 'labor_cost' => '12.0000', 'overhead_cost' => '3.5000', 'unit_cost' => '35.7540'])
+            ->where('product.cost', ['material_cost' => ['min' => '20.2540', 'max' => '20.2540'], 'labor_cost' => '12.0000', 'overhead_cost' => '3.5000', 'unit_cost' => ['min' => '35.7540', 'max' => '35.7540']])
             ->where('product.capacity.max_producible', 112)
             ->where('product.capacity.bottleneck.sku', 'MAT-BTN-017')
-            ->where('product.margin', ['amount' => '53.2460', 'percent' => '59.83'])
+            ->where('product.margin', ['amount' => ['min' => '53.2460', 'max' => '53.2460'], 'percent' => ['min' => '59.83', 'max' => '59.83']])
             ->where('product.selling_price', '89.0000')));
 
         expect(loadedPageProp($response, 'product.components.*.units_possible'))->toBe([126, 112, 158, 400]);
@@ -262,8 +262,8 @@ describe('store', function () {
 
         actingAs($this->user)->get(route('products.show', $product))
             ->assertInertia(fn (Assert $page) => $page->loadDeferredProps('default', fn (Assert $reloaded) => $reloaded
-                ->where('product.cost', ['material_cost' => '20.2540', 'labor_cost' => '12.0000', 'overhead_cost' => '0.0000', 'unit_cost' => '32.2540'])
-                ->where('product.margin', ['amount' => '56.7460', 'percent' => '63.76'])
+                ->where('product.cost', ['material_cost' => ['min' => '20.2540', 'max' => '20.2540'], 'labor_cost' => '12.0000', 'overhead_cost' => '0.0000', 'unit_cost' => ['min' => '32.2540', 'max' => '32.2540']])
+                ->where('product.margin', ['amount' => ['min' => '56.7460', 'max' => '56.7460'], 'percent' => ['min' => '63.76', 'max' => '63.76']])
                 ->where('product.capacity.max_producible', 112)
                 ->where('product.capacity.bottleneck.sku', 'MAT-BTN-017')));
     })->with([
@@ -458,7 +458,7 @@ describe('update', function () {
 
     it('clears the overhead to 0 and the unit cost drops by the old overhead', function () {
         $jacket = pid(1);
-        $unitCost = fn (): string => loadedPageProp(actingAs($this->user)->get(route('products.show', $jacket)), 'product.cost.unit_cost');
+        $unitCost = fn (): string => loadedPageProp(actingAs($this->user)->get(route('products.show', $jacket)), 'product.cost.unit_cost.max');
 
         expect($unitCost())->toBe('35.7540');
 

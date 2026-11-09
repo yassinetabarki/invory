@@ -2,7 +2,7 @@ import { Link } from '@inertiajs/react';
 import { Eye, Pencil } from 'lucide-react';
 import { PriceMargin } from '@/components/products/price-margin';
 import { CapacityBadge } from '@/components/shared/capacity-badge';
-import { Money } from '@/components/shared/money';
+import { MoneyRange } from '@/components/shared/money';
 import { PhotoThumb } from '@/components/shared/photo-thumb';
 import { ProductStatusBadge } from '@/components/shared/product-status-badge';
 import { Button } from '@/components/ui/button';
@@ -187,7 +187,7 @@ export function ProductsTable({ products, hrefs }: ProductsTableProps) {
                                     />
                                 </TableCell>
                                 <TableCell className="text-right font-semibold tabular-nums">
-                                    <Money value={product.unit_cost} />
+                                    <MoneyRange value={product.unit_cost} />
                                 </TableCell>
                                 <TableCell className="text-right tabular-nums">
                                     <PriceMargin
@@ -199,6 +199,7 @@ export function ProductsTable({ products, hrefs }: ProductsTableProps) {
                                 <TableCell>
                                     <CapacityBadge
                                         value={product.capacity.max_producible}
+                                        best={product.capacity.best}
                                     />
                                 </TableCell>
                                 <TableCell className="max-w-56 whitespace-normal">
@@ -259,6 +260,7 @@ export function ProductsTable({ products, hrefs }: ProductsTableProps) {
                             </span>
                             <CapacityBadge
                                 value={product.capacity.max_producible}
+                                best={product.capacity.best}
                             />
                         </div>
 
@@ -274,7 +276,7 @@ export function ProductsTable({ products, hrefs }: ProductsTableProps) {
                                     Unit cost
                                 </dt>
                                 <dd className="font-semibold tabular-nums">
-                                    <Money value={product.unit_cost} />
+                                    <MoneyRange value={product.unit_cost} />
                                 </dd>
                             </div>
                             <div>

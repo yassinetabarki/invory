@@ -10,6 +10,7 @@ import { paginate } from '@/test/fixtures';
 import { colourNamed } from '@/test/fixtures/colours';
 import type {
     Colour,
+    DecimalRange,
     FinishedStock,
     MaterialOption,
     MaterialRef,
@@ -28,6 +29,11 @@ import type {
     UnitOfMeasure,
     VariantBarcode,
 } from '@/types/domain';
+
+/** A figure that does not vary over the colours and sizes: lowest = highest (INV-16). */
+export function same(value: string): DecimalRange {
+    return { min: value, max: value };
+}
 
 // ---------------------------------------------------------------------------
 // Materials
@@ -295,6 +301,8 @@ function line(
             stock_status: option.stock_status,
             reorder_level,
         },
+        quantity_mode: 'same',
+        quantities: [],
         quantity: values.quantity,
         waste_percent: values.waste_percent,
         effective_quantity: values.effective_quantity,
@@ -306,6 +314,41 @@ function line(
         notes: values.notes,
     };
 }
+
+/**
+ * A "By colour and size" line (INV-16): Denim 12oz Black, used in Black only
+ * (S 1.6000 · M 1.8000 · L 2.0000 · XL 2.2000). Quantity, effective quantity,
+ * line cost and units possible are null ("Varies"); waste and stock stay single values.
+ */
+export const denimBlackByVariantLine: ProductComponentLine = {
+    id: 190,
+    position: 5,
+    material: {
+        id: 13,
+        sku: 'MAT-DEN-013',
+        name: 'Denim 12oz Black',
+        unit: 'm',
+        photo_url: null,
+        stock_status: 'in_stock',
+        reorder_level: '10.0000',
+    },
+    quantity_mode: 'by_variant',
+    quantities: [
+        { colour_id: 8, size_id: 1, quantity: '1.6000' },
+        { colour_id: 8, size_id: 2, quantity: '1.8000' },
+        { colour_id: 8, size_id: 3, quantity: '2.0000' },
+        { colour_id: 8, size_id: 4, quantity: '2.2000' },
+    ],
+    quantity: null,
+    waste_percent: '10.00',
+    effective_quantity: null,
+    unit_cost: '8.5000',
+    line_cost: null,
+    stock_on_hand: '40.0000',
+    units_possible: null,
+    is_bottleneck: false,
+    notes: null,
+};
 
 // ---------------------------------------------------------------------------
 // Options
@@ -430,13 +473,19 @@ export const denimJacket: Product = {
     overhead_cost: '3.5000',
     selling_price: '89.0000',
     cost: {
-        material_cost: '20.2540',
+        material_cost: same('20.2540'),
         labor_cost: '12.0000',
         overhead_cost: '3.5000',
-        unit_cost: '35.7540',
+        unit_cost: same('35.7540'),
     },
-    margin: { amount: '53.2460', percent: '59.83' },
-    capacity: { max_producible: 112, bottleneck: materialRef('button') },
+    margin: { amount: same('53.2460'), percent: same('59.83') },
+    capacity: {
+        max_producible: 112,
+        bottleneck: materialRef('button'),
+        best: 112,
+        by_variant: null,
+    },
+    capacity_by_colour: null,
     components: [
         line(1, 1, 'denim', {
             quantity: '1.8000',
@@ -631,13 +680,19 @@ export const canvasLowSneaker: Product = {
     overhead_cost: '2.0000',
     selling_price: '69.0000',
     cost: {
-        material_cost: '10.4990',
+        material_cost: same('10.4990'),
         labor_cost: '9.3000',
         overhead_cost: '2.0000',
-        unit_cost: '21.7990',
+        unit_cost: same('21.7990'),
     },
-    margin: { amount: '47.2010', percent: '68.41' },
-    capacity: { max_producible: 0, bottleneck: materialRef('cupsole') },
+    margin: { amount: same('47.2010'), percent: same('68.41') },
+    capacity: {
+        max_producible: 0,
+        bottleneck: materialRef('cupsole'),
+        best: 0,
+        by_variant: null,
+    },
+    capacity_by_colour: null,
     components: [
         line(3, 1, 'canvas', {
             quantity: '0.6500',
@@ -704,13 +759,19 @@ export const choreJacket: Product = {
     overhead_cost: '3.0400',
     selling_price: null,
     cost: {
-        material_cost: '14.8900',
+        material_cost: same('14.8900'),
         labor_cost: '14.5000',
         overhead_cost: '3.0400',
-        unit_cost: '32.4300',
+        unit_cost: same('32.4300'),
     },
     margin: null,
-    capacity: { max_producible: 129, bottleneck: materialRef('canvas') },
+    capacity: {
+        max_producible: 129,
+        bottleneck: materialRef('canvas'),
+        best: 129,
+        by_variant: null,
+    },
+    capacity_by_colour: null,
     components: [
         line(6, 1, 'canvas', {
             quantity: '2.1000',
@@ -754,27 +815,102 @@ export const choreJacket: Product = {
 export const jacketWithoutComposition: Product = {
     ...choreJacket,
     cost: {
-        material_cost: '0.0000',
+        material_cost: same('0.0000'),
         labor_cost: '14.5000',
         overhead_cost: '3.0400',
-        unit_cost: '17.5400',
+        unit_cost: same('17.5400'),
     },
-    capacity: { max_producible: null, bottleneck: null },
+    capacity: {
+        max_producible: null,
+        bottleneck: null,
+        best: null,
+        by_variant: null,
+    },
+    capacity_by_colour: null,
     components: [],
+};
+
+const black: Colour = { id: 8, code: 'BLK', name: 'Black', swatch: '#1F1F23' };
+const indigo: Colour = {
+    id: 10,
+    code: 'IND',
+    name: 'Indigo',
+    swatch: '#3E4C7E',
+};
+const sizeXl: Size = { id: 4, label: 'XL' };
+
+/** Denim 12oz Black, the By colour and size line's material. */
+export const denimBlackRef: MaterialRef = {
+    id: 13,
+    sku: 'MAT-DEN-013',
+    name: 'Denim 12oz Black',
+    unit: 'm',
+};
+
+/**
+ * The card's example (INV-16): the Denim Jacket in Black and Indigo with the
+ * Black denim By colour and size and 40 m on hand. Guaranteed 16 (Black, XL,
+ * limited by the Black denim), best 112 (Indigo, limited by the button).
+ */
+export const denimJacketVarying: Product = {
+    ...denimJacket,
+    colours: [black, indigo],
+    cost: {
+        material_cost: { min: '18.3840', max: '23.9940' },
+        labor_cost: '12.0000',
+        overhead_cost: '3.5000',
+        unit_cost: { min: '33.8840', max: '39.4940' },
+    },
+    margin: {
+        amount: { min: '49.5060', max: '55.1160' },
+        percent: { min: '55.62', max: '61.93' },
+    },
+    capacity: {
+        max_producible: 16,
+        bottleneck: denimBlackRef,
+        best: 112,
+        by_variant: {
+            binding: { colour: black, size: sizeXl },
+            best_at: { colour: indigo, bottleneck: materialRef('button') },
+        },
+    },
+    capacity_by_colour: [
+        {
+            colour: black,
+            guaranteed: 16,
+            best: 22,
+            bottleneck: denimBlackRef,
+            binding_size: sizeXl,
+        },
+        {
+            colour: indigo,
+            guaranteed: 103,
+            best: 112,
+            bottleneck: materialRef('denim'),
+            binding_size: sizeXl,
+        },
+    ],
+    components: [
+        ...denimJacket.components.map((component) => ({
+            ...component,
+            is_bottleneck: false,
+        })),
+        { ...denimBlackByVariantLine, is_bottleneck: true },
+    ],
 };
 
 /** Sold below cost: 30.0000 against a unit cost of 35.7540. */
 export const denimJacketBelowCost: Product = {
     ...denimJacket,
     selling_price: '30.0000',
-    margin: { amount: '-5.7540', percent: '-19.18' },
+    margin: { amount: same('-5.7540'), percent: same('-19.18') },
 };
 
 /** A zero selling price has an amount but no percentage. */
 export const denimJacketGiveaway: Product = {
     ...denimJacket,
     selling_price: '0.0000',
-    margin: { amount: '-35.7540', percent: null },
+    margin: { amount: same('-35.7540'), percent: null },
 };
 
 // ---------------------------------------------------------------------------
@@ -791,10 +927,15 @@ export const denimJacketItem: ProductListItem = {
     status_label: 'Active',
     photo_url: '/mock/photos/prd-jkt-001.svg',
     components_count: 4,
-    unit_cost: '35.7540',
+    unit_cost: same('35.7540'),
     selling_price: '89.0000',
-    margin: { amount: '53.2460', percent: '59.83' },
-    capacity: { max_producible: 112, bottleneck: materialRef('button') },
+    margin: { amount: same('53.2460'), percent: same('59.83') },
+    capacity: {
+        max_producible: 112,
+        bottleneck: materialRef('button'),
+        best: 112,
+        by_variant: null,
+    },
     units_sold_last_30_days: 38,
 };
 
@@ -808,10 +949,15 @@ export const teeItem: ProductListItem = {
     status_label: 'Active',
     photo_url: '/mock/photos/prd-tsh-002.svg',
     components_count: 3,
-    unit_cost: '9.7484',
+    unit_cost: same('9.7484'),
     selling_price: '24.0000',
-    margin: { amount: '14.2516', percent: '59.38' },
-    capacity: { max_producible: 50, bottleneck: materialRef('jersey') },
+    margin: { amount: same('14.2516'), percent: same('59.38') },
+    capacity: {
+        max_producible: 50,
+        bottleneck: materialRef('jersey'),
+        best: 50,
+        by_variant: null,
+    },
     units_sold_last_30_days: 142,
 };
 
@@ -825,10 +971,15 @@ export const sneakerItem: ProductListItem = {
     status_label: 'Active',
     photo_url: '/mock/photos/prd-snk-003.svg',
     components_count: 5,
-    unit_cost: '21.7990',
+    unit_cost: same('21.7990'),
     selling_price: '69.0000',
-    margin: { amount: '47.2010', percent: '68.41' },
-    capacity: { max_producible: 0, bottleneck: materialRef('cupsole') },
+    margin: { amount: same('47.2010'), percent: same('68.41') },
+    capacity: {
+        max_producible: 0,
+        bottleneck: materialRef('cupsole'),
+        best: 0,
+        by_variant: null,
+    },
     units_sold_last_30_days: 9,
 };
 
@@ -842,10 +993,15 @@ export const toteItem: ProductListItem = {
     status_label: 'Active',
     photo_url: '/mock/photos/prd-tot-004.svg',
     components_count: 6,
-    unit_cost: '101.0300',
+    unit_cost: same('101.0300'),
     selling_price: '249.0000',
-    margin: { amount: '147.9700', percent: '59.43' },
-    capacity: { max_producible: 53, bottleneck: materialRef('nappa') },
+    margin: { amount: same('147.9700'), percent: same('59.43') },
+    capacity: {
+        max_producible: 53,
+        bottleneck: materialRef('nappa'),
+        best: 53,
+        by_variant: null,
+    },
     units_sold_last_30_days: 12,
 };
 
@@ -859,10 +1015,15 @@ export const jeansItem: ProductListItem = {
     status_label: 'Active',
     photo_url: '/mock/photos/prd-jns-005.svg',
     components_count: 6,
-    unit_cost: '29.4780',
+    unit_cost: same('29.4780'),
     selling_price: '79.0000',
-    margin: { amount: '49.5220', percent: '62.69' },
-    capacity: { max_producible: 105, bottleneck: materialRef('thread') },
+    margin: { amount: same('49.5220'), percent: same('62.69') },
+    capacity: {
+        max_producible: 105,
+        bottleneck: materialRef('thread'),
+        best: 105,
+        by_variant: null,
+    },
     units_sold_last_30_days: 64,
 };
 
@@ -876,10 +1037,15 @@ export const choreJacketItem: ProductListItem = {
     status_label: 'Draft',
     photo_url: null,
     components_count: 4,
-    unit_cost: '32.4300',
+    unit_cost: same('32.4300'),
     selling_price: null,
     margin: null,
-    capacity: { max_producible: 129, bottleneck: materialRef('canvas') },
+    capacity: {
+        max_producible: 129,
+        bottleneck: materialRef('canvas'),
+        best: 129,
+        by_variant: null,
+    },
     units_sold_last_30_days: 0,
 };
 
@@ -893,10 +1059,15 @@ export const beltItem: ProductListItem = {
     status_label: 'Active',
     photo_url: '/mock/photos/prd-blt-007.svg',
     components_count: 2,
-    unit_cost: '17.0440',
+    unit_cost: same('17.0440'),
     selling_price: '45.0000',
-    margin: { amount: '27.9560', percent: '62.12' },
-    capacity: { max_producible: 391, bottleneck: materialRef('nappa') },
+    margin: { amount: same('27.9560'), percent: same('62.12') },
+    capacity: {
+        max_producible: 391,
+        bottleneck: materialRef('nappa'),
+        best: 391,
+        by_variant: null,
+    },
     units_sold_last_30_days: 31,
 };
 
@@ -907,8 +1078,13 @@ export const unfinishedItem: ProductListItem = {
     sku: 'PRD-NEW-008',
     name: 'Unfinished Parka',
     components_count: 0,
-    unit_cost: '17.5400',
-    capacity: { max_producible: null, bottleneck: null },
+    unit_cost: same('17.5400'),
+    capacity: {
+        max_producible: null,
+        bottleneck: null,
+        best: null,
+        by_variant: null,
+    },
 };
 
 /** Sold below cost: a negative margin. */
@@ -918,7 +1094,7 @@ export const belowCostItem: ProductListItem = {
     sku: 'PRD-JKT-009',
     name: 'Clearance Jacket',
     selling_price: '30.0000',
-    margin: { amount: '-5.7540', percent: '-19.18' },
+    margin: { amount: same('-5.7540'), percent: same('-19.18') },
 };
 
 /** All seven preview products, by name (the list's order). */

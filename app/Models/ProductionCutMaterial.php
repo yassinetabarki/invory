@@ -21,7 +21,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $production_cut_id
  * @property int $material_id
  * @property int|null $unit_id The material's unit at the cut.
- * @property string $quantity_per_unit Decimal string, 8 decimals.
+ * @property string|null $quantity_per_unit Decimal string, 8 decimals. Null on a cut that has {@see ProductionCutVariant} rows (INV-16).
  * @property string $quantity_taken Decimal string, 4 decimals.
  * @property CarbonInterface $created_at
  * @property CarbonInterface $updated_at

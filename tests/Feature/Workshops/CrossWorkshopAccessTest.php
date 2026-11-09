@@ -147,7 +147,7 @@ it('answers 404 to every route with a record of another workshop, shows nothing 
     $jacket = loadedPageProp($this->get(route('products.show', $records['product']))->assertOk(), 'product');
     $denim = pageProp($this->get(route('materials.show', $records['material']))->assertOk(), 'material');
 
-    expect($jacket['cost']['unit_cost'])->toBe('35.7540')
+    expect($jacket['cost']['unit_cost'])->toBe(['min' => '35.7540', 'max' => '35.7540'])
         ->and($jacket['capacity']['max_producible'])->toBe(112)
         ->and($jacket['capacity']['bottleneck']['name'])->toBe('Metal shank button 17mm')
         ->and(pageProp($this->get(route('sales.index', ['period' => 'this_year'])), 'sales.meta.total'))->toBe(60)

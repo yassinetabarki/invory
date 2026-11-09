@@ -1,4 +1,4 @@
-import type { Decimal } from '@/types/domain';
+import type { Decimal, DecimalRange } from '@/types/domain';
 
 /**
  * Display formatting for server decimals.
@@ -177,13 +177,130 @@ export function formatPercent(value: Maybe<Decimal>, locale: string): string {
         return EMPTY_VALUE;
     }
 
+    return percentFormatter(locale).format(value);
+}
+
+function percentFormatter(locale: string): Intl.NumberFormat {
     return new Intl.NumberFormat(locale, {
         style: 'unit',
         unit: 'percent',
         minimumFractionDigits: 0,
         maximumFractionDigits: 2,
         signDisplay: 'negative',
-    }).format(value);
+    });
+}
+
+/** Between the two ends of a range: an en dash, no spaces (`33.884–39.494`). */
+export const RANGE_SEPARATOR = '–';
+
+const NUMBER_PART_TYPES: ReadonlySet<Intl.NumberFormatPartTypes> = new Set([
+    'integer',
+    'group',
+    'decimal',
+    'fraction',
+]);
+
+const partsText = (parts: Intl.NumberFormatPart[]): string =>
+    parts.map((part) => part.value).join('');
+
+/**
+ * Joins the formatted ends of a range into one set of parts. Ends that read
+ * the same after formatting give the one figure (so a range that does not vary
+ * reads exactly like a single value). Otherwise the high end's digits follow
+ * the low end's, so the currency or percent sign is written once, wherever the
+ * locale puts it (`TND 33.884–39.494`, `55,62–61,93 %`). With a minus sign on
+ * either end, both are written in full (`-€5.75–€3.00`): nothing is guessed.
+ */
+function joinRange(
+    low: Intl.NumberFormatPart[],
+    high: Intl.NumberFormatPart[],
+): Intl.NumberFormatPart[] {
+    if (partsText(low) === partsText(high)) {
+        return low;
+    }
+
+    const separator: Intl.NumberFormatPart = {
+        type: 'literal',
+        value: RANGE_SEPARATOR,
+    };
+
+    if ([...low, ...high].some((part) => part.type === 'minusSign')) {
+        return [...low, separator, ...high];
+    }
+
+    const isNumber = (part: Intl.NumberFormatPart) =>
+        NUMBER_PART_TYPES.has(part.type);
+    const lastNumber = low.reduce(
+        (last, part, index) => (isNumber(part) ? index : last),
+        -1,
+    );
+
+    return [
+        ...low.slice(0, lastNumber + 1),
+        separator,
+        ...high.filter(isNumber),
+        ...low.slice(lastNumber + 1),
+    ];
+}
+
+/**
+ * A money range as the pieces of its text, like `formatMoneyParts`, for a
+ * screen that draws the currency apart from the amount. Ends that read the
+ * same after formatting are one value's parts. A null, empty or malformed end
+ * is one literal piece holding the em dash.
+ */
+export function formatMoneyRangeParts(
+    range: Maybe<DecimalRange>,
+    options: Omit<FormatMoneyOptions, 'precise'>,
+): Intl.NumberFormatPart[] {
+    if (
+        range == null ||
+        !isNumericString(range.min) ||
+        !isNumericString(range.max)
+    ) {
+        return [{ type: 'literal', value: EMPTY_VALUE }];
+    }
+
+    return joinRange(
+        moneyFormatter(range.min, options).formatToParts(range.min),
+        moneyFormatter(range.max, options).formatToParts(range.max),
+    );
+}
+
+/**
+ * A unit cost or margin from its lowest to its highest over every colour and
+ * size (INV-16): TND, `{ min: "33.8840", max: "39.4940" }` →
+ * `TND 33.884–39.494`. Money keeps its currency's own digits. When the ends
+ * read the same it is exactly `formatMoney`'s text (`TND 35.754`).
+ */
+export function formatMoneyRange(
+    range: Maybe<DecimalRange>,
+    options: Omit<FormatMoneyOptions, 'precise'>,
+): string {
+    return partsText(formatMoneyRangeParts(range, options));
+}
+
+/** A margin percentage range: `55.62–61.93%`; ends that read the same give `55.62%`. */
+export function formatPercentRange(
+    range: Maybe<DecimalRange>,
+    locale: string,
+): string {
+    if (
+        range == null ||
+        !isNumericString(range.min) ||
+        !isNumericString(range.max)
+    ) {
+        return EMPTY_VALUE;
+    }
+
+    const formatter = percentFormatter(locale);
+
+    return partsText(
+        joinRange(
+            formatter.formatToParts(range.min),
+            formatter.formatToParts(range.max),
+        ),
+    );
 }
 
 /** `YYYY-MM-DD`, optionally followed by an ISO-8601 time (and offset). */

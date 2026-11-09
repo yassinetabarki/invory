@@ -8,6 +8,7 @@ use App\Enums\ProductionBatchStatus;
 use App\Models\BarcodeName;
 use App\Models\OrderLineSize;
 use App\Models\Product;
+use App\Models\ProductComponentQuantity;
 use App\Models\ProductionBatch;
 use App\Models\ProductSizeStock;
 use App\Models\Size;
@@ -15,9 +16,10 @@ use App\Models\Size;
 /**
  * A size a product uses can't be taken off it (INV-18-f, AC-6, ADR-0028), whatever the reason: finished units in stock, a row on an order
  * (delivered and cancelled included, a deleted order doesn't count), a barcode of the product's name in one of its current colours (a
- * size that ever had one stays for good), or a batch In production. A size with none of them is free.
+ * size that ever had one stays for good), a batch In production, or a quantity of a By colour and size composition line (INV-16-e). A size
+ * with none of them is free.
  *
- * {@see reasons()} is the one reader: FOUR grouped queries per product, whatever its sizes. The sentences are written here too, so no
+ * {@see reasons()} is the one reader: FIVE grouped queries per product, whatever its sizes. The sentences are written here too, so no
  * screen words a lock itself. Checked twice, like the colour lock: by the update request (so the sentences show with the other errors)
  * and by `UpdateProduct` under the product's row lock (so a stock update, an order or a barcode can't land between the check and the save).
  */
@@ -31,10 +33,12 @@ final class ProductSizeLock
 
     private const PRODUCTION = 'has units in production';
 
+    private const QUANTITIES = 'has material quantities';
+
     public function __construct(private readonly ProductSizes $productSizes) {}
 
     /**
-     * Each locked size of the product (by size id) with the reasons it is locked, in this order: stock, orders, barcodes, production.
+     * Each locked size of the product (by size id) with the reasons it is locked, in this order: stock, orders, barcodes, production, material quantities.
      * A free size has no entry.
      *
      * @return array<int, list<string>>
@@ -57,6 +61,8 @@ final class ProductSizeLock
             self::PRODUCTION => ProductionBatch::query()->where('product_id', $product->id)
                 ->where('status', ProductionBatchStatus::InProduction->value)
                 ->distinct()->pluck('size_id'),
+            // INV-16-e: a cell of a By colour and size line (cells exist only on such lines).
+            self::QUANTITIES => ProductComponentQuantity::query()->where('product_id', $product->id)->distinct()->pluck('size_id'),
         ];
 
         $reasons = [];

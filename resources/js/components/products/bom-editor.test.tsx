@@ -4,11 +4,13 @@ import { useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { BomEditor } from '@/components/products/bom-editor';
 import type { BomRow } from '@/components/products/bom-rows';
-import type { MaterialOption } from '@/types/domain';
+import type { Colour, MaterialOption } from '@/types/domain';
 import { inertiaMock, resetInertiaMock, respondToHttp } from '@/test/inertia';
+import { colourNamed } from '@/test/fixtures/colours';
 import {
     answerMaterialOptions,
     materialOptions,
+    sizeOptionsFixture,
 } from '@/test/fixtures/products';
 
 vi.mock('@inertiajs/react', async (importOriginal) => {
@@ -18,6 +20,10 @@ vi.mock('@inertiajs/react', async (importOriginal) => {
         await importOriginal<typeof import('@inertiajs/react')>(),
     );
 });
+
+const indigo = colourNamed('Indigo');
+const black = colourNamed('Black');
+const sizesSToXl = sizeOptionsFixture.slice(0, 4);
 
 const DENIM = 4;
 const BUTTON = 5;
@@ -41,6 +47,8 @@ function row(
         quantity,
         waste_percent: waste,
         notes,
+        quantity_mode: 'same',
+        quantities: {},
     };
 }
 
@@ -55,6 +63,8 @@ type HarnessProps = {
     /** What the form knows of its saved rows (the edit page's `product.components`). */
     known?: readonly MaterialOption[];
     errors?: Record<string, string | undefined>;
+    /** The colours ticked on the form (default Indigo and Black); the sizes are S, M, L, XL. */
+    colours?: Colour[];
     onRows?: (rows: BomRow[]) => void;
 };
 
@@ -63,6 +73,7 @@ function Harness({
     initial = jacketRows(),
     known = knownMaterials,
     errors = {},
+    colours = [indigo, black],
     onRows,
 }: HarnessProps) {
     const [rows, setRows] = useState(initial);
@@ -72,6 +83,8 @@ function Harness({
             rows={rows}
             knownMaterials={known}
             errors={errors}
+            colours={colours}
+            sizes={sizesSToXl}
             onChange={(next) => {
                 setRows(next);
                 onRows?.(next);
@@ -146,6 +159,26 @@ describe('<BomEditor>', () => {
                 'Row 2: Metal shank button 17mm',
                 'Row 3: Polyester thread',
             ]);
+
+            // Every button of a row is 44 px high below md (INV-16 AC-1).
+            const first = within(
+                screen.getByRole('group', { name: /^Row 1:/ }),
+            );
+
+            expect(first.getByRole('combobox').parentElement).toHaveClass(
+                '[&_[data-action=material]]:h-11',
+                'md:[&_[data-action=material]]:h-9',
+            );
+
+            for (const name of [
+                'Move Denim 12oz Indigo down',
+                'Remove Denim 12oz Indigo',
+            ]) {
+                expect(first.getByRole('button', { name })).toHaveClass(
+                    'size-11',
+                    'md:size-9',
+                );
+            }
         });
 
         it('says "1 material" for a single row', () => {
@@ -564,6 +597,8 @@ describe('<BomEditor>', () => {
                     quantity: '1.80',
                     waste_percent: '10.5',
                     notes: 'Body',
+                    quantity_mode: 'same',
+                    quantities: {},
                 },
             ]);
         });
@@ -918,6 +953,292 @@ describe('<BomEditor>', () => {
             expect(params.include).toHaveLength(50);
             // 20 matches + 50 picked, never the 2000.
             expect(screen.getAllByRole('option')).toHaveLength(70);
+        });
+    });
+
+    describe('the quantity mode of a line (INV-16-f)', () => {
+        const byVariant = (quantities: BomRow['quantities']): BomRow => ({
+            ...row('a', DENIM, '', '10'),
+            quantity_mode: 'by_variant',
+            quantities,
+        });
+        const sameCells = (colourId: number, value: string) => ({
+            [colourId]: Object.fromEntries(
+                sizesSToXl.map((size) => [size.id, value]),
+            ),
+        });
+        const mode = (name: string, n = 1) =>
+            within(rowGroup(n)).getByRole('radio', { name });
+
+        it('selects Same for every variant on a line that exists and on a new one', async () => {
+            const onRows = vi.fn();
+            const { user } = setup({ onRows });
+
+            for (const n of [1, 2, 3]) {
+                expect(mode('Same for every variant', n)).toBeChecked();
+                expect(mode('By colour and size', n)).not.toBeChecked();
+            }
+
+            await user.click(
+                screen.getByRole('button', { name: 'Add material' }),
+            );
+
+            expect(mode('Same for every variant', 4)).toBeChecked();
+            expect(lastRows(onRows)[3]).toMatchObject({
+                quantity_mode: 'same',
+                quantities: {},
+            });
+        });
+
+        it('fills every cell of the ticked colours and pressed sizes with the typed quantity, and opens the grid', async () => {
+            const onRows = vi.fn();
+            const { user } = setup({
+                initial: [row('a', DENIM, '1.8000', '10')],
+                onRows,
+            });
+
+            await user.click(mode('By colour and size'));
+
+            expect(lastRows(onRows)[0]).toMatchObject({
+                quantity_mode: 'by_variant',
+                quantity: '',
+                quantities: {
+                    ...sameCells(indigo.id, '1.8000'),
+                    ...sameCells(black.id, '1.8000'),
+                },
+            });
+            // The grid is open at once, every cell holding the quantity typed.
+            const sheet = within(
+                screen.getByRole('dialog', { name: 'Denim 12oz Indigo' }),
+            );
+
+            expect(sheet.getByLabelText('Indigo, size M')).toHaveValue(
+                '1.8000',
+            );
+            expect(sheet.getByText('8 of 8 cells filled')).toBeInTheDocument();
+
+            await user.click(sheet.getByRole('button', { name: 'Done' }));
+
+            expect(
+                within(rowGroup(1)).getByText(
+                    '8 of 8 cells · Indigo and Black only',
+                ),
+            ).toBeInTheDocument();
+            expect(
+                within(rowGroup(1)).queryByLabelText(
+                    'Quantity per unit for Denim 12oz Indigo',
+                ),
+            ).not.toBeInTheDocument();
+        });
+
+        it('opens the grid blank when no quantity is typed', async () => {
+            const onRows = vi.fn();
+            const { user } = setup({
+                initial: [row('a', DENIM, '')],
+                onRows,
+            });
+
+            await user.click(mode('By colour and size'));
+
+            expect(lastRows(onRows)[0]).toMatchObject({
+                quantity_mode: 'by_variant',
+                quantities: {},
+            });
+            const sheet = within(
+                screen.getByRole('dialog', { name: 'Denim 12oz Indigo' }),
+            );
+
+            expect(sheet.getByText('0 of 8 cells filled')).toBeInTheDocument();
+
+            await user.click(sheet.getByRole('button', { name: 'Done' }));
+
+            expect(
+                within(rowGroup(1)).getByText('No cells set yet'),
+            ).toBeInTheDocument();
+        });
+
+        const white = colourNamed('White');
+        const ecru = colourNamed('Ecru');
+        const beige = colourNamed('Beige');
+
+        it.each([
+            [
+                [indigo, black],
+                sameCells(indigo.id, '1.8000'),
+                '4 of 8 cells · Indigo only',
+            ],
+            [
+                [indigo, black, white, ecru, beige],
+                {
+                    ...sameCells(indigo.id, '1.8'),
+                    ...sameCells(black.id, '1.8'),
+                    ...sameCells(ecru.id, '2'),
+                },
+                '12 of 20 cells',
+            ],
+            [[indigo, black], {}, 'No cells set yet'],
+        ])('summarises the cells of a line (%#)', (colours, grid, summary) => {
+            setup({ initial: [byVariant(grid)], colours });
+
+            expect(within(rowGroup(1)).getByText(summary)).toBeInTheDocument();
+        });
+
+        it('asks before a filled grid goes back to one quantity, and not for a grid with no cell', async () => {
+            const onRows = vi.fn();
+            const { user } = setup({
+                initial: [byVariant(sameCells(indigo.id, '1.8000'))],
+                onRows,
+            });
+
+            await user.click(mode('Same for every variant'));
+
+            const dialog = within(
+                screen.getByRole('alertdialog', {
+                    name: 'Switch to one quantity for every variant?',
+                }),
+            );
+
+            expect(
+                dialog.getByText(
+                    'This clears the 4 quantities you set for Denim 12oz Indigo across its colours and sizes.',
+                ),
+            ).toBeInTheDocument();
+            expect(
+                dialog.getByRole('button', { name: 'Keep the grid' }),
+            ).toHaveFocus();
+
+            await user.click(
+                dialog.getByRole('button', { name: 'Keep the grid' }),
+            );
+
+            expect(onRows).not.toHaveBeenCalled();
+            expect(mode('By colour and size')).toBeChecked();
+
+            await user.click(mode('Same for every variant'));
+            await user.click(
+                screen.getByRole('button', { name: 'Switch anyway' }),
+            );
+
+            expect(lastRows(onRows)[0]).toMatchObject({
+                quantity_mode: 'same',
+                quantity: '',
+                quantities: {},
+            });
+            expect(
+                within(rowGroup(1)).getByLabelText(
+                    'Quantity per unit for Denim 12oz Indigo',
+                ),
+            ).toHaveValue('');
+
+            // A line with no cell switches without asking.
+            await user.click(mode('By colour and size'));
+            await user.click(screen.getByRole('button', { name: 'Done' }));
+            await user.click(mode('Same for every variant'));
+
+            expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+            expect(mode('Same for every variant')).toBeChecked();
+        });
+
+        it('sizes the switch-back buttons 44 px on a phone, like the size questions', async () => {
+            const { user } = setup({
+                initial: [byVariant(sameCells(indigo.id, '1.8000'))],
+            });
+
+            await user.click(mode('Same for every variant'));
+
+            for (const name of ['Keep the grid', 'Switch anyway']) {
+                expect(screen.getByRole('button', { name })).toHaveClass(
+                    'h-11',
+                    'sm:h-9',
+                );
+            }
+        });
+
+        it('marks the selected option with a check and a ring, not by colour alone', () => {
+            setup({ initial: [byVariant(sameCells(indigo.id, '1.8000'))] });
+
+            const selected = mode('By colour and size');
+            const other = mode('Same for every variant');
+
+            expect(selected).toBeChecked();
+            expect(selected).toHaveClass('data-[state=on]:inset-ring-primary');
+            expect(selected.querySelector('svg.lucide-check')).not.toHaveClass(
+                'invisible',
+            );
+            // The check's room is kept, so the button keeps its width.
+            expect(other.querySelector('svg.lucide-check')).toHaveClass(
+                'invisible',
+            );
+        });
+
+        it('keeps By colour and size reachable but off until a material is chosen', async () => {
+            const onRows = vi.fn();
+            const { user } = setup({
+                initial: [row('a', '', '')],
+                onRows,
+            });
+            const option = within(rowGroup(1)).getByRole('radio', {
+                name: 'By colour and size',
+            });
+
+            expect(option).toHaveAttribute('aria-disabled', 'true');
+            expect(option).not.toBeDisabled();
+            expect(option).toHaveAccessibleDescription(
+                'Choose a material first.',
+            );
+            expect(
+                within(rowGroup(1)).getByText('Choose a material first.'),
+            ).toBeInTheDocument();
+
+            option.focus();
+            expect(option).toHaveFocus();
+
+            await user.keyboard('{Enter}');
+            await user.click(option);
+
+            expect(onRows).not.toHaveBeenCalled();
+            expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+            expect(
+                within(rowGroup(1)).getByRole('radio', {
+                    name: 'Same for every variant',
+                }),
+            ).toBeChecked();
+        });
+
+        it('restores the quantity typed when the grid goes straight back, and asks once a cell was edited', async () => {
+            const onRows = vi.fn();
+            const { user } = setup({
+                initial: [row('a', DENIM, '1.8', '10')],
+                onRows,
+            });
+
+            await user.click(mode('By colour and size'));
+            await user.click(screen.getByRole('button', { name: 'Done' }));
+            await user.click(mode('Same for every variant'));
+
+            expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+            expect(lastRows(onRows)[0]).toMatchObject({
+                quantity_mode: 'same',
+                quantity: '1.8',
+                quantities: {},
+            });
+            expect(
+                within(rowGroup(1)).getByLabelText(
+                    'Quantity per unit for Denim 12oz Indigo',
+                ),
+            ).toHaveValue('1.8');
+
+            // Again, but one cell is edited before going back: the question applies.
+            await user.click(mode('By colour and size'));
+            await user.type(screen.getByLabelText('Indigo, size M'), '5');
+            await user.click(screen.getByRole('button', { name: 'Done' }));
+            await user.click(mode('Same for every variant'));
+
+            expect(
+                screen.getByRole('alertdialog', {
+                    name: 'Switch to one quantity for every variant?',
+                }),
+            ).toBeInTheDocument();
         });
     });
 

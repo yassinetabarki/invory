@@ -19,7 +19,7 @@ final class ProductListResource extends JsonResource
     /** @return array<string, mixed> */
     public function toArray(Request $request): array
     {
-        $margin = $this->costing->margin;
+        $costing = $this->costing;
 
         return [
             'id' => $this->id,
@@ -31,9 +31,9 @@ final class ProductListResource extends JsonResource
             'status_label' => $this->status->label(),
             'photo_url' => $this->photo_url,
             'components_count' => $this->components->count(),
-            'unit_cost' => $this->costing->result->cost->unitCost,
+            'unit_cost' => $costing->unitCostRange(),
             'selling_price' => $this->selling_price,
-            'margin' => $margin === null ? null : ['amount' => $margin->amount, 'percent' => $margin->percent],
+            'margin' => $costing->marginRange(),
             'capacity' => (new CapacityResource($this->resource))->resolve($request),
             'units_sold_last_30_days' => $this->units_sold_last_30_days,
         ];

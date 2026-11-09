@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\Services\Production;
 
+use App\Domain\Stock\CutPlan;
 use App\Models\ProductionBatch;
+use App\Services\Orders\OrderMessages;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Number;
 
 /**
@@ -110,6 +113,42 @@ final readonly class ProductionMessages
     public static function startDeleted(string $product): string
     {
         return __(':product was deleted, so it can\'t be started.', ['product' => $product]);
+    }
+
+    /**
+     * Why a start is refused for short stock (INV-16-k, AC-6): a grid of several colours and sizes of a product that varies by colour and
+     * size says which materials are short, in composition order, without a number to try; anything else keeps ADR-0014's sentence.
+     */
+    public static function notEnoughStock(CutPlan $plan): string
+    {
+        if (! $plan->mixed) {
+            return OrderMessages::notEnoughStock($plan);
+        }
+
+        $short = [];
+
+        foreach ($plan->takes as $take) {
+            if ($take->shortBy !== null) {
+                $short[] = $take->materialName;
+            }
+        }
+
+        return self::shortOn($short);
+    }
+
+    /**
+     * "Short on Denim 12oz Black. Restock it first, or lower the units." · "Short on Denim 12oz Black and Metal shank button 17mm.
+     * Restock them first, or lower the units." (three or more: "A, B and C").
+     *
+     * @param  list<string>  $materialNames  at least one, in composition order
+     */
+    public static function shortOn(array $materialNames): string
+    {
+        return trans_choice(
+            '{1} Short on :materials. Restock it first, or lower the units.|[2,*] Short on :materials. Restock them first, or lower the units.',
+            count($materialNames),
+            ['materials' => Arr::join($materialNames, ', ', ' and ')],
+        );
     }
 
     // Moves, Put in stock and Undo batch

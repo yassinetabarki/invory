@@ -17,9 +17,10 @@ use Illuminate\Pagination\Paginator;
  * The page of the products list: SQL filters (name or SKU, category code, status), by name then id, 25 to a page, and every
  * product on the page carrying its `costing` (the Resources read it).
  *
- * "Can't produce" (`max_producible = 0`) is a result of the costing, not a column, so that filter costs the whole filtered set
- * and keeps the matches in PHP before paginating. This interim is accepted until S-23 adds `product_metrics` (capacity as a
- * column), which turns it into a SQL condition; every other filter paginates in SQL and costs the one page.
+ * "Can't produce" (best capacity 0, `max_producible = 0` for a product that doesn't vary by colour and size) is a result of the
+ * costing, not a column, so that filter costs the whole filtered set and keeps the matches in PHP before paginating. This interim
+ * is accepted until S-23 adds `product_metrics` (capacity as a column), which turns it into a SQL condition; every other filter
+ * paginates in SQL and costs the one page.
  */
 final readonly class ProductIndexQuery
 {

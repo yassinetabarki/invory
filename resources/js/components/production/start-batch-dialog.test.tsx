@@ -1,4 +1,4 @@
-import { act, render, screen, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { StartBatchDialog } from '@/components/production/start-batch-dialog';
@@ -200,4 +200,102 @@ describe('StartBatchDialog (INV-5, AC-2)', () => {
         expect(dialog.getByRole('alert')).toHaveTextContent(refusal);
         expect(field).toHaveValue('20');
     });
+
+    // INV-16-k (AC-6): the preview is asked for the grid, one field per colour and size above 0.
+    it('asks for the materials of the grid typed, leaving the empty fields out', async () => {
+        const user = userEvent.setup();
+        render(<StartBatchDialog open preset={jacketRef} onClose={vi.fn()} />);
+
+        const dialog = within(
+            screen.getByRole('dialog', { name: 'Start batch' }),
+        );
+        const colour = (name: string) =>
+            jacketLine.stock.colours.find(
+                (entry) => entry.colour.name === name,
+            )!.colour.id;
+        const size = (label: string) =>
+            jacketLine.sizes.find((entry) => entry.label === label)!.id;
+
+        await user.type(await dialog.findByLabelText('Indigo M'), '6');
+        await user.type(dialog.getByLabelText('Black S'), '5');
+        await user.type(dialog.getByLabelText('Indigo L'), '0');
+
+        await waitFor(
+            () => {
+                const requests = inertiaMock.http.requests.filter((request) =>
+                    request.path.endsWith('/materials'),
+                );
+                expect(requests.at(-1)?.params).toEqual({
+                    [`units[${colour('Indigo')}][${size('M')}]`]: '6',
+                    [`units[${colour('Black')}][${size('S')}]`]: '5',
+                });
+            },
+            { timeout: 2000 },
+        );
+        expect(
+            await dialog.findByRole(
+                'table',
+                { name: 'Materials for 16 units' },
+                { timeout: 2000 },
+            ),
+        ).toBeInTheDocument();
+    });
+
+    // INV-16-k (AC-6): a short message (mixed grid, or today's single-variant one) disables Start batch without removing it from the tab order.
+    it.each([
+        [
+            'mixed grid',
+            'Short on Denim 12oz Black. Restock it first, or lower the units.',
+        ],
+        [
+            'single variant',
+            'Not enough stock to cut 20 units. You can cut at most 12 now: Metal shank button 17mm runs short. Restock it first, or cut 12 or fewer.',
+        ],
+    ])(
+        'keeps Start batch focusable but inert while the %s message shows',
+        async (_case, message) => {
+            respondToHttp(({ path }) =>
+                path.endsWith('/materials')
+                    ? {
+                          ...preview16,
+                          rows: [
+                              {
+                                  ...preview16.rows[0],
+                                  after: '0.0000',
+                                  short_by: '1.8000',
+                              },
+                          ],
+                          max_cuttable: null,
+                          short_message: message,
+                      }
+                    : startLine,
+            );
+            const user = userEvent.setup();
+            render(
+                <StartBatchDialog open preset={jacketRef} onClose={vi.fn()} />,
+            );
+
+            const dialog = within(
+                screen.getByRole('dialog', { name: 'Start batch' }),
+            );
+            await user.type(await dialog.findByLabelText('Indigo M'), '20');
+
+            expect(
+                await dialog.findByText(message, undefined, { timeout: 2000 }),
+            ).toBeInTheDocument();
+            expect(dialog.getByText('Short by 1.8 m')).toBeInTheDocument();
+
+            const button = dialog.getByRole('button', { name: 'Start batch' });
+            expect(button).toHaveAttribute('aria-disabled', 'true');
+            expect(button).toBeEnabled();
+            expect(button).toHaveAccessibleDescription(message);
+
+            button.focus();
+            expect(button).toHaveFocus();
+
+            await user.click(button);
+            await user.keyboard('{Enter}');
+            expect(inertiaMock.router.post).not.toHaveBeenCalled();
+        },
+    );
 });

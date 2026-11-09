@@ -41,7 +41,10 @@ final class ProductCatalog
         return $this->products()->count();
     }
 
-    /** Products (any status) that can't be made now: `max_producible = 0`. Products without a composition are not counted. */
+    /**
+     * Products (any status) that can't be made now: their best capacity is 0 (`max_producible = 0` for a product that doesn't vary by
+     * colour and size). Products without a composition are not counted.
+     */
     public function unproducibleCount(): int
     {
         $this->products();
@@ -59,11 +62,14 @@ final class ProductCatalog
         $alerts = [];
 
         foreach ($this->products() as $product) {
-            $capacity = $this->costings[$product->id]->result->capacity;
+            $costing = $this->costings[$product->id];
 
-            if ($capacity->maxProducible !== 0) {
+            if (! $costing->cantProduce()) {
                 continue;
             }
+
+            // Best is 0, so every variant is: the binding variant's bottleneck is the one to name.
+            $capacity = $costing->result->capacity;
 
             foreach ($product->components as $component) {
                 if ($component->material_id === $capacity->bottleneckMaterialId) {

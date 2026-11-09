@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { PriceMargin } from '@/components/products/price-margin';
+import { same } from '@/test/fixtures/products';
 import { resetInertiaMock, setPageProps } from '@/test/inertia';
 
 vi.mock('@inertiajs/react', async (importOriginal) => {
@@ -20,7 +21,7 @@ describe('<PriceMargin>', () => {
         render(
             <PriceMargin
                 sellingPrice="89.0000"
-                margin={{ amount: '53.2460', percent: '59.83' }}
+                margin={{ amount: same('53.2460'), percent: same('59.83') }}
             />,
         );
 
@@ -38,7 +39,7 @@ describe('<PriceMargin>', () => {
         render(
             <PriceMargin
                 sellingPrice="89.0000"
-                margin={{ amount: '53.2460', percent: '59.83' }}
+                margin={{ amount: same('53.2460'), percent: same('59.83') }}
             />,
         );
 
@@ -56,7 +57,7 @@ describe('<PriceMargin>', () => {
         render(
             <PriceMargin
                 sellingPrice="30.0000"
-                margin={{ amount: '-5.7540', percent: '-19.18' }}
+                margin={{ amount: same('-5.7540'), percent: same('-19.18') }}
             />,
         );
 
@@ -72,7 +73,7 @@ describe('<PriceMargin>', () => {
         render(
             <PriceMargin
                 sellingPrice="0.0000"
-                margin={{ amount: '-35.7540', percent: null }}
+                margin={{ amount: same('-35.7540'), percent: null }}
             />,
         );
 

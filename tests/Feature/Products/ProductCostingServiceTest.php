@@ -5,6 +5,9 @@ use App\Models\Material;
 use App\Models\Product;
 use App\Models\User;
 use App\Services\Costing\ProductCostingService;
+use Tests\Support\VariantJacket;
+
+use function Pest\Laravel\actingAs;
 
 /*
 |--------------------------------------------------------------------------
@@ -200,5 +203,99 @@ describe('batch costing', function () {
     it('accepts any iterable and an empty one', function () {
         expect($this->service->costMany([]))->toBe([])
             ->and($this->service->costMany((fn () => yield from [])()))->toBe([]);
+    });
+});
+
+describe('per colour and size (INV-16-d)', function () {
+    it('costs the Denim Jacket of the card per colour and size: 16 guaranteed, 112 best, 33.8840 to 39.4940', function () {
+        $jacket = VariantJacket::create();
+
+        $costing = $this->service->cost($jacket->fresh());
+
+        $variants = $costing->variants;
+        $capacity = $costing->result->capacity;
+
+        // The interim single figures are the binding variant's: Black XL, limited by the Black denim (40 / 2.42 = 16, never rounded up).
+        expect($costing->varies())->toBeTrue()
+            ->and($capacity->maxProducible)->toBe(16)
+            ->and($capacity->bottleneckMaterialId)->toBe($jacket->materials['black_denim']->id)
+            ->and($capacity->bottleneckMaterialName)->toBe('Denim 12oz Black')
+            ->and([$variants->bindingColourId, $variants->bindingSizeId])->toBe([$jacket->colours['Black'], $jacket->sizes['XL']])
+            ->and([$variants->guaranteed, $variants->best, $costing->best()])->toBe([16, 112, 112])
+            ->and([$variants->bestColourId, $variants->bestSizeId, $variants->bestMaterialName])->toBe([$jacket->colours['Indigo'], $jacket->sizes['S'], 'Metal shank button 17mm'])
+            ->and([$variants->unitCostMin, $variants->unitCostMax])->toBe(['33.8840', '39.4940'])
+            ->and([$variants->marginAmountMin, $variants->marginAmountMax, $variants->marginPercentMin, $variants->marginPercentMax])->toBe(['49.5060', '55.1160', '55.62', '61.93'])
+            ->and($costing->result->cost->unitCost)->toBe('39.4940')
+            ->and([$costing->margin->amount, $costing->margin->percent])->toBe(['49.5060', '55.62'])
+            ->and($costing->cantProduce())->toBeFalse()
+            ->and(array_map(fn ($line) => $line->materialName, $costing->bom))->toBe(['Denim 12oz Black', 'Metal shank button 17mm', 'Polyester thread', 'Woven brand label'])
+            ->and($this->service->nextLimit($costing, $jacket->materials['black_denim']->id))->toBeNull();
+    });
+
+    it('gives a colour without cells only the Same for every variant lines: Light wash costs 18.9240 and makes 112', function () {
+        $jacket = VariantJacket::create();
+        $jacket->product->colours()->attach($jacket->colours['Light wash'], ['workshop_id' => $jacket->workshop->id]);
+
+        $variants = $this->service->cost($jacket->fresh())->variants;
+        $lightWash = array_values(array_filter($variants->variants, fn ($variant) => $variant->colourId === $jacket->colours['Light wash']));
+
+        expect($lightWash)->toHaveCount(4)
+            ->and(array_map(fn ($variant) => [$variant->unitCost, $variant->maxProducible], $lightWash))->toBe(array_fill(0, 4, ['18.9240', 112]))
+            ->and([$variants->unitCostMin, $variants->unitCostMax])->toBe(['18.9240', '39.4940'])
+            ->and([$variants->guaranteed, $variants->best])->toBe([16, 112]);
+    });
+
+    it('keeps the figures of a product with no by-colour-and-size line, on the fast path', function () {
+        $costing = $this->service->cost(createDenimJacket($this->materials));
+
+        expect($costing->variants)->toBeNull()
+            ->and($costing->varies())->toBeFalse()
+            ->and($costing->result->cost->unitCost)->toBe('35.7540')
+            ->and($costing->result->capacity->maxProducible)->toBe(112)
+            ->and($costing->best())->toBe(112)
+            ->and($costing->result->capacity->bottleneckMaterialName)->toBe('Metal shank button 17mm')
+            ->and($costing->cantProduce())->toBeFalse();
+    });
+
+    it('counts a varying product as unproducible only when its best is 0, in the list filter too', function () {
+        $jacket = VariantJacket::create();
+        $user = User::factory()->create();
+        $listed = fn (): array => pageProp(actingAs($user)->get(route('products.index', ['cant_produce' => 1])), 'products.data.*.sku') ?? [];
+
+        // Black denim out: 0 guaranteed, but the Indigo variants still make 112.
+        $jacket->materials['black_denim']->update(['quantity_on_hand' => '0.0000']);
+        $costing = $this->service->cost($jacket->fresh());
+
+        expect([$costing->result->capacity->maxProducible, $costing->best(), $costing->cantProduce()])->toBe([0, 112, false])
+            ->and($listed())->toBe([]);
+
+        // Every material it uses out: no variant can be made.
+        foreach ($jacket->materials as $material) {
+            $material->update(['quantity_on_hand' => '0.0000']);
+        }
+
+        $costing = $this->service->cost($jacket->fresh());
+
+        expect([$costing->result->capacity->maxProducible, $costing->best(), $costing->cantProduce()])->toBe([0, 0, true])
+            ->and($listed())->toBe([$jacket->product->sku]);
+    });
+
+    it('runs the same number of queries for 10 products that vary by colour and size as for 1', function () {
+        $jackets = array_map(fn () => VariantJacket::create(), range(1, 12));
+        $load = fn (array $some) => Product::query()->whereKey(array_map(fn (VariantJacket $jacket) => $jacket->product->id, $some))->get();
+        $products = fn (array $some) => $load($some);
+
+        // The sizes of a product are read once per request: every measurement takes products no earlier one touched.
+        $this->service->costMany($products([$jackets[0]])); // warm-up
+
+        $one = $products([$jackets[1]]);
+        $ten = $products(array_slice($jackets, 2, 10));
+
+        $queriesForOne = countQueries(fn () => $this->service->costMany($one));
+        $queriesForTen = countQueries(fn () => $this->service->costMany($ten));
+
+        // components, materials (+ their category and unit), colours, cells, sizes.
+        expect($queriesForOne)->toBe($queriesForTen)
+            ->and(count($this->service->costMany($ten)))->toBe(10);
     });
 });

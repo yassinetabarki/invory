@@ -1,12 +1,17 @@
 <?php
 
+use App\Actions\Materials\DeleteMaterial;
 use App\Actions\Products\UpdateProduct;
 use App\Enums\ProductionBatchStatus;
+use App\Exceptions\MaterialInUseException;
 use App\Models\Barcode;
 use App\Models\BarcodeName;
+use App\Models\Material;
 use App\Models\Order;
 use App\Models\OrderLine;
 use App\Models\Product;
+use App\Models\ProductComponent;
+use App\Models\ProductComponentQuantity;
 use App\Models\ProductionBatch;
 use App\Models\ProductSizeStock;
 use App\Models\Size;
@@ -36,7 +41,10 @@ beforeEach(function () {
     $this->tote = demoProduct('PRD-TOT-004');
 });
 
-/** Puts one thing on the product's size (by label) so that it is locked for that reason: stock, orders, barcodes or production ('size' gives the product the size first). */
+/**
+ * Puts one thing on the product's size (by label) so that it is locked for that reason: stock, orders, barcodes, production or
+ * quantities (a cell of a new By colour and size line; INV-16-e). 'size' gives the product the size first.
+ */
 function szlPlant(Product $product, string $reason, string $label, bool $delivered = false): void
 {
     $size = sizeId($label);
@@ -51,6 +59,10 @@ function szlPlant(Product $product, string $reason, string $label, bool $deliver
             'barcode_id' => Barcode::factory()->create(['colour_id' => $colour, 'size_id' => $size])->id, 'name_key' => $product->name_key,
         ]),
         'production' => ProductionBatch::factory()->create(['product_id' => $product->id, 'colour_id' => $colour, 'size_id' => $size, 'units' => 3]),
+        'quantities' => ProductComponentQuantity::factory()->create([
+            'product_component_id' => ProductComponent::factory()->byVariant()->create(['product_id' => $product->id, 'material_id' => Material::factory()->create(['category' => 'fabric', 'unit' => 'm'])->id])->id,
+            'colour_id' => $colour, 'size_id' => $size, 'quantity' => '1.5000',
+        ]),
     };
 }
 
@@ -126,6 +138,12 @@ it('refuses a save that chooses no size, One size with others, a size of another
     'all four reasons' => ['jacket', [['stock', 'M'], ['orders', 'M'], ['barcodes', 'M'], ['production', 'M']], ['XS', 'S', 'L', 'XL', 'XXL', 'XXXL'], [
         'sizes.removed.{M}' => "M can't be taken off Denim Jacket: it has units in stock, is on orders, has barcodes and has units in production.",
     ]],
+    'XL with a material quantity alone' => ['jacket', [['quantities', 'XL']], ['XS', 'S', 'M', 'L', 'XXL', 'XXXL'], [
+        'sizes.removed.{XL}' => "XL can't be taken off Denim Jacket: it has material quantities.",
+    ]],
+    'XL with stock, orders and a material quantity' => ['jacket', [['stock', 'XL'], ['orders', 'XL'], ['quantities', 'XL']], ['XS', 'S', 'M', 'L', 'XXL', 'XXXL'], [
+        'sizes.removed.{XL}' => "XL can't be taken off Denim Jacket: it has units in stock, is on orders and has material quantities.",
+    ]],
     'the Tote with One size locked, adding S (a stale page)' => ['tote', [['stock', 'One size']], ['S', 'One size'], ['sizes' => SIZES_COMBINED]],
 ]);
 
@@ -141,7 +159,8 @@ it('words why One size can\'t be chosen and why other sizes can\'t (AC-6)', func
 
     expect($lock->oneSizeLock($product))->toBe($oneSize)
         ->and($lock->otherSizesLock($product))->toBe($others)
-        ->and($lock->tooltip(['has units in stock', 'is on orders', 'has barcodes']))->toBe("Can't be taken off: it has units in stock, is on orders and has barcodes.");
+        ->and($lock->tooltip(['has units in stock', 'is on orders', 'has barcodes']))->toBe("Can't be taken off: it has units in stock, is on orders and has barcodes.")
+        ->and($lock->tooltip(['has units in stock', 'is on orders', 'has material quantities']))->toBe("Can't be taken off: it has units in stock, is on orders and has material quantities.");
 })->with([
     'one letter size' => [['S', 'M', 'L', 'XL'], ['XL'], "XL is in use, so One size can't be chosen.", null],
     'one number size' => [['36', '37', '38'], ['38'], "Size 38 is in use, so One size can't be chosen.", null],
@@ -152,7 +171,7 @@ it('words why One size can\'t be chosen and why other sizes can\'t (AC-6)', func
     'One size free' => [['One size'], [], null, null],
 ]);
 
-it('locks a size only for what is really on it, in four queries (AC-6)', function (Closure $plant, array $expected) {
+it('locks a size only for what is really on it, in five queries (AC-6)', function (Closure $plant, array $expected) {
     $plant->call($this, $this->jacket);
 
     $lock = app(ProductSizeLock::class);
@@ -162,7 +181,7 @@ it('locks a size only for what is really on it, in four queries (AC-6)', functio
     });
     $m = sizeId('M');
 
-    expect($queries)->toBe(4)
+    expect($queries)->toBe(5)
         ->and($reasons[$m] ?? [])->toBe($expected);
 })->with([
     'a deleted order' => [function (Product $jacket) {
@@ -191,7 +210,47 @@ it('locks a size only for what is really on it, in four queries (AC-6)', functio
         szlPlant($jacket, 'orders', 'M');
         szlPlant($jacket, 'stock', 'M');
     }, ['has units in stock', 'is on orders']],
+    'a material quantity' => [fn (Product $jacket) => szlPlant($jacket, 'quantities', 'M'), ['has material quantities']],
+    'a material quantity, after stock and orders' => [function (Product $jacket) {
+        szlPlant($jacket, 'quantities', 'M');
+        szlPlant($jacket, 'orders', 'M');
+        szlPlant($jacket, 'stock', 'M');
+    }, ['has units in stock', 'is on orders', 'has material quantities']],
 ]);
+
+it('keeps One size from being chosen while a size has a material quantity, and a size with none comes off (AC-3)', function () {
+    $lock = app(ProductSizeLock::class);
+
+    szlPlant($this->jacket, 'quantities', 'XL');
+
+    // XL is locked by its quantity: One size can't be chosen, and the save that takes XL off is refused (see the dataset above).
+    expect($lock->oneSizeLock($this->jacket))->toBe("XL is in use, so One size can't be chosen.")
+        ->and($lock->otherSizesLock($this->jacket))->toBeNull();
+
+    // A "One size" product with a quantity keeps its one size: no other can be chosen.
+    szlPlant($this->tote, 'quantities', 'One size');
+
+    expect($lock->otherSizesLock($this->tote))->toBe("One size is in use, so other sizes can't be chosen.");
+
+    // XXXL has no cell: it comes off.
+    szlSave($this->jacket, ['XS', 'S', 'M', 'L', 'XL', 'XXL'])->assertSessionHasNoErrors();
+
+    expect(szlLabels($this->jacket))->toBe(['XS', 'S', 'M', 'L', 'XL', 'XXL']);
+});
+
+it('keeps a material on a By colour and size line from being deleted or changing unit (AC-3)', function () {
+    szlPlant($this->jacket, 'quantities', 'M');
+
+    $material = ProductComponent::query()->where('product_id', $this->jacket->id)->where('quantity_mode', 'by_variant')->firstOrFail()->material;
+
+    expect(fn () => app(DeleteMaterial::class)->handle($material))->toThrow(MaterialInUseException::class);
+
+    actingAs($this->user)->put(route('materials.update', $material), validMaterialPayload([
+        'sku' => $material->sku, 'name' => $material->name, 'category' => 'fabric', 'unit' => 'yd',
+    ]))->assertSessionHasErrors(['unit' => "This material is used in 1 product composition, so its unit can't change."]);
+
+    expect($material->refresh()->unit->code)->toBe('m');
+});
 
 /**
  * Two saves at once: the lock is read again under the product's row lock, and every other writer reads the product's sizes under it too,
@@ -209,6 +268,21 @@ dataset('saves that meet a size change', [
 
         expect($save)->toThrow(fn (ValidationException $e) => expect($e->errors())->toBe([
             'sizes.removed.'.sizeId('XL') => ["XL can't be taken off Denim Jacket: it has units in stock."],
+        ]));
+        expect($this->jacket->fresh()->name)->toBe('Denim Jacket')
+            ->and(szlLabels($this->jacket))->toBe(SZL_ALL);
+    }],
+    'Update product, after a material quantity was saved' => [function () {
+        actingAs($this->user);
+        $stale = demoProduct('PRD-JKT-001');
+        // The request passed with XL free; before the save, a quantity of a By colour and size line was saved in XL.
+        szlPlant($this->jacket, 'quantities', 'XL');
+        $save = fn () => app(UpdateProduct::class)->handle($stale, validProductPayload([
+            'sku' => $stale->sku, 'name' => 'Changed', 'sizes' => array_map(fn (string $label): int => sizeId($label), ['XS', 'S', 'M', 'L', 'XXL', 'XXXL']),
+        ]), $this->user);
+
+        expect($save)->toThrow(fn (ValidationException $e) => expect($e->errors())->toBe([
+            'sizes.removed.'.sizeId('XL') => ["XL can't be taken off Denim Jacket: it has material quantities."],
         ]));
         expect($this->jacket->fresh()->name)->toBe('Denim Jacket')
             ->and(szlLabels($this->jacket))->toBe(SZL_ALL);

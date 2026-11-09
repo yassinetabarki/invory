@@ -1,10 +1,14 @@
 import { Link } from '@inertiajs/react';
 import { TriangleAlert } from 'lucide-react';
+import { useState } from 'react';
+import { gridFromCells } from '@/components/products/bom-rows';
+import { QuantityGridSheet } from '@/components/products/quantity-grid-sheet';
 import { CapacityBadge } from '@/components/shared/capacity-badge';
-import { Money } from '@/components/shared/money';
+import { Money, MoneyRange } from '@/components/shared/money';
 import { PhotoThumb } from '@/components/shared/photo-thumb';
 import { Quantity } from '@/components/shared/quantity';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
     Table,
     TableBody,
@@ -19,20 +23,30 @@ import { useAppSettings } from '@/hooks/use-app-settings';
 import { formatCount, formatPercent } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type {
-    Decimal,
+    Colour,
+    DecimalRange,
     MaterialRef,
     ProductComponentLine,
+    SizeOption,
 } from '@/types/domain';
 
 type BomTableProps = {
     lines: ProductComponentLine[];
-    /** `cost.material_cost`: the sum of the line costs, from the server. */
-    materialsTotal: Decimal;
+    /** `cost.material_cost`: the sum of the line costs, lowest to highest over every colour and size, from the server. */
+    materialsTotal: DecimalRange;
     /** `capacity.max_producible`; null without a composition. */
     capacity: number | null;
+    /** `capacity.best` (INV-16): shown as "16–112 units" when above `capacity`. Defaults to `capacity`. */
+    best?: number | null;
     /** URL builder for a material (Wayfinder in the page). */
     materialHref: (material: MaterialRef) => string;
+    /** The product's colours and sizes, in list order: the rows and columns of View grid. */
+    colours: readonly Colour[];
+    sizes: readonly SizeOption[];
 };
+
+/** No errors to show in the read-only grid. */
+const NO_ERRORS: never[] = [];
 
 /** The "Bottleneck" marker: text and icon, never colour alone. */
 function BottleneckBadge() {
@@ -47,6 +61,11 @@ function BottleneckBadge() {
     );
 }
 
+/** A figure that has no single value on a by-colour-and-size line (INV-16). */
+function Varies() {
+    return <span className="text-muted-foreground">Varies</span>;
+}
+
 /** Units this stock makes of the product, with the badge on the limiting line. */
 function UnitsPossible({ line }: { line: ProductComponentLine }) {
     const { locale } = useAppSettings();
@@ -54,10 +73,65 @@ function UnitsPossible({ line }: { line: ProductComponentLine }) {
     return (
         <span className="inline-flex flex-wrap items-center justify-end gap-2">
             {line.is_bottleneck && <BottleneckBadge />}
-            <strong className="tabular-nums">
-                {formatCount(line.units_possible, locale)}
-            </strong>
+            {line.quantity_mode === 'by_variant' ||
+            line.units_possible === null ? (
+                <Varies />
+            ) : (
+                <strong className="tabular-nums">
+                    {formatCount(line.units_possible, locale)}
+                </strong>
+            )}
         </span>
+    );
+}
+
+/** Quantity per unit or effective quantity: the server's figure, or "Varies". */
+function LineQuantity({
+    line,
+    field,
+    onViewGrid,
+    alignEnd = false,
+}: {
+    line: ProductComponentLine;
+    field: 'quantity' | 'effective_quantity';
+    /** Given on the Quantity figure only: a by-colour-and-size line gets its **View grid** link. */
+    onViewGrid?: () => void;
+    alignEnd?: boolean;
+}) {
+    const value = line[field];
+
+    if (line.quantity_mode !== 'by_variant' && value !== null) {
+        return <Quantity value={value} unit={line.material.unit} />;
+    }
+
+    return (
+        <span
+            className={cn(
+                'flex flex-col',
+                alignEnd ? 'items-end' : 'items-start',
+            )}
+        >
+            <Varies />
+            {onViewGrid && (
+                <Button
+                    type="button"
+                    variant="link"
+                    onClick={onViewGrid}
+                    aria-label={`View grid for ${line.material.name}`}
+                    className="h-auto min-h-11 p-0 text-sm md:min-h-0"
+                >
+                    View grid
+                </Button>
+            )}
+        </span>
+    );
+}
+
+function LineCost({ line }: { line: ProductComponentLine }) {
+    return line.quantity_mode === 'by_variant' || line.line_cost === null ? (
+        <Varies />
+    ) : (
+        <Money value={line.line_cost} />
     );
 }
 
@@ -103,12 +177,28 @@ export function BomTable({
     lines,
     materialsTotal,
     capacity,
+    best = capacity,
     materialHref,
+    colours,
+    sizes,
 }: BomTableProps) {
     const { locale } = useAppSettings();
+    const [viewing, setViewing] = useState<ProductComponentLine | null>(null);
 
     return (
         <>
+            {viewing && (
+                <QuantityGridSheet
+                    title={viewing.material.name}
+                    unit={viewing.material.unit}
+                    colours={colours}
+                    sizes={sizes}
+                    grid={gridFromCells(viewing.quantities)}
+                    errors={NO_ERRORS}
+                    readOnly
+                    onClose={() => setViewing(null)}
+                />
+            )}
             {/* >= md: table */}
             <div className="hidden md:block">
                 <Table>
@@ -160,25 +250,28 @@ export function BomTable({
                                     />
                                 </TableCell>
                                 <TableCell className="text-right tabular-nums">
-                                    <Quantity
-                                        value={line.quantity}
-                                        unit={line.material.unit}
+                                    <LineQuantity
+                                        line={line}
+                                        field="quantity"
+                                        alignEnd
+                                        onViewGrid={() => setViewing(line)}
                                     />
                                 </TableCell>
                                 <TableCell className="text-right text-muted-foreground tabular-nums">
                                     {formatPercent(line.waste_percent, locale)}
                                 </TableCell>
                                 <TableCell className="text-right tabular-nums">
-                                    <Quantity
-                                        value={line.effective_quantity}
-                                        unit={line.material.unit}
+                                    <LineQuantity
+                                        line={line}
+                                        field="effective_quantity"
+                                        alignEnd
                                     />
                                 </TableCell>
                                 <TableCell className="text-right text-muted-foreground tabular-nums">
                                     <Money value={line.unit_cost} precise />
                                 </TableCell>
                                 <TableCell className="text-right font-semibold tabular-nums">
-                                    <Money value={line.line_cost} />
+                                    <LineCost line={line} />
                                 </TableCell>
                                 <TableCell className="text-right tabular-nums">
                                     <Quantity
@@ -198,11 +291,11 @@ export function BomTable({
                                 Materials total
                             </TableCell>
                             <TableCell className="text-right font-bold tabular-nums">
-                                <Money value={materialsTotal} />
+                                <MoneyRange value={materialsTotal} />
                             </TableCell>
                             <TableCell />
                             <TableCell className="pr-5 text-right">
-                                <CapacityBadge value={capacity} />
+                                <CapacityBadge value={capacity} best={best} />
                             </TableCell>
                         </TableRow>
                     </TableFooter>
@@ -231,9 +324,10 @@ export function BomTable({
                                         Qty per unit
                                     </dt>
                                     <dd className="tabular-nums">
-                                        <Quantity
-                                            value={line.quantity}
-                                            unit={line.material.unit}
+                                        <LineQuantity
+                                            line={line}
+                                            field="quantity"
+                                            onViewGrid={() => setViewing(line)}
                                         />
                                     </dd>
                                 </div>
@@ -253,9 +347,9 @@ export function BomTable({
                                         Effective qty
                                     </dt>
                                     <dd className="tabular-nums">
-                                        <Quantity
-                                            value={line.effective_quantity}
-                                            unit={line.material.unit}
+                                        <LineQuantity
+                                            line={line}
+                                            field="effective_quantity"
                                         />
                                     </dd>
                                 </div>
@@ -272,7 +366,7 @@ export function BomTable({
                                         Line cost
                                     </dt>
                                     <dd className="font-semibold tabular-nums">
-                                        <Money value={line.line_cost} />
+                                        <LineCost line={line} />
                                     </dd>
                                 </div>
                                 <div>
@@ -302,13 +396,13 @@ export function BomTable({
                     <div className="flex items-center justify-between gap-3">
                         <dt>Materials total</dt>
                         <dd className="tabular-nums">
-                            <Money value={materialsTotal} />
+                            <MoneyRange value={materialsTotal} />
                         </dd>
                     </div>
                     <div className="flex items-center justify-between gap-3">
                         <dt>Can produce</dt>
                         <dd>
-                            <CapacityBadge value={capacity} />
+                            <CapacityBadge value={capacity} best={best} />
                         </dd>
                     </div>
                 </dl>

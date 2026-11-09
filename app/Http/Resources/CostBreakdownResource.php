@@ -10,21 +10,23 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
  * `CostBreakdown`: the figures of the domain's cost breakdown, as the scale-4 strings it already holds (nothing is computed here).
+ * The material and unit cost are ranges, lowest to highest over every colour and size (one number twice when nothing varies).
  *
  * @mixin Product
  */
 final class CostBreakdownResource extends JsonResource
 {
-    /** @return array{material_cost: string, labor_cost: string, overhead_cost: string, unit_cost: string} */
+    /** @return array{material_cost: array{min: string, max: string}, labor_cost: string, overhead_cost: string, unit_cost: array{min: string, max: string}} */
     public function toArray(Request $request): array
     {
-        $cost = $this->costing->result->cost;
+        $costing = $this->costing;
+        $cost = $costing->result->cost;
 
         return [
-            'material_cost' => $cost->materialCost,
+            'material_cost' => $costing->materialCostRange(),
             'labor_cost' => $cost->laborCost,
             'overhead_cost' => $cost->overheadCost,
-            'unit_cost' => $cost->unitCost,
+            'unit_cost' => $costing->unitCostRange(),
         ];
     }
 }

@@ -2,9 +2,12 @@
 
 use App\Models\Material;
 use App\Models\Product;
+use App\Models\User;
 use App\Services\Costing\MaterialUsageService;
 use App\Services\Reference\ReferenceData;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Storage;
+use Tests\Support\VariantJacket;
 
 use function Pest\Laravel\actingAs;
 
@@ -60,7 +63,7 @@ function usageSummary(Material $material): array
 
     return array_map(static fn ($row): array => [
         $row->product->name,
-        $row->unitsCovered,
+        $row->unitsCoveredMin,
         $row->maxProducible,
         $row->isBottleneck,
         $row->nextLimit === null ? null : [$row->nextLimit['material']->name, $row->nextLimit['max_producible']],
@@ -77,28 +80,31 @@ it('lists the Denim Jacket as the button\'s bottleneck row, and as a plain row o
         [
             'product' => usageProduct(1, 'PRD-JKT-001', 'Denim Jacket', 'active', photo: 'products/jacket.jpg'),
             'effective_quantity' => '8.0000',
-            'units_covered' => 112,
+            'units_covered' => ['min' => 112, 'max' => 112],
             'max_producible' => 112,
             'bottleneck' => usageMaterialRef('MAT-BTN-017'),
             'is_bottleneck' => true,
+            'product_varies' => false,
             'next_limit' => ['material' => usageMaterialRef('MAT-DEN-012'), 'max_producible' => 126],
         ],
         [
             'product' => usageProduct(6, 'PRD-JKT-006', 'Canvas Chore Jacket', 'draft'),
             'effective_quantity' => '5.0000',
-            'units_covered' => 180,
+            'units_covered' => ['min' => 180, 'max' => 180],
             'max_producible' => 129,
             'bottleneck' => usageMaterialRef('MAT-CAN-010'),
             'is_bottleneck' => false,
+            'product_varies' => false,
             'next_limit' => null,
         ],
         [
             'product' => usageProduct(5, 'PRD-JNS-005', 'Denim Jeans 5-pocket', 'active'),
             'effective_quantity' => '1.0000',
-            'units_covered' => 900,
+            'units_covered' => ['min' => 900, 'max' => 900],
             'max_producible' => 105,
             'bottleneck' => usageMaterialRef('MAT-THR-PES'),
             'is_bottleneck' => false,
+            'product_varies' => false,
             'next_limit' => null,
         ],
     ]);
@@ -110,13 +116,39 @@ it('lists the Denim Jacket as the button\'s bottleneck row, and as a plain row o
     expect($jacket)->toBe([
         'product' => usageProduct(1, 'PRD-JKT-001', 'Denim Jacket', 'active', photo: 'products/jacket.jpg'),
         'effective_quantity' => '1.9800',
-        'units_covered' => 126,
+        'units_covered' => ['min' => 126, 'max' => 126],
         'max_producible' => 112,
         'bottleneck' => usageMaterialRef('MAT-BTN-017'),
         'is_bottleneck' => false,
+        'product_varies' => false,
         'next_limit' => null,
     ]);
 });
+
+it('reads a product with a By colour and size line from its variants: the need or Varies, a range of units, the guaranteed capacity', function (string $key, ?string $need, array $units, bool $isBottleneck) {
+    $jacket = VariantJacket::create();
+    $material = $jacket->materials[$key];
+
+    $response = $this->actingAs(User::factory()->create())->get(route('materials.show', $material));
+
+    // The jacket is listed on both denims (Black XL doesn't use the Indigo denim) and on the button. Guaranteed 16, limited by the Black
+    // denim in Black XL. A denim line needs a different amount per size ("Varies"); the button, the same 8 in every variant.
+    expect(pageProp($response, 'usage'))->toHaveCount(1)
+        ->and(Arr::except(pageProp($response, 'usage.0'), ['product', 'bottleneck']))->toBe([
+            'effective_quantity' => $need,
+            'units_covered' => $units,
+            'max_producible' => 16,
+            'is_bottleneck' => $isBottleneck,
+            'product_varies' => true,
+            'next_limit' => null,
+        ])
+        ->and(pageProp($response, 'usage.0.product.id'))->toBe($jacket->product->id)
+        ->and(pageProp($response, 'usage.0.bottleneck.name'))->toBe('Denim 12oz Black');
+})->with([
+    'Denim 12oz Black' => ['black_denim', null, ['min' => 16, 'max' => 22], true],
+    'Denim 12oz Indigo' => ['indigo_denim', null, ['min' => 103, 'max' => 142], false],
+    'Metal shank button 17mm: the same need in every variant' => ['button', '8.0000', ['min' => 112, 'max' => 112], false],
+]);
 
 it('handles the edge cases of a composition', function (Closure $arrange, array $expected) {
     $button = Material::factory()->create(['name' => 'Aaa button', 'quantity_on_hand' => '100.0000']);

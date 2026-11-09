@@ -9,7 +9,7 @@ import {
     sneakerItem,
     unfinishedItem,
 } from '@/test/fixtures/products';
-import { resetInertiaMock } from '@/test/inertia';
+import { resetInertiaMock, setPageProps } from '@/test/inertia';
 import type { ProductListItem } from '@/types/domain';
 
 vi.mock('@inertiajs/react', async (importOriginal) => {
@@ -102,6 +102,33 @@ describe('<ProductsTable>', () => {
             expect(jacket.getByText('59.83%')).toBeInTheDocument();
             expect(jacket.getByText('112 units')).toBeInTheDocument();
             expect(jacket.getByText('38')).toBeInTheDocument();
+        });
+
+        it('shows the unit cost and margin ranges and the capacity range of a product that varies (INV-16)', () => {
+            setPageProps({
+                app: { currency: 'TND', locale: 'en', today: '2026-11-08' },
+            });
+            renderTable([
+                {
+                    ...denimJacketItem,
+                    unit_cost: { min: '33.8840', max: '39.4940' },
+                    margin: {
+                        amount: { min: '49.5060', max: '55.1160' },
+                        percent: { min: '55.62', max: '61.93' },
+                    },
+                    capacity: {
+                        ...denimJacketItem.capacity,
+                        max_producible: 16,
+                        best: 112,
+                    },
+                },
+            ]);
+
+            const jacket = within(row(/Denim Jacket/));
+
+            expect(jacket.getByText('TND 33.884–39.494')).toBeInTheDocument();
+            expect(jacket.getByText('55.62–61.93%')).toBeInTheDocument();
+            expect(jacket.getByText('16–112 units')).toBeInTheDocument();
         });
 
         it('links the bottleneck to its material', () => {

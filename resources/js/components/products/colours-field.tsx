@@ -16,6 +16,8 @@ type ColoursFieldProps = {
     onChange: (ids: number[]) => void;
     /** Server validation error ("Choose at least one colour."), or several sentences (one line each, all read with the button). */
     error?: string | string[];
+    /** Quiet lines under the chips (not errors), such as what taking a colour off clears. */
+    notes?: string[];
     className?: string;
 };
 
@@ -31,6 +33,7 @@ export function ColoursField({
     value,
     onChange,
     error,
+    notes = [],
     className,
 }: ColoursFieldProps) {
     const [open, setOpen] = useState(false);
@@ -132,6 +135,14 @@ export function ColoursField({
                         </Button>
                     }
                 />
+            </div>
+
+            <div aria-live="polite" className="flex flex-col gap-1">
+                {notes.map((note) => (
+                    <p key={note} className="text-sm text-muted-foreground">
+                        {note}
+                    </p>
+                ))}
             </div>
 
             {sentences.map((sentence, index) => (

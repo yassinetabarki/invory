@@ -3,10 +3,11 @@ import type { ComponentProps } from 'react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { ProductForm } from '@/components/products/product-form';
-import { defaultColours } from '@/test/fixtures/colours';
+import { colourNamed, defaultColours } from '@/test/fixtures/colours';
 import {
     answerMaterialOptions,
     choreJacket,
+    denimBlackByVariantLine,
     denimJacket,
     fullCategorySizesFixture,
     fullSizeOptionsFixture,
@@ -20,7 +21,7 @@ import {
     setFormState,
     setPageProps,
 } from '@/test/inertia';
-import type { Product } from '@/types/domain';
+import type { Product, SizeOption } from '@/types/domain';
 
 vi.mock('@inertiajs/react', async (importOriginal) => {
     const { createInertiaModule } = await import('@/test/inertia');
@@ -38,6 +39,8 @@ type SetupOptions = {
     product?: Product;
     method?: 'post' | 'put';
     url?: string;
+    /** The workshop's size list, when a test names its sizes otherwise. */
+    sizes?: SizeOption[];
 };
 
 function setup({
@@ -45,6 +48,7 @@ function setup({
     method = product ? 'put' : 'post',
     url = product ? `/products/${product.id}` : '/products',
     locks,
+    sizes = fullSizeOptionsFixture,
 }: SetupOptions = {}) {
     const user = userEvent.setup();
     const view = render(
@@ -55,7 +59,7 @@ function setup({
             categories={productCategories}
             statuses={productStatuses}
             colours={defaultColours}
-            sizes={fullSizeOptionsFixture}
+            sizes={sizes}
             categorySizes={fullCategorySizesFixture}
             {...locks}
             action={{ url, method }}
@@ -431,6 +435,7 @@ describe('<ProductForm>', () => {
             expect(submittedRows()).toEqual([
                 {
                     material_id: 4,
+                    quantity_mode: 'same',
                     quantity: '1.8',
                     waste_percent: '10',
                     notes: 'Body',
@@ -645,24 +650,28 @@ describe('<ProductForm>', () => {
             expect(submittedRows()).toEqual([
                 {
                     material_id: 4,
+                    quantity_mode: 'same',
                     quantity: '1.8',
                     waste_percent: '10',
                     notes: 'Body, sleeves, collar',
                 },
                 {
                     material_id: 5,
+                    quantity_mode: 'same',
                     quantity: '8',
                     waste_percent: '0',
                     notes: 'Front placket (6), cuffs (2)',
                 },
                 {
                     material_id: 8,
+                    quantity_mode: 'same',
                     quantity: '120',
                     waste_percent: '5',
                     notes: 'All seams',
                 },
                 {
                     material_id: 12,
+                    quantity_mode: 'same',
                     quantity: '1',
                     waste_percent: '0',
                     notes: 'Inside back yoke',
@@ -857,6 +866,703 @@ describe('<ProductForm>', () => {
             expect(screen.getByText('1 size chosen')).toBeInTheDocument();
             expect(screen.queryByText(/Sizes kept/)).toBeNull();
             window.history.replaceState(null, '', '/');
+        });
+    });
+    describe('a line By colour and size (INV-16-f)', () => {
+        const black = colourNamed('Black');
+        const indigo = colourNamed('Indigo');
+        const cells = (colourId: number) =>
+            ['1.6000', '1.8000', '2.0000', '2.2000'].map((quantity, index) => ({
+                colour_id: colourId,
+                size_id: index + 1,
+                quantity,
+            }));
+        const grid = (colourId: number) =>
+            Object.fromEntries(
+                cells(colourId).map((cell) => [cell.size_id, cell.quantity]),
+            );
+        // The Denim Jacket in Black and Indigo (list order), its black denim By colour and size.
+        const jacketWithGrid: Product = {
+            ...denimJacket,
+            colours: [black, indigo],
+            components: [
+                ...denimJacket.components,
+                {
+                    ...denimBlackByVariantLine,
+                    quantities: [...cells(black.id), ...cells(indigo.id)],
+                },
+            ],
+        };
+
+        it('posts the mode of every line and the cells of the grid on Add product', async () => {
+            const { user } = setup();
+
+            await user.type(screen.getByLabelText(/^SKU/), 'PRD-JKT-010');
+            await user.click(screen.getByLabelText(/^Category/));
+            await user.click(screen.getByRole('option', { name: 'Apparel' }));
+            await user.click(
+                screen.getByRole('button', { name: 'Add colour' }),
+            );
+            await user.click(
+                await screen.findByRole('option', { name: 'Indigo, IND' }),
+            );
+            await user.keyboard('{Escape}');
+
+            await pickMaterial(user, /Denim 12oz Indigo/);
+            await user.type(
+                within(rowGroup(1)).getByLabelText(
+                    'Quantity per unit for Denim 12oz Indigo',
+                ),
+                '1.8',
+            );
+            await pickMaterial(user, /Metal shank button 17mm/);
+            await user.type(
+                within(rowGroup(2)).getByLabelText(
+                    'Quantity per unit for Metal shank button 17mm',
+                ),
+                '8',
+            );
+            await user.click(
+                within(rowGroup(1)).getByRole('radio', {
+                    name: 'By colour and size',
+                }),
+            );
+            // The grid opens at once; Done closes it and keeps the cells.
+            await user.click(screen.getByRole('button', { name: 'Done' }));
+            await user.click(
+                screen.getAllByRole('button', { name: 'Save product' })[0],
+            );
+
+            // Indigo × the seven sizes of Apparel, each holding what was typed.
+            const sizeIds = [21, 1, 2, 3, 4, 22, 23];
+
+            expect(submittedRows()).toEqual([
+                {
+                    material_id: 4,
+                    quantity_mode: 'by_variant',
+                    quantity: '',
+                    waste_percent: '0',
+                    notes: '',
+                    quantities: {
+                        [indigo.id]: Object.fromEntries(
+                            sizeIds.map((sizeId) => [sizeId, '1.8']),
+                        ),
+                    },
+                },
+                {
+                    material_id: 5,
+                    quantity_mode: 'same',
+                    quantity: '8',
+                    waste_percent: '0',
+                    notes: '',
+                },
+            ]);
+        });
+
+        it('posts the saved cells of a grid, as sent, on Edit product', async () => {
+            const { user } = setup({ product: jacketWithGrid });
+
+            expect(
+                within(rowGroup(5)).getByText(
+                    '8 of 8 cells · Black and Indigo only',
+                ),
+            ).toBeInTheDocument();
+
+            await user.click(
+                screen.getAllByRole('button', { name: 'Save product' })[0],
+            );
+
+            expect(submittedRows()[4]).toEqual({
+                material_id: 13,
+                quantity_mode: 'by_variant',
+                quantity: '',
+                waste_percent: '10',
+                notes: '',
+                quantities: {
+                    [black.id]: grid(black.id),
+                    [indigo.id]: grid(indigo.id),
+                },
+            });
+            expect(submittedRows()[0]).toMatchObject({ quantity_mode: 'same' });
+        });
+
+        it('keeps what was typed in the grid in the form when Done closes it', async () => {
+            const { user } = setup({ product: jacketWithGrid });
+
+            await user.click(
+                within(rowGroup(5)).getByRole('button', { name: 'Edit grid' }),
+            );
+
+            const sheet = within(
+                screen.getByRole('dialog', { name: 'Denim 12oz Black' }),
+            );
+
+            await user.clear(sheet.getByLabelText('Indigo, size S'));
+            await user.type(sheet.getByLabelText('Indigo, size S'), '1.7');
+            await user.clear(sheet.getByLabelText('Black, size XL'));
+            await user.click(sheet.getByRole('button', { name: 'Done' }));
+
+            expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+            expect(
+                within(rowGroup(5)).getByText(
+                    '7 of 8 cells · Black and Indigo only',
+                ),
+            ).toBeInTheDocument();
+
+            await user.click(
+                screen.getAllByRole('button', { name: 'Save product' })[0],
+            );
+
+            expect(submittedRows()[4]).toMatchObject({
+                quantities: {
+                    [indigo.id]: { 1: '1.7', 2: '1.8000' },
+                    [black.id]: { 1: '1.6000', 3: '2.0000' },
+                },
+            });
+            expect(
+                (submittedRows()[4] as { quantities: Record<number, object> })
+                    .quantities[black.id],
+            ).not.toHaveProperty('4');
+        });
+
+        it('leaves out the cells of a colour taken off the form, with no question', async () => {
+            const { user } = setup({ product: jacketWithGrid });
+
+            await user.click(
+                screen.getByRole('button', { name: 'Remove Black' }),
+            );
+
+            expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+
+            await user.click(
+                screen.getAllByRole('button', { name: 'Save product' })[0],
+            );
+
+            expect(submittedRows()[4]).toMatchObject({
+                quantities: { [indigo.id]: grid(indigo.id) },
+            });
+            expect(submittedRows()[4]).not.toMatchObject({
+                quantities: { [black.id]: expect.anything() },
+            });
+        });
+
+        it('shows the message of a refused cell under its line and marks the grid button', () => {
+            setFormState({
+                errors: {
+                    'components.4.quantities.8.2':
+                        'Enter a number from 0 to 1,000,000 with up to 4 decimals.',
+                },
+            });
+            setup({ product: jacketWithGrid });
+
+            expect(
+                within(rowGroup(5)).getByText(
+                    'Enter a number from 0 to 1,000,000 with up to 4 decimals.',
+                ),
+            ).toBeInTheDocument();
+            expect(
+                within(rowGroup(5)).getByRole('button', { name: 'Edit grid' }),
+            ).toHaveAttribute('aria-invalid', 'true');
+        });
+    });
+
+    describe('asking before typed quantities are cleared (INV-16-m)', () => {
+        const black = colourNamed('Black');
+        const indigo = colourNamed('Indigo');
+        const white = colourNamed('White');
+        const sizesGroup = () => screen.getByRole('group', { name: /^Sizes/ });
+        const size = (name: string) =>
+            within(sizesGroup()).getByRole('button', { name });
+        const pressed = (name: string) =>
+            expect(size(name)).toHaveAttribute('aria-pressed', 'true');
+        const notPressed = (name: string) =>
+            expect(size(name)).toHaveAttribute('aria-pressed', 'false');
+        const question = (name: string) =>
+            screen.getByRole('alertdialog', { name });
+        const save = (user: ReturnType<typeof userEvent.setup>) =>
+            user.click(
+                screen.getAllByRole('button', { name: 'Save product' })[0],
+            );
+
+        /** The Denim Jacket with a Black denim line By colour and size holding these cells ([colour, size id]). */
+        function jacketWithCells(
+            cells: [colour: { id: number }, sizeId: number][],
+            overrides: Partial<Product> = {},
+        ): Product {
+            return {
+                ...denimJacket,
+                colours: [black, indigo],
+                ...overrides,
+                components: [
+                    ...denimJacket.components,
+                    {
+                        ...denimBlackByVariantLine,
+                        quantities: cells.map(([colour, sizeId]) => ({
+                            colour_id: colour.id,
+                            size_id: sizeId,
+                            quantity: '2.2000',
+                        })),
+                    },
+                ],
+            };
+        }
+
+        /** Black and Indigo × S, M, L, XL: 8 cells. */
+        const eightCells = jacketWithCells(
+            [black, indigo].flatMap((colour) =>
+                [1, 2, 3, 4].map((sizeId): [{ id: number }, number] => [
+                    colour,
+                    sizeId,
+                ]),
+            ),
+        );
+
+        /** The cells the submitted line holds: colour id → the size ids with a quantity. */
+        function submittedCells(row: number): Record<string, string[]> {
+            const { quantities } = submittedRows()[row] as {
+                quantities: Record<string, Record<string, string>>;
+            };
+
+            return Object.fromEntries(
+                Object.entries(quantities).map(([colourId, cells]) => [
+                    colourId,
+                    Object.keys(cells),
+                ]),
+            );
+        }
+
+        async function chooseCategory(
+            user: ReturnType<typeof userEvent.setup>,
+            name: string,
+        ) {
+            await user.click(screen.getByLabelText(/^Category/));
+            await user.click(screen.getByRole('option', { name }));
+        }
+
+        /** Add product: Apparel, the given colours, and a denim line By colour and size holding 1.8 in every cell. */
+        async function addGridLine(
+            user: ReturnType<typeof userEvent.setup>,
+            colourOptions: string[],
+        ) {
+            await chooseCategory(user, 'Apparel');
+
+            for (const option of colourOptions) {
+                await user.click(
+                    screen.getByRole('button', { name: 'Add colour' }),
+                );
+                await user.click(
+                    await screen.findByRole('option', { name: option }),
+                );
+                await user.keyboard('{Escape}');
+            }
+
+            await pickMaterial(user, /Denim 12oz Indigo/);
+            await user.type(
+                within(rowGroup(1)).getByLabelText(
+                    'Quantity per unit for Denim 12oz Indigo',
+                ),
+                '1.8',
+            );
+            await user.click(
+                within(rowGroup(1)).getByRole('radio', {
+                    name: 'By colour and size',
+                }),
+            );
+            await user.click(screen.getByRole('button', { name: 'Done' }));
+        }
+
+        /** Add product with S, M, L, XL and two colours: 8 typed cells (XS, XXL and XXXL come off before any is typed). */
+        async function addEightTypedCells(
+            user: ReturnType<typeof userEvent.setup>,
+        ) {
+            await chooseCategory(user, 'Apparel');
+            await user.click(size('XS'));
+            await user.click(size('XXL'));
+            await user.click(size('XXXL'));
+            await addGridLine(user, ['Indigo, IND', 'Black, BLK']);
+        }
+
+        it('asks before a size with typed quantities comes off, and Keep leaves the sizes and the cells', async () => {
+            const { user } = setup({ product: eightCells });
+
+            await user.click(size('XL'));
+
+            const dialog = within(question('Take XL off this product?'));
+
+            expect(
+                dialog.getByText(
+                    'This clears the 2 quantities you set for XL across its materials.',
+                ),
+            ).toBeInTheDocument();
+            expect(
+                dialog.getByRole('button', { name: 'Keep XL' }),
+            ).toHaveFocus();
+            expect(
+                dialog.getByRole('button', { name: 'Take XL off' }),
+            ).toHaveClass('bg-destructive');
+
+            await user.click(dialog.getByRole('button', { name: 'Keep XL' }));
+
+            expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+            pressed('XL');
+
+            await save(user);
+
+            expect(submission().data.sizes).toEqual([1, 2, 3, 4]);
+            expect(submittedCells(4)).toEqual({
+                [black.id]: ['1', '2', '3', '4'],
+                [indigo.id]: ['1', '2', '3', '4'],
+            });
+        });
+
+        it('takes the size off and clears its cells on Take XL off', async () => {
+            const { user } = setup({ product: eightCells });
+
+            await user.click(size('XL'));
+            await user.click(
+                screen.getByRole('button', { name: 'Take XL off' }),
+            );
+
+            expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+            notPressed('XL');
+
+            await save(user);
+
+            expect(submission().data.sizes).toEqual([1, 2, 3]);
+            expect(submittedCells(4)).toEqual({
+                [black.id]: ['1', '2', '3'],
+                [indigo.id]: ['1', '2', '3'],
+            });
+        });
+
+        it('says "the 1 quantity" for one cell, and "size 36" for a size named with digits', async () => {
+            const { user } = setup({
+                product: jacketWithCells([[black, 5]], {
+                    colours: [black],
+                    sizes: [
+                        { id: 1, label: 'S' },
+                        { id: 5, label: '36' },
+                    ],
+                }),
+            });
+
+            await user.click(size('36'));
+
+            const dialog = within(question('Take size 36 off this product?'));
+
+            expect(
+                dialog.getByText(
+                    'This clears the 1 quantity you set for size 36 across its materials.',
+                ),
+            ).toBeInTheDocument();
+            expect(
+                dialog.getByRole('button', { name: 'Keep size 36' }),
+            ).toBeInTheDocument();
+            expect(
+                dialog.getByRole('button', { name: 'Take size 36 off' }),
+            ).toBeInTheDocument();
+        });
+
+        it('takes a size with no typed cell off without asking', async () => {
+            const { user } = setup({
+                product: jacketWithCells([[black, 4]]),
+            });
+
+            await user.click(size('S'));
+
+            expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+            notPressed('S');
+            expect(screen.getByText('3 sizes chosen')).toBeInTheDocument();
+        });
+
+        it('asks before "Use the sizes of Footwear" clears 8 cells, and Keep the sizes changes nothing', async () => {
+            const { user } = setup();
+
+            await addEightTypedCells(user);
+            await chooseCategory(user, 'Footwear');
+            await user.click(
+                screen.getByRole('button', {
+                    name: 'Use the sizes of Footwear',
+                }),
+            );
+
+            const dialog = within(question('Use the sizes of Footwear?'));
+
+            expect(
+                dialog.getByText(
+                    'This replaces the sizes and clears the 8 quantities you set across its materials.',
+                ),
+            ).toBeInTheDocument();
+
+            await user.click(
+                dialog.getByRole('button', { name: 'Keep the sizes' }),
+            );
+
+            expect(screen.getByText('4 sizes chosen')).toBeInTheDocument();
+            expect(screen.getByText(/Sizes kept/)).toBeInTheDocument();
+
+            await save(user);
+
+            expect(submission().data.sizes).toEqual([1, 2, 3, 4]);
+            expect(submittedCells(0)).toEqual({
+                [indigo.id]: ['1', '2', '3', '4'],
+                [black.id]: ['1', '2', '3', '4'],
+            });
+        });
+
+        it('replaces the sizes and clears the 8 cells on Use Footwear sizes', async () => {
+            const { user } = setup();
+
+            await addEightTypedCells(user);
+            await chooseCategory(user, 'Footwear');
+            await user.click(
+                screen.getByRole('button', {
+                    name: 'Use the sizes of Footwear',
+                }),
+            );
+            await user.click(
+                screen.getByRole('button', { name: 'Use Footwear sizes' }),
+            );
+
+            expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+            expect(screen.getByText('11 sizes chosen')).toBeInTheDocument();
+            expect(screen.queryByText(/Sizes kept/)).toBeNull();
+
+            await save(user);
+
+            expect(submission().data.sizes).toEqual([
+                5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+            ]);
+            expect(submittedCells(0)).toEqual({});
+        });
+
+        it('applies "Use the sizes of Footwear" at once when no cell would be cleared', async () => {
+            const { user } = setup();
+
+            await chooseCategory(user, 'Apparel');
+            await user.click(size('XS'));
+            await chooseCategory(user, 'Footwear');
+            await user.click(
+                screen.getByRole('button', {
+                    name: 'Use the sizes of Footwear',
+                }),
+            );
+
+            expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+            expect(screen.getByText('11 sizes chosen')).toBeInTheDocument();
+        });
+
+        it('keeps the sizes on a category change as soon as a line holds a typed quantity', async () => {
+            const { user } = setup();
+
+            await addGridLine(user, ['Indigo, IND']);
+            await chooseCategory(user, 'Footwear');
+
+            expect(screen.getByText('7 sizes chosen')).toBeInTheDocument();
+            expect(
+                screen.getByText(/Sizes kept: you changed them./),
+            ).toBeInTheDocument();
+        });
+
+        it('asks "Use One size?" over 8 cells, and Keep the sizes changes nothing', async () => {
+            const { user } = setup();
+
+            await addEightTypedCells(user);
+            await user.click(size('One size'));
+
+            const dialog = within(question('Use One size?'));
+
+            expect(
+                dialog.getByText(
+                    'This replaces the sizes and clears the 8 quantities you set across its materials.',
+                ),
+            ).toBeInTheDocument();
+            expect(
+                dialog.getByRole('button', { name: 'Keep the sizes' }),
+            ).toHaveFocus();
+
+            await user.click(
+                dialog.getByRole('button', { name: 'Keep the sizes' }),
+            );
+
+            expect(screen.getByText('4 sizes chosen')).toBeInTheDocument();
+            notPressed('One size');
+
+            await save(user);
+
+            expect(submission().data.sizes).toEqual([1, 2, 3, 4]);
+            expect(submittedCells(0)).toEqual({
+                [indigo.id]: ['1', '2', '3', '4'],
+                [black.id]: ['1', '2', '3', '4'],
+            });
+        });
+
+        it('sends One size alone and none of the 8 cells on Use One size', async () => {
+            const { user } = setup();
+
+            await addEightTypedCells(user);
+            await user.click(size('One size'));
+            await user.click(
+                screen.getByRole('button', { name: 'Use One size' }),
+            );
+
+            expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+            pressed('One size');
+            expect(screen.getByText('1 size chosen')).toBeInTheDocument();
+
+            await save(user);
+
+            expect(submission().data.sizes).toEqual([16]);
+            expect(submittedCells(0)).toEqual({});
+        });
+
+        it('says "the 1 quantity" and uses the workshop\'s own name for its One size', async () => {
+            const { user } = setup({
+                product: jacketWithCells([[black, 4]], { colours: [black] }),
+                sizes: fullSizeOptionsFixture.map((option) =>
+                    option.one_size
+                        ? { ...option, label: 'Free size' }
+                        : option,
+                ),
+            });
+
+            await user.click(size('Free size'));
+
+            expect(
+                within(question('Use Free size?')).getByText(
+                    'This replaces the sizes and clears the 1 quantity you set across its materials.',
+                ),
+            ).toBeInTheDocument();
+            expect(
+                screen.getByRole('button', { name: 'Use Free size' }),
+            ).toBeInTheDocument();
+        });
+
+        it('presses One size at once when no typed cell would be cleared', async () => {
+            const { user } = setup({ product: denimJacket });
+
+            await user.click(size('One size'));
+
+            expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+            pressed('One size');
+            expect(screen.getByText('1 size chosen')).toBeInTheDocument();
+        });
+
+        describe('a colour taken off while lines hold quantities for it', () => {
+            const note = (colour: string, count: string) =>
+                `Taking ${colour} off clears its ${count} across its materials when you save.`;
+
+            it('says so under Colours, once per colour in list order, and stops when the colour is ticked again', async () => {
+                const { user } = setup({ product: eightCells });
+
+                expect(screen.queryByText(/^Taking .* off clears/)).toBeNull();
+
+                await user.click(
+                    screen.getByRole('button', { name: 'Remove Indigo' }),
+                );
+                await user.click(
+                    screen.getByRole('button', { name: 'Remove Black' }),
+                );
+
+                const lines = screen
+                    .getAllByText(/^Taking .* off clears/)
+                    .map((line) => line.textContent);
+
+                expect(lines).toEqual([
+                    note('Black', '4 quantities'),
+                    note('Indigo', '4 quantities'),
+                ]);
+
+                await user.click(
+                    screen.getByRole('button', { name: 'Add colour' }),
+                );
+                await user.click(
+                    await screen.findByRole('option', { name: 'Black, BLK' }),
+                );
+                await user.keyboard('{Escape}');
+
+                expect(
+                    screen.queryByText(note('Black', '4 quantities')),
+                ).toBeNull();
+                expect(
+                    screen.getByText(note('Indigo', '4 quantities')),
+                ).toBeInTheDocument();
+            });
+
+            it('says "its 1 quantity" for one cell, and says nothing for a colour with none', async () => {
+                const { user } = setup({
+                    product: jacketWithCells([[black, 2]]),
+                });
+
+                await user.click(
+                    screen.getByRole('button', { name: 'Remove Indigo' }),
+                );
+
+                expect(screen.queryByText(/^Taking .* off clears/)).toBeNull();
+
+                await user.click(
+                    screen.getByRole('button', { name: 'Remove Black' }),
+                );
+
+                expect(
+                    screen.getByText(note('Black', '1 quantity')),
+                ).toBeInTheDocument();
+            });
+        });
+
+        describe('another size pressed while One size is on, with 3 typed cells', () => {
+            const oneSizeProduct = jacketWithCells(
+                [
+                    [white, 16],
+                    [black, 16],
+                    [indigo, 16],
+                ],
+                {
+                    colours: [white, black, indigo],
+                    sizes: [{ id: 16, label: 'One size' }],
+                    one_size: true,
+                },
+            );
+
+            it('asks "Take One size off this product?", and Keep One size leaves it pressed', async () => {
+                const { user } = setup({ product: oneSizeProduct });
+
+                await user.click(size('S'));
+
+                const dialog = within(
+                    question('Take One size off this product?'),
+                );
+
+                expect(
+                    dialog.getByText(
+                        'This clears the 3 quantities you set for One size across its materials.',
+                    ),
+                ).toBeInTheDocument();
+
+                await user.click(
+                    dialog.getByRole('button', { name: 'Keep One size' }),
+                );
+
+                pressed('One size');
+                notPressed('S');
+            });
+
+            it('presses the size and clears the 3 cells on Take One size off', async () => {
+                const { user } = setup({ product: oneSizeProduct });
+
+                await user.click(size('S'));
+                await user.click(
+                    screen.getByRole('button', { name: 'Take One size off' }),
+                );
+
+                notPressed('One size');
+                pressed('S');
+
+                await save(user);
+
+                expect(submission().data.sizes).toEqual([1]);
+                expect(submittedCells(4)).toEqual({});
+            });
         });
     });
 });

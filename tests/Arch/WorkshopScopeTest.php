@@ -14,11 +14,14 @@ use App\Models\OrderLineSize;
 use App\Models\Product;
 use App\Models\ProductCategory;
 use App\Models\ProductComponent;
+use App\Models\ProductComponentQuantity;
 use App\Models\ProductionBatch;
 use App\Models\ProductionBatchMove;
 use App\Models\ProductionCounter;
 use App\Models\ProductionCut;
 use App\Models\ProductionCutMaterial;
+use App\Models\ProductionCutVariant;
+use App\Models\ProductionCutVariantMaterial;
 use App\Models\ProductionPhase;
 use App\Models\ProductRestock;
 use App\Models\ProductRestockLine;
@@ -44,7 +47,7 @@ use App\Models\WorkshopLabelSetting;
 const WORKSHOP_ADR = 'docs/adr/0013-one-workshop-per-account.md';
 
 /** The tables of workshop data (S-45 adds units and the two category tables). */
-const WORKSHOP_TABLES = ['clients', 'materials', 'products', 'product_components', 'stock_movements', 'sales', 'orders', 'order_lines', 'order_line_cuts', 'order_line_cut_materials', 'order_line_sizes', 'product_size_stocks', 'sizes', 'product_sizes', 'product_category_sizes', 'colours', 'product_colours', 'barcodes', 'barcode_names', 'product_restocks', 'product_restock_lines', 'production_counters', 'production_phases', 'production_cuts', 'production_cut_materials', 'production_batches', 'production_batch_moves', 'workshop_label_settings'];
+const WORKSHOP_TABLES = ['clients', 'materials', 'products', 'product_components', 'product_component_quantities', 'stock_movements', 'sales', 'orders', 'order_lines', 'order_line_cuts', 'order_line_cut_materials', 'order_line_sizes', 'product_size_stocks', 'sizes', 'product_sizes', 'product_category_sizes', 'colours', 'product_colours', 'barcodes', 'barcode_names', 'product_restocks', 'product_restock_lines', 'production_counters', 'production_phases', 'production_cuts', 'production_cut_materials', 'production_cut_variants', 'production_cut_variant_materials', 'production_batches', 'production_batch_moves', 'workshop_label_settings'];
 
 /**
  * Every PHP file under `app/`, as [path relative to the project root, source without comments]: a comment that talks about
@@ -135,7 +138,7 @@ it('validates against a table of workshop data only through WorkshopRule in app/
     // Both spellings of each: the table (`materials`) and the model class (`Material::class`, `App\Models\Material`).
     $targets = array_merge(WORKSHOP_TABLES, array_map(
         static fn (string $model): string => '(?:\\\\?App\\\\{1,2}Models\\\\{1,2})?'.class_basename($model).'(?:::class)?',
-        [Material::class, Product::class, ProductComponent::class, StockMovement::class, Sale::class, Order::class, OrderLine::class, OrderLineCut::class, OrderLineCutMaterial::class, OrderLineSize::class, ProductSizeStock::class, Size::class, Colour::class, Barcode::class, BarcodeName::class, ProductRestock::class, ProductRestockLine::class, ProductionCounter::class, ProductionPhase::class, ProductionCut::class, ProductionCutMaterial::class, ProductionBatch::class, ProductionBatchMove::class, WorkshopLabelSetting::class],
+        [Material::class, Product::class, ProductComponent::class, ProductComponentQuantity::class, StockMovement::class, Sale::class, Order::class, OrderLine::class, OrderLineCut::class, OrderLineCutMaterial::class, OrderLineSize::class, ProductSizeStock::class, Size::class, Colour::class, Barcode::class, BarcodeName::class, ProductRestock::class, ProductRestockLine::class, ProductionCounter::class, ProductionPhase::class, ProductionCut::class, ProductionCutMaterial::class, ProductionCutVariant::class, ProductionCutVariantMaterial::class, ProductionBatch::class, ProductionBatchMove::class, WorkshopLabelSetting::class],
     ));
     $named = '(?:'.implode('|', $targets).')\b';
     $found = [];

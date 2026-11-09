@@ -112,7 +112,7 @@ describe('show', function () {
                 ->hasAll(['material', 'usage', 'history'])
                 ->has('material', fn (Assert $material) => $material->hasAll(materialContractKeys()))
                 ->has('usage', 3, fn (Assert $row) => $row->hasAll([
-                    'product', 'effective_quantity', 'units_covered', 'max_producible', 'bottleneck', 'is_bottleneck', 'next_limit',
+                    'product', 'effective_quantity', 'units_covered', 'max_producible', 'bottleneck', 'is_bottleneck', 'product_varies', 'next_limit',
                 ]))
                 ->has('usage.0.product', fn (Assert $product) => $product->hasAll(['id', 'sku', 'name', 'photo_url', 'status', 'status_label']))
                 ->has('history', 4));

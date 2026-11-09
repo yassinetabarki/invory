@@ -1,15 +1,22 @@
 import { Fragment } from 'react';
 import type { ReactNode } from 'react';
 import { useAppSettings } from '@/hooks/use-app-settings';
-import { formatCount, formatMoneyParts } from '@/lib/format';
+import {
+    RANGE_SEPARATOR,
+    formatCount,
+    formatMoneyRangeParts,
+} from '@/lib/format';
 import { cn } from '@/lib/utils';
-import type { Capacity, Decimal } from '@/types/domain';
+import type { Capacity, DecimalRange } from '@/types/domain';
 
 type ProductHeroProps = {
     capacity: Capacity;
-    unitCost: Decimal;
+    /** `cost.unit_cost`: lowest to highest over every colour and size (INV-16); one figure when nothing varies. */
+    unitCost: DecimalRange;
     /** The product has more than one size (S-58). */
     multipleSizes: boolean;
+    /** The product has more than one colour (INV-16): a one-colour product's "any mix" spans sizes only. */
+    multipleColours: boolean;
     /** The "In stock" figure (S-56): the grid's second cell, with its own loading state. */
     stock: ReactNode;
 };
@@ -72,6 +79,8 @@ export const HERO_ROW =
 export const BIG =
     'text-[2.25rem] leading-[1.1] font-bold tracking-tight tabular-nums';
 const BIG_TEXT = 'text-[1.625rem] leading-[1.2] font-bold tracking-tight';
+/** A range is twice as long as a figure: the size of the text figures, so it fits a card of the row. */
+const BIG_RANGE = `${BIG_TEXT} tabular-nums`;
 /** The unit word after a count; the count and the word are separated by a real space in the text. */
 export const UNITS = 'text-lg font-semibold';
 
@@ -82,15 +91,20 @@ export function unitsWord(count: number): string {
 /**
  * The unit cost at the big size, its currency part (`TND`, `€`) at the size of
  * "units" so the figure fits a card of the row. The pieces join to exactly the
- * `formatMoney` text; a `<wbr>` after the space lets a large cost put its
- * amount under the code. Parts are told apart by type, never by position.
+ * `formatMoneyRange` text (the `formatMoney` text when nothing varies); a
+ * `<wbr>` after the space (and after the dash of a range) lets a large cost
+ * wrap. Parts are told apart by type, never by position. A range is drawn
+ * smaller, as it is twice as long.
  */
-function UnitCostFigure({ value }: { value: Decimal }) {
-    const { currency, locale } = useAppSettings();
-    const parts = formatMoneyParts(value, { currency, locale });
-
+function UnitCostFigure({
+    varies,
+    parts,
+}: {
+    varies: boolean;
+    parts: Intl.NumberFormatPart[];
+}) {
     return (
-        <span className={BIG}>
+        <span className={varies ? BIG_RANGE : BIG}>
             {parts.map((part, index) => {
                 if (part.type === 'currency') {
                     return (
@@ -104,7 +118,8 @@ function UnitCostFigure({ value }: { value: Decimal }) {
                     (other) => other?.type === 'currency',
                 );
 
-                return part.type === 'literal' && beside ? (
+                return part.type === 'literal' &&
+                    (beside || part.value === RANGE_SEPARATOR) ? (
                     <Fragment key={index}>
                         {part.value}
                         <wbr />
@@ -127,10 +142,30 @@ export function ProductHero({
     capacity,
     unitCost,
     multipleSizes,
+    multipleColours,
     stock,
 }: ProductHeroProps) {
-    const { locale } = useAppSettings();
-    const { max_producible: producible } = capacity;
+    const { currency, locale } = useAppSettings();
+    const costParts = formatMoneyRangeParts(unitCost, { currency, locale });
+    const costVaries = costParts.some(
+        (part) => part.type === 'literal' && part.value === RANGE_SEPARATOR,
+    );
+    const {
+        max_producible: producible,
+        best,
+        by_variant: byVariant,
+    } = capacity;
+    // "Can't produce" only when not even the best colour and size can make a unit.
+    const cantProduce = best === 0;
+    // The caption names what "any mix" spans: colours too when a line varies by colour and size and the product has several (INV-16).
+    const mixColours = byVariant !== null && multipleColours;
+    const mix = mixColours
+        ? multipleSizes
+            ? 'any mix of colours and sizes'
+            : 'any mix of colours'
+        : multipleSizes
+          ? 'any mix of sizes'
+          : null;
 
     return (
         <div className={HERO_ROW}>
@@ -147,7 +182,7 @@ export function ProductHero({
                         </span>
                     </>
                 )}
-                {producible === 0 && (
+                {cantProduce && (
                     <>
                         <span className={BIG_TEXT}>Can&apos;t produce</span>
                         <span className="text-[0.8125rem] text-primary-foreground/85">
@@ -155,7 +190,7 @@ export function ProductHero({
                         </span>
                     </>
                 )}
-                {producible !== null && producible > 0 && (
+                {producible !== null && !cantProduce && (
                     <>
                         <span className={BIG}>
                             {formatCount(producible, locale)}{' '}
@@ -164,8 +199,8 @@ export function ProductHero({
                             </span>
                         </span>
                         <span className="text-[0.8125rem] text-primary-foreground/85">
-                            {multipleSizes
-                                ? 'from current stock, any mix of sizes'
+                            {mix
+                                ? `from current stock, ${mix}`
                                 : 'from current stock'}
                         </span>
                     </>
@@ -175,11 +210,13 @@ export function ProductHero({
             {stock}
 
             <HeroCard label="Unit cost" ariaLabel="Unit cost">
-                <UnitCostFigure value={unitCost} />
+                <UnitCostFigure varies={costVaries} parts={costParts} />
                 <span className="text-[0.8125rem] text-muted-foreground">
-                    {multipleSizes
-                        ? 'same for every size'
-                        : 'materials, labor and overhead'}
+                    {costVaries
+                        ? 'varies by colour and size'
+                        : multipleSizes
+                          ? 'same for every size'
+                          : 'materials, labor and overhead'}
                 </span>
             </HeroCard>
         </div>

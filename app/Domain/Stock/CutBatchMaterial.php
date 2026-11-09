@@ -14,7 +14,7 @@ final readonly class CutBatchMaterial
     /** @param ?string $notReturned null, 'deleted' or 'unit_changed': decided by the caller from today's material */
     public function __construct(
         public int $materialId,
-        public string $perUnitExact,  // decimal(20,8) as stored
+        public ?string $perUnitExact, // decimal(20,8) as stored; null on a cut with groups (they remember it)
         public string $taken,         // decimal(14,4) as stored
         public ?string $notReturned,
     ) {}

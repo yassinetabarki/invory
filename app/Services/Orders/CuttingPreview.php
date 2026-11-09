@@ -11,9 +11,9 @@ use App\Models\Product;
 use App\Services\Costing\ProductCostingService;
 
 /**
- * What cutting N units of a product takes from its materials (S-53, ADR-0014 section 8), worked out by the server so the screen never
- * computes. Start batch (INV-5) reads it without locks for its window and with locks for the batch itself, so the two can't disagree.
- * Since INV-14 orders no longer cut (ADR-0026).
+ * What cutting a grid of colours and sizes of a product takes from its materials (S-53, ADR-0014 section 8; per colour and size since
+ * INV-16, ADR-0027 decision 6), worked out by the server so the screen never computes. Start batch (INV-5) reads it without locks for
+ * its window and with locks for the batch itself, so the two can't disagree. Since INV-14 orders no longer cut (ADR-0026).
  */
 final readonly class CuttingPreview
 {
@@ -23,13 +23,14 @@ final readonly class CuttingPreview
     ) {}
 
     /**
-     * What cutting `$units` units of the product takes from its composition's materials, on their stock as it is read now. With
-     * `$lock` the materials are read with `FOR UPDATE`, in ascending id (ADR-0014 section 7), so the plan is the truth until the
-     * transaction ends: only the move itself asks for that, inside its transaction.
+     * What cutting the grid takes from the composition's materials, on their stock as it is read now. With `$lock` the materials are
+     * read with `FOR UPDATE`, in ascending id (ADR-0014 section 7), then the cells of the composition, so the plan is the truth until
+     * the transaction ends: only Start batch asks for that, inside its transaction, after it locked the product.
      *
+     * @param  array<int, array<int, int>>  $grid  units by colour id, then size id; only the variants to cut (units above 0), in the order to write them
      * @return array{plan: CutPlan, materials: array<int, Material>} the materials keyed by id, as the plan was made from them
      */
-    public function plan(Product $product, int $units, bool $lock = false): array
+    public function plan(Product $product, array $grid, bool $lock = false): array
     {
         $components = $product->components()->get();
         $ids = $components->pluck('material_id')->all();
@@ -50,7 +51,11 @@ final readonly class CuttingPreview
         $product->setRelation('components', $components);
 
         return [
-            'plan' => $this->calculator->take($this->costing->bomLines($product), $units),
+            'plan' => $this->calculator->takeVariants(
+                $this->costing->variantCompositions($product, $grid),
+                array_values(array_unique(array_map(intval(...), $ids))),
+                $this->costing->varies($product),
+            ),
             'materials' => $materials->all(),
         ];
     }

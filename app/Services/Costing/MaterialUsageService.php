@@ -15,7 +15,7 @@ use Illuminate\Database\Eloquent\Collection;
  * {@see ProductCostingService} (the maths is the domain's, see "Material usage and next limit" in the costing skill).
  *
  * It reads only the products that use the material (their compositions and the materials of those, 3 queries however many
- * products there are) and never the others.
+ * products there are, plus 3 more (cells, colours, sizes) when any of them has a By colour and size line) and never the others.
  */
 final readonly class MaterialUsageService
 {
@@ -50,6 +50,32 @@ final readonly class MaterialUsageService
             $materials = $product->components->mapWithKeys(static fn ($component): array => [$component->material_id => $component->material]);
             $bottleneck = $capacity->bottleneckMaterialId === null ? null : $materials->get($capacity->bottleneckMaterialId);
 
+            if ($costing->varies()) {
+                // A product with a By colour and size line: the guaranteed figure, the binding variant's bottleneck, and the lowest and
+                // highest need and units covered over the variants that use the material (INV-16, ADR-0027). No next limit. The need is
+                // one figure ("8.0000") when every variant that uses the material needs the same, and null ("Varies") when it differs.
+                $variants = $costing->variants;
+                $span = $variants?->materials[$material->id] ?? null;
+
+                if ($variants === null || $span === null || $variants->guaranteed === null || $bottleneck === null) {
+                    continue;
+                }
+
+                $usages[] = new MaterialUsage(
+                    product: $product,
+                    effectiveQuantity: $span->varies() ? null : $span->neededMin,
+                    unitsCoveredMin: $span->unitsCoveredMin,
+                    unitsCoveredMax: $span->unitsCoveredMax,
+                    maxProducible: $variants->guaranteed,
+                    bottleneck: $bottleneck,
+                    isBottleneck: $variants->bindingMaterialId === $material->id,
+                    nextLimit: null,
+                    productVaries: true,
+                );
+
+                continue;
+            }
+
             // The domain sums every line of the material (F-41); read its total instead of picking a line.
             $requirement = null;
 
@@ -71,11 +97,13 @@ final readonly class MaterialUsageService
             $usages[] = new MaterialUsage(
                 product: $product,
                 effectiveQuantity: $requirement->perUnit,
-                unitsCovered: $requirement->unitsPossible,
+                unitsCoveredMin: $requirement->unitsPossible,
+                unitsCoveredMax: $requirement->unitsPossible,
                 maxProducible: $capacity->maxProducible,
                 bottleneck: $bottleneck,
                 isBottleneck: $requirement->isBottleneck,
                 nextLimit: $next?->maxProducible === null || $limiting === null ? null : ['material' => $limiting, 'max_producible' => $next->maxProducible],
+                productVaries: false,
             );
         }
 
