@@ -71,6 +71,20 @@ Phases 6, 7 and 8 are on hold too (D-20).
 
 ## 2. Decisions needed from you
 
+**Decided on 2026-11-09 (D-32): the tech-lead's eight questions on INV-21, all the recommended options.** The tech-lead rated INV-21
+complex, size XL (19 commits; the card said L). You decided: (1) "View by colour" on a By colour and size line shows a range per colour
+("Indigo 103–142 units · Black 16–22 units"); (2) the Used-in suggestion reads "20 units, in Black"; (3) a per-colour material with no
+reorder level is never Low stock and is Out of stock only when every colour is at 0; (4) a colour that a cost-per-colour material lacks
+has no cost, and its variants are left out of the product's cost and margin ranges; (5) a Start batch in several colours on a product
+with only "Same for every variant" lines but a per-colour material reads like a mixed grid, ending "Restock them first, or lower the
+units." (this narrows the approved UI card's line 192: "You can cut at most N now" holds only when no material of the product is per
+colour); (6) switching a material on or off per colour is logged as "Split by colour" and "Joined into one stock"; (7) an Undo batch gives
+nothing back to a colour the material no longer has ("Light wash not on this material, not returned"); (8) four small touches of the UI
+card (material search, product composition note, grid sheet's muted line, "Stock per colour" under the name) wait as `INV-26` (`Idea`).
+**The card's criteria AC-5, AC-11, AC-12, AC-14, AC-15 and AC-17 were edited for this; the card is `Ready`, so the edited criteria need
+your re-approval.** The tech-lead applies the answers to the Technical work, which waits for your approval. Next free ID: INV-27; next
+decision: D-33.
+
 **Decided on 2026-11-09 (D-31): INV-16 accepted, without a click-through.** You accepted "Material use per colour and size" and it is
 committed (code `e01b2ea`, docs `7548753`; tech-lead verdict APPROVED; the 10-step click-through script was not run). **Decided with
 the designer's UX review:** a blank switch to By colour and size opens the first colour; the Composition table's footer badge follows
@@ -84,7 +98,7 @@ size, the disabled state's timing, the INV-18 focus gap, and 320 px wrapping sti
 dark mode were never seen on screen). Tech debt proposed by the tech-lead on 2026-11-08, outside the order: INV-22 (list load time on a
 throttled host), INV-23 (mirrored tie-break; Show and Edit read the cells twice), INV-24 (`ProductionCutMaterialFactory` and `unit_id`).
 **Dev database `laravel`:** the INV-16 migration is applied; its one product "JEBA" has a By colour and size line of 21 cells (your own
-data; nothing is seeded or reset). **Next: INV-21, then INV-17, INV-9, INV-7.** Next free ID: INV-26; next decision: D-32.
+data; nothing is seeded or reset). **Next: INV-21, then INV-17, INV-9, INV-7.** Next free ID: INV-27; next decision: D-33.
 
 **Decided on 2026-11-08 (D-30): INV-21 "Material stock per colour" registered, its UI card `Approved`.** A material can be set to
 **stock per colour** (Denim 12oz with Indigo 250 m and Black 40 m) or stay on one stock for all colours (buttons, thread). Colours come
