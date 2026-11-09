@@ -60,10 +60,15 @@ XL 103; Black S 22 · M 20 · L 18 · XL 16.
   - **By colour and size** replaces the field with a summary and **Edit grid**: "4 of 8 cells · Indigo only" (a line with cells in
     one or two colours names them; with more, only the count, "12 of 20 cells"), or "No cells set yet" for a line with none.
   - Switching the Indigo line, typed 1.8000, to **By colour and size** opens its grid at once with all 8 cells holding 1.8000, ready
-    to edit or clear. A line with no quantity typed opens with all cells blank.
+    to edit or clear. A line with no quantity typed opens with all cells blank, and the first colour (in the product's colour order)
+    open, so the fields are ready to type in.
+  - A line with no material chosen can't be switched: **By colour and size** is disabled and, under the control, reads "Choose a
+    material first."
   - Switching the filled Indigo line back asks: "Switch to one quantity for every variant? This clears the 4 quantities you set for
     Denim 12oz Indigo across its colours and sizes." with **Keep the grid** (nothing changes) and **Switch anyway** (the line shows
     its quantity field again, empty). A line with no cell switches back without asking.
+  - Pressing **By colour and size** and then straight back, while the grid is still as pre-filled and no cell has been edited,
+    brings back the quantity you typed and asks nothing.
   - The grid's colours are the colours ticked on the form and its sizes the sizes pressed in its Sizes field. Taking a colour off the
     form drops its cells with the save, with no question.
   - Pressing a size off the form (Add product, or Edit product for quantities typed but not saved) while a line holds quantities for
@@ -81,9 +86,11 @@ XL 103; Black S 22 · M 20 · L 18 · XL 16.
 - [ ] **AC-2 · The quantity grid.** **Edit grid** opens a side panel titled "Denim 12oz Indigo", with the composition list still
   behind it, "Quantity by colour and size, in m. A blank cell means that colour and size doesn't use this material.", **Find colour**
   (filters the product's own colours as you type), "1 of 2 colours used", **Expand all** and **Collapse all**.
-  - One row per colour, in the product's colour order, closed except the colour just switched to and any colour that already has a
-    cell. A closed row reads "Not used", "4 of 4 sizes · 1.8000 m" (the same value in every size) or "4 of 4 sizes · 1.6000–2.2000 m".
-  - Opening Indigo shows S 1.6000 · M 1.8000 · L 2.0000 · XL 2.2000, each field named "Indigo, size M" and so on, with the unit m.
+  - One row per colour, in the product's colour order, closed except any colour that already has a cell; when no colour has a cell
+    (a line switched with no quantity typed), the first colour is open. A closed row reads "Not used", "4 of 4 sizes · 1.8000 m"
+    (the same value in every size) or "4 of 4 sizes · 1.6000–2.2000 m". Find colour with no match reads "No colour matches "xyz"."
+  - Opening Indigo shows S 1.6000 · M 1.8000 · L 2.0000 · XL 2.2000, each field named "Indigo, size M" and so on (a One size
+    product: "Indigo, One size"), with the unit m.
     With only S typed at 1.6000, **Fill empty sizes with 1.6000 m** appears; pressing it fills M, L and XL with 1.6000 and never
     changes a cell already typed.
   - The footer reads "4 of 8 cells filled" and **Done**, which closes the panel; nothing is saved until **Save product**. A cell left
@@ -102,6 +109,8 @@ XL 103; Black S 22 · M 20 · L 18 · XL 16.
     "The sizes or colours of Denim Jacket have changed. Enter its quantities again."; more than 2,000 cells on the product: "Denim
     Jacket can hold at most 2,000 quantities across its materials. Remove some, or switch a line to Same for every variant." A failed
     save keeps every typed value, shows its message under the line, and opens the grid's colour row of the offending cell.
+  - On Add and Edit product, taking a colour off while a line holds quantities for it shows a quiet line under Colours, with no
+    question: "Taking Black off clears its 4 quantities across its materials when you save." ("its 1 quantity" for one).
   - Taking a colour off the product removes its cells in the same save, with no question. Adding a colour (Light wash) gives it no
     cells: its variants use only the **Same for every variant** lines (unit cost TND 18.924, can produce 112), and nothing warns. A size
     added to the product works the same way.
@@ -113,10 +122,10 @@ XL 103; Black S 22 · M 20 · L 18 · XL 16.
 
 - [ ] **AC-4 · Guaranteed and best on the product page.** Opening the Denim Jacket:
   - **Can produce now** reads "16 units" with "from current stock, any mix of colours and sizes." ("any mix of colours" for one size).
-  - The bottleneck callout reads "Bottleneck: Denim 12oz Black (Black, size XL)." and "40.0000 m in stock covers 16 units of Black,
+  - The bottleneck callout reads "Bottleneck: Denim 12oz Black (Black, size XL)." and "40 m in stock covers 16 units of Black,
     size XL — the smallest across every colour and size.", then in a quieter line "Best case: 112 units, in Indigo — limited there by
     Metal shank button 17mm.", the material names being links as today. For a "One size" product the same lines read "Bottleneck: Denim 12oz Black (Black)." and
-    "40.0000 m in stock covers 16 units of Black — the smallest across every colour." For a one-colour product with several sizes they read
+    "40 m in stock covers 16 units of Black — the smallest across every colour." For a one-colour product with several sizes they read
     "Bottleneck: Denim 12oz Indigo (size XL)." and "… covers 16 units of size XL — the smallest across every size."
   - **Capacity by colour** follows, one row per colour in the product's colour order:
 
@@ -129,7 +138,12 @@ XL 103; Black S 22 · M 20 · L 18 · XL 16.
     and counts for neither capacity figure, but its unit cost (TND 15.500, labor and overhead) is part of the cost range (AC-5). While it loads the card shows a placeholder; on a phone each colour is a stacked card with
     Guaranteed, Best and Limited by.
   - With Denim 12oz Black at 0 m: "0 units" with the same caption, "Best case: 112 units, in Indigo — limited there by Metal shank
-    button 17mm.", Black reading 0 and 0. "Can't produce" shows only when best is 0.
+    button 17mm.", Black reading 0 and 0. "Can't produce" shows only when best is 0, on the hero, the Products list and the
+    Composition table's footer badge alike (see AC-5).
+  - When the bottleneck's colour and size can't be made at all (guaranteed 0, best above 0), the callout keeps its title "Bottleneck:
+    Denim 12oz Black (Black, size XL)." and reads "Denim 12oz Black is out of stock, so Black, size XL can't be made." ("Denim
+    12oz Black doesn't cover one unit of Black, size XL. 0.5 m in stock." when it has some stock), then the "Best case" line. A
+    material below its reorder level adds "It's also below its reorder level of 30 m."
   - In the **Composition** table the two denim lines read "Varies" under Quantity, Effective qty and Units possible, each with a
     **View grid** link; waste % and the material's stock stay single values.
   - The guaranteed and best figures and the bottleneck are exact: 40 ÷ 2.42 gives 16, never rounded up.
@@ -140,7 +154,8 @@ XL 103; Black S 22 · M 20 · L 18 · XL 16.
     size" in place of "same for every size". On a phone each range wraps onto its own line under its label.
   - Products list: the same unit cost and margin ranges in the same cells, and the capacity badge "16–112 units" (success tone);
     with Black at 0 m "0–112 units" (warning tone, with the short-stock icon); "Can't produce" (danger, as today) only when best
-    is 0.
+    is 0. The "Can produce" badge in the footer of the Composition table (and its phone layout) follows the same rule and reads
+    the same: "16–112 units", "0–112 units" (warning) or "Can't produce" only when best is 0.
   - The range counts every colour and size, a colour with no composition included: with a third colour that uses no material, the
     lowest unit cost is TND 15.500 (labor and overhead only).
   - When nothing on a product varies (all lines **Same for every variant**, or one variant), the range is one number and every
@@ -179,7 +194,8 @@ XL 103; Black S 22 · M 20 · L 18 · XL 16.
 
 ## Technical work
 > [!warning] Complex · CRITICAL · backend + frontend · 13 commits
-> Tech-lead · 2026-11-07 · approved 2026-11-07 (replanned on per-product sizes, INV-18 / ADR-0028; first proposed 2026-11-06)
+> Tech-lead · 2026-11-07 · approved 2026-11-07 (replanned on per-product sizes, INV-18 / ADR-0028; first proposed 2026-11-06) ·
+> delivered 2026-11-08
 > Why complex: changes the cost and capacity maths (per colour and size), two new tables and two column changes, a new business rule
 > (the grid, its cap, a fifth reason on the size lock), Start batch's take and Undo batch's return, and the data four screens receive.
 
@@ -567,6 +583,12 @@ over 2,000) · `sizes.removed.{sizeId}` (INV-18's size lock, now with "has mater
 ### Decisions
 - **The calculator doesn't change; it runs per variant.** `VariantCosting` feeds it each variant's composition and sums up, so the
   golden test and every existing formula stay as they are. Variants with the same composition are costed once.
+  *Amended in the build (2026-11-07, INV-16-d load test: 11 s for 25 products at the cap):* a full `calculate()` per distinct
+  composition costs ~0.4 ms, and a product at the cap has up to 220 of them. `VariantCosting` now works out each line's exact figures
+  once per (line, quantity) with the calculator's formulas, and per variant sums the exact line costs (rounded once), floors each
+  material's units possible and picks the bottleneck with the calculator's tie-break; `CostingCalculator::calculate()` still runs,
+  unchanged, for the binding variant (`single`) and for products that don't vary. An equivalence test checks every variant's figures
+  against `calculate()` on that variant's composition. ADR-0027 §4 records it.
 - **Best is reached at** the first variant, in colour list order then size order, with the largest capacity: the card's example names
   Indigo, limited by the button. **A colour with no line at all** gives null ("No composition") and counts for neither capacity
   figure, as an empty composition does today; its unit cost (labor + overhead) is part of the cost range (ADR-0027, updated).
@@ -609,3 +631,17 @@ table's order.
   (INV-16-m) with their own dialog component, so INV-16-f stays within budget.
 - **The card's example** is built in the feature tests by giving the Denim Jacket the sizes S · M · L · XL (INV-18's `withSizes()`);
   the domain golden test (INV-16-b) uses ADR-0027's eight abstract variants and doesn't depend on any size list.
+
+### Progress log
+- 2026-11-07 · build started · wave 1: INV-16-a ∥ INV-16-b ∥ INV-16-c dispatched (b and c are pure domain, disjoint from a)
+- 2026-11-08 · INV-16-a, -b, -c, -d approved (a: one fix round for the old rollback tests; d: one round for the load budget, list 2.1 s
+  on this host vs 1.5 s, see Decisions); ADR-0027 accepted, skill and ARCHITECTURE amended; `composer test` green (3,035 passed) · next: INV-16-e
+- 2026-11-08 · INV-16-e (BE + FE type-compat, one test-ripple round), INV-16-f, -g, -m, INV-16-k (BE + FE) and INV-16-l (BE) done;
+  next: INV-16-l (FE), then wave 3 (INV-16-h → -i → -j), then full gates and PostgreSQL parity
+- 2026-11-08 · INV-16-l (FE) and INV-16-h (BE + FE, one test-ripple round; `MaterialUsage.product_varies` added) done; next: INV-16-i ∥ INV-16-j (BE), then INV-16-j (FE)
+- 2026-11-08 · INV-16-i and INV-16-j (BE + FE) done; one fix round (a test helper name clash, the hero's range test); all 13 steps
+  approved. Gates: `composer test`, `npx vp test`, `npm run check`, `npm run build` green; `types:check` at the 21-error baseline (INV-20)
+- 2026-11-08 · PostgreSQL parity green (3,167 passed); load test 0.83 s (list) and 0.25 s (dashboard), within 1.5 s · delivery report sent
+- 2026-11-09 · fix round after acceptance (human-approved, 10 items: footer badge best, switch-back 44 px, mode check mark, One size
+  field name, no colour match, first colour open, no material chosen, E3 callout, colour-off note, straight back restores) done;
+  gates green again (`composer test` 3,079 passed, `npx vp test` 1,588 passed, check, build; types:check at the 21-error baseline)

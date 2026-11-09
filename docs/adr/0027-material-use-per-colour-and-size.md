@@ -1,8 +1,9 @@
 # ADR-0027 — Material use per colour and size: a quantity grid on composition lines
 
-- **Status:** Proposed · 2026-11-06 (tech-lead; from the human's decisions of 2026-11-06 on INV-16). It becomes Accepted when the human
-  approves it with INV-16's Technical work. Until then the costing skill is **not** changed: its amendment is staged in the appendix
-  below and is applied, word for word, in the commit that accepts this ADR.
+- **Status:** Accepted · 2026-11-07 (approved by the human with INV-16's Technical work, replanned on ADR-0028; proposed 2026-11-06).
+  The appendix was applied to the costing skill in the same commit. Amended in the build (2026-11-07): §4 (how `VariantCosting` costs
+  a variant), §5 (an empty composition is in the cost range), §6 (the mixed-grid sentence), §8 (the size lock replaces the category
+  lock) and appendix G, H and I.
 - **Amends:** ADR-0018 decision 7 and ADR-0019 "Consequences" ("colours change no figure"), ADR-0015 ("every size uses the same
   composition", in the skill's *Sizes* and *Orders by size* sections), ADR-0023 decision 2 (one per-unit amount per material per
   production cut).
@@ -38,7 +39,7 @@ database holds compositions, production cuts and batches that must keep their fi
 - **A missing cell means "this variant doesn't use this material"**, not zero and not "fall back". This is how colour-specific stock is
   expressed: the *Denim 12oz Indigo* line has cells only under Indigo, the *Denim 12oz Black* line only under Black. A `by_variant` line
   has at least one cell.
-- **Waste % stays one per line** and applies to every cell (not decided by the human; see the questions).
+- **Waste % stays one per line** and applies to every cell (INV-16 kept it one per line).
 - One line per material per product stays (database-unique), so Indigo and Black denim are two lines because they are two materials.
 
 ### 2. Materials don't change
@@ -54,11 +55,18 @@ exactly its unit cost, capacity, bottleneck and next limit**, and a product whos
 - The adapter (`ProductCostingService`) resolves a **variant composition** for each colour × size: every `same` line, plus every
   `by_variant` line with a cell for that variant, as a `BomLine` with that quantity. `CostingCalculator::calculate()` and
   `capacityWithout()` run **unchanged** on it. The golden test of the skill stays green as it is.
-- A new pure class in `App\Domain\Costing` (working name `VariantCosting`) takes the per-variant results and returns the per-colour and
+- A new pure class, `App\Domain\Costing\VariantCosting`, takes the lines and the variants and returns the per-colour and
   per-product summaries of the appendix (ranges, guaranteed figures, the binding variant and its bottleneck). No `Illuminate\*`.
 - **Fast path:** a product with no `by_variant` line is calculated once; every variant reads that one result. This keeps the products
   list and the dashboard (which cost every product in PHP until S-23's `product_metrics`, F-38) at today's cost for the products that
   don't vary.
+- **Amended in the build (2026-11-07):** running `calculate()` once per distinct composition cost ~0.4 ms each, and a product at
+  the cap has up to 220 compositions (the INV-16-d load test took 11 s for 25 such products). `VariantCosting` now works out each
+  line's exact effective quantity and line cost once per (line, quantity) with the calculator's formulas, and per variant sums the
+  exact line costs (rounded once), sums each material's exact need, floors its units possible and picks the bottleneck with the
+  calculator's tie-break (mirrored, since `isBetterBottleneck()` is private). `CostingCalculator` itself is unchanged and still runs
+  for a product that doesn't vary and for the binding variant (`VariantCostingResult::$single`). An equivalence test checks every
+  variant against `calculate()` on its composition (a material on two lines, ties by name and id, tiny quantities).
 
 ### 5. Capacity is exact per variant; colour and product figures are "guaranteed" and "best"
 Per variant, capacity and bottleneck are today's formulas on the variant composition. Above a variant there is no single exact
@@ -77,13 +85,15 @@ Two readings settled in INV-16's Technical work (2026-11-06):
 - **Where best is reached:** the first variant, in colour list order then size order, with the largest capacity. Its colour is the
   one named ("Best case: 112 units, in Indigo") and its bottleneck the material named ("limited there by …").
 - **A variant whose composition is empty** (no `same` line and no cell of its colour and size) has `max_producible = null`, like an
-  empty BOM today: it counts for neither guaranteed nor best, and a colour whose every size is null reads "No composition".
+  empty BOM today: it counts for neither guaranteed nor best, and a colour whose every size is null reads "No composition". Its
+  unit cost (labor + overhead) is part of the cost and margin ranges (INV-16 AC-4, AC-5).
 
 ### 6. Start batch checks the grid it is given, exactly
 The plan sums per variant: `needed(m) = round4( Σ_v n_v × required_exact(m, v) )`, rounded once per material per start (as today).
 The start is allowed when `Σ_v n_v × required_exact(m, v) ≤ stock(m)` **unrounded**, for every material. With every line `same` this is
 exactly today's rule `N ≤ max_producible(P)`. "Short by" stays per material. The sentence "You can cut at most N now" has no single N
-for a mixed grid and needs new wording (question below).
+for a mixed grid: INV-16 AC-6 says "Short on <materials>. Restock it first, or lower the units." (composition order), and keeps
+today's sentence for one colour and size or a product with no `by_variant` line.
 
 ### 7. Production cuts remember the amount per unit per variant
 ADR-0023 decision 2 stays (one cut per Start batch, shared by its batches; one rounding per material), but a single per-unit amount per
@@ -101,11 +111,13 @@ material no longer fits a cut whose variants differ.
   Every cut made from INV-16 on writes variant rows, also when nothing varies.
 
 ### 8. Colour, size and material changes keep the grid consistent
-Every writer of a product's composition, colours or category takes the product's row lock first (ADR-0017 decision 4).
+Every writer of a product's composition, colours or sizes takes the product's row lock first (ADR-0017 decision 4).
 - **A colour taken off a product** deletes that colour's cells in the same save (`SyncProductColours`). A colour added has no cells: it
   uses only the `same` lines until cells are typed.
-- **A category change to another size list** is refused while any line is `by_variant` (it would orphan every cell). This is the safe
-  default; whether to refuse or clear, and the wording, is a product decision.
+- **A size with a cell can't be taken off the product** (replanned 2026-11-07 on ADR-0028): it is the fifth reason of
+  `ProductSizeLock` ("has material quantities"), the slot ADR-0028 §5 kept for it, so INV-18's tooltip, refusal, second check
+  under the row lock and One size sentences cover it. A size added has no cells. A category no longer decides sizes, so a category
+  change touches no cell. On PostgreSQL the key (`product_id`, `size_id`) → `product_sizes` refuses a size detached with cells.
 - A material in any line, `same` or `by_variant`, is in use (`MaterialInUseException`, the unit-change lock), as today.
 
 ### 9. Bounds
@@ -149,7 +161,7 @@ line, so screens that don't show colours keep working.
 
 ## Appendix — staged amendment to `.claude/skills/invory-costing-domain/SKILL.md`
 
-Applied when this ADR is accepted. Each block says where it goes.
+Applied to the skill on 2026-11-07, when this ADR was accepted. Each block says where it goes.
 
 ### A. Glossary (new rows, after "Component line")
 
@@ -248,19 +260,19 @@ Cuts made before INV-16 hold the same per-unit amount for every variant, so thei
 | A colour whose material has 0 on hand | that colour's variants = 0; `guaranteed(P) = 0`, `best(P)` may still be > 0 |
 | A colour taken off the product | its cells are deleted in the same save |
 | A colour added to the product | no cells: its variants use only the `same` lines |
-| Category change to another size list with a `by_variant` line | refused |
+| A size with a cell taken off the product | refused: "has material quantities" (INV-18's size lock, fifth reason) |
 | Undo a batch of an old (before INV-16) start | same figures as before |
 | Start a mixed grid where rounding would hide a shortfall | refused: the check is on the unrounded total |
 
 ### H. Validation (new bullets under "Validation rules")
 - Composition line: `quantity_mode` `same` or `by_variant`. `same`: `quantity` as today. `by_variant`: `quantities[colourId][sizeId]`
-  each empty or 0 (no cell) or > 0 up to 1,000,000 with max 4 decimals; only colours the save leaves on the product and sizes of
-  its size list; at least one cell; at most 2,000 cells per product over all its lines. When the product's colours or sizes no
+  each empty or 0 (no cell) or > 0 up to 1,000,000 with max 4 decimals; only colours and sizes the save leaves on the
+  product; at least one cell; at most 2,000 cells per product over all its lines. When the product's colours or sizes no
   longer match the submitted grid, nothing is saved ("The sizes or colours of <product> have changed. Enter its quantities again.").
 
 ### I. Worked example (new golden test, added beside the Denim Jacket one)
-A domain-level example: the pure calculator is given these eight variants. (The Apparel list has had seven sizes, XS to XXXL, since
-2026-11-02, so tests through real products use INV-16's card example instead.)
+A domain-level example: the pure calculator is given these eight variants (real products take the sizes S · M · L · XL
+since INV-18, as INV-16's card example does).
 Denim Jacket in Indigo and Black, sizes S, M, L, XL; labor 12.0000, overhead 3.5000. Lines: *Denim 12oz Indigo* (8.5000/m, stock 250,
 waste 10 %) by colour and size, Indigo only: S 1.6000 · M 1.8000 · L 2.0000 · XL 2.2000; *Denim 12oz Black* (8.5000/m, stock 40, waste
 10 %), Black only, the same four quantities; button, thread and label `same` as in the main example.

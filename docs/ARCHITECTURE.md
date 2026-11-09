@@ -98,6 +98,9 @@ code testable and ready to scale.
                            │ (one Start cutting)│          │ (per unit + taken)   │
                            └────────────────────┘          └──────────────────────┘
 ```
+Status (2026-11-07): INV-16 lets a composition line be **By colour and size** (`product_components.quantity_mode`, cells in
+`product_component_quantities`, ADR-0027): every figure is worked out per colour × size and summed up as guaranteed / best and
+ranges; Start batch remembers its per-unit amounts per colour and size (`production_cut_variants`).
 Status (2026-11-02): INV-3 records each restock of finished products in `product_restocks` and `product_restock_lines` (ADR-0022);
 saving adds to `product_size_stocks`, Undo takes the units back off and marks the restock undone.
 Status (2026-10-31): INV-2 counts the finished units per colour and size: each `product_size_stocks` row names a colour too
@@ -178,7 +181,8 @@ its own sizes (`product_sizes`, at least one; the flagged one only alone), read 
 `CreateProduct` without sizes takes the suggestion. Changing a category changes no product's sizes. PostgreSQL only: composite keys
 (`workshop_id`, `size_id`) → `sizes (workshop_id, id)` on every table that names a size. The migration `2026_11_08_100000` gave every
 product exactly its category's former list; the installation-wide `size_lists` and `product_categories.size_list_id` are gone (ADR-0015 is
-superseded). Sizes never reach `App\Domain\Costing`.
+superseded). Sizes reach `App\Domain\Costing` only as ids of the variants of `VariantCosting` (INV-16). A size with a quantity cell
+on a By colour and size line is locked on its product: the fifth reason of `ProductSizeLock`, "has material quantities" (INV-16).
 
 ### `colours` and `product_colours` (INV-1, [ADR-0018](adr/0018-colours-per-workshop.md))
 
@@ -217,7 +221,8 @@ Colours never reach `App\Domain\Costing`.
 | workshop_id | FK → workshops | the product's workshop (composite FK to products and materials on PostgreSQL) |
 | product_id | FK → products | `cascadeOnDelete` |
 | material_id | FK → materials | `restrictOnDelete` |
-| quantity | decimal(14,4) | > 0, **per 1 unit of product**, in the material's unit |
+| quantity_mode | string, default `same` | `same` · `by_variant` (`ComponentQuantityMode`, INV-16) |
+| quantity | decimal(14,4) nullable | > 0, **per 1 unit of product**, in the material's unit; null exactly when `by_variant` (PostgreSQL CHECK) |
 | waste_percent | decimal(5,2) | 0 ≤ x < 100, default 0 (cutting loss, shrinkage…) |
 | notes | string(100) nullable | placement, e.g. "body", "lining", "outsole" |
 | position | unsignedSmallInteger | display order |
@@ -225,6 +230,30 @@ Colours never reach `App\Domain\Costing`.
 
 Constraint: `unique(product_id, material_id)`. One line per material per product. The calculator still
 aggregates by material defensively.
+
+### `product_component_quantities` (INV-16, [ADR-0027](adr/0027-material-use-per-colour-and-size.md))
+
+| Column                              | Type                        | Rules                                                                     |
+| ----------------------------------- | --------------------------- | ------------------------------------------------------------------------- |
+| workshop_id                         | FK → workshops              | the line's workshop (composite keys on PostgreSQL)                        |
+| product_component_id                | FK → product_components     | `cascadeOnDelete`; (`product_component_id`, `product_id`) → its line      |
+| product_id, colour_id, size_id      | FKs                         | colour and size `restrictOnDelete`; product keys below are NO ACTION      |
+| quantity                            | decimal(14,4)               | > 0 and ≤ 1,000,000 (PostgreSQL CHECK); a missing cell = not used         |
+| timestamps                          |                             |                                                                           |
+
+Keys: unique (`product_component_id`, `colour_id`, `size_id`); index (`product_id`, `size_id`) for the size lock. PostgreSQL only:
+(`product_id`, `colour_id`) → `product_colours` and (`product_id`, `size_id`) → `product_sizes`, both NO ACTION so a product's own
+cascade removes links and cells in one statement while a colour or size detached with cells is refused. `SyncProductColours` deletes
+a colour's cells before it detaches it; a size with cells is locked. At most 2,000 cells per product (the save checks it). Read as plain
+rows by `ProductCostingService` for the products that have a `by_variant` line only, so products that don't vary cost no extra query.
+
+**Variant costing.** `ProductCostingService` builds, per product with a `by_variant` line, the variants (its colours in list order ×
+its own sizes) and the `VariantLine`s, and asks `App\Domain\Costing\VariantCosting` for every figure: per variant cost and capacity, per
+colour guaranteed / best and the binding size, per product guaranteed (`max_producible`, binding variant and bottleneck), best and
+where it is reached, unit / material cost and margin ranges, and per material its need and units covered, lowest and highest.
+`VariantCosting` works out each line's exact figures once per (line, quantity) and combines them per variant with the calculator's
+rules (rounded once, floored, same tie-break); `CostingCalculator::calculate()` runs unchanged for products that don't vary and for
+the binding variant. `ProductCosting::cantProduce()` reads best = 0 (dashboard, products list filter).
 
 ### `sales` (S-14-BE)
 | Column | Type | Rules |
@@ -402,7 +431,9 @@ cuts → materials in ascending id.
 | ------------------------------------------------ | ------------------------------ | ---------------------------------------------------------------------------------------- |
 | `production_phases`.name, position               | string(24), unsigned tinyint   | unique (workshop, `lower(name)`); positions 1…n, at most 6 (CHECK on PostgreSQL)         |
 | `production_cuts`.product_id, units              | FK → products, unsigned int    | one Start batch; `units_returned` ≤ units; `user_id` `nullOnDelete`                      |
-| `production_cut_materials`                       | as `order_line_cut_materials`  | per cut and material: unit at the cut, `quantity_per_unit` (20,8), `quantity_taken` (14,4) |
+| `production_cut_materials`                       | as `order_line_cut_materials`  | per cut and material: unit at the cut, `quantity_per_unit` (20,8, null when the cut has variant rows), `quantity_taken` (14,4) |
+| `production_cut_variants`                        | FK → production_cuts (cascade) | INV-16: per cut, colour and size: `units`, `units_returned` (CHECK 0 ≤ returned ≤ units); unique cut + colour + size |
+| `production_cut_variant_materials`               | FK → cut variants (cascade)    | INV-16: `material_id` (restrict), `quantity_per_unit` (20,8) > 0; unique variant + material |
 | `production_batches`.number                      | unsigned integer               | unique (workshop, number), from `production_counters.last_batch_number`                  |
 | `production_batches`.product, colour, size       | FK, `restrictOnDelete`         | one variant; products are soft-deleted                                                   |
 | `production_batches`.production_cut_id           | FK → production_cuts           | the start whose materials it holds; `split_from_id` → the batch it was split from        |
@@ -417,6 +448,10 @@ cuts → materials in ascending id.
 PostgreSQL only: `unique(workshop_id, id)` on phases, cuts and batches, and composite keys on (`workshop_id`, …) for every parent.
 `production_counters` holds one row per workshop (made on first use): the batch counter and the production lock. Every production
 writer locks it first, then batch → cut, product → materials in ascending id, or the phases.
+Since INV-16 every Start batch writes one `production_cut_variants` row per colour and size with its per-unit amounts per material
+(`CuttingCalculator::takeVariants()`: the exact total is checked against stock, rounded once per material). Undo batch reads a cut's
+variant rows as groups (`giveBackFromGroup()`: `held = round4(Σ r_u × per_unit)`, the batch's group losing k); a cut made before INV-16
+has none and is read as one group, which returns exactly what it always did. No old row is rewritten.
 
 ### `stock_movements` (S-16-BE, material history)
 | Column | Type | Rules |

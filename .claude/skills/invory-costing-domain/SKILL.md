@@ -16,6 +16,10 @@ If a rule here is wrong or incomplete, stop and ask the tech-lead to update it (
 | Product | A final fashion item we make (jacket, sneaker, tote…) | `Product` / `products` |
 | Composition / BOM | The list of materials (with quantities) that make **one unit** of a product | `ProductComponent` / `product_components` |
 | Component line | One row of the BOM: material + quantity per unit + waste % | `BomLine` (domain VO) |
+| Quantity mode | A component line is **Same for every variant** (one quantity, every line before INV-16) or **By colour and size** (a quantity per colour × size of the product; a variant with no quantity doesn't use the material) | `quantity_mode`, `ComponentQuantityMode` (`same`, `by_variant`) |
+| Quantity cell | The quantity of a by-colour-and-size line for one colour and one size, in the material's unit, > 0 | `ProductComponentQuantity` / `product_component_quantities` |
+| Variant composition | The lines one variant uses: every `same` line, and every `by_variant` line with a cell for it, at that cell's quantity | resolved in `ProductCostingService` |
+| Guaranteed / best | Of a colour or a product: the smallest / largest capacity of its variants. Any mix up to *guaranteed* units can be made; *best* is one variant made on its own | `guaranteed`, `best` |
 | Waste % | Expected loss on top of the net quantity (cutting, shrinkage, defects) | `waste_percent` |
 | Effective quantity | Quantity actually consumed per unit, waste included | `effective_quantity` |
 | Unit cost | Total cost to make one unit of a product | `unit_cost` |
@@ -86,26 +90,44 @@ existing records. A row can be deleted only when nothing references it.
 - Each PHP enum exposes `label(): string` and `static options(): array<array{value:string,label:string}>`. The frontend gets options as props
   (or from the shared `reference` prop) and never hard-codes labels.
 
-## Formulas
-
-For a product P with BOM lines L₁…Lₙ:
+## Formulas (per colour and size since 2026-11-07, INV-16, ADR-0027)
 
 ```
-effective_qty(L)      = L.quantity × (1 + L.waste_percent / 100)
-line_cost(L)          = effective_qty(L) × L.material.unit_cost
-material_cost(P)      = Σ line_cost(L)
-unit_cost(P)          = material_cost(P) + P.labor_cost + P.overhead_cost
+For a product P, a variant v = (colour c, size z) of colours(P) × sizes(P), and a line L of P (material m, waste w):
+
+q(L, v)               = L.quantity                     when L is `same`
+                      = cell(L, c, z)                  when L is `by_variant` and has that cell
+                      = none                           otherwise (v doesn't use L)
+lines(P, v)           = the lines L with q(L, v) ≠ none                                    ← the variant composition
+effective_qty(L, v)   = q(L, v) × (1 + w / 100)
+line_cost(L, v)       = effective_qty(L, v) × m.unit_cost
+material_cost(P, v)   = Σ line_cost(L, v) over lines(P, v)
+unit_cost(P, v)       = material_cost(P, v) + P.labor_cost + P.overhead_cost
                         (P.overhead_cost is never null: a blank overhead is stored as 0, S-43)
 
-required(m)           = Σ effective_qty(L) for every line L whose material is m     ← aggregate per material!
-units_possible(m)     = ⌊ m.quantity_on_hand / required(m) ⌋
-max_producible(P)     = min over materials m of units_possible(m)
-bottleneck(P)         = the material m with the smallest units_possible(m)
-                        (tie → lowest material name in byte order (`strcmp`), then lowest id)
+required(m, v)        = Σ effective_qty(L, v) over the lines of lines(P, v) whose material is m     ← aggregate per material!
+units_possible(m, v)  = ⌊ m.quantity_on_hand / required(m, v) ⌋
+max_producible(P, v)  = min over the materials of lines(P, v) of units_possible(m, v);  null when lines(P, v) is empty
+bottleneck(P, v)      = the material with the smallest units_possible(m, v)  (tie → lowest name in byte order, then lowest id)
 
-stock_value(m)        = m.quantity_on_hand × m.unit_cost
-inventory_value       = Σ stock_value(m) over the workshop's non-deleted materials
+guaranteed(P, c)      = min over sizes z of max_producible(P, (c, z))       (variants with null left out; null if all are)
+best(P, c)            = max over sizes z of max_producible(P, (c, z))
+binding(P, c)         = the size z giving guaranteed(P, c)  (tie → size order);  bottleneck(P, c) = bottleneck(P, (c, binding))
+guaranteed(P)         = min over every variant v of max_producible(P, v);  best(P) = max over every variant
+binding(P)            = the variant giving guaranteed(P)  (tie → colour list order, then size order);  bottleneck(P) = its bottleneck
+best_at(P)            = the variant giving best(P)        (tie → colour list order, then size order);  named on screen by its colour
+                        and its bottleneck ("Best case: 112 units, in Indigo — limited there by Metal shank button 17mm")
+unit_cost_range(P)    = min and max of unit_cost(P, v) over every variant
+
+When P has no `by_variant` line, every variant has the same composition and:
+unit_cost(P, v) = unit_cost(P),  max_producible(P, v) = guaranteed = best = max_producible(P),  bottleneck as today.
+The formulas of before INV-16 (effective_qty(L), required(m), max_producible(P) …) are this case.
+
+stock_value(m)        = m.quantity_on_hand × m.unit_cost                    (unchanged)
+inventory_value       = Σ stock_value(m) over the workshop's non-deleted materials   (unchanged)
 ```
+- Per-colour and per-product figures are each **on their own**: the colours share `same` materials (buttons, thread), so
+  `best(Indigo) + best(Black)` may not be makeable together. Like `units_covered`, they ignore what other variants would use.
 
 ### Material usage and next limit (added 2026-10-08, decision 3)
 
@@ -122,6 +144,15 @@ next_limit(P, m)      = only when bottleneck(P) = m: max_producible and bottlene
 `next_limit` reads "if you restock m, the next limit is X at N units". It can equal the current capacity (a tie at the bottleneck).
 Worked example: the button limits the Denim Jacket to 112; without it the next limit is Denim 12oz Indigo at **126**.
 
+Per colour and size (INV-16, ADR-0027):
+```
+needed_per_unit(m, P, v) = required(m, v)                                  for every variant v whose composition uses m
+units_covered(m, P, v)   = units_possible(m, v)
+next_limit(P, v, m)      = only when bottleneck(P, v) = m: max_producible and bottleneck of lines(P, v) without m
+```
+A product with no `by_variant` line gives one figure per product, as today. Which variants a screen lists, or a min–max, is the
+screens' choice.
+
 ### Selling price and margin (added 2026-10-08, decision 5)
 
 ```
@@ -129,6 +160,10 @@ margin(P)             = P.selling_price − unit_cost(P)                       s
 margin_percent(P)     = margin(P) ÷ P.selling_price × 100                    scale 2, HalfUp   (gross margin: % of the selling price, not markup on cost)
 ```
 `selling_price` is optional (`decimal(12,4)`, ≥ 0). `selling_price = null` → `margin = null`. `selling_price = 0` → `margin.amount = −unit_cost`, `margin.percent = null`.
+Per colour and size (INV-16):
+```
+margin(P, v)          = P.selling_price − unit_cost(P, v)            scale 4;   margin_percent(P, v) as today, per variant
+```
 Worked example: Denim Jacket at selling price `89.0000` → `margin.amount = "53.2460"`, `margin.percent = "59.83"`.
 
 ### Sales (added 2026-10-08, decision 1)
@@ -205,25 +240,35 @@ button, ⌊660 / 8⌋), and the inventory value from TND 10,544.300 to 9,936.680
 buttons, moving 5 back returns 50 pc (the latest cut first). With the button at 100 pc, cutting 20 is refused (needs
 160 pc, short by 60 pc, at most 12); cutting 12 leaves 4 pc. With the button at 7 pc, at most 0.
 
-### Start batch and Undo batch (added 2026-11-02, INV-5, ADR-0023)
+### Start batch and Undo batch (added 2026-11-02, INV-5, ADR-0023; per colour and size since INV-16, ADR-0027)
 
 ```
-start_batch(P, grid):                                     grid = units per colour and size of P, whole, 0 … 1,000,000 each
-    N = Σ grid                                            N ≥ 1
-    requires: P is not deleted                            (active, draft and archived products can be started)
-    requires: BOM empty  or  N ≤ max_producible(P)        the same check, plan and history as start_cutting(·, N), made once for N
-    writes:   one production cut c (units N) remembering per material per_unit and taken = needed(m, N)
-              one batch per colour and size with units > 0, In cutting since today, numbered from the workshop's production counter, + 1 each
-undo_batch(b):                                            only while b is In cutting; k = units(b)
-    r = c.units − c.units_returned                        c = b's production cut (shared by every batch of that start)
-    returned(m) = held(c, m, r) − held(c, m, r − k)       ADR-0014's formula; every batch of a start undone = exactly `taken`
+start_batch(P, grid):                                     grid = units n_v per colour and size of P, whole, 0 … 1,000,000 each
+    N = Σ n_v                                             N ≥ 1; P not deleted
+    required_exact(m, v) = Σ effective_qty(L, v) over m's lines of lines(P, v), unrounded (at most 8 decimals)
+    total_exact(m)       = Σ_v n_v × required_exact(m, v)
+    requires: total_exact(m) ≤ stock(m) for every material m          (exact; with no `by_variant` line this is N ≤ max_producible(P))
+    needed(m)            = round4( total_exact(m) )                    HalfUp, once per material per start
+    short_by(m)          = round4( total_exact(m) − stock(m) )         for materials where that is > 0
+    stock'(m)            = stock(m) − needed(m)
+    writes: one production cut c; per variant with n_v > 0 its units and, per material, per_unit(c, v, m) = required_exact(m, v);
+            per material taken(c, m) = needed(m); one batch per variant with n_v > 0, In cutting since today
+undo_batch(b):                                            only while b is In cutting; b in variant v, k = units(b)
+    r_u                  = units of variant u in c not returned yet
+    held(c, m, r)        = round4( Σ_u r_u × per_unit(c, u, m) )
+    returned(m)          = held(c, m, r) − held(c, m, r with r_v − k)          every batch of a start undone = exactly `taken`
     nothing back for a material deleted since, or whose unit changed since the start
 put_in_stock(b, k):                                       1 ≤ k ≤ units(b); P not deleted; a restock "From production"
     finished_stock(P, colour, size) += k                  never above 1,000,000; materials and costing unchanged
 ```
+Cuts made before INV-16 hold the same per-unit amount for every variant, so their `held` figures are unchanged.
+
 - Moves between phases never touch materials or the shelf. Undoing the restock of a Put in stock takes the units off the shelf; the
   batch doesn't come back and its materials stay used.
 - Batches and order cuts take from the same stock under the same locks until INV-14 removes cutting from orders.
+- A mixed grid (more than one colour and size, and a `by_variant` line) refused for short stock says "Short on <A>. Restock it
+  first, or lower the units." / "Short on <A> and <B>. Restock them first, or lower the units." (composition order, no "at most"
+  number); one colour and size, or a product with no `by_variant` line, keeps "You can cut at most N now: …".
 
 Worked example (Denim Jacket, 900 buttons): Indigo M 6 and Indigo L 10 = 16 units take 31.68 m Denim 12oz Indigo, 128 pc Metal shank
 button 17mm, 2,016 m Polyester thread and 16 pc Woven brand label as one production cut; B-0153 (6) and B-0154 (10) start In cutting;
@@ -258,7 +303,7 @@ suggested(W, C)       = the sizes category C suggests in workshop W, in list ord
 used_by(z)            = number of non-deleted products, any status, with size z
 locked(P, z)          = reasons, in order: stock (finished(P, ·, z) ≥ 1 in a colour) · orders (a row of a non-deleted order,
                         delivered and cancelled included) · barcodes (a barcode of name_key(P), a colour of P and z) ·
-                        production (a batch of P in z In production) · [INV-16: material quantities]
+                        production (a batch of P in z In production) · material quantities (a cell of a `by_variant` line of P in z, INV-16)
 ```
 - A size taken off a product while `locked` is refused: "XL can't be taken off Denim Jacket: it has units in stock, is on orders and has
   barcodes." (one sentence per size, list order; "Size 36 can't …" for a digits-only name; "it" always before the first reason, "…: it
@@ -268,7 +313,8 @@ locked(P, z)          = reasons, in order: stock (finished(P, ·, z) ≥ 1 in a 
 - Changing a product's category changes none of its sizes; a category no longer locks anything. A new size is on no product.
 - A product added without sizes (`CreateProduct` with no `sizes` key) gets `suggested(W, its category)`.
 - Renaming a size changes the variant SKUs that name it and no barcode.
-- Sizes change **no figure**: unit cost, "Can produce", the bottleneck, next limit, margin, sales and the dashboard are as before.
+- A size changes no figure unless a line of the product is By colour and size (INV-16, ADR-0027): then each size has its own
+  composition, cost and capacity (see Formulas).
 - Screens: the badge "One size" (the flagged size's name) · "Size M" · "Sizes S, M, L, XL" (2 to 6) · "Sizes XS to XXXL" (7 or more in an
   unbroken run of sizes(W)) · "Sizes XS, S, M and 4 more" (7 or more with gaps). "Can produce now" adds ", any mix of sizes" when
   |sizes(P)| > 1. Settings › Product categories' Suggests line uses the same rule without "Sizes" / "Size" ("XS to XXXL", "S, M, L,
@@ -313,7 +359,7 @@ size_mode(L)          = by_size        when L was recorded by size (L.by_size)
   the same composition.
 - The history entries of a move of a `by_size` line remember the sizes moved (size, label, units, in size order) and read
   "14 × Denim Jacket (S 4 · M 10)"; other entries have none.
-- Sizes change no figure: costing, "Can produce", the bottleneck, sales and the dashboard are as before. The Orders list's totals,
+- Every size uses the same composition (true of order cuts, which ended with ADR-0026). The Orders list's totals,
   filter and statuses read the line, so they add every size.
 
 Worked example: Boutique Lina's Denim Jacket S 10 · M 20 · L 15 · XL 5 (line 50). Start cutting S 4 · M 10 → S 6 · 4, M 10 · 10, L 15 ·
@@ -358,7 +404,7 @@ variants(P)           = |colours(P)| × |sizes(P)|
   it can't be removed from <product>. Set its stock to 0 first." ("1 unit" for one), one sentence per such colour in list order. A
   colour at 0 comes off as before; added back later, it starts at 0.
 - Deleting a product deletes every colour's stock; every writer takes the product's row
-  lock first. **Changes no figure**, as before: costing, "Can produce now" (every colour uses the same composition), sales, orders and
+  lock first. **Changes no figure**, as before: costing, "Can produce now", sales, orders and
   the dashboard.
 
 Worked example: Black S 1 · M 0 · L 2 · XL 1, Indigo 2 · 0 · 3 · 1, Light wash 0 → Black 4, Indigo 6, Light wash 0, sizes 3 · 0 · 5 · 2,
@@ -402,8 +448,9 @@ used_by(c)            = number of non-deleted products with colour c, any status
 - **Every product has at least one colour** ("Choose at least one colour."), whatever its status. Products recorded before INV-1 got
   their workshop's first colour (White). A colour with units in stock can't be taken off a product (INV-2, see
   "Finished stock per colour").
-- **Colours change no figure:** unit cost, "Can produce now", the bottleneck, next limit, margin, finished stock, orders, sales and the
-  dashboard are as before.
+- **Colours change no figure** unless a line of the product is By colour and size (INV-16, ADR-0027): unit cost, "Can produce now",
+  the bottleneck, next limit, margin, finished stock, orders, sales and the dashboard are as before. A colour taken off a product
+  loses its cells in the same save; a colour added has none.
 - The materials' "Colour" field stays free text ("Antique brass"); it is not a colour of this list.
 
 ### Barcodes (added 2026-10-31, INV-8, ADR-0020)
@@ -491,11 +538,19 @@ sentence above; a Trucker Jacket with Light wash S only → renames fine and the
 | Material deleted, or its unit changed, between a cut and its return | nothing back for it ("Deleted, not returned" / "Unit changed, not returned"); the other materials come back |
 | Delete an order with units in cutting or ready to ship | refused; nothing deleted (also when someone starts cutting while Delete is confirmed) |
 | Two people cut from the same stock at once | the second check sees the stock left by the first (row locks, ADR-0014) |
+| Every line `same` | Every variant has today's figures; guaranteed = best = `max_producible(P)` |
+| A variant with no line at all (e.g. Black when only an Indigo-only line exists) | `max_producible(P, v) = null`, left out of guaranteed and best; a colour whose every size is null reads "No composition" |
+| A colour whose material has 0 on hand | that colour's variants = 0; `guaranteed(P) = 0`, `best(P)` may still be > 0 |
+| A colour taken off the product | its cells are deleted in the same save |
+| A colour added to the product | no cells: its variants use only the `same` lines |
+| A size with a cell taken off the product | refused: "has material quantities" (INV-18's size lock, fifth reason) |
+| Undo a batch of an old (before INV-16) start | same figures as before |
+| Start a mixed grid where rounding would hide a shortfall | refused: the check is on the unrounded total |
 
 ## Validation rules (inputs)
 
 - Material: `unit_cost` ≥ 0 (max 4 decimals), `quantity_on_hand` ≥ 0 (max 4 decimals), `reorder_level` nullable ≥ 0.
-- BOM line: `quantity` > 0 (max 4 decimals); `waste_percent` 0 ≤ x < 100 (max 2 decimals); `material_id` exists in the product's workshop, not soft-deleted, `distinct` within the product.
+- BOM line: `quantity` > 0 (max 4 decimals) on a `same` line; `waste_percent` 0 ≤ x < 100 (max 2 decimals); `material_id` exists in the product's workshop, not soft-deleted, `distinct` within the product.
 - Product: `labor_cost` required, ≥ 0 (max 4 decimals). `overhead_cost` **optional**, ≥ 0 (max 4 decimals): blank or missing is saved as `0`
   and counts as 0 in the unit cost; a typed value follows the same rules (decided 2026-10-14, D-8, S-43). An empty BOM is allowed (e.g. a draft).
   `selling_price` nullable ≥ 0 (max 4 decimals).
@@ -515,6 +570,10 @@ sentence above; a Trucker Jacket with Light wash S only → renames fine and the
   unique in the workshop ("Code IND is already used by Indigo."); `swatch` put in capitals, a "#" added before 6 hex digits typed
   without one, `^#[0-9A-F]{6}$` ("Enter a colour code like #3E4C7E."); `position` nullable, whole number 0 … 32 767 ("Enter a whole
   number from 0 to 32,767, or leave it empty."; empty = last). Product: `colours` at least one id of the workshop's colours, distinct.
+- Composition line: `quantity_mode` `same` or `by_variant`. `same`: `quantity` as today. `by_variant`: `quantities[colourId][sizeId]`
+  each empty or 0 (no cell) or > 0 up to 1,000,000 with max 4 decimals; only colours and sizes the save leaves on the
+  product; at least one cell; at most 2,000 cells per product over all its lines. When the product's colours or sizes no
+  longer match the submitted grid, nothing is saved ("The sizes or colours of <product> have changed. Enter its quantities again.").
 
 ## Worked example — use as a golden test (backend unit test + frontend display test)
 
@@ -538,6 +597,31 @@ Variant checks:
 - Remove all lines → `material_cost = "0.0000"`, `unit_cost = "15.5000"`, `max_producible = null`.
 - Overhead left empty (`0.0000`) → `unit_cost = "32.2540"`, at selling price `89.0000` `margin.amount = "56.7460"`, `margin.percent = "63.76"`;
   `max_producible = 112`, bottleneck = button (unchanged).
+
+## Worked example per colour and size (INV-16, ADR-0027) — golden test
+
+A domain-level example: the pure calculator is given these eight variants (real products take the sizes S · M · L · XL
+since INV-18, as INV-16's card example does).
+Denim Jacket in Indigo and Black, sizes S, M, L, XL; labor 12.0000, overhead 3.5000. Lines: *Denim 12oz Indigo* (8.5000/m, stock 250,
+waste 10 %) by colour and size, Indigo only: S 1.6000 · M 1.8000 · L 2.0000 · XL 2.2000; *Denim 12oz Black* (8.5000/m, stock 40, waste
+10 %), Black only, the same four quantities; button, thread and label `same` as in the main example.
+
+| Variant   | Denim eff. qty | Unit cost | Denim units possible | Can produce | Bottleneck              |
+| --------- | -------------- | --------- | -------------------- | ----------- | ----------------------- |
+| Indigo S  | 1.7600         | 33.8840   | 142                  | 112         | Metal shank button 17mm |
+| Indigo M  | 1.9800         | 35.7540   | 126                  | 112         | Metal shank button 17mm |
+| Indigo L  | 2.2000         | 37.6240   | 113                  | 112         | Metal shank button 17mm |
+| Indigo XL | 2.4200         | 39.4940   | 103                  | 103         | Denim 12oz Indigo       |
+| Black S   | 1.7600         | 33.8840   | 22                   | 22          | Denim 12oz Black        |
+| Black M   | 1.9800         | 35.7540   | 20                   | 20          | Denim 12oz Black        |
+| Black L   | 2.2000         | 37.6240   | 18                   | 18          | Denim 12oz Black        |
+| Black XL  | 2.4200         | 39.4940   | 16                   | 16          | Denim 12oz Black        |
+
+- Indigo: guaranteed 103 (binding XL, Denim 12oz Indigo), best 112. Black: guaranteed 16 (XL, Denim 12oz Black), best 22.
+  Product: guaranteed 16, best 112, unit cost 33.8840 to 39.4940. Indigo M matches the main example exactly.
+- Start batch Indigo M 6 · Indigo L 10 · Black S 5 (21 units): Denim 12oz Indigo 6 × 1.98 + 10 × 2.2 = **33.8800 m**, Denim 12oz Black
+  5 × 1.76 = **8.8000 m**, button 168 pc, thread 2,646 m, label 21 pc. Undoing the Indigo L batch gives back 22.0000 m of Indigo denim,
+  80 pc, 1,260 m and 10 pc, and nothing of the Black denim.
 
 ## Where it lives in code
 
@@ -575,3 +659,8 @@ Variant checks:
   (`ordered()`, `is_one_size`), `product_sizes`, `product_category_sizes`, `App\Services\Products\ProductSizes` (the one reader),
   `App\Domain\Sizes\SizeLine` (badge and Suggests line), `App\Services\Products\ProductSizeLock` (per size), `App\Actions\Sizes\{CreateSize,
   UpdateSize,CreateDefaultSizes}`, `App\Actions\Products\SyncProductSizes`; `SizeList`, `SizeLists` and `SizeListResource` are gone.
+- Added 2026-11-07 (INV-16, ADR-0027): `App\Enums\ComponentQuantityMode`, `App\Models\{ProductComponentQuantity,ProductionCutVariant,
+  ProductionCutVariantMaterial}`, `App\Domain\Costing\{VariantCosting,VariantLine,VariantCostingResult,VariantResult,ColourCapacity,
+  MaterialSpan}` (per-variant cost and capacity, guaranteed and best, ranges), `CuttingCalculator::takeVariants()` /
+  `giveBackFromGroup()` with `VariantUnits` and `CutGroup`, `ProductCosting::$variants` / `best()`, the fifth reason of
+  `ProductSizeLock`.

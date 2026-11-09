@@ -51,6 +51,12 @@ Board: `Inv16BomEditor` (desktop)
 5. Switching a filled **By colour and size** line back to **Same for every variant** asks first: "Switch to one quantity for every
    variant? This clears the 4 quantities you set for Denim 12oz Indigo across its colours and sizes." · **Keep the grid** · **Switch
    anyway**.
+6. A line with no material chosen can't be switched: **By colour and size** is disabled and, under the control, reads "Choose a
+   material first."
+7. Pressing **By colour and size** and then straight back, while the grid is still as pre-filled and no cell has been edited,
+   brings back the quantity you typed and asks nothing.
+8. On Add and Edit product, taking a colour off while a line holds quantities for it shows a quiet line under Colours, with no
+   question: "Taking Black off clears its 4 quantities across its materials when you save." ("its 1 quantity" for one).
 
 ### The quantity grid (opens in a Sheet)
 Board: `Inv16QuantityGrid` (desktop)
@@ -59,17 +65,19 @@ Board: `Inv16QuantityGrid` (desktop)
 2. Help text: "Quantity by colour and size, in m. A blank cell means that colour and size doesn't use this material."
 3. **Find colour** — a text filter over the product's own colours.
 4. "2 of 20 colours used" and **Expand all** / **Collapse all**.
-5. One row per colour, in the product's own colour order, closed by default except the colour just switched to and any colour that
-   already has a cell. A closed row reads "Not used", or "4 of 4 sizes · 1.8000 m" (same value in every size) or "4 of 4 sizes ·
-   1.6000–2.2000 m" (different values).
-6. Opening Indigo shows its four sizes as labelled fields: S 1.6000, M 1.8000, L 2.0000, XL 2.2000 (each field in m). **Fill empty
+5. One row per colour, in the product's own colour order, closed by default except any colour that already has a cell; when no
+   colour has a cell (a line switched with no quantity typed), the first colour is open. A closed row reads "Not used", or "4 of 4
+   sizes · 1.8000 m" (same value in every size) or "4 of 4 sizes · 1.6000–2.2000 m" (different values). **Find colour** with no
+   match reads "No colour matches "xyz"."
+6. Opening Indigo shows its four sizes as labelled fields: S 1.6000, M 1.8000, L 2.0000, XL 2.2000 (each field in m; named "Indigo,
+   size M", and "Indigo, One size" on a One size product). **Fill empty
    sizes with 1.6000 m** appears once a colour has at least one filled cell and an empty one; it never overwrites a typed cell.
 7. Footer: "8 of 44 cells filled" and **Done** (closes the Sheet; nothing saves separately — **Save product** saves the whole page).
 
 ### Product page — capacity, cost and margin
 Board: `Inv16ProductShow` (desktop)
 1. **Can produce now**: the headline is **guaranteed**, 16. Caption: "from current stock, any mix of colours and sizes."
-2. **Bottleneck**: "Bottleneck: Denim 12oz Black (Black, size XL)." Body: "40.0000 m in stock covers 16 units of Black, size XL — the
+2. **Bottleneck**: "Bottleneck: Denim 12oz Black (Black, size XL)." Body: "40 m in stock covers 16 units of Black, size XL — the
    smallest across every colour and size." A second, quieter line: "Best case: 112 units, in Indigo — limited there by Metal shank
    button 17mm."
 3. **Capacity by colour** — a new table, right after the bottleneck:
@@ -88,7 +96,17 @@ Board: `Inv16ProductShow` (desktop)
    link that opens the same grid read-only. Waste % and the material's own stock stay single values.
 6. **Products list**: the capacity badge shows "16–112 units" (success tone) in place of one number; "0–112 units" (warning tone,
    short-stock icon) when guaranteed is 0 but best isn't; "Can't produce" (danger, unchanged) only when best is 0. Unit cost and
-   margin show the same range, in the same cell.
+   margin show the same range, in the same cell. The "Can produce" badge in the footer of the Composition table (and its phone
+   layout) follows the same rule and reads the same.
+7. **Bottleneck, when it can't be made**: with guaranteed 0 and best above 0, the title stays "Bottleneck: Denim 12oz Black (Black,
+   size XL)." and the body reads "Denim 12oz Black is out of stock, so Black, size XL can't be made." ("Denim 12oz Black doesn't
+   cover one unit of Black, size XL. 0.5 m in stock." when it has some stock), then the "Best case" line. A material below its
+   reorder level adds "It's also below its reorder level of 30 m."
+
+### Material page — "Used in"
+For a product with a **By colour and size** line, the material's row reads: "Needs per unit" **Varies**, "This stock covers"
+**16–22 units** (a range over the colours and sizes that use it), "Can make now" the product's guaranteed figure (16) with "This
+material (bottleneck)" on the Black denim, and no "Suggestion:" sentence. Products with no such line read as today.
 
 ### Start batch — a mixed grid runs short
 Board: `Inv16StartBatchShort`
@@ -128,15 +146,18 @@ A product's sizes are the ones chosen in its Sizes field, not its category's ([[
 | **Long content**             | 20 colours × 11 sizes: the Sheet's accordion scrolls, **Find colour** filters it; the composition line stays one compact row regardless of grid size |
 
 ## Wording
-- Composition line: "Same for every variant" · "By colour and size" · "4 of 44 cells · Indigo only" · "No cells set yet" · "Edit grid".
+- Composition line: "Same for every variant" · "By colour and size" · "4 of 44 cells · Indigo only" · "No cells set yet" · "Edit grid" ·
+  "Choose a material first." · "Taking Black off clears its 4 quantities across its materials when you save."
 - Switch-back confirm: "Switch to one quantity for every variant? This clears the 4 quantities you set for Denim 12oz Indigo across
   its colours and sizes." · "Keep the grid" · "Switch anyway".
 - Grid Sheet: "Quantity by colour and size, in m. A blank cell means that colour and size doesn't use this material." · "Find colour"
   · "2 of 20 colours used" · "Expand all" · "Collapse all" · "Not used" · "4 of 4 sizes · 1.8000 m" · "4 of 4 sizes · 1.6000–2.2000 m"
-  · "Fill empty sizes with 1.6000 m" · "8 of 44 cells filled" · "Done".
-- Product page: "from current stock, any mix of colours and sizes." · "Bottleneck: Denim 12oz Black (Black, size XL)." · "40.0000 m
+  · "Fill empty sizes with 1.6000 m" · "8 of 44 cells filled" · "Done" · "No colour matches "xyz"." · "Indigo, One size".
+- Product page: "from current stock, any mix of colours and sizes." · "Bottleneck: Denim 12oz Black (Black, size XL)." · "40 m
   in stock covers 16 units of Black, size XL — the smallest across every colour and size." · "Best case: 112 units, in Indigo —
-  limited there by Metal shank button 17mm." · "Capacity by colour" · "All colours (any mix)" · "Varies" · "View grid".
+  limited there by Metal shank button 17mm." · "Capacity by colour" · "All colours (any mix)" · "Varies" · "View grid" · "Denim 12oz
+  Black is out of stock, so Black, size XL can't be made." · "Denim 12oz Black doesn't cover one unit of Black, size XL. 0.5 m in
+  stock." · "It's also below its reorder level of 30 m."
 - Start batch: "Short on Denim 12oz Black. Restock it first, or lower the units." · "Short on Denim 12oz Black and Metal shank button
   17mm. Restock them first, or lower the units."
 - Sizes: "Take XL off this product?" · "This clears the 2 quantities you set for XL across its materials." · "Keep XL" · "Take XL
