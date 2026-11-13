@@ -93,6 +93,8 @@ describe('<CapacityByColourCard>', () => {
                 guaranteed: null,
                 best: null,
                 bottleneck: null,
+                bottleneck_colour: null,
+                bottleneck_missing: false,
                 binding_size: null,
             },
         ]);

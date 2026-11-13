@@ -187,7 +187,13 @@ export function ProductsTable({ products, hrefs }: ProductsTableProps) {
                                     />
                                 </TableCell>
                                 <TableCell className="text-right font-semibold tabular-nums">
-                                    <MoneyRange value={product.unit_cost} />
+                                    {product.unit_cost === null ? (
+                                        <span className="font-normal text-muted-foreground">
+                                            No unit cost yet.
+                                        </span>
+                                    ) : (
+                                        <MoneyRange value={product.unit_cost} />
+                                    )}
                                 </TableCell>
                                 <TableCell className="text-right tabular-nums">
                                     <PriceMargin
@@ -276,7 +282,13 @@ export function ProductsTable({ products, hrefs }: ProductsTableProps) {
                                     Unit cost
                                 </dt>
                                 <dd className="font-semibold tabular-nums">
-                                    <MoneyRange value={product.unit_cost} />
+                                    {product.unit_cost === null ? (
+                                        <span className="font-normal text-muted-foreground">
+                                            No unit cost yet.
+                                        </span>
+                                    ) : (
+                                        <MoneyRange value={product.unit_cost} />
+                                    )}
                                 </dd>
                             </div>
                             <div>

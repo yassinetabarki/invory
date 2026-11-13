@@ -1,6 +1,7 @@
 import { Link } from '@inertiajs/react';
 import { Plus } from 'lucide-react';
 import { BomTable } from '@/components/products/bom-table';
+import type { AddColour } from '@/components/products/colour-stock-line';
 import { EmptyState } from '@/components/shared/empty-state';
 import { Button } from '@/components/ui/button';
 import type {
@@ -13,7 +14,7 @@ import type {
 
 type CompositionCardProps = {
     lines: ProductComponentLine[];
-    materialsTotal: DecimalRange;
+    materialsTotal: DecimalRange | null;
     capacity: number | null;
     /** `capacity.best` (INV-16); defaults to `capacity`. */
     best?: number | null;
@@ -23,6 +24,8 @@ type CompositionCardProps = {
     sizes: readonly SizeOption[];
     /** The product's edit page, where the composition is changed. */
     editHref: string;
+    /** Opens the window that adds a missing colour to a material (INV-21-p); handed to the table. */
+    onAddColour?: AddColour;
 };
 
 /** The "Composition" section of the product page: heading, edit link and table. */
@@ -35,6 +38,7 @@ export function CompositionCard({
     colours,
     sizes,
     editHref,
+    onAddColour,
 }: CompositionCardProps) {
     return (
         <section
@@ -84,6 +88,7 @@ export function CompositionCard({
                     materialHref={materialHref}
                     colours={colours}
                     sizes={sizes}
+                    onAddColour={onAddColour}
                 />
             )}
         </section>

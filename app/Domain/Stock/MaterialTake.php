@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\Domain\Stock;
 
-/** One material of a planned cut: what it needs, what is in stock, what is left, and by how much it falls short. */
+/**
+ * One stock of a planned cut: what it needs, what is in stock, what is left, and by how much it falls short.
+ * A stock is a one-stock material, or one colour of a per-colour material (INV-21).
+ */
 final readonly class MaterialTake
 {
     public function __construct(
@@ -16,5 +19,7 @@ final readonly class MaterialTake
         public string $inStock,       // scale 4
         public ?string $after,        // inStock − needed, scale 4; null when short
         public ?string $shortBy,      // round4(units × perUnitExact − stock) when that is above 0; else null
+        public ?int $colourId = null, // the colour of this stock; null for a one-stock material
+        public bool $missing = false, // the per-colour material lacks this colour: stock 0, short by the whole need
     ) {}
 }

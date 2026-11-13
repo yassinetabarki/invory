@@ -2,6 +2,11 @@ import { Link } from '@inertiajs/react';
 import { TriangleAlert } from 'lucide-react';
 import { useState } from 'react';
 import { gridFromCells } from '@/components/products/bom-rows';
+import {
+    ColourStockLine,
+    UnitsByColour,
+} from '@/components/products/colour-stock-line';
+import type { AddColour } from '@/components/products/colour-stock-line';
 import { QuantityGridSheet } from '@/components/products/quantity-grid-sheet';
 import { CapacityBadge } from '@/components/shared/capacity-badge';
 import { Money, MoneyRange } from '@/components/shared/money';
@@ -33,7 +38,7 @@ import type {
 type BomTableProps = {
     lines: ProductComponentLine[];
     /** `cost.material_cost`: the sum of the line costs, lowest to highest over every colour and size, from the server. */
-    materialsTotal: DecimalRange;
+    materialsTotal: DecimalRange | null;
     /** `capacity.max_producible`; null without a composition. */
     capacity: number | null;
     /** `capacity.best` (INV-16): shown as "16–112 units" when above `capacity`. Defaults to `capacity`. */
@@ -43,6 +48,8 @@ type BomTableProps = {
     /** The product's colours and sizes, in list order: the rows and columns of View grid. */
     colours: readonly Colour[];
     sizes: readonly SizeOption[];
+    /** Opens the window that adds a colour to a material that lacks it (INV-21-p); the link shows only when given. */
+    onAddColour?: AddColour;
 };
 
 /** No errors to show in the read-only grid. */
@@ -66,22 +73,62 @@ function Varies() {
     return <span className="text-muted-foreground">Varies</span>;
 }
 
-/** Units this stock makes of the product, with the badge on the limiting line. */
-function UnitsPossible({ line }: { line: ProductComponentLine }) {
+/**
+ * Units this stock makes of the product, with the badge on the limiting line.
+ * A material kept per colour reads "Varies" with **View by colour** (INV-21).
+ */
+function UnitsPossible({
+    line,
+    alignEnd = false,
+}: {
+    line: ProductComponentLine;
+    alignEnd?: boolean;
+}) {
     const { locale } = useAppSettings();
+    const perColour = line.stock_by_colour !== null;
 
     return (
-        <span className="inline-flex flex-wrap items-center justify-end gap-2">
-            {line.is_bottleneck && <BottleneckBadge />}
-            {line.quantity_mode === 'by_variant' ||
-            line.units_possible === null ? (
-                <Varies />
-            ) : (
-                <strong className="tabular-nums">
-                    {formatCount(line.units_possible, locale)}
-                </strong>
+        <span
+            className={cn(
+                'flex flex-col gap-1',
+                alignEnd ? 'items-end' : 'items-start',
             )}
+        >
+            <span className="inline-flex flex-wrap items-center justify-end gap-2">
+                {line.is_bottleneck && <BottleneckBadge />}
+                {perColour ||
+                line.quantity_mode === 'by_variant' ||
+                line.units_possible === null ? (
+                    <Varies />
+                ) : (
+                    <strong className="tabular-nums">
+                        {formatCount(line.units_possible, locale)}
+                    </strong>
+                )}
+            </span>
+            {perColour && <UnitsByColour line={line} alignEnd={alignEnd} />}
         </span>
+    );
+}
+
+/** The material's stock: one figure, or each of the product's colours for a material kept per colour. */
+function StockOnHand({
+    line,
+    onAddColour,
+    alignEnd = false,
+}: {
+    line: ProductComponentLine;
+    onAddColour?: AddColour;
+    alignEnd?: boolean;
+}) {
+    return line.stock_by_colour === null ? (
+        <Quantity value={line.stock_on_hand} unit={line.material.unit} />
+    ) : (
+        <ColourStockLine
+            line={line}
+            onAddColour={onAddColour}
+            alignEnd={alignEnd}
+        />
     );
 }
 
@@ -181,6 +228,7 @@ export function BomTable({
     materialHref,
     colours,
     sizes,
+    onAddColour,
 }: BomTableProps) {
     const { locale } = useAppSettings();
     const [viewing, setViewing] = useState<ProductComponentLine | null>(null);
@@ -274,13 +322,14 @@ export function BomTable({
                                     <LineCost line={line} />
                                 </TableCell>
                                 <TableCell className="text-right tabular-nums">
-                                    <Quantity
-                                        value={line.stock_on_hand}
-                                        unit={line.material.unit}
+                                    <StockOnHand
+                                        line={line}
+                                        onAddColour={onAddColour}
+                                        alignEnd
                                     />
                                 </TableCell>
                                 <TableCell className="pr-5 text-right">
-                                    <UnitsPossible line={line} />
+                                    <UnitsPossible line={line} alignEnd />
                                 </TableCell>
                             </TableRow>
                         ))}
@@ -374,9 +423,9 @@ export function BomTable({
                                         In stock
                                     </dt>
                                     <dd className="tabular-nums">
-                                        <Quantity
-                                            value={line.stock_on_hand}
-                                            unit={line.material.unit}
+                                        <StockOnHand
+                                            line={line}
+                                            onAddColour={onAddColour}
                                         />
                                     </dd>
                                 </div>

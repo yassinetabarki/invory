@@ -7,6 +7,7 @@ namespace App\Http\Resources;
 use App\Domain\Costing\LineCost;
 use App\Domain\Sizes\SizeLine;
 use App\Enums\ComponentQuantityMode;
+use App\Enums\MaterialStockMode;
 use App\Models\Product;
 use App\Models\ProductComponent;
 use App\Models\ProductComponentQuantity;
@@ -72,7 +73,8 @@ final class ProductResource extends JsonResource
     }
 
     /**
-     * What each colour can make, in the product's colour order; null unless a line is By colour and size. A colour that uses no material
+     * What each colour can make, in the product's colour order; null unless a line is By colour and size or a material is kept per colour
+     * (INV-21). A colour that uses no material
      * comes back with every figure null ("No composition"). The colours are the product's own (the costing loads them), the binding size
      * is one of its sizes (null for a "One size" product) and the bottleneck is a material of its lines: nothing here queries.
      *
@@ -82,7 +84,7 @@ final class ProductResource extends JsonResource
     {
         $variants = $costing->variants;
 
-        if ($variants === null || ! $variants->varies) {
+        if ($variants === null || ! $costing->perVariant()) {
             return null;
         }
 
@@ -130,7 +132,44 @@ final class ProductResource extends JsonResource
             $isBottleneck = $line->isBottleneck;
         }
 
-        return (new ProductComponentResource($component, $line, $index + 1, $isBottleneck, $this->cells($component, $cellOrder)))->resolve($request);
+        return (new ProductComponentResource($component, $line, $index + 1, $isBottleneck, $this->cells($component, $cellOrder), $this->stockByColour($request, $component, $costing)))->resolve($request);
+    }
+
+    /**
+     * What a material kept per colour holds for each of the product's colours that uses the line, in the product's colour order: that
+     * colour's stock and the lowest and highest units it covers over the colour's sizes. A colour no size of which uses the line has no
+     * reading. Null for a one-stock material. The colour rows come with the costing, which loads them.
+     *
+     * @return list<array<string, mixed>>|null
+     */
+    private function stockByColour(Request $request, ProductComponent $component, ProductCosting $costing): ?array
+    {
+        $material = $component->material;
+
+        if ($material->stock_mode !== MaterialStockMode::PerColour) {
+            return null;
+        }
+
+        $span = $costing->variants?->materials[$material->id] ?? null;
+        $rows = $material->colours->keyBy('colour_id');
+        $readings = [];
+
+        foreach ($this->colours as $colour) {
+            $units = $span->byColour[$colour->id] ?? null;
+
+            if ($units === null) {
+                continue;
+            }
+
+            $readings[] = [
+                'colour' => (new ColourResource($colour))->resolve($request),
+                'missing' => $units['missing'],
+                'stock_on_hand' => $rows->get($colour->id)->quantity_on_hand ?? '0.0000',
+                'units_possible' => ['min' => $units['min'], 'max' => $units['max']],
+            ];
+        }
+
+        return $readings;
     }
 
     /**

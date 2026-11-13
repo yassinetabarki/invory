@@ -12,6 +12,8 @@ enum StockMovementType: string
     case PriceChange = 'price_change';
     case Cutting = 'cutting';
     case CuttingReturn = 'cutting_return';
+    case ColourSplit = 'colour_split';
+    case ColourJoin = 'colour_join';
 
     public function label(): string
     {
@@ -22,6 +24,8 @@ enum StockMovementType: string
             self::PriceChange => __('Price change'),
             self::Cutting => __('Cutting'),
             self::CuttingReturn => __('Back from cutting'),
+            self::ColourSplit => __('Split by colour'),
+            self::ColourJoin => __('Joined into one stock'),
         };
     }
 

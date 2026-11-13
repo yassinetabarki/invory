@@ -5,11 +5,11 @@ import MaterialController from '@/actions/App/Http/Controllers/MaterialControlle
 import { StockBadge } from '@/components/materials/stock-badge';
 import { PhotoThumb } from '@/components/shared/photo-thumb';
 import { Quantity } from '@/components/shared/quantity';
-import type { Material } from '@/types/domain';
+import type { NeedsRestockMaterial } from '@/types/domain';
 
 type NeedsRestockCardProps = {
     /** The server's shortlist (out of stock first, then low; max 5). */
-    materials: Material[];
+    materials: NeedsRestockMaterial[];
 };
 
 /** Materials at or below their reorder level, each with its stock status. */
@@ -56,12 +56,22 @@ export function NeedsRestockCard({ materials }: NeedsRestockCardProps) {
                                 size="md"
                             />
                             <span className="flex min-w-0 flex-1 flex-col">
-                                <Link
-                                    href={MaterialController.show(material.id)}
-                                    className="font-semibold hover:underline focus-visible:underline"
-                                >
-                                    {material.name}
-                                </Link>
+                                <span>
+                                    <Link
+                                        href={MaterialController.show(
+                                            material.id,
+                                        )}
+                                        className="font-semibold hover:underline focus-visible:underline"
+                                    >
+                                        {material.name}
+                                    </Link>
+                                    {material.colours_text && (
+                                        <span className="text-[0.8125rem] text-muted-foreground tabular-nums">
+                                            {' · '}
+                                            {material.colours_text}
+                                        </span>
+                                    )}
+                                </span>
                                 <span className="text-xs text-muted-foreground tabular-nums">
                                     <Quantity
                                         value={material.quantity_on_hand}

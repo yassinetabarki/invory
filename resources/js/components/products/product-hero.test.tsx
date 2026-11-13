@@ -77,6 +77,10 @@ describe('<ProductHero>', () => {
             {
                 max_producible: null,
                 bottleneck: null,
+                bottleneck_colour: null,
+                bottleneck_missing: false,
+                bottleneck_colour_status: null,
+                bottleneck_stock: null,
                 best: null,
                 by_variant: null,
             },
@@ -120,6 +124,10 @@ describe('<ProductHero>', () => {
         renderHero({
             max_producible: null,
             bottleneck: null,
+            bottleneck_colour: null,
+            bottleneck_missing: false,
+            bottleneck_colour_status: null,
+            bottleneck_stock: null,
             best: null,
             by_variant: null,
         });

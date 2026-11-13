@@ -12,7 +12,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
  * `StockMovement` in resources/js/types/domain.ts. Needs the `user_name`, `order_client` and
- * `product_name` attributes that {@see StockHistory} joins in. Decimals are scale-4 strings (the model's casts), dates are 'YYYY-MM-DD'.
+ * `product_name` attributes that {@see StockHistory} joins in, and the `colour` relation loaded. Decimals are scale-4 strings (the model's casts), dates are 'YYYY-MM-DD'.
  *
  * @mixin StockMovement
  */
@@ -41,6 +41,10 @@ final class StockMovementResource extends JsonResource
             'order' => $this->order_id === null ? null : ['id' => $this->order_id, 'client' => $this->order_client],
             'product_name' => $this->product_name,
             'user_name' => $this->user_name,
+            // INV-21: the colour a per-colour entry is about (null for a one-stock entry) and the receipt or switch its entries share.
+            // The `colour` relation is eager-loaded by the controller (no N+1).
+            'colour' => $this->colour_id === null ? null : ColourResource::make($this->colour),
+            'entry_group' => $this->entry_group,
         ];
     }
 }

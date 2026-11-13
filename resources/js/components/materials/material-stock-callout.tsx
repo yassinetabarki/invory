@@ -11,6 +11,18 @@ export function MaterialStockCallout({ material }: { material: Material }) {
         return null;
     }
 
+    // A per-colour material that needs restock: the server names the colours (INV-21).
+    if (material.stock_callout) {
+        return (
+            <Callout
+                tone={material.stock_status === 'out' ? 'danger' : 'warning'}
+                title={material.stock_callout.title}
+            >
+                {material.stock_callout.detail}
+            </Callout>
+        );
+    }
+
     const reorder = material.reorder_level !== null && (
         <>
             , reorder at{' '}

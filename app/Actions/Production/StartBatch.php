@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions\Production;
 
 use App\Actions\Materials\AppendStockMovement;
+use App\Actions\Materials\MaterialStockWriter;
 use App\Actions\Products\UpdateFinishedStock;
 use App\Enums\ProductionBatchMoveKind;
 use App\Enums\ProductionBatchStatus;
@@ -38,6 +39,7 @@ final readonly class StartBatch
     public function __construct(
         private CuttingPreview $preview,
         private AppendStockMovement $appendMovement,
+        private MaterialStockWriter $stock,
         private ProductSizes $productSizes,
     ) {}
 
@@ -117,13 +119,21 @@ final readonly class StartBatch
                 ));
             }
 
+            // One take per stock (INV-21, ADR-0029 section 6): a one-stock material, or one colour of a per-colour material. The plan locked
+            // the materials in ascending id; the writer is the only one that changes a quantity.
+            $locked = [];
+
             foreach ($plan->takes as $take) {
                 $material = $materials[$take->materialId];
                 $after = $take->after ?? throw new LogicException("Material #{$take->materialId} is short in an allowed start.");
 
-                $material->quantity_on_hand = $after;
+                if (! isset($locked[$material->id])) {
+                    $this->stock->lock($material);
+                    $locked[$material->id] = true;
+                }
+
                 $material->updated_by = $actor->id;
-                $material->save();
+                $this->stock->addQuantity($material, $take->colourId, '-'.$take->needed);
 
                 $this->appendMovement->handle($material, StockMovementType::Cutting, $today, $actor, [
                     'quantity' => $take->needed,
@@ -131,10 +141,12 @@ final readonly class StartBatch
                     'quantity_after' => $after,
                     'product_id' => $product->id,
                     'units' => $total,
+                    'colour_id' => $take->colourId,
                 ]);
 
                 $remembered = $cut->materials()->make([
                     'material_id' => $material->id,
+                    'colour_id' => $take->colourId,
                     'unit_id' => $material->unit_id,
                     'quantity_per_unit' => null, // every new cut remembers its amounts per colour and size (ADR-0027 decision 7), also when nothing varies
                     'quantity_taken' => $take->needed,

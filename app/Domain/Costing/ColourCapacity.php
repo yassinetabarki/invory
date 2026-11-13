@@ -14,5 +14,7 @@ final readonly class ColourCapacity
         public ?int $bindingSizeId,
         public ?int $bottleneckMaterialId,
         public ?string $bottleneckMaterialName,
+        public ?int $bottleneckColourId = null, // the colour of the bottleneck's stock; null for a one-stock material (INV-21)
+        public bool $bottleneckMissing = false, // the bottleneck material lacks that colour (stock 0)
     ) {}
 }

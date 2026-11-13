@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions\Production;
 
 use App\Actions\Materials\AppendStockMovement;
+use App\Actions\Materials\MaterialStockWriter;
 use App\Enums\ProductionBatchMoveKind;
 use App\Enums\ProductionBatchStatus;
 use App\Enums\StockMovementType;
@@ -30,6 +31,7 @@ final readonly class UndoBatch
     public function __construct(
         private ProductionReturns $returns,
         private AppendStockMovement $appendMovement,
+        private MaterialStockWriter $stock,
     ) {}
 
     /** @throws ValidationException on `undo` when the batch moved on (or was undone) since the page */
@@ -54,9 +56,10 @@ final readonly class UndoBatch
                 $material = $materials[$return->materialId];
                 $after = $return->after ?? throw new LogicException("Material #{$return->materialId} is returnable without a stock after the return.");
 
-                $material->quantity_on_hand = $after;
+                // The row names where it goes back: the one stock (null), or a colour of the per-colour material (ADR-0029 section 6).
+                $this->stock->lock($material);
                 $material->updated_by = $actor->id;
-                $material->save();
+                $this->stock->addQuantity($material, $return->colourId, $return->returned);
 
                 $this->appendMovement->handle($material, StockMovementType::CuttingReturn, $today, $actor, [
                     'quantity' => $return->returned,
@@ -64,6 +67,7 @@ final readonly class UndoBatch
                     'quantity_after' => $after,
                     'product_id' => $locked->product_id,
                     'units' => $locked->units,
+                    'colour_id' => $return->colourId,
                 ]);
             }
 

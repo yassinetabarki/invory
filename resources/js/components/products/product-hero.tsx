@@ -1,5 +1,8 @@
 import { Fragment } from 'react';
 import type { ReactNode } from 'react';
+import type { AddColour } from '@/components/products/colour-stock-line';
+import { NoUnitCost } from '@/components/products/cost-breakdown-card';
+import type { MissingCostColour } from '@/components/products/cost-breakdown-card';
 import { useAppSettings } from '@/hooks/use-app-settings';
 import {
     RANGE_SEPARATOR,
@@ -11,8 +14,12 @@ import type { Capacity, DecimalRange } from '@/types/domain';
 
 type ProductHeroProps = {
     capacity: Capacity;
-    /** `cost.unit_cost`: lowest to highest over every colour and size (INV-16); one figure when nothing varies. */
-    unitCost: DecimalRange;
+    /** `cost.unit_cost`: lowest to highest over every colour and size (INV-16); one figure when nothing varies. Null when no variant has a cost (INV-21). */
+    unitCost: DecimalRange | null;
+    /** The colours a cost-per-colour material lacks (INV-21): "No unit cost yet. Add Light wash to Denim 12oz." sits under the figure of the other colours (alone when `unitCost` is null). */
+    missingCosts?: readonly MissingCostColour[];
+    /** Opens the window that adds a missing colour to the material; the link shows only when given. */
+    onAddColour?: AddColour;
     /** The product has more than one size (S-58). */
     multipleSizes: boolean;
     /** The product has more than one colour (INV-16): a one-colour product's "any mix" spans sizes only. */
@@ -141,6 +148,8 @@ function UnitCostFigure({
 export function ProductHero({
     capacity,
     unitCost,
+    missingCosts = [],
+    onAddColour,
     multipleSizes,
     multipleColours,
     stock,
@@ -210,14 +219,31 @@ export function ProductHero({
             {stock}
 
             <HeroCard label="Unit cost" ariaLabel="Unit cost">
-                <UnitCostFigure varies={costVaries} parts={costParts} />
-                <span className="text-[0.8125rem] text-muted-foreground">
-                    {costVaries
-                        ? 'varies by colour and size'
-                        : multipleSizes
-                          ? 'same for every size'
-                          : 'materials, labor and overhead'}
-                </span>
+                {unitCost === null ? (
+                    <NoUnitCost
+                        missing={missingCosts}
+                        onAddColour={onAddColour}
+                        className="text-base font-semibold"
+                    />
+                ) : (
+                    <>
+                        <UnitCostFigure varies={costVaries} parts={costParts} />
+                        <span className="text-[0.8125rem] text-muted-foreground">
+                            {costVaries
+                                ? 'varies by colour and size'
+                                : multipleSizes
+                                  ? 'same for every size'
+                                  : 'materials, labor and overhead'}
+                        </span>
+                        {missingCosts.length > 0 && (
+                            <NoUnitCost
+                                missing={missingCosts}
+                                onAddColour={onAddColour}
+                                className="mt-1 text-sm"
+                            />
+                        )}
+                    </>
+                )}
             </HeroCard>
         </div>
     );

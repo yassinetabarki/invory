@@ -8,7 +8,10 @@ namespace App\Domain\Stock;
 final readonly class CutPlan
 {
     /**
-     * @param  list<MaterialTake>  $takes  one per material in BOM first-appearance order; [] for an empty BOM
+     * @param  list<MaterialTake>  $takes  one per stock in BOM first-appearance order (a per-colour material: one per colour, in the order
+     *                                     the variants' colours come); [] for an empty BOM
+     * @param  bool  $mixed  more than one variant and the product varies (by colour and size, or through a per-colour material):
+     *                       no "at most N" number
      * @param  list<CutGroup>  $variants  per colour and size of a takeVariants() plan, the per-unit amounts to remember (unitsReturned 0); [] from take()
      */
     public function __construct(

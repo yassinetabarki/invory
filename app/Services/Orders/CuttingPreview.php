@@ -6,6 +6,8 @@ namespace App\Services\Orders;
 
 use App\Domain\Stock\CutPlan;
 use App\Domain\Stock\CuttingCalculator;
+use App\Domain\Stock\MaterialTake;
+use App\Models\Colour;
 use App\Models\Material;
 use App\Models\Product;
 use App\Services\Costing\ProductCostingService;
@@ -28,7 +30,7 @@ final readonly class CuttingPreview
      * the transaction ends: only Start batch asks for that, inside its transaction, after it locked the product.
      *
      * @param  array<int, array<int, int>>  $grid  units by colour id, then size id; only the variants to cut (units above 0), in the order to write them
-     * @return array{plan: CutPlan, materials: array<int, Material>} the materials keyed by id, as the plan was made from them
+     * @return array{plan: CutPlan, materials: array<int, Material>, colours: array<int, Colour>} the materials keyed by id, as the plan was made from them, and the colours of its per-colour stocks keyed by id (one query; the window's rows only serialize)
      */
     public function plan(Product $product, array $grid, bool $lock = false): array
     {
@@ -50,13 +52,18 @@ final readonly class CuttingPreview
 
         $product->setRelation('components', $components);
 
+        $plan = $this->calculator->takeVariants(
+            $this->costing->variantCompositions($product, $grid),
+            array_values(array_unique(array_map(intval(...), $ids))),
+            // A by-colour-and-size line or a per-colour material: the variants differ (ADR-0029 section 6).
+            $this->costing->costsPerVariant($product),
+        );
+        $colourIds = array_values(array_unique(array_filter(array_map(static fn (MaterialTake $take): ?int => $take->colourId, $plan->takes))));
+
         return [
-            'plan' => $this->calculator->takeVariants(
-                $this->costing->variantCompositions($product, $grid),
-                array_values(array_unique(array_map(intval(...), $ids))),
-                $this->costing->varies($product),
-            ),
+            'plan' => $plan,
             'materials' => $materials->all(),
+            'colours' => $colourIds === [] ? [] : Colour::query()->whereIn('id', $colourIds)->get()->keyBy('id')->all(),
         ];
     }
 }

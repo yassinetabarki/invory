@@ -4,13 +4,17 @@ import { useRef, useState } from 'react';
 import MaterialController from '@/actions/App/Http/Controllers/MaterialController';
 import ProductController from '@/actions/App/Http/Controllers/ProductController';
 import SaleController from '@/actions/App/Http/Controllers/SaleController';
+import { AddMaterialColourDialog } from '@/components/materials/add-material-colour-dialog';
 import { BottleneckCallout } from '@/components/products/bottleneck-callout';
 import {
     CapacityByColourCard,
     CapacityByColourCardLoading,
 } from '@/components/products/capacity-by-colour-card';
 import { CompositionCard } from '@/components/products/composition-card';
-import { CostBreakdownCard } from '@/components/products/cost-breakdown-card';
+import {
+    CostBreakdownCard,
+    missingCostColours,
+} from '@/components/products/cost-breakdown-card';
 import {
     FinishedStockError,
     FinishedStockFigure,
@@ -86,7 +90,26 @@ function ProductDetails({
     const [confirming, setConfirming] = useState(false);
     const [processing, setProcessing] = useState(false);
     const deleteButtonRef = useRef<HTMLButtonElement>(null);
+    // INV-21-p: "Add Light wash to Denim 12oz" opens its window; the last one asked stays while it closes.
+    const [adding, setAdding] = useState<{
+        materialId: number;
+        colourId: number;
+    } | null>(null);
+    const [addingOpen, setAddingOpen] = useState(false);
+    const addMaterial = product.components.find(
+        (line) => line.material.id === adding?.materialId,
+    );
+    const addColourReading = addMaterial?.stock_by_colour?.find(
+        (reading) => reading.colour.id === adding?.colourId,
+    );
 
+    function addColour(materialId: number, colourId: number) {
+        setAdding({ materialId, colourId });
+        setAddingOpen(true);
+    }
+
+    // INV-21: the colours a cost-per-colour material lacks: their variants have no unit cost.
+    const missingCosts = missingCostColours(product.components);
     const editHref = ProductController.edit.url(product.id);
     const isActive = product.status === 'active';
     // Only active products can be sold, so only they get the shortcut.
@@ -168,6 +191,8 @@ function ProductDetails({
                         <ProductHero
                             capacity={product.capacity}
                             unitCost={product.cost.unit_cost}
+                            missingCosts={missingCosts}
+                            onAddColour={addColour}
                             multipleSizes={product.sizes.length > 1}
                             multipleColours={product.colours.length > 1}
                             stock={
@@ -196,6 +221,7 @@ function ProductDetails({
                             singleColour={product.colours.length === 1}
                             materialHref={materialHref}
                             editHref={editHref}
+                            onAddColour={addColour}
                         />
                         {product.capacity_by_colour && (
                             <CapacityByColourCard
@@ -203,6 +229,7 @@ function ProductDetails({
                                 guaranteed={product.capacity.max_producible}
                                 best={product.capacity.best}
                                 materialHref={materialHref}
+                                onAddColour={addColour}
                             />
                         )}
                         <CostBreakdownCard
@@ -211,6 +238,8 @@ function ProductDetails({
                             sellingPrice={product.selling_price}
                             margin={product.margin}
                             editHref={editHref}
+                            missingCosts={missingCosts}
+                            onAddColour={addColour}
                         />
                     </div>
                 </div>
@@ -246,6 +275,7 @@ function ProductDetails({
                         one_size: product.one_size,
                     }))}
                     editHref={editHref}
+                    onAddColour={addColour}
                 />
 
                 <RecentSalesCard
@@ -257,6 +287,16 @@ function ProductDetails({
                     })}
                 />
             </div>
+
+            {addMaterial && addColourReading && (
+                <AddMaterialColourDialog
+                    open={addingOpen}
+                    onOpenChange={setAddingOpen}
+                    material={addMaterial.material}
+                    colour={addColourReading.colour}
+                    productName={product.name}
+                />
+            )}
 
             <ConfirmDeleteDialog
                 open={confirming}

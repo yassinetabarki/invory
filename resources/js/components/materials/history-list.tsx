@@ -1,3 +1,4 @@
+import { ColourTag } from '@/components/shared/colour-tag';
 import { Badge } from '@/components/ui/badge';
 import { useAppSettings } from '@/hooks/use-app-settings';
 import { formatDate, formatMoney, formatQuantity } from '@/lib/format';
@@ -25,6 +26,8 @@ const TONE: Record<StockMovementType, string> = {
     created: 'bg-neutral text-neutral-foreground',
     cutting: 'bg-warning text-warning-foreground',
     cutting_return: 'bg-success text-success-foreground',
+    colour_split: 'bg-info text-info-foreground',
+    colour_join: 'bg-info text-info-foreground',
 };
 
 type Formatters = { currency: string; locale: string };
@@ -55,12 +58,14 @@ function describeCut(
 
 /**
  * What happened, as a sentence. The `+` before a restock is a literal prefix:
- * quantities and prices are only formatted, never computed.
+ * quantities and prices are only formatted, never computed. The reference of a
+ * receipt's entries is left out when the group heading already shows it.
  */
 function describe(
     entry: StockMovement,
     unit: UnitOfMeasure,
     { currency, locale }: Formatters,
+    showReference: boolean,
 ): string {
     const quantity = (value: string | null) =>
         formatQuantity(value, { locale, unit });
@@ -71,7 +76,9 @@ function describe(
         case 'restock': {
             const text = `+${quantity(entry.quantity)} at ${price(entry.unit_price)}`;
 
-            return entry.reference ? `${text} · ${entry.reference}` : text;
+            return entry.reference && showReference
+                ? `${text} · ${entry.reference}`
+                : text;
         }
         case 'created':
             return `${quantity(entry.quantity)} at ${price(entry.unit_price)}`;
@@ -86,7 +93,84 @@ function describe(
             return describeCut(entry, `−${quantity(entry.quantity)}`, locale);
         case 'cutting_return':
             return describeCut(entry, `+${quantity(entry.quantity)}`, locale);
+        case 'colour_split':
+        case 'colour_join':
+            return quantity(entry.quantity);
     }
+}
+
+type DescriptionProps = {
+    entry: StockMovement;
+    unit: UnitOfMeasure;
+    formatters: Formatters;
+    showReference: boolean;
+};
+
+/** What the entry says, led by its colour (swatch and name) when it has one. */
+function Description({
+    entry,
+    unit,
+    formatters,
+    showReference,
+}: DescriptionProps) {
+    return (
+        <span className="inline-flex flex-wrap items-center gap-x-1.5">
+            {entry.colour && <ColourTag colour={entry.colour} />}
+            <span>{describe(entry, unit, formatters, showReference)}</span>
+        </span>
+    );
+}
+
+function TypeBadge({ entry }: { entry: StockMovement }) {
+    return (
+        <Badge
+            variant="outline"
+            data-type={entry.type}
+            className={cn(
+                'rounded-full border-transparent font-semibold',
+                TONE[entry.type],
+            )}
+        >
+            {entry.type_label}
+        </Badge>
+    );
+}
+
+/** Entries of one receipt or switch: the server tags them with one `entry_group`. */
+function toBlocks(entries: StockMovement[]): StockMovement[][] {
+    const blocks: StockMovement[][] = [];
+    const groups = new Map<string, StockMovement[]>();
+
+    for (const entry of entries) {
+        const group = entry.entry_group ? groups.get(entry.entry_group) : null;
+
+        if (group) {
+            group.push(entry);
+            continue;
+        }
+
+        const block = [entry];
+        blocks.push(block);
+
+        if (entry.entry_group) {
+            groups.set(entry.entry_group, block);
+        }
+    }
+
+    return blocks;
+}
+
+/**
+ * A switch is ONE line: "Split by colour · Indigo 250 m" names the coloured
+ * entry's quantity, "Joined into one stock · 290 m" the colourless one's.
+ */
+function switchEntry(entries: StockMovement[]): StockMovement {
+    const wantsColour = entries[0].type === 'colour_split';
+
+    return (
+        entries.find((entry) => (entry.colour !== null) === wantsColour) ??
+        entries[0]
+    );
 }
 
 /**
@@ -95,6 +179,7 @@ function describe(
  */
 export function HistoryList({ entries, unit, className }: HistoryListProps) {
     const { currency, locale } = useAppSettings();
+    const formatters = { currency, locale };
 
     if (entries.length === 0) {
         return (
@@ -106,39 +191,89 @@ export function HistoryList({ entries, unit, className }: HistoryListProps) {
 
     return (
         <ol className={cn('flex flex-col', className)}>
-            {entries.map((entry) => (
-                <li
-                    key={entry.id}
-                    className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-1 border-t py-2.5 first:border-t-0 sm:grid-cols-[6rem_7rem_minmax(0,1fr)_auto] sm:gap-x-4"
-                >
-                    <time
-                        dateTime={entry.occurred_on}
-                        className="text-sm whitespace-nowrap text-muted-foreground"
-                    >
-                        {formatDate(entry.occurred_on, locale)}
-                    </time>
-                    <span>
-                        <Badge
-                            variant="outline"
-                            data-type={entry.type}
-                            className={cn(
-                                'rounded-full border-transparent font-semibold',
-                                TONE[entry.type],
-                            )}
+            {toBlocks(entries).map((block) => {
+                const first = block[0];
+                const isSwitch =
+                    first.type === 'colour_split' ||
+                    first.type === 'colour_join';
+
+                if (block.length === 1 || isSwitch) {
+                    const entry = isSwitch ? switchEntry(block) : first;
+
+                    return (
+                        <li
+                            key={first.id}
+                            className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-1 border-t py-2.5 first:border-t-0 sm:grid-cols-[6rem_7rem_minmax(0,1fr)_auto] sm:gap-x-4"
                         >
-                            {entry.type_label}
-                        </Badge>
-                    </span>
-                    <span className="col-span-2 text-sm font-medium tabular-nums sm:col-span-1">
-                        {describe(entry, unit, { currency, locale })}
-                    </span>
-                    {entry.user_name && (
-                        <span className="col-span-2 text-xs text-muted-foreground sm:col-span-1">
-                            by {entry.user_name}
-                        </span>
-                    )}
-                </li>
-            ))}
+                            <time
+                                dateTime={entry.occurred_on}
+                                className="text-sm whitespace-nowrap text-muted-foreground"
+                            >
+                                {formatDate(entry.occurred_on, locale)}
+                            </time>
+                            <span>
+                                <TypeBadge entry={entry} />
+                            </span>
+                            <span className="col-span-2 text-sm font-medium tabular-nums sm:col-span-1">
+                                <Description
+                                    entry={entry}
+                                    unit={unit}
+                                    formatters={formatters}
+                                    showReference
+                                />
+                            </span>
+                            {entry.user_name && (
+                                <span className="col-span-2 text-xs text-muted-foreground sm:col-span-1">
+                                    by {entry.user_name}
+                                </span>
+                            )}
+                        </li>
+                    );
+                }
+
+                const reference = block.find(
+                    (entry) => entry.reference,
+                )?.reference;
+
+                return (
+                    <li
+                        key={first.id}
+                        className="border-t py-2.5 first:border-t-0"
+                    >
+                        <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm text-muted-foreground">
+                            <time dateTime={first.occurred_on}>
+                                {formatDate(first.occurred_on, locale)}
+                            </time>
+                            {reference && <span>{reference}</span>}
+                            {first.user_name && (
+                                <span className="text-xs">
+                                    by {first.user_name}
+                                </span>
+                            )}
+                        </p>
+                        <ol className="mt-1.5 flex flex-col gap-1.5 sm:pl-24">
+                            {block.map((entry) => (
+                                <li
+                                    key={entry.id}
+                                    className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 sm:grid-cols-[7rem_minmax(0,1fr)] sm:gap-x-4"
+                                >
+                                    <span>
+                                        <TypeBadge entry={entry} />
+                                    </span>
+                                    <span className="text-sm font-medium tabular-nums">
+                                        <Description
+                                            entry={entry}
+                                            unit={unit}
+                                            formatters={formatters}
+                                            showReference={false}
+                                        />
+                                    </span>
+                                </li>
+                            ))}
+                        </ol>
+                    </li>
+                );
+            })}
         </ol>
     );
 }

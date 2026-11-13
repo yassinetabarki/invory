@@ -10,7 +10,8 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
  * `MaterialOption` in resources/js/types/domain.ts: a material the composition editor's picker can offer. Needs the `unit`
- * relation, which a material always carries (see `Material::$with`).
+ * relation, which a material always carries (see `Material::$with`), and the `colours` of a per-colour material (its status reads them:
+ * `Material::loadColours()`).
  *
  * @mixin Material
  */

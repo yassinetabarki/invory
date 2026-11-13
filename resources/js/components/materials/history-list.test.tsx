@@ -298,6 +298,115 @@ describe('<HistoryList>', () => {
         ).toBeInTheDocument();
     });
 
+    it('names the colour of each entry, groups a receipt and shows a switch as one line', () => {
+        const indigo = {
+            id: 1,
+            code: 'IND',
+            name: 'Indigo',
+            swatch: '#3E4C7E',
+        };
+        const black = { id: 2, code: 'BLK', name: 'Black', swatch: '#1F1F23' };
+        const receipt = {
+            type: 'restock',
+            type_label: 'Restock',
+            occurred_on: '2026-10-02',
+            unit_price: '0.3500',
+            reference: 'PO-2291',
+            entry_group: 'receipt-1',
+        } as const;
+        const grouped = [
+            entry({
+                ...receipt,
+                id: 12,
+                colour: black,
+                quantity: '40.0000',
+            }),
+            entry({
+                ...receipt,
+                id: 11,
+                colour: indigo,
+                quantity: '100.0000',
+            }),
+        ];
+        const switchEntries = [
+            entry({
+                id: 22,
+                type: 'colour_join',
+                type_label: 'Joined into one stock',
+                occurred_on: '2026-09-20',
+                quantity: '290.0000',
+                colour: null,
+                reference: null,
+                entry_group: 'join-1',
+            }),
+            entry({
+                id: 21,
+                type: 'colour_join',
+                type_label: 'Joined into one stock',
+                occurred_on: '2026-09-20',
+                quantity: '250.0000',
+                colour: indigo,
+                reference: null,
+                entry_group: 'join-1',
+            }),
+            entry({
+                id: 20,
+                type: 'colour_split',
+                type_label: 'Split by colour',
+                occurred_on: '2026-09-10',
+                quantity: '250.0000',
+                colour: null,
+                reference: null,
+                entry_group: 'split-1',
+            }),
+            entry({
+                id: 19,
+                type: 'colour_split',
+                type_label: 'Split by colour',
+                occurred_on: '2026-09-10',
+                quantity: '250.0000',
+                colour: indigo,
+                reference: null,
+                entry_group: 'split-1',
+            }),
+        ];
+
+        render(
+            <HistoryList entries={[...grouped, ...switchEntries]} unit="m" />,
+        );
+
+        // A receipt: one date and reference, then a line per colour (swatch and name).
+        const receiptItem = row(0);
+        expect(within(receiptItem).getAllByText('2 Oct 2026')).toHaveLength(1);
+        expect(within(receiptItem).getAllByText('PO-2291')).toHaveLength(1);
+        const lines = within(receiptItem).getAllByRole('listitem');
+        expect(lines).toHaveLength(2);
+        expect(within(lines[1]).getByText('Restock')).toBeInTheDocument();
+        expect(within(lines[1]).getByText('Indigo')).toBeInTheDocument();
+        expect(
+            within(lines[1]).getByText('+100 m at €0.35'),
+        ).toBeInTheDocument();
+        expect(
+            lines[1].querySelector('[data-slot="colour-swatch"]'),
+        ).toHaveStyle({ backgroundColor: '#3E4C7E' });
+        expect(within(lines[0]).getByText('Black')).toBeInTheDocument();
+        expect(
+            within(lines[0]).getByText('+40 m at €0.35'),
+        ).toBeInTheDocument();
+
+        // A switch: one line, naming the quantity the sentence is about.
+        const join = row(3);
+        expect(
+            within(join).getByText('Joined into one stock'),
+        ).toBeInTheDocument();
+        expect(within(join).getByText('290 m')).toBeInTheDocument();
+        expect(within(join).queryByText('Indigo')).not.toBeInTheDocument();
+        const split = row(4);
+        expect(within(split).getByText('Split by colour')).toBeInTheDocument();
+        expect(within(split).getByText('Indigo')).toBeInTheDocument();
+        expect(within(split).getByText('250 m')).toBeInTheDocument();
+    });
+
     it('says so when there is no history', () => {
         render(<HistoryList entries={[]} unit="pc" />);
 

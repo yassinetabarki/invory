@@ -9,12 +9,25 @@ import { useAppSettings } from '@/hooks/use-app-settings';
 import { formatCount } from '@/lib/format';
 import type { Material } from '@/types/domain';
 
+type MaterialActionsProps = {
+    material: Material;
+    /**
+     * Opens the Restock sheet of a per-colour material (the page owns it).
+     * Without it Restock opens the quick form in a dialog.
+     */
+    onRestockColours?: () => void;
+};
+
 /**
- * Restock (opens the quick form in a dialog), Edit and Delete. A material that
+ * Restock (opens the quick form in a dialog, or the page's sheet for a
+ * per-colour material), Edit and Delete. A material that
  * products use cannot be deleted: the button is disabled and the reason sits
  * next to it, linked with `aria-describedby`.
  */
-export function MaterialActions({ material }: { material: Material }) {
+export function MaterialActions({
+    material,
+    onRestockColours,
+}: MaterialActionsProps) {
     const reasonId = useId();
     const { locale } = useAppSettings();
     const [restocking, setRestocking] = useState(false);
@@ -41,7 +54,11 @@ export function MaterialActions({ material }: { material: Material }) {
                 <Button
                     type="button"
                     ref={restockButtonRef}
-                    onClick={() => setRestocking(true)}
+                    onClick={() =>
+                        onRestockColours
+                            ? onRestockColours()
+                            : setRestocking(true)
+                    }
                 >
                     <Plus aria-hidden="true" />
                     Restock
@@ -76,12 +93,14 @@ export function MaterialActions({ material }: { material: Material }) {
                 )}
             </div>
 
-            <RestockDialog
-                material={material}
-                open={restocking}
-                onOpenChange={setRestocking}
-                returnFocusTo={restockButtonRef}
-            />
+            {!onRestockColours && (
+                <RestockDialog
+                    material={material}
+                    open={restocking}
+                    onOpenChange={setRestocking}
+                    returnFocusTo={restockButtonRef}
+                />
+            )}
 
             <ConfirmDeleteDialog
                 open={confirming}

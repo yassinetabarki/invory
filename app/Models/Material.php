@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\MaterialCostMode;
+use App\Enums\MaterialStockMode;
 use App\Enums\StockStatus;
 use App\Models\Concerns\BelongsToWorkshop;
+use App\Services\Materials\MaterialStockSentences;
 use App\Services\Photos\PhotoStorage;
 use Brick\Math\BigDecimal;
 use Brick\Math\RoundingMode;
@@ -15,6 +18,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -22,6 +26,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
+use LogicException;
 
 /**
  * @property int $id
@@ -35,6 +40,8 @@ use InvalidArgumentException;
  * @property string $unit_cost
  * @property string $quantity_on_hand
  * @property string|null $reorder_level
+ * @property MaterialStockMode $stock_mode One stock for all colours, or a stock per colour (INV-21). Never mass-assignable.
+ * @property MaterialCostMode $cost_mode `same` unless the stock is per colour (INV-21). Never mass-assignable.
  * @property string|null $supplier_name
  * @property string|null $supplier_reference
  * @property string|null $color
@@ -67,6 +74,13 @@ class Material extends Model
     protected $with = ['category', 'unit'];
 
     /**
+     * What the database defaults to, so a material that is made but not saved reads as one stock too (INV-21).
+     *
+     * @var array<string, string>
+     */
+    protected $attributes = ['stock_mode' => 'single', 'cost_mode' => 'same'];
+
+    /**
      * Columns the index may be sorted by: the single source of truth for `sortedBy()` and IndexMaterialRequest.
      *
      * @var list<string>
@@ -80,6 +94,8 @@ class Material extends Model
             'unit_cost' => 'decimal:4',
             'quantity_on_hand' => 'decimal:4',
             'reorder_level' => 'decimal:4',
+            'stock_mode' => MaterialStockMode::class,
+            'cost_mode' => MaterialCostMode::class,
         ];
     }
 
@@ -116,6 +132,28 @@ class Material extends Model
     }
 
     /**
+     * The colour rows of a material kept per colour (none for one stock), in the order of Settings › Colours: colour position, then name,
+     * then id. The order joins `colours` (one query, so `with('colours')` is not N+1); the select keeps the rows' own columns and adds
+     * `has_history` (1 or null: some ledger entry names the colour), so a page knows which colours may be removed without a query per row.
+     *
+     * @return HasMany<MaterialColour, $this>
+     */
+    public function colours(): HasMany
+    {
+        return $this->hasMany(MaterialColour::class)
+            ->select('material_colours.*')
+            ->addSelect(['has_history' => StockMovement::query()
+                ->selectRaw('1')
+                ->whereColumn('stock_movements.material_id', 'material_colours.material_id')
+                ->whereColumn('stock_movements.colour_id', 'material_colours.colour_id')
+                ->limit(1)])
+            ->join('colours', 'colours.id', '=', 'material_colours.colour_id')
+            ->orderBy('colours.position')
+            ->orderBy('colours.name')
+            ->orderBy('colours.id');
+    }
+
+    /**
      * The stock ledger of this material (append-only, see {@see StockMovement}).
      *
      * @return HasMany<StockMovement, $this>
@@ -140,9 +178,30 @@ class Material extends Model
 
     /**
      * Computed server-side, see the "Stock status" rule in the costing domain skill.
+     *
+     * A per-colour material (INV-21, ADR-0029 section 8) is `out` when every colour is at 0, else `low` when the reorder level is set and
+     * some colour is at or under it (a colour at 0 is), else `in_stock`. It reads the loaded `colours` relation and never queries for it:
+     * callers eager-load `colours` (`with('colours')`, or `MaterialStockWriter::lock()`), and a one-stock material needs nothing but
+     * `stock_mode`, `quantity_on_hand` and `reorder_level` (narrow selects must include `stock_mode`).
+     *
+     * @throws LogicException when the material is per colour and `colours` is not loaded
      */
     public function stockStatus(): StockStatus
     {
+        if ($this->stock_mode === MaterialStockMode::PerColour) {
+            $quantities = $this->loadedColours()->map(fn (MaterialColour $row): BigDecimal => BigDecimal::of($row->quantity_on_hand));
+
+            if ($quantities->every(fn (BigDecimal $quantity): bool => $quantity->isZero())) {
+                return StockStatus::Out;
+            }
+
+            $reorder = $this->reorder_level;
+
+            return $reorder !== null && $quantities->contains(fn (BigDecimal $quantity): bool => $quantity->isLessThanOrEqualTo($reorder))
+                ? StockStatus::Low
+                : StockStatus::InStock;
+        }
+
         $quantity = BigDecimal::of($this->quantity_on_hand);
 
         if ($quantity->isZero()) {
@@ -157,13 +216,94 @@ class Material extends Model
     }
 
     /**
-     * Stock value = quantity on hand x unit cost, as a scale-4 string.
+     * Stock value as a scale-4 string: with cost per colour the sum of each colour's own `round4(quantity x cost)` (it reads the loaded
+     * `colours`, see {@see self::stockStatus()}); otherwise `round4(quantity on hand x unit cost)`, the total being the stored one.
+     *
+     * @throws LogicException when the cost is per colour and `colours` is not loaded
      */
     public function stockValue(): string
     {
+        if ($this->stock_mode === MaterialStockMode::PerColour && $this->cost_mode === MaterialCostMode::PerColour) {
+            return (string) $this->loadedColours()
+                ->reduce(fn (BigDecimal $sum, MaterialColour $row): BigDecimal => $sum->plus(
+                    BigDecimal::of($row->quantity_on_hand)->multipliedBy($row->unit_cost ?? '0')->toScale(4, RoundingMode::HalfUp),
+                ), BigDecimal::zero())
+                ->toScale(4, RoundingMode::HalfUp);
+        }
+
         return (string) BigDecimal::of($this->quantity_on_hand)
             ->multipliedBy($this->unit_cost)
             ->toScale(4, RoundingMode::HalfUp);
+    }
+
+    /**
+     * Loads the colour rows (with their colour) of the per-colour materials among these, for a Resource or a status: one query for the
+     * rows of all of them and one for their colours, and none when no material is per colour. Narrow selects must include `stock_mode`.
+     *
+     * @param  iterable<Material>  $materials
+     */
+    public static function loadColours(iterable $materials): void
+    {
+        $perColour = [];
+
+        foreach ($materials as $material) {
+            if ($material->stock_mode === MaterialStockMode::PerColour) {
+                $perColour[] = $material;
+            }
+        }
+
+        (new Collection($perColour))->load('colours.colour');
+    }
+
+    /** The status of one colour of a per-colour material, by the one-stock rule on that colour's quantity and the material's reorder level. */
+    public function colourStatus(MaterialColour $row): StockStatus
+    {
+        $quantity = BigDecimal::of($row->quantity_on_hand);
+
+        if ($quantity->isZero()) {
+            return StockStatus::Out;
+        }
+
+        return $this->reorder_level !== null && $quantity->isLessThanOrEqualTo($this->reorder_level) ? StockStatus::Low : StockStatus::InStock;
+    }
+
+    /**
+     * Why a colour row can't be removed (INV-21 AC-8), or null when it can: it holds stock ("Indigo has 250 m in stock, so it can't be
+     * removed."), or some ledger entry names it ("Black has history, so it can't be removed."). The stock reason comes first.
+     *
+     * @param  bool  $hasHistory  whether a stock movement names the colour (the `colours` relation's `has_history`, or a query)
+     */
+    public function colourRemovalRefusal(MaterialColour $row, bool $hasHistory): ?string
+    {
+        $name = $row->colour->name;
+        $quantity = BigDecimal::of($row->quantity_on_hand);
+
+        if (! $quantity->isZero()) {
+            return __(':colour has :quantity in stock, so it can\'t be removed.', [
+                'colour' => $name,
+                'quantity' => MaterialStockSentences::quantity($quantity, $this->unit->code),
+            ]);
+        }
+
+        if ($hasHistory) {
+            return __(':colour has history, so it can\'t be removed.', ['colour' => $name]);
+        }
+
+        return null;
+    }
+
+    /**
+     * @return Collection<int, MaterialColour>
+     *
+     * @throws LogicException
+     */
+    private function loadedColours(): Collection
+    {
+        if (! $this->relationLoaded('colours')) {
+            throw new LogicException("Material #{$this->id}: load `colours` before reading the status or value of a material kept per colour.");
+        }
+
+        return $this->getRelation('colours');
     }
 
     /**
@@ -211,8 +351,10 @@ class Material extends Model
     /**
      * Materials whose stock status is `low` or `out`.
      *
-     * The predicate (with the soft-delete condition) is mirrored by the partial index `materials_restock_idx`
-     * (migration 2026_10_13_300000_add_restock_index_to_materials_table): change both together.
+     * The first two arms (with the soft-delete condition) are mirrored by the partial index `materials_restock_idx`
+     * (migration 2026_10_13_300000_add_restock_index_to_materials_table). The third is a per-colour material (INV-21) with some colour at or
+     * under the reorder level; every colour at 0 is the first arm, since the stored total is their exact sum. The index must hold
+     * `stock_mode = 'per_colour'` rows too for the planner to use it with that arm.
      *
      * @param  Builder<Material>  $query
      */
@@ -223,7 +365,15 @@ class Material extends Model
             ->where('quantity_on_hand', '<=', 0)
             ->orWhere(fn (Builder $q) => $q
                 ->whereNotNull('reorder_level')
-                ->whereColumn('quantity_on_hand', '<=', 'reorder_level')));
+                ->whereColumn('quantity_on_hand', '<=', 'reorder_level'))
+            ->orWhere(fn (Builder $q) => $q
+                ->where('stock_mode', MaterialStockMode::PerColour->value)
+                ->whereNotNull('reorder_level')
+                ->whereExists(MaterialColour::query()
+                    ->selectRaw('1')
+                    ->whereColumn('material_colours.material_id', 'materials.id')
+                    ->whereColumn('material_colours.quantity_on_hand', '<=', 'materials.reorder_level')
+                    ->toBase())));
     }
 
     /**

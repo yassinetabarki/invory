@@ -1,6 +1,6 @@
 import { useId, useState } from 'react';
 
-export type PanelKind = 'restock' | 'history';
+export type PanelKind = 'restock' | 'history' | 'colours';
 
 /** Props for the button that opens a panel (`aria-expanded` + `aria-controls`). */
 export type PanelTriggerProps = {

@@ -146,7 +146,8 @@ function materialContractKeys(): array
 {
     return [
         'id', 'sku', 'name', 'category', 'category_label', 'unit', 'unit_label', 'unit_cost',
-        'quantity_on_hand', 'reorder_level', 'stock_value', 'stock_status', 'supplier_name',
+        'quantity_on_hand', 'reorder_level', 'stock_value', 'stock_status', 'stock_mode', 'cost_mode', 'colours',
+        'unit_cost_range', 'stock_callout', 'colours_restock_summary', 'restock_colours', 'supplier_name',
         'supplier_reference', 'color', 'composition', 'notes', 'photo_url', 'used_in_count', 'created_at', 'updated_at',
     ];
 }
@@ -391,14 +392,80 @@ function orderUnits(?int $productId, array $byLabel, ?string $colour = null, ?st
 }
 
 /**
+ * The stock per colour migration object (INV-21-a): `materials.stock_mode` / `cost_mode`, `material_colours`, `stock_movements.colour_id`
+ * / `entry_group` and `production_cut_materials.colour_id`. It is the newest of the hand-kept list (F-60): a test that rolls any older
+ * migration back rolls this one back first (before `quantityCellsMigration()`), and brings it back up last (after it). The older
+ * rollback tests don't call it: `quantityCellsMigration()` carries it. The object returned here carries INV-21-b's widened restock index
+ * (`materials_restock_idx` names `stock_mode`, so it must go before the column does): its `up()` runs INV-21-a, then the widening; its
+ * `down()` takes the widening off first, and if INV-21-a then refuses, puts it back before rethrowing.
+ */
+function stockPerColourMigration(): Migration
+{
+    $stock = require database_path('migrations/2026_11_10_100000_add_stock_per_colour_to_materials.php');
+    $index = require database_path('migrations/2026_11_10_100100_widen_materials_restock_index.php');
+
+    return new class($stock, $index) extends Migration
+    {
+        public function __construct(private readonly Migration $stock, private readonly Migration $index) {}
+
+        public function up(): void
+        {
+            $this->stock->up();
+            $this->index->up();
+        }
+
+        public function down(): void
+        {
+            $this->index->down();
+
+            try {
+                $this->stock->down();
+            } catch (Throwable $e) {
+                $this->index->up();
+
+                throw $e;
+            }
+        }
+    };
+}
+
+/**
  * The quantity cells migration object (INV-16-a): `product_components.quantity_mode`, `product_component_quantities` and the
- * per-colour-and-size cut tables, which point at `sizes`, `product_sizes` and `colours`. It is the newest of the hand-kept list (F-60):
- * a test that rolls any older migration back rolls this one back first (before `sizesPerWorkshopMigration()`), and brings it back up
- * last (after it). The older rollback tests don't call it: `sizesPerWorkshopMigration()` carries it.
+ * per-colour-and-size cut tables, which point at `sizes`, `product_sizes` and `colours`. It is the second newest of the hand-kept list
+ * (F-60), below `stockPerColourMigration()`: a test that rolls any older migration back rolls this one back first (before
+ * `sizesPerWorkshopMigration()`), and brings it back up last (after it). Because INV-21-a changes tables this one created (the
+ * production cut materials) and refuses to go back while its data exists, the object returned here carries INV-21-a too: its `up()`
+ * runs INV-16-a, then INV-21-a; its `down()` rolls INV-21-a back first, and if INV-16-a then refuses, brings INV-21-a back before
+ * rethrowing. So the older rollback tests need no edit.
  */
 function quantityCellsMigration(): Migration
 {
-    return require database_path('migrations/2026_11_09_100000_add_quantity_cells_to_compositions.php');
+    $cells = require database_path('migrations/2026_11_09_100000_add_quantity_cells_to_compositions.php');
+    $stock = stockPerColourMigration();
+
+    return new class($cells, $stock) extends Migration
+    {
+        public function __construct(private readonly Migration $cells, private readonly Migration $stock) {}
+
+        public function up(): void
+        {
+            $this->cells->up();
+            $this->stock->up();
+        }
+
+        public function down(): void
+        {
+            $this->stock->down();
+
+            try {
+                $this->cells->down();
+            } catch (Throwable $e) {
+                $this->stock->up();
+
+                throw $e;
+            }
+        }
+    };
 }
 
 /**

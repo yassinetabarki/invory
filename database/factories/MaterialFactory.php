@@ -4,9 +4,15 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
+use App\Enums\MaterialCostMode;
+use App\Enums\MaterialStockMode;
+use App\Models\Colour;
 use App\Models\Material;
 use App\Models\MaterialCategory;
+use App\Models\MaterialColour;
 use App\Models\Unit;
+use Brick\Math\BigDecimal;
+use Brick\Math\RoundingMode;
 use Database\Factories\Concerns\DefaultWorkshop;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use InvalidArgumentException;
@@ -81,6 +87,58 @@ class MaterialFactory extends Factory
     public function outOfStock(): static
     {
         return $this->state(fn (): array => ['quantity_on_hand' => '0.0000']);
+    }
+
+    /**
+     * A material kept per colour (INV-21), consistent as its writer leaves it: one `material_colours` row per entry, `quantity_on_hand` the
+     * exact total, and `unit_cost` the lowest colour cost with cost per colour (the material's own cost otherwise, which the rows then don't
+     * repeat). A cost goes with `MaterialCostMode::PerColour` and is required there.
+     *
+     * @param  list<array{0: Colour|int|string, 1: string, 2?: string|null}>  $colours  [colour (model, id, or code in the material's workshop), quantity, cost]
+     */
+    public function perColour(array $colours, MaterialCostMode $costMode = MaterialCostMode::Same): static
+    {
+        $perColour = $costMode === MaterialCostMode::PerColour;
+        $total = BigDecimal::zero();
+        $lowest = null;
+
+        foreach ($colours as $entry) {
+            $cost = $entry[2] ?? null;
+
+            if (($cost !== null) !== $perColour) {
+                throw new InvalidArgumentException('A cost goes with every colour of a material with cost per colour, and with none otherwise.');
+            }
+
+            $total = $total->plus($entry[1]);
+
+            if ($cost !== null && ($lowest === null || BigDecimal::of($cost)->isLessThan($lowest))) {
+                $lowest = BigDecimal::of($cost);
+            }
+        }
+
+        return $this
+            ->state(fn (): array => [
+                'stock_mode' => MaterialStockMode::PerColour->value,
+                'cost_mode' => $costMode->value,
+                'quantity_on_hand' => (string) $total->toScale(4, RoundingMode::HalfUp),
+            ] + ($lowest === null ? [] : ['unit_cost' => (string) $lowest->toScale(4, RoundingMode::HalfUp)]))
+            ->afterCreating(function (Material $material) use ($colours): void {
+                foreach ($colours as $entry) {
+                    $colour = $entry[0];
+
+                    MaterialColour::factory()->create([
+                        'material_id' => $material->id,
+                        'workshop_id' => $material->workshop_id,
+                        'colour_id' => match (true) {
+                            $colour instanceof Colour => $colour->id,
+                            is_int($colour) => $colour,
+                            default => Colour::withoutGlobalScopes()->where('workshop_id', $material->workshop_id)->where('code', $colour)->firstOrFail()->id,
+                        },
+                        'quantity_on_hand' => $entry[1],
+                        'unit_cost' => $entry[2] ?? null,
+                    ]);
+                }
+            });
     }
 
     /**

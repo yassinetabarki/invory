@@ -25,6 +25,8 @@ final class ProductComponentResource extends JsonResource
      * @param  LineCost|null  $line  Null for a By colour and size line.
      * @param  bool  $isBottleneck  Whether the line's material is what limits the product (the binding variant's bottleneck).
      * @param  list<array{colour_id: int, size_id: int, quantity: string}>  $quantities  The cells, colours in list order, then sizes in order.
+     * @param  list<array<string, mixed>>|null  $stockByColour  `ColourStockReading` for each of the product's colours that uses the line, in list order;
+     *                                                          null for a one-stock material (INV-21). Worked out by the product's resource.
      */
     public function __construct(
         ProductComponent $component,
@@ -32,6 +34,7 @@ final class ProductComponentResource extends JsonResource
         private readonly int $position,
         private readonly bool $isBottleneck,
         private readonly array $quantities = [],
+        private readonly ?array $stockByColour = null,
     ) {
         parent::__construct($component);
     }
@@ -49,6 +52,8 @@ final class ProductComponentResource extends JsonResource
                 'photo_url' => $material->photo_url,
                 'stock_status' => $material->stockStatus()->value,
                 'reorder_level' => $material->reorder_level,
+                'stock_mode' => $material->stock_mode->value,
+                'cost_mode' => $material->cost_mode->value,
             ],
             'quantity_mode' => $this->quantity_mode->value,
             'quantities' => $this->quantities,
@@ -57,8 +62,10 @@ final class ProductComponentResource extends JsonResource
             'effective_quantity' => $this->line?->effectiveQuantity,
             'unit_cost' => $this->line->unitCost ?? $material->unit_cost,
             'line_cost' => $this->line?->lineCost,
-            'stock_on_hand' => $this->line->stockOnHand ?? $material->quantity_on_hand,
+            // A material kept per colour shows its total here; each colour's stock is in `stock_by_colour`.
+            'stock_on_hand' => $this->stockByColour === null ? ($this->line->stockOnHand ?? $material->quantity_on_hand) : $material->quantity_on_hand,
             'units_possible' => $this->line?->unitsPossible,
+            'stock_by_colour' => $this->stockByColour,
             'is_bottleneck' => $this->isBottleneck,
             'notes' => $this->notes,
         ];

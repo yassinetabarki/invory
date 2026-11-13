@@ -8,6 +8,7 @@ use App\Actions\Materials\RestockMaterial;
 use App\Http\Requests\Materials\StoreRestockRequest;
 use App\Models\Material;
 use App\Models\User;
+use App\Services\Materials\MaterialStockSentences;
 use Brick\Math\BigDecimal;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
@@ -15,12 +16,13 @@ use Inertia\Inertia;
 final class MaterialRestockController extends Controller
 {
     /** StoreRestockRequest authorizes `update` on the material and validates the receipt. */
-    public function store(StoreRestockRequest $request, Material $material, RestockMaterial $restockMaterial): RedirectResponse
+    public function store(StoreRestockRequest $request, Material $material, RestockMaterial $restockMaterial, MaterialStockSentences $sentences): RedirectResponse
     {
         $user = $request->user();
         $material = $restockMaterial->handle($material, $request->validated(), $user instanceof User ? $user : abort(401));
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Restocked :name: +:quantity :unit.', [
+        // A per-colour material has its own sentence ("Indigo +100 m, Black +20 m"); a one-stock one keeps today's.
+        Inertia::flash('toast', ['type' => 'success', 'message' => $sentences->restocked($material, (array) $request->validated('lines', [])) ?? __('Restocked :name: +:quantity :unit.', [
             'name' => $material->name,
             // "500", not "500.0000": the toast reads like a sentence.
             'quantity' => (string) BigDecimal::of($request->validated('quantity'))->strippedOfTrailingZeros(),

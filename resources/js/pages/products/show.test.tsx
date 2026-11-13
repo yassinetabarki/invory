@@ -9,6 +9,7 @@ import {
     denimJacket,
     denimBarcodes,
     denimJacketBelowCost,
+    denimJacketLightWash,
     denimRecentSales,
     denimSalesLast30Days,
     denimStockByColour,
@@ -518,9 +519,62 @@ describe('products/show page', () => {
         });
 
         it('shows a negative margin with its sign', () => {
-            renderShow(props(denimJacketBelowCost));
+            const { rerender } = renderShow(props(denimJacketBelowCost));
 
             expect(costValue('Margin')).toHaveTextContent('-€5.75 · -19.18%');
+
+            // INV-21: some colours lack a cost (the server sent a range): the range and margin of the others stay, with a line under the range.
+            const lightWash = props(denimJacketLightWash);
+
+            setPageProps(lightWash, {
+                url: '/products/1',
+                component: 'products/show',
+            });
+            rerender(<ProductsShow {...lightWash} />);
+
+            const costCard = screen.getByRole('region', {
+                name: 'Cost breakdown',
+            });
+            const heroCost = screen.getByRole('region', { name: 'Unit cost' });
+
+            for (const shown of [costValue('Unit cost'), heroCost]) {
+                expect(shown).toHaveTextContent('€33.88');
+                expect(shown).toHaveTextContent(
+                    'No unit cost yet. Add Light wash to Denim 12oz.',
+                );
+            }
+            expect(costValue('Margin')).toHaveTextContent('€49.51');
+            expect(
+                within(costCard).getByRole('button', {
+                    name: 'Add Light wash to Denim 12oz',
+                }),
+            ).toBeInTheDocument();
+
+            // Every colour lacks a cost (the server sent no range): the lines only, no margin.
+            const allMissing = props({
+                ...denimJacketLightWash,
+                cost: { ...denimJacketLightWash.cost, unit_cost: null },
+                margin: null,
+            });
+
+            setPageProps(allMissing, {
+                url: '/products/1',
+                component: 'products/show',
+            });
+            rerender(<ProductsShow {...allMissing} />);
+
+            for (const shown of [
+                costValue('Unit cost'),
+                screen.getByRole('region', { name: 'Unit cost' }),
+            ]) {
+                expect(shown).toHaveTextContent(
+                    'No unit cost yet. Add Light wash to Denim 12oz.',
+                );
+                expect(shown).not.toHaveTextContent('€33.88');
+            }
+            expect(
+                within(costCard).queryByText('Margin'),
+            ).not.toBeInTheDocument();
         });
 
         it('says there are no sales yet, with a link to record one', () => {

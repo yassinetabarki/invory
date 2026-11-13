@@ -21,12 +21,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $production_cut_id
  * @property int $material_id
  * @property int|null $unit_id The material's unit at the cut.
+ * @property int|null $colour_id The colour of the stock the take came from (INV-21); null for a one-stock take and every cut before.
  * @property string|null $quantity_per_unit Decimal string, 8 decimals. Null on a cut that has {@see ProductionCutVariant} rows (INV-16).
  * @property string $quantity_taken Decimal string, 4 decimals.
  * @property CarbonInterface $created_at
  * @property CarbonInterface $updated_at
  */
-#[Fillable(['material_id', 'unit_id', 'quantity_per_unit', 'quantity_taken'])]
+#[Fillable(['material_id', 'colour_id', 'unit_id', 'quantity_per_unit', 'quantity_taken'])]
 class ProductionCutMaterial extends Model
 {
     /** @use HasFactory<ProductionCutMaterialFactory> */
@@ -42,6 +43,12 @@ class ProductionCutMaterial extends Model
     public function cut(): BelongsTo
     {
         return $this->belongsTo(ProductionCut::class, 'production_cut_id');
+    }
+
+    /** @return BelongsTo<Colour, $this> */
+    public function colour(): BelongsTo
+    {
+        return $this->belongsTo(Colour::class);
     }
 
     /**

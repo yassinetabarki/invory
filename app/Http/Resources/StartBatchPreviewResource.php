@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Resources;
 
 use App\Domain\Stock\CutPlan;
+use App\Models\Colour;
 use App\Models\Material;
 use App\Services\Production\ProductionMessages;
 use Illuminate\Http\Request;
@@ -15,7 +16,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * · After, and "Short by" when stock is short), by material name, with the refusal the save would give. Every figure is the plan's.
  * `max_cuttable` is null for a mixed grid (INV-16-k), and `short_message` then names the short materials instead.
  *
- * @property array{plan: CutPlan, materials: array<int, Material>} $resource
+ * @property array{plan: CutPlan, materials: array<int, Material>, colours: array<int, Colour>} $resource
  */
 final class StartBatchPreviewResource extends JsonResource
 {
@@ -24,10 +25,11 @@ final class StartBatchPreviewResource extends JsonResource
     {
         $plan = $this->resource['plan'];
         $materials = $this->resource['materials'];
+        $colours = $this->resource['colours'];
         $rows = [];
 
         foreach ($plan->takes as $take) {
-            $rows[] = ['material' => $materials[$take->materialId], 'take' => $take];
+            $rows[] = ['material' => $materials[$take->materialId], 'take' => $take, 'colours' => $colours];
         }
 
         usort($rows, static fn (array $a, array $b): int => [$a['material']->name, $a['material']->id] <=> [$b['material']->name, $b['material']->id]);
@@ -37,7 +39,7 @@ final class StartBatchPreviewResource extends JsonResource
             'rows' => array_map(static fn (array $row): array => (new MaterialMoveRowResource($row))->resolve($request), $rows),
             'has_composition' => $plan->hasComposition(),
             'max_cuttable' => $plan->maxCuttable,
-            'short_message' => $plan->allowed ? null : ProductionMessages::notEnoughStock($plan),
+            'short_message' => $plan->allowed ? null : ProductionMessages::notEnoughStock($plan, array_map(static fn (Colour $colour): string => $colour->name, $colours)),
         ];
     }
 }

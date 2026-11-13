@@ -3,7 +3,15 @@ import { createContext, useContext, useId, useRef, useState } from 'react';
 import { currencySymbol } from '@/components/materials/currency-symbol';
 import { AffixInput, FormField } from '@/components/materials/form-field';
 import type { ControlProps } from '@/components/materials/form-field';
+import {
+    MaterialColoursTable,
+    useColourRows,
+} from '@/components/materials/material-colours-table';
 import { MaterialFormActions } from '@/components/materials/material-form-actions';
+import { SameCostDialog } from '@/components/materials/same-cost-dialog';
+import type { CostChoice } from '@/components/materials/same-cost-dialog';
+import { StockSettings } from '@/components/materials/stock-settings';
+import { SwitchToOneStockDialog } from '@/components/materials/switch-to-one-stock-dialog';
 import { useFocusFirstInvalid } from '@/components/materials/use-focus-first-invalid';
 import { PhotoField } from '@/components/shared/photo-field';
 import { Input } from '@/components/ui/input';
@@ -18,22 +26,35 @@ import { Textarea } from '@/components/ui/textarea';
 import { useAppSettings } from '@/hooks/use-app-settings';
 import { cn } from '@/lib/utils';
 import type {
+    Colour,
     MaterialCategory,
+    MaterialColourStock,
     MaterialFormData,
     Option,
     UnitOfMeasure,
 } from '@/types/domain';
 
 type FieldName = keyof MaterialFormData;
-/** The fields rendered as text inputs (everything but the photo pair). */
-type TextFieldName = Exclude<FieldName, 'photo' | 'remove_photo'>;
-type FieldErrors = Partial<Record<FieldName, string>>;
+/** The fields rendered as text inputs (everything but the photo pair and the stock-per-colour fields, INV-21-h). */
+type TextFieldName = Exclude<
+    FieldName,
+    'photo' | 'remove_photo' | 'stock_mode' | 'cost_mode' | 'colours'
+>;
+/** Server errors by key: the fields, and `colours` / `colours.{i}.…` for the Colours table. */
+type FieldErrors = Partial<Record<string, string>>;
+
+/** Phone fields and buttons are 44 px high, 36 px from the laptop breakpoint. */
+const TALL = 'h-11 md:h-9';
 
 type MaterialFormProps = {
     initial: MaterialFormData;
     categories: Option<MaterialCategory>[];
     units: Option<UnitOfMeasure>[];
     /** Server validation errors keyed by field name. */
+    /** The workshop's colours in Settings › Colours order (a page prop). */
+    colours: Colour[];
+    /** The colours the material has saved, with whether each can go (edit); [] on Add. */
+    storedColours?: MaterialColourStock[];
     errors: FieldErrors;
     processing: boolean;
     submitLabel: string;
@@ -41,6 +62,21 @@ type MaterialFormProps = {
     /** The photo the material has now (edit), or null. */
     photoUrl?: string | null;
 };
+
+/** The text a confirmed switch to one stock puts in the one-stock fields (undefined: the form's own). */
+type SingleFigures = {
+    quantity?: string;
+    quantityKey: number;
+    unitCost?: string;
+    unitCostKey: number;
+    /** The quantity is the server's total of the colours: shown, not typed. */
+    joined: boolean;
+};
+
+/** True unless the text is empty or only zeros (no maths: a quantity string with a non-zero digit). */
+function hasStock(quantity: string): boolean {
+    return /[1-9]/.test(quantity);
+}
 
 /** Shared by every field of one form instance. */
 type FormContextValue = {
@@ -111,7 +147,7 @@ function TextField({
                     defaultValue={initial[name]}
                     placeholder={placeholder}
                     autoComplete="off"
-                    className={inputClassName}
+                    className={cn(TALL, inputClassName)}
                 />
             )}
         </Field>
@@ -124,8 +160,20 @@ function DecimalField({
     placeholder,
     startAffix,
     endAffix,
+    disabled,
+    readOnly,
+    defaultValue,
     ...field
-}: SimpleFieldProps & { startAffix?: string; endAffix?: string }) {
+}: SimpleFieldProps & {
+    startAffix?: string;
+    endAffix?: string;
+    /** A field the chosen stock setting doesn't use: not submitted, its text kept. */
+    disabled?: boolean;
+    /** A figure the server works out (the total of a switch to one stock). */
+    readOnly?: boolean;
+    /** Replaces the form's initial text (a switch put a new figure here); key the field to apply it. */
+    defaultValue?: string;
+}) {
     const { initial } = useFormContext();
 
     return (
@@ -136,11 +184,14 @@ function DecimalField({
                     name={name}
                     type="text"
                     inputMode="decimal"
-                    defaultValue={initial[name]}
+                    defaultValue={defaultValue ?? initial[name]}
                     placeholder={placeholder}
                     autoComplete="off"
                     startAffix={startAffix}
                     endAffix={endAffix}
+                    disabled={disabled}
+                    readOnly={readOnly}
+                    className={TALL}
                 />
             )}
         </Field>
@@ -201,6 +252,8 @@ export function MaterialForm({
     processing,
     submitLabel,
     cancelHref,
+    colours,
+    storedColours,
     photoUrl = null,
 }: MaterialFormProps) {
     const uid = useId();
@@ -210,9 +263,107 @@ export function MaterialForm({
     // Radix Select also renders a hidden native <select name="unit">.
     const [unit, setUnit] = useState<UnitOfMeasure>(initial.unit);
 
+    const [stockMode, setStockMode] = useState(initial.stock_mode);
+    const [costMode, setCostMode] = useState(initial.cost_mode);
+    const rows = useColourRows(initial.colours, colours);
+    // The window of a switch back that is open, if any (INV-21-i).
+    const [pending, setPending] = useState<'stock' | 'cost' | null>(null);
+    // Figures a confirmed switch puts in the one-stock fields; a bumped key remounts the field so it takes the new text.
+    const [single, setSingle] = useState<SingleFigures>({
+        quantityKey: 0,
+        unitCostKey: 0,
+        joined: false,
+    });
+    // The cost every colour started at, shown under the table until the cost setting changes again.
+    const [costStartsAt, setCostStartsAt] = useState<string | null>(null);
+
     useFocusFirstInvalid(containerRef, errors, processing);
 
     const unitSuffix = unit === '' ? undefined : unit;
+    const perColour = stockMode === 'per_colour';
+    const costPerColour = perColour && costMode === 'per_colour';
+    const symbol = currencySymbol(currency, locale);
+    // Edit passes the colours the material has saved (even none); Add passes none. A new material switches freely.
+    const saved = storedColours !== undefined;
+    const savedPerColour = saved && initial.stock_mode === 'per_colour';
+    const savedCostPerColour =
+        savedPerColour && initial.cost_mode === 'per_colour';
+    const currentCost = single.unitCost ?? initial.unit_cost;
+
+    // A switch on a saved material: Stock per colour asks for the colour holding today's stock; going back asks first.
+    function changeStockMode(next: typeof stockMode) {
+        if (next === 'single' && savedPerColour) {
+            setPending('stock');
+
+            return;
+        }
+
+        setStockMode(next);
+
+        if (
+            next === 'per_colour' &&
+            saved &&
+            initial.stock_mode === 'single' &&
+            hasStock(initial.quantity_on_hand) &&
+            rows.rows.length === 0
+        ) {
+            rows.addHolder(initial.quantity_on_hand);
+        }
+    }
+
+    function changeCostMode(next: typeof costMode) {
+        if (next === 'same' && savedCostPerColour) {
+            setPending('cost');
+
+            return;
+        }
+
+        setCostMode(next);
+
+        if (next === 'per_colour' && saved && currentCost !== '') {
+            rows.fillCosts(currentCost);
+            setCostStartsAt(currentCost);
+        } else {
+            setCostStartsAt(null);
+        }
+    }
+
+    function applySameCost(cost: string) {
+        setCostMode('same');
+        setCostStartsAt(null);
+        setSingle((current) => ({
+            ...current,
+            unitCost: cost,
+            unitCostKey: current.unitCostKey + 1,
+        }));
+        setPending(null);
+    }
+
+    function applyOneStock(total: string, cost: string | null) {
+        setStockMode('single');
+        setCostMode('same');
+        setCostStartsAt(null);
+        setSingle((current) => ({
+            quantity: total,
+            quantityKey: current.quantityKey + 1,
+            unitCost: cost ?? current.unitCost,
+            unitCostKey:
+                cost === null ? current.unitCostKey : current.unitCostKey + 1,
+            joined: true,
+        }));
+        setPending(null);
+    }
+
+    /** What each colour holds in the form: the window's list of costs to keep. */
+    const costChoices: CostChoice[] = rows.rows.flatMap((row) => {
+        const colour = colours.find(
+            (candidate) => candidate.id === row.colour_id,
+        );
+
+        return colour && row.unit_cost !== ''
+            ? [{ id: row.uid, colourName: colour.name, cost: row.unit_cost }]
+            : [];
+    });
 
     return (
         <FormContext value={{ uid, initial, errors }}>
@@ -245,7 +396,7 @@ export function MaterialForm({
                                         >
                                             <SelectTrigger
                                                 {...control}
-                                                className="w-full"
+                                                className="w-full data-[size=default]:h-11 md:data-[size=default]:h-9"
                                             >
                                                 <SelectValue placeholder="Choose a category…" />
                                             </SelectTrigger>
@@ -262,12 +413,15 @@ export function MaterialForm({
                                         </Select>
                                     )}
                                 </Field>
-                                <TextField
-                                    name="color"
-                                    label="Colour"
-                                    optional
-                                    placeholder="e.g. Indigo, Antique brass"
-                                />
+                                {/* Hidden, not removed, with Stock per colour: its text is kept (and saved) for when the owner switches back. */}
+                                <div hidden={perColour}>
+                                    <TextField
+                                        name="color"
+                                        label="Colour"
+                                        optional
+                                        placeholder="e.g. Indigo, Antique brass"
+                                    />
+                                </div>
                                 <TextField
                                     name="composition"
                                     label="Composition"
@@ -282,6 +436,20 @@ export function MaterialForm({
                             title="Stock and cost"
                             description="Quantities in compositions always use this unit."
                         >
+                            <StockSettings
+                                stockMode={stockMode}
+                                costMode={costMode}
+                                onStockModeChange={changeStockMode}
+                                onCostModeChange={changeCostMode}
+                            />
+                            {/* One stock sends no cost mode of its own: it is always "same". */}
+                            {!perColour && (
+                                <input
+                                    type="hidden"
+                                    name="cost_mode"
+                                    value="same"
+                                />
+                            )}
                             <div className="grid gap-4 sm:grid-cols-2">
                                 <Field
                                     name="unit"
@@ -298,7 +466,7 @@ export function MaterialForm({
                                         >
                                             <SelectTrigger
                                                 {...control}
-                                                className="w-full"
+                                                className="w-full data-[size=default]:h-11 md:data-[size=default]:h-9"
                                             >
                                                 <SelectValue placeholder="Choose a unit…" />
                                             </SelectTrigger>
@@ -315,34 +483,72 @@ export function MaterialForm({
                                         </Select>
                                     )}
                                 </Field>
-                                <DecimalField
-                                    name="unit_cost"
-                                    label="Unit cost"
-                                    required
-                                    hint="Up to 4 decimals, e.g. 0.0040 for thread."
-                                    placeholder="0.00"
-                                    startAffix={currencySymbol(
-                                        currency,
-                                        locale,
-                                    )}
-                                    endAffix={unitSuffix && `/ ${unitSuffix}`}
-                                />
-                                <DecimalField
-                                    name="quantity_on_hand"
-                                    label="Quantity in stock"
-                                    required
-                                    placeholder="0"
-                                    endAffix={unitSuffix}
-                                />
-                                <DecimalField
-                                    name="reorder_level"
-                                    label="Reorder at"
-                                    optional
-                                    hint="Shown as Low stock at or below this level."
-                                    placeholder="—"
-                                    endAffix={unitSuffix}
-                                />
+                                {/* Fields the setting doesn't use are hidden and not submitted; what was typed stays. */}
+                                <div hidden={costPerColour}>
+                                    <DecimalField
+                                        key={`cost-${single.unitCostKey}`}
+                                        defaultValue={single.unitCost}
+                                        name="unit_cost"
+                                        label="Unit cost"
+                                        required
+                                        hint="Up to 4 decimals, e.g. 0.0040 for thread."
+                                        placeholder="0.00"
+                                        startAffix={symbol}
+                                        endAffix={
+                                            unitSuffix && `/ ${unitSuffix}`
+                                        }
+                                        disabled={costPerColour}
+                                    />
+                                </div>
+                                <div hidden={perColour}>
+                                    <DecimalField
+                                        key={`quantity-${single.quantityKey}`}
+                                        defaultValue={single.quantity}
+                                        readOnly={single.joined}
+                                        name="quantity_on_hand"
+                                        label="Quantity in stock"
+                                        required
+                                        placeholder="0"
+                                        endAffix={unitSuffix}
+                                        disabled={perColour}
+                                    />
+                                </div>
                             </div>
+                            {perColour && (
+                                <MaterialColoursTable
+                                    id={`${uid}-colours`}
+                                    colours={colours}
+                                    rows={rows.rows}
+                                    stored={storedColours ?? []}
+                                    onAdd={rows.add}
+                                    onChoose={rows.choose}
+                                    onRemove={rows.remove}
+                                    onEdit={rows.edit}
+                                    costPerColour={costPerColour}
+                                    unit={unitSuffix}
+                                    currencySymbol={symbol}
+                                    errors={errors}
+                                    holding={
+                                        rows.rows.some((row) => row.holder)
+                                            ? initial.quantity_on_hand
+                                            : undefined
+                                    }
+                                    costStartsAt={costStartsAt ?? undefined}
+                                />
+                            )}
+                            <DecimalField
+                                name="reorder_level"
+                                label="Reorder at"
+                                optional
+                                hint={
+                                    perColour
+                                        ? 'Applies to each colour. The material shows Low stock when any colour is at or under this level.'
+                                        : 'Shown as Low stock at or below this level.'
+                                }
+                                placeholder="—"
+                                endAffix={unitSuffix}
+                                className="sm:max-w-[calc(50%-0.5rem)]"
+                            />
                         </Section>
 
                         <Section title="Supplier and notes">
@@ -402,13 +608,40 @@ export function MaterialForm({
                     </Section>
                 </div>
 
-                <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end [&>*]:h-11 md:[&>*]:h-9">
                     <MaterialFormActions
                         processing={processing}
                         submitLabel={submitLabel}
                         cancelHref={cancelHref}
                     />
                 </div>
+
+                {pending === 'cost' && (
+                    <SameCostDialog
+                        choices={costChoices}
+                        unit={unitSuffix}
+                        onKeep={() => setPending(null)}
+                        onConfirm={applySameCost}
+                    />
+                )}
+                {pending === 'stock' && (
+                    <SwitchToOneStockDialog
+                        unit={unitSuffix}
+                        colours={rows.rows.flatMap((row) =>
+                            row.colour_id === ''
+                                ? []
+                                : [
+                                      {
+                                          colourId: row.colour_id,
+                                          quantity: row.quantity_on_hand,
+                                      },
+                                  ],
+                        )}
+                        choices={costPerColour ? costChoices : null}
+                        onKeep={() => setPending(null)}
+                        onConfirm={applyOneStock}
+                    />
+                )}
             </div>
         </FormContext>
     );

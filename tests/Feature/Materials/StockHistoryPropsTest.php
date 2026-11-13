@@ -1,9 +1,14 @@
 <?php
 
+use App\Actions\Materials\AppendStockMovement;
+use App\Enums\StockMovementType;
+use App\Models\Colour;
 use App\Models\Material;
 use App\Models\StockMovement;
 use App\Models\User;
+use App\Services\Inventory\StockLedgerVerifier;
 use Brick\Math\BigDecimal;
+use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\Support\DemoHistory;
 
@@ -28,6 +33,7 @@ beforeEach(function () {
 const STOCK_MOVEMENT_KEYS = [
     'id', 'material_id', 'type', 'type_label', 'occurred_on', 'quantity', 'quantity_before', 'quantity_after',
     'unit_price', 'unit_cost_before', 'unit_cost_after', 'reference', 'note', 'units', 'sizes', 'order', 'product_name', 'user_name',
+    'colour', 'entry_group',
 ];
 
 /** The ids of a material's entries, newest first (every demo entry is dated in order, so that is the reverse of the entry order). */
@@ -64,6 +70,8 @@ describe('show: history', function () {
                 'order' => null,
                 'product_name' => null,
                 'user_name' => 'Admin',
+                'colour' => null,
+                'entry_group' => null,
             ],
             [
                 'id' => $restock,
@@ -84,6 +92,8 @@ describe('show: history', function () {
                 'order' => null,
                 'product_name' => null,
                 'user_name' => 'Admin',
+                'colour' => null,
+                'entry_group' => null,
             ],
             [
                 'id' => $correction,
@@ -104,6 +114,8 @@ describe('show: history', function () {
                 'order' => null,
                 'product_name' => null,
                 'user_name' => 'Admin',
+                'colour' => null,
+                'entry_group' => null,
             ],
             [
                 'id' => $created,
@@ -124,6 +136,8 @@ describe('show: history', function () {
                 'order' => null,
                 'product_name' => null,
                 'user_name' => 'Admin',
+                'colour' => null,
+                'entry_group' => null,
             ],
         ]);
     });
@@ -249,6 +263,52 @@ describe('show: history', function () {
         expect(count($few))->toBeLessThanOrEqual(10, implode(PHP_EOL, $few))
             ->and(count($many))->toBe(count($few), implode(PHP_EOL, $many))
             ->and(queriesMatching($many, 'from "stock_movements"'))->toHaveCount(1);
+    });
+
+    it('names the colour and the receipt of a per-colour entry, and sends null for a one-stock one (INV-21-n)', function () {
+        $denim = Material::factory()->perColour([['IND', '100.0000'], ['BLK', '40.0000']])->create(['sku' => 'ZZZ-DEN', 'name' => 'Zzz denim']);
+        $plain = Material::factory()->create(['sku' => 'ZZZ-PLAIN', 'name' => 'Zzz plain', 'quantity_on_hand' => '5.0000']);
+        $colours = Colour::query()->whereIn('code', ['IND', 'BLK'])->get()->keyBy('code');
+        $receipt = (string) Str::uuid();
+        $plainGroup = (string) Str::uuid();
+        $append = app(AppendStockMovement::class);
+        $receive = function (Material $material, string $code, string $quantity) use ($append, $colours, $receipt): void {
+            $append->handle($material, StockMovementType::Restock, '2026-10-08', $this->user, [
+                'quantity' => $quantity, 'quantity_after' => $quantity, 'unit_price' => '8.5000', 'reference' => 'PO-1',
+                'colour_id' => $colours[$code]->id, 'entry_group' => $receipt,
+            ]);
+        };
+
+        // One receipt, two colours: the entries share the group and each names its colour (the later entry is listed first).
+        $receive($denim, 'IND', '100.0000');
+        $receive($denim, 'BLK', '40.0000');
+        $append->handle($plain, StockMovementType::Restock, '2026-10-08', $this->user, [
+            'quantity' => '5.0000', 'quantity_after' => '5.0000', 'unit_price' => '1.0000', 'entry_group' => $plainGroup,
+        ]);
+
+        $url = route('materials.show', $denim);
+        actingAs($this->user)->get($url)->assertOk(); // warm up
+        $few = queryLog(fn () => $this->get($url)->assertOk());
+        $response = actingAs($this->user)->get($url);
+
+        expect(pageProp($response, 'history.*.colour.name'))->toBe(['Black', 'Indigo'])
+            ->and(pageProp($response, 'history.*.entry_group'))->toBe([$receipt, $receipt])
+            ->and(pageProp($response, 'history.1.colour'))->toBe(['id' => $colours['IND']->id, 'code' => 'IND', 'name' => 'Indigo', 'swatch' => $colours['IND']->swatch])
+            ->and(app(StockLedgerVerifier::class)->verify()['drifts'])->toBe([]); // each colour's entries add up to its stock
+
+        // Many more entries: the same number of queries (the colour is eager-loaded, not looked up per row).
+        foreach (range(1, 6) as $i) {
+            $receive($denim, $i % 2 === 0 ? 'IND' : 'BLK', '0.0000');
+        }
+        $many = queryLog(fn () => $this->get($url)->assertOk());
+
+        expect(count($many))->toBe(count($few), implode(PHP_EOL, $many));
+
+        // A one-stock entry has no colour; its group is sent as stored.
+        $response = actingAs($this->user)->get(route('materials.show', $plain));
+
+        expect(pageProp($response, 'history.0.colour'))->toBeNull()
+            ->and(pageProp($response, 'history.0.entry_group'))->toBe($plainGroup);
     });
 });
 

@@ -48,6 +48,22 @@ describe('<NeedsRestockCard>', () => {
         );
     });
 
+    it('names the colours that need restock after a per-colour material', () => {
+        render(
+            <NeedsRestockCard
+                materials={[
+                    {
+                        ...needsRestock[1],
+                        name: 'Denim 12oz',
+                        colours_text: 'Black 40 m',
+                    },
+                ]}
+            />,
+        );
+
+        expect(rows()[0]).toHaveTextContent('Denim 12oz · Black 40 m');
+    });
+
     it('keeps the server order (out of stock first)', () => {
         render(<NeedsRestockCard materials={needsRestock} />);
 

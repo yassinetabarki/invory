@@ -1,8 +1,11 @@
 import { router, useHttp } from '@inertiajs/react';
 import { Printer, TriangleAlert } from 'lucide-react';
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
+import type { Ref } from 'react';
 import type { FormEvent } from 'react';
+import { AddMaterialColourDialog } from '@/components/materials/add-material-colour-dialog';
 import { typedUnits } from '@/components/orders/order-size-fields';
+import { AddColourLink } from '@/components/products/colour-stock-line';
 import { RestockProductPicker } from '@/components/restocks/restock-product-picker';
 import { variantName } from '@/components/restocks/restock-line';
 import { ColourTag } from '@/components/shared/colour-tag';
@@ -30,6 +33,8 @@ import {
 } from '@/routes/progress/products';
 import type {
     BatchesStarted,
+    Colour,
+    MaterialRef,
     RestockProductRef,
     StartBatchLine,
     StartBatchPreview,
@@ -132,7 +137,8 @@ function useStartLine(productId: number | null) {
     };
 }
 
-function usePreview(productId: number | null, grid: Grid) {
+/** `refresh` asks again for the same grid (after a colour was added to a material: its row is no longer "No stock"). */
+function usePreview(productId: number | null, grid: Grid, refresh: number) {
     const { get, cancel } = useHttp<Record<string, never>, StartBatchPreview>();
     // One string per grid, so the wait and the answer are tied to what was typed.
     const typedKey = JSON.stringify(grid);
@@ -164,19 +170,40 @@ function usePreview(productId: number | null, grid: Grid) {
             current = false;
             cancel();
         };
-    }, [get, cancel, productId, settledKey, key]);
+    }, [get, cancel, productId, settledKey, key, refresh]);
 
     return state !== null && state.key === key && settledKey === typedKey
         ? state.preview
         : null;
 }
 
+type AddColourRequest = { material: MaterialRef; colour: Colour };
+
+/** A colour the material lacks: its stock reads "No stock" in the warning tone (words, not colour alone). */
+function NoStock({ className }: { className?: string }) {
+    return (
+        <span
+            className={cn(
+                'font-sans font-semibold text-warning-foreground',
+                className,
+            )}
+        >
+            No stock
+        </span>
+    );
+}
+
 function MaterialsTable({
     preview,
     compact,
+    onAddColour,
+    captionRef,
 }: {
     preview: StartBatchPreview;
     compact: boolean;
+    onAddColour: (request: AddColourRequest) => void;
+    /** Where focus rests when the Add link it was on has gone. */
+    captionRef: Ref<HTMLTableCaptionElement>;
 }) {
     const { locale } = useAppSettings();
     const short = preview.rows.some((row) => row.short_by !== null);
@@ -192,7 +219,11 @@ function MaterialsTable({
 
     return (
         <table className="w-full text-sm">
-            <caption className="mb-2 text-left font-medium">
+            <caption
+                ref={captionRef}
+                tabIndex={-1}
+                className="mb-2 text-left font-medium outline-none"
+            >
                 Materials for {formatCount(preview.units, locale)}{' '}
                 {preview.units === 1 ? 'unit' : 'units'}
             </caption>
@@ -226,10 +257,11 @@ function MaterialsTable({
             <tbody>
                 {preview.rows.map((row) => {
                     const unit = row.material.unit;
+                    const colour = row.colour;
 
                     return (
                         <tr
-                            key={row.material.id}
+                            key={`${row.material.id}-${row.colour?.id ?? 0}`}
                             className="border-b last:border-b-0"
                         >
                             <th
@@ -237,16 +269,46 @@ function MaterialsTable({
                                 className="py-1 pr-2 text-left font-normal"
                             >
                                 {row.material.name}
+                                {row.colour && (
+                                    <>
+                                        {' · '}
+                                        <ColourTag
+                                            colour={row.colour}
+                                            className="align-middle"
+                                        />
+                                    </>
+                                )}
+                                {row.missing && compact && (
+                                    <NoStock className="block" />
+                                )}
+                                {row.missing && colour && (
+                                    <div>
+                                        <AddColourLink
+                                            materialName={row.material.name}
+                                            colourName={colour.name}
+                                            onClick={() =>
+                                                onAddColour({
+                                                    material: row.material,
+                                                    colour,
+                                                })
+                                            }
+                                        />
+                                    </div>
+                                )}
                             </th>
                             <td className="px-2 py-1 text-right font-mono tabular-nums">
                                 {formatQuantity(row.quantity, { locale, unit })}
                             </td>
                             {!compact && (
                                 <td className="px-2 py-1 text-right font-mono tabular-nums">
-                                    {formatQuantity(row.in_stock, {
-                                        locale,
-                                        unit,
-                                    })}
+                                    {row.missing ? (
+                                        <NoStock />
+                                    ) : (
+                                        formatQuantity(row.in_stock, {
+                                            locale,
+                                            unit,
+                                        })
+                                    )}
                                 </td>
                             )}
                             <td className="py-1 pl-2 text-right font-mono tabular-nums">
@@ -346,7 +408,38 @@ function StartForm({
     const { line, failed, retry } = useStartLine(product?.id ?? null);
     const variants = line ? typedVariants(line, typed) : [];
     const total = variants.reduce((sum, variant) => sum + variant.units, 0);
-    const preview = usePreview(line ? line.product.id : null, gridOf(variants));
+    // "Add Light wash to Denim 12oz" opens over this window; the last one asked stays while it closes.
+    const [adding, setAdding] = useState<AddColourRequest | null>(null);
+    const [addingOpen, setAddingOpen] = useState(false);
+    const [refresh, setRefresh] = useState(0);
+    const preview = usePreview(
+        line ? line.product.id : null,
+        gridOf(variants),
+        refresh,
+    );
+    // After a colour was added: the preview we had when its window closed, so the answer to the new request is told apart.
+    const refocus = useRef<{ from: StartBatchPreview | null } | null>(null);
+    const captionRef = useRef<HTMLTableCaptionElement>(null);
+
+    // The Add link may be gone once the materials are asked again (the row no longer reads No stock): focus then
+    // stays in this window, on the materials heading, never on <body>.
+    useEffect(() => {
+        const pending = refocus.current;
+
+        if (pending === null || pending.from === preview) {
+            return;
+        }
+
+        refocus.current = null;
+
+        if (
+            document.activeElement === null ||
+            document.activeElement === document.body
+        ) {
+            captionRef.current?.focus();
+        }
+    }, [preview]);
+
     // A short message disables Start batch: aria-disabled, so it stays focusable and says why.
     const shortMessage = preview?.short_message ?? null;
 
@@ -414,216 +507,248 @@ function StartForm({
             .find((entry) => entry.colour.id === colourId)
             ?.sizes.find((entry) => entry.size.id === sizeId)?.units ?? 0;
 
+    // The add-colour window has its own form: it sits beside this one, never inside it (a submit would bubble up).
     return (
-        <form
-            noValidate
-            onSubmit={submit}
-            className="flex min-h-0 flex-1 flex-col gap-4"
-        >
-            <div className="-mx-1 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-1">
-                <div className="flex flex-col gap-1.5">
-                    <span
-                        id={`${uid}-product-label`}
-                        className="text-sm font-medium"
-                    >
-                        Product
-                    </span>
-                    <RestockProductPicker
-                        mode="filter"
-                        id={`${uid}-product`}
-                        labelledBy={`${uid}-product-label`}
-                        value={product}
-                        onSelect={(next) => {
-                            setProduct(next);
-                            setTyped({});
-                            setErrors({});
-                        }}
-                    />
-                    {line && line.can_produce !== null && (
-                        <p className="text-sm text-muted-foreground">
-                            Can produce now{' '}
-                            <span className="font-mono">
-                                {formatCount(line.can_produce, locale)}
-                            </span>
-                        </p>
-                    )}
-                    {errors.product_id && (
-                        <p
-                            className="text-sm text-destructive-foreground"
-                            role="alert"
+        <>
+            <form
+                noValidate
+                onSubmit={submit}
+                className="flex min-h-0 flex-1 flex-col gap-4"
+            >
+                <div className="-mx-1 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-1">
+                    <div className="flex flex-col gap-1.5">
+                        <span
+                            id={`${uid}-product-label`}
+                            className="text-sm font-medium"
                         >
-                            {errors.product_id}
-                        </p>
+                            Product
+                        </span>
+                        <RestockProductPicker
+                            mode="filter"
+                            id={`${uid}-product`}
+                            labelledBy={`${uid}-product-label`}
+                            value={product}
+                            onSelect={(next) => {
+                                setProduct(next);
+                                setTyped({});
+                                setErrors({});
+                            }}
+                        />
+                        {line && line.can_produce !== null && (
+                            <p className="text-sm text-muted-foreground">
+                                Can produce now{' '}
+                                <span className="font-mono">
+                                    {formatCount(line.can_produce, locale)}
+                                </span>
+                            </p>
+                        )}
+                        {errors.product_id && (
+                            <p
+                                className="text-sm text-destructive-foreground"
+                                role="alert"
+                            >
+                                {errors.product_id}
+                            </p>
+                        )}
+                    </div>
+
+                    {failed && (
+                        <div
+                            role="alert"
+                            className="flex items-center gap-3 text-sm"
+                        >
+                            <p>Couldn&apos;t load the product. Try again.</p>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={retry}
+                            >
+                                Try again
+                            </Button>
+                        </div>
+                    )}
+
+                    {line && (
+                        <fieldset className="flex flex-col gap-3">
+                            <legend className="mb-2 text-sm font-medium">
+                                How many units of each colour and size?
+                            </legend>
+                            {line.stock.colours.map(({ colour }) => (
+                                <div
+                                    key={colour.id}
+                                    className="flex flex-col gap-2"
+                                >
+                                    <ColourTag
+                                        colour={colour}
+                                        className="text-sm font-medium"
+                                    />
+                                    <div className="grid grid-cols-3 gap-2 sm:grid-cols-[repeat(auto-fill,minmax(5rem,1fr))]">
+                                        {line.sizes.map((size) => {
+                                            const name = variantName(
+                                                colour.name,
+                                                size,
+                                                line.one_size,
+                                            );
+                                            const fieldId = `${uid}-c${colour.id}-s${size.id}`;
+                                            const error =
+                                                errors[
+                                                    `units.${colour.id}.${size.id}`
+                                                ];
+                                            const onShelf = shelf(
+                                                colour.id,
+                                                size.id,
+                                            );
+
+                                            return (
+                                                <div
+                                                    key={size.id}
+                                                    className="flex flex-col gap-1"
+                                                >
+                                                    <label
+                                                        htmlFor={fieldId}
+                                                        className="text-xs font-semibold"
+                                                    >
+                                                        {line.one_size
+                                                            ? colour.name
+                                                            : size.label}
+                                                    </label>
+                                                    <Input
+                                                        id={fieldId}
+                                                        aria-label={name}
+                                                        inputMode="numeric"
+                                                        autoComplete="off"
+                                                        aria-invalid={
+                                                            error
+                                                                ? true
+                                                                : undefined
+                                                        }
+                                                        aria-describedby={`${fieldId}-shelf`}
+                                                        value={
+                                                            typed[colour.id]?.[
+                                                                size.id
+                                                            ] ?? ''
+                                                        }
+                                                        className="h-11 text-center font-mono sm:h-9"
+                                                        onChange={(event) =>
+                                                            setField(
+                                                                colour.id,
+                                                                size.id,
+                                                                event.target
+                                                                    .value,
+                                                            )
+                                                        }
+                                                    />
+                                                    <span
+                                                        id={`${fieldId}-shelf`}
+                                                        className={cn(
+                                                            'text-xs',
+                                                            onShelf === 0
+                                                                ? 'font-medium text-amber-700 dark:text-amber-400'
+                                                                : 'text-muted-foreground',
+                                                        )}
+                                                    >
+                                                        Shelf{' '}
+                                                        {onShelf === 0
+                                                            ? 'Out'
+                                                            : formatCount(
+                                                                  onShelf,
+                                                                  locale,
+                                                              )}
+                                                    </span>
+                                                    {error && (
+                                                        <span className="text-xs text-destructive-foreground">
+                                                            {error}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            ))}
+                            <p className="text-sm" aria-live="polite">
+                                Total {formatCount(total, locale)}{' '}
+                                {total === 1 ? 'unit' : 'units'} ·{' '}
+                                {formatCount(variants.length, locale)}{' '}
+                                {variants.length === 1 ? 'batch' : 'batches'}
+                                {variants.length > 0 &&
+                                    ` (${variants.map((variant) => `${variant.name} ${formatCount(variant.units, locale)}`).join(', ')})`}
+                            </p>
+                        </fieldset>
+                    )}
+
+                    {preview && total > 0 && (
+                        <MaterialsTable
+                            preview={preview}
+                            compact={isMobile}
+                            captionRef={captionRef}
+                            onAddColour={(request) => {
+                                setAdding(request);
+                                setAddingOpen(true);
+                            }}
+                        />
                     )}
                 </div>
 
-                {failed && (
-                    <div
+                {(errors.units || shortMessage) && (
+                    <p
+                        id={`${uid}-message`}
                         role="alert"
-                        className="flex items-center gap-3 text-sm"
+                        className="shrink-0 text-sm text-destructive-foreground"
                     >
-                        <p>Couldn&apos;t load the product. Try again.</p>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={retry}
-                        >
-                            Try again
-                        </Button>
-                    </div>
+                        {errors.units ?? shortMessage}
+                    </p>
                 )}
 
-                {line && (
-                    <fieldset className="flex flex-col gap-3">
-                        <legend className="mb-2 text-sm font-medium">
-                            How many units of each colour and size?
-                        </legend>
-                        {line.stock.colours.map(({ colour }) => (
-                            <div
-                                key={colour.id}
-                                className="flex flex-col gap-2"
-                            >
-                                <ColourTag
-                                    colour={colour}
-                                    className="text-sm font-medium"
-                                />
-                                <div className="grid grid-cols-3 gap-2 sm:grid-cols-[repeat(auto-fill,minmax(5rem,1fr))]">
-                                    {line.sizes.map((size) => {
-                                        const name = variantName(
-                                            colour.name,
-                                            size,
-                                            line.one_size,
-                                        );
-                                        const fieldId = `${uid}-c${colour.id}-s${size.id}`;
-                                        const error =
-                                            errors[
-                                                `units.${colour.id}.${size.id}`
-                                            ];
-                                        const onShelf = shelf(
-                                            colour.id,
-                                            size.id,
-                                        );
+                <DialogFooter className="shrink-0 max-sm:sticky max-sm:bottom-0 max-sm:bg-background max-sm:pt-2">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        disabled={processing}
+                        onClick={onClose}
+                        className="max-sm:h-11"
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        type="submit"
+                        disabled={processing}
+                        aria-disabled={shortMessage !== null ? true : undefined}
+                        aria-describedby={
+                            shortMessage !== null ? `${uid}-message` : undefined
+                        }
+                        onClick={(event) => {
+                            if (shortMessage !== null) {
+                                event.preventDefault();
+                            }
+                        }}
+                        className="aria-disabled:cursor-not-allowed aria-disabled:opacity-50 max-sm:h-11"
+                    >
+                        {processing && <Spinner />}
+                        Start batch
+                    </Button>
+                </DialogFooter>
+            </form>
+            {adding && line && (
+                <AddMaterialColourDialog
+                    open={addingOpen}
+                    onOpenChange={(next) => {
+                        setAddingOpen(next);
 
-                                        return (
-                                            <div
-                                                key={size.id}
-                                                className="flex flex-col gap-1"
-                                            >
-                                                <label
-                                                    htmlFor={fieldId}
-                                                    className="text-xs font-semibold"
-                                                >
-                                                    {line.one_size
-                                                        ? colour.name
-                                                        : size.label}
-                                                </label>
-                                                <Input
-                                                    id={fieldId}
-                                                    aria-label={name}
-                                                    inputMode="numeric"
-                                                    autoComplete="off"
-                                                    aria-invalid={
-                                                        error ? true : undefined
-                                                    }
-                                                    aria-describedby={`${fieldId}-shelf`}
-                                                    value={
-                                                        typed[colour.id]?.[
-                                                            size.id
-                                                        ] ?? ''
-                                                    }
-                                                    className="h-11 text-center font-mono sm:h-9"
-                                                    onChange={(event) =>
-                                                        setField(
-                                                            colour.id,
-                                                            size.id,
-                                                            event.target.value,
-                                                        )
-                                                    }
-                                                />
-                                                <span
-                                                    id={`${fieldId}-shelf`}
-                                                    className={cn(
-                                                        'text-xs',
-                                                        onShelf === 0
-                                                            ? 'font-medium text-amber-700 dark:text-amber-400'
-                                                            : 'text-muted-foreground',
-                                                    )}
-                                                >
-                                                    Shelf{' '}
-                                                    {onShelf === 0
-                                                        ? 'Out'
-                                                        : formatCount(
-                                                              onShelf,
-                                                              locale,
-                                                          )}
-                                                </span>
-                                                {error && (
-                                                    <span className="text-xs text-destructive-foreground">
-                                                        {error}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        ))}
-                        <p className="text-sm" aria-live="polite">
-                            Total {formatCount(total, locale)}{' '}
-                            {total === 1 ? 'unit' : 'units'} ·{' '}
-                            {formatCount(variants.length, locale)}{' '}
-                            {variants.length === 1 ? 'batch' : 'batches'}
-                            {variants.length > 0 &&
-                                ` (${variants.map((variant) => `${variant.name} ${formatCount(variant.units, locale)}`).join(', ')})`}
-                        </p>
-                    </fieldset>
-                )}
-
-                {preview && total > 0 && (
-                    <MaterialsTable preview={preview} compact={isMobile} />
-                )}
-            </div>
-
-            {(errors.units || shortMessage) && (
-                <p
-                    id={`${uid}-message`}
-                    role="alert"
-                    className="shrink-0 text-sm text-destructive-foreground"
-                >
-                    {errors.units ?? shortMessage}
-                </p>
-            )}
-
-            <DialogFooter className="shrink-0 max-sm:sticky max-sm:bottom-0 max-sm:bg-background max-sm:pt-2">
-                <Button
-                    type="button"
-                    variant="outline"
-                    disabled={processing}
-                    onClick={onClose}
-                    className="max-sm:h-11"
-                >
-                    Cancel
-                </Button>
-                <Button
-                    type="submit"
-                    disabled={processing}
-                    aria-disabled={shortMessage !== null ? true : undefined}
-                    aria-describedby={
-                        shortMessage !== null ? `${uid}-message` : undefined
-                    }
-                    onClick={(event) => {
-                        if (shortMessage !== null) {
-                            event.preventDefault();
+                        // The server reloaded: ask again for the grid typed, which stays as it is.
+                        if (!next) {
+                            refocus.current = { from: preview };
+                            setRefresh((count) => count + 1);
                         }
                     }}
-                    className="aria-disabled:cursor-not-allowed aria-disabled:opacity-50 max-sm:h-11"
-                >
-                    {processing && <Spinner />}
-                    Start batch
-                </Button>
-            </DialogFooter>
-        </form>
+                    material={adding.material}
+                    colour={adding.colour}
+                    productName={line.product.name}
+                    fallbackFocus={() => captionRef.current}
+                />
+            )}
+        </>
     );
 }
 

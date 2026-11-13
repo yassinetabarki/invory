@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Resources;
 
 use App\Domain\Stock\ReturnPlan;
+use App\Models\Colour;
 use App\Models\Material;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -13,7 +14,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * `UndoBatchPreview` in resources/js/types/domain.ts (INV-5-e, AC-6): what Undo batch gives back, by material name ("7.92 m Denim
  * 12oz Indigo, 32 pc Metal shank button 17mm, …"). Every figure is the plan's.
  *
- * @property array{plan: ReturnPlan, materials: array<int, Material>} $resource
+ * @property array{plan: ReturnPlan, materials: array<int, Material>, colours: array<int, Colour>} $resource
  */
 final class UndoBatchPreviewResource extends JsonResource
 {
@@ -22,10 +23,11 @@ final class UndoBatchPreviewResource extends JsonResource
     {
         $plan = $this->resource['plan'];
         $materials = $this->resource['materials'];
+        $colours = $this->resource['colours'];
         $rows = [];
 
         foreach ($plan->returns as $return) {
-            $rows[] = ['material' => $materials[$return->materialId], 'return' => $return];
+            $rows[] = ['material' => $materials[$return->materialId], 'return' => $return, 'colours' => $colours];
         }
 
         usort($rows, static fn (array $a, array $b): int => [$a['material']->name, $a['material']->id] <=> [$b['material']->name, $b['material']->id]);

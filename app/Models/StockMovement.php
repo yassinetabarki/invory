@@ -41,6 +41,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int|null $product_id The product of that order line (only ever soft-deleted).
  * @property int|null $units The units of the order line that were cut or moved back.
  * @property array<int, array{size_id: int, label: string, units: int}>|null $sizes The sizes a `cutting` / `cutting_return` entry moved (S-61-a); null before sizes and for the other types.
+ * @property int|null $colour_id The colour of a per-colour material an entry is about (INV-21); null for a one-stock entry and every entry before.
+ * @property string|null $entry_group One receipt or switch: its entries share this uuid (INV-21).
  * @property int|null $user_id Who did it (null once that user is deleted). Never mass-assignable: it comes from the actor.
  * @property string|null $user_name Not a column: the history queries join the user's name in (one query, no N+1).
  * @property string|null $order_client Not a column: the history queries join the order's client in (soft-deleted orders included).
@@ -50,7 +52,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 #[Fillable([
     'type', 'occurred_on', 'quantity', 'quantity_before', 'quantity_after', 'unit_price', 'unit_cost_before', 'unit_cost_after',
-    'reference', 'note', 'order_id', 'product_id', 'units', 'sizes',
+    'reference', 'note', 'order_id', 'product_id', 'units', 'sizes', 'colour_id', 'entry_group',
 ])]
 class StockMovement extends Model
 {
@@ -98,6 +100,12 @@ class StockMovement extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class)->withTrashed();
+    }
+
+    /** @return BelongsTo<Colour, $this> */
+    public function colour(): BelongsTo
+    {
+        return $this->belongsTo(Colour::class);
     }
 
     /** @return BelongsTo<User, $this> */

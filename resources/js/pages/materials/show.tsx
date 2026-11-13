@@ -1,4 +1,5 @@
 import { Head } from '@inertiajs/react';
+import { useState } from 'react';
 import MaterialController from '@/actions/App/Http/Controllers/MaterialController';
 import { CategoryBadge } from '@/components/materials/category-badge';
 import { HistoryCard } from '@/components/materials/history-card';
@@ -8,6 +9,8 @@ import { MaterialKpis } from '@/components/materials/material-kpis';
 import { MaterialPhotoCard } from '@/components/materials/material-photo-card';
 import { MaterialStockCallout } from '@/components/materials/material-stock-callout';
 import { MaterialUsageCard } from '@/components/materials/material-usage';
+import { RestockSheet } from '@/components/materials/restock-sheet';
+import { StockByColourCard } from '@/components/materials/stock-by-colour-card';
 import { StockBadge } from '@/components/materials/stock-badge';
 import type { MaterialShowProps } from '@/types/domain';
 
@@ -16,6 +19,12 @@ export default function MaterialsShow({
     usage,
     history,
 }: MaterialShowProps) {
+    // The Restock sheet of a per-colour material: from the page button or a colour's Restock.
+    const [sheet, setSheet] = useState<{ colourId: number | null } | null>(
+        null,
+    );
+    const perColour = material.stock_mode === 'per_colour';
+
     return (
         <>
             <Head title={material.name} />
@@ -34,7 +43,14 @@ export default function MaterialsShow({
                             <StockBadge status={material.stock_status} />
                         </div>
                     </div>
-                    <MaterialActions material={material} />
+                    <MaterialActions
+                        material={material}
+                        onRestockColours={
+                            perColour
+                                ? () => setSheet({ colourId: null })
+                                : undefined
+                        }
+                    />
                 </header>
 
                 <div className="flex flex-col gap-5 lg:flex-row lg:items-start">
@@ -46,6 +62,12 @@ export default function MaterialsShow({
                     <div className="flex min-w-0 flex-1 flex-col gap-4">
                         <MaterialKpis material={material} />
                         <MaterialStockCallout material={material} />
+                        {perColour && (
+                            <StockByColourCard
+                                material={material}
+                                onRestock={(colourId) => setSheet({ colourId })}
+                            />
+                        )}
                         <MaterialDetailsCard material={material} />
                     </div>
                 </div>
@@ -54,6 +76,19 @@ export default function MaterialsShow({
 
                 <HistoryCard material={material} history={history} />
             </div>
+
+            {perColour && sheet && (
+                <RestockSheet
+                    material={material}
+                    open
+                    initialColourId={sheet.colourId}
+                    onOpenChange={(open) => {
+                        if (!open) {
+                            setSheet(null);
+                        }
+                    }}
+                />
+            )}
         </>
     );
 }

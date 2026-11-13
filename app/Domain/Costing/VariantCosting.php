@@ -18,6 +18,15 @@ use InvalidArgumentException;
  * quantities of its lines, its units possible the floor of stock over requirement, and the bottleneck the smallest of those with the
  * calculator's tie-break. `calculate()` of the calculator still runs, unchanged, once per product, for {@see VariantCostingResult::$single}.
  * VariantCostingTest checks every variant's figures against it.
+ *
+ * Colour stock (INV-21, ADR-0029): when a line is on a material kept per colour, a variant of colour c reads that colour's stock and
+ * cost, so a composition is costed once per colour (its key then holds the colour). A colour the material lacks is a stock of 0,
+ * flagged missing; with cost per colour it has no cost, and a variant with such a line has no material or unit cost and no margin, and
+ * is left out of the cost and margin ranges. Its capacity is 0 and the material its bottleneck. Without a per-colour line, every figure
+ * is as before INV-21.
+ *
+ * @phpstan-type Span array{name: string, unit: string, min: BigDecimal, max: BigDecimal, unitsMin: int, unitsMax: int, byColour: array<int, array{min: int, max: int, missing: bool}>}
+ * @phpstan-type Figure array{materialCost: BigDecimal|null, unitCost: BigDecimal|null, max: int|null, materialId: int|null, materialName: string|null, colourId: int|null, missing: bool}
  */
 final class VariantCosting
 {
@@ -51,17 +60,23 @@ final class VariantCosting
             $varies = $varies || $line->varies();
         }
 
-        /** @var array<string, array{materialCost: BigDecimal, unitCost: BigDecimal, max: int|null, materialId: int|null, materialName: string|null}> $figures one per distinct composition */
+        $perColour = false;
+
+        foreach ($lines as $line) {
+            $perColour = $perColour || $line->perColour();
+        }
+
+        /** @var array<string, Figure> $figures one per distinct composition (and colour, when a line is per colour) */
         $figures = [];
         /** @var array<int|string, Margin|null> $margins one per distinct unit cost (a PHP key: "35.7540" stays a string) */
         $margins = [];
-        /** @var array<int, array{name: string, unit: string, min: BigDecimal, max: BigDecimal, unitsMin: int, unitsMax: int}> $spans */
+        /** @var array<int, Span> $spans */
         $spans = [];
         $variantResults = [];
 
         foreach ($variants as [$colourId, $sizeId]) {
             $picks = [];
-            $key = '';
+            $key = $perColour ? 'c'.$colourId.':' : '';
 
             foreach ($lines as $index => $line) {
                 $option = $line->optionFor($colourId, $sizeId);
@@ -72,35 +87,38 @@ final class VariantCosting
                 }
             }
 
-            $figures[$key] ??= $this->figures($lines, $picks, $fixed, $spans);
+            $figures[$key] ??= $this->figures($lines, $picks, $colourId, $fixed, $spans);
             $figure = $figures[$key];
 
-            $materialCost = $figure['materialCost']->toString();
-            $unitCost = $figure['unitCost']->toString();
+            $materialCost = $figure['materialCost']?->toString();
+            $unitCost = $figure['unitCost']?->toString();
 
-            if ($sellingPrice !== null && ! array_key_exists($unitCost, $margins)) {
+            if ($unitCost !== null && $sellingPrice !== null && ! array_key_exists($unitCost, $margins)) {
                 $margins[$unitCost] = $this->margins->calculate($sellingPrice, $unitCost);
             }
 
             $variantResults[] = new VariantResult(
-                $colourId, $sizeId, $materialCost, $unitCost, $figure['max'], $figure['materialId'], $figure['materialName'], $margins[$unitCost] ?? null,
+                $colourId, $sizeId, $materialCost, $unitCost, $figure['max'], $figure['materialId'], $figure['materialName'],
+                $unitCost === null ? null : ($margins[$unitCost] ?? null), $figure['colourId'], $figure['missing'],
             );
         }
 
-        return $this->summarise($lines, $varies, $variantResults, $figures, $margins, $spans, $laborCost, $overheadCost);
+        return $this->summarise($lines, $varies, $perColour, $variantResults, $figures, $margins, $spans, $laborCost, $overheadCost);
     }
 
     /**
-     * The figures of one composition: material cost, unit cost, capacity and bottleneck. Also widens the spans of the materials it uses.
+     * The figures of one composition for a colour: material cost, unit cost, capacity and bottleneck. Also widens the spans of the
+     * materials it uses. The costs are null when a line has no unit cost for the colour.
      *
      * @param  list<VariantLine>  $lines
      * @param  array<int, int>  $picks  Option by line index, for the lines the composition has.
-     * @param  array<int, array{name: string, unit: string, min: BigDecimal, max: BigDecimal, unitsMin: int, unitsMax: int}>  $spans
-     * @return array{materialCost: BigDecimal, unitCost: BigDecimal, max: int|null, materialId: int|null, materialName: string|null}
+     * @param  array<int, Span>  $spans
+     * @return Figure
      */
-    private function figures(array $lines, array $picks, BigDecimal $fixed, array &$spans): array
+    private function figures(array $lines, array $picks, int $colourId, BigDecimal $fixed, array &$spans): array
     {
         $exactMaterialCost = BigDecimal::zero();
+        $costed = true;
         /** @var array<int, BigDecimal> $required exact requirement by material id */
         $required = [];
         /** @var array<int, VariantLine> $firstLine the material's name, unit and stock come from its first line */
@@ -108,7 +126,13 @@ final class VariantCosting
 
         foreach ($picks as $index => $option) {
             $line = $lines[$index];
-            $exactMaterialCost = $exactMaterialCost->plus($line->costs[$option]);
+            $cost = $line->costFor($colourId, $option);
+
+            if ($cost === null) {
+                $costed = false;
+            } else {
+                $exactMaterialCost = $exactMaterialCost->plus($cost);
+            }
 
             if (isset($required[$line->materialId])) {
                 $required[$line->materialId] = $required[$line->materialId]->plus($line->effectives[$option]);
@@ -124,7 +148,7 @@ final class VariantCosting
 
         foreach ($required as $materialId => $need) {
             $material = $firstLine[$materialId];
-            $units = $material->stock->dividedBy($need, 0, RoundingMode::Down)->toInt();
+            $units = $material->stockFor($colourId)->dividedBy($need, 0, RoundingMode::Down)->toInt();
 
             if ($bottleneckId === null || self::isBetterBottleneck($units, $material->materialName, $materialId, $bottleneckUnits, $bottleneckName, $bottleneckId)) {
                 $bottleneckId = $materialId;
@@ -133,6 +157,16 @@ final class VariantCosting
             }
 
             $span = $spans[$materialId] ?? null;
+            $byColour = $span['byColour'] ?? [];
+
+            if ($material->perColour()) {
+                $colour = $byColour[$colourId] ?? null;
+                $byColour[$colourId] = [
+                    'min' => $colour === null ? $units : min($colour['min'], $units),
+                    'max' => $colour === null ? $units : max($colour['max'], $units),
+                    'missing' => $material->missingFor($colourId),
+                ];
+            }
 
             $spans[$materialId] = [
                 'name' => $span['name'] ?? $material->materialName,
@@ -141,26 +175,31 @@ final class VariantCosting
                 'max' => $span === null || $need->isGreaterThan($span['max']) ? $need : $span['max'],
                 'unitsMin' => $span === null ? $units : min($span['unitsMin'], $units),
                 'unitsMax' => $span === null ? $units : max($span['unitsMax'], $units),
+                'byColour' => $byColour,
             ];
         }
 
+        $bottleneck = $bottleneckId === null ? null : $firstLine[$bottleneckId];
+
         return [
-            'materialCost' => $exactMaterialCost->toScale(self::SCALE, RoundingMode::HalfUp),
-            'unitCost' => $exactMaterialCost->plus($fixed)->toScale(self::SCALE, RoundingMode::HalfUp),
+            'materialCost' => $costed ? $exactMaterialCost->toScale(self::SCALE, RoundingMode::HalfUp) : null,
+            'unitCost' => $costed ? $exactMaterialCost->plus($fixed)->toScale(self::SCALE, RoundingMode::HalfUp) : null,
             'max' => $bottleneckId === null ? null : $bottleneckUnits,
             'materialId' => $bottleneckId,
             'materialName' => $bottleneckId === null ? null : $bottleneckName,
+            'colourId' => $bottleneck !== null && $bottleneck->perColour() ? $colourId : null,
+            'missing' => $bottleneck !== null && $bottleneck->missingFor($colourId),
         ];
     }
 
     /**
      * @param  list<VariantLine>  $lines
      * @param  list<VariantResult>  $variantResults
-     * @param  array<string, array{materialCost: BigDecimal, unitCost: BigDecimal, max: int|null, materialId: int|null, materialName: string|null}>  $figures
+     * @param  array<string, Figure>  $figures
      * @param  array<int|string, Margin|null>  $margins
-     * @param  array<int, array{name: string, unit: string, min: BigDecimal, max: BigDecimal, unitsMin: int, unitsMax: int}>  $spans
+     * @param  array<int, Span>  $spans
      */
-    private function summarise(array $lines, bool $varies, array $variantResults, array $figures, array $margins, array $spans, string $laborCost, string $overheadCost): VariantCostingResult
+    private function summarise(array $lines, bool $varies, bool $perColour, array $variantResults, array $figures, array $margins, array $spans, string $laborCost, string $overheadCost): VariantCostingResult
     {
         // Capacity: the first variant in the given order wins a tie, for the lowest and for the highest.
         $binding = null;
@@ -209,14 +248,20 @@ final class VariantCosting
                 bindingSizeId: $low?->sizeId,
                 bottleneckMaterialId: $low?->bottleneckMaterialId,
                 bottleneckMaterialName: $low?->bottleneckMaterialName,
+                bottleneckColourId: $low?->bottleneckColourId,
+                bottleneckMissing: $low->bottleneckMissing ?? false,
             );
         }
 
         // Cost and margin ranges over every variant (an empty composition costs labor + overhead); equal figures change no lowest or highest,
-        // so the distinct compositions and the distinct unit costs are enough.
+        // so the distinct compositions and the distinct unit costs are enough. A variant with no unit cost is left out.
         $materialCostMin = $materialCostMax = $unitCostMin = $unitCostMax = null;
 
         foreach ($figures as $figure) {
+            if ($figure['materialCost'] === null || $figure['unitCost'] === null) {
+                continue;
+            }
+
             $materialCostMin = $materialCostMin === null || $figure['materialCost']->isLessThan($materialCostMin) ? $figure['materialCost'] : $materialCostMin;
             $materialCostMax = $materialCostMax === null || $figure['materialCost']->isGreaterThan($materialCostMax) ? $figure['materialCost'] : $materialCostMax;
             $unitCostMin = $unitCostMin === null || $figure['unitCost']->isLessThan($unitCostMin) ? $figure['unitCost'] : $unitCostMin;
@@ -243,14 +288,14 @@ final class VariantCosting
 
         // `single`: the one costing of the whole BOM when nothing varies, else the binding variant's (the first when every composition is empty).
         $first = $variantResults[0];
-        $singleVariant = $varies ? ($binding ?? $first) : $first;
+        $singleVariant = $varies || $perColour ? ($binding ?? $first) : $first;
         $bom = [];
 
         foreach ($lines as $line) {
             $quantity = $line->quantityFor($singleVariant->colourId, $singleVariant->sizeId);
 
             if ($quantity !== null) {
-                $bom[] = $line->bomLine($quantity);
+                $bom[] = $line->bomLine($quantity, $singleVariant->colourId);
             }
         }
 
@@ -270,16 +315,21 @@ final class VariantCosting
             bestSizeId: $best?->sizeId,
             bestMaterialId: $best?->bottleneckMaterialId,
             bestMaterialName: $best?->bottleneckMaterialName,
-            materialCostMin: ($materialCostMin ?? BigDecimal::zero())->toString(),
-            materialCostMax: ($materialCostMax ?? BigDecimal::zero())->toString(),
-            unitCostMin: ($unitCostMin ?? BigDecimal::zero())->toString(),
-            unitCostMax: ($unitCostMax ?? BigDecimal::zero())->toString(),
+            materialCostMin: $materialCostMin?->toString(),
+            materialCostMax: $materialCostMax?->toString(),
+            unitCostMin: $unitCostMin?->toString(),
+            unitCostMax: $unitCostMax?->toString(),
             marginAmountMin: $amountMin?->toString(),
             marginAmountMax: $amountMax?->toString(),
             marginPercentMin: $percentMin?->toString(),
             marginPercentMax: $percentMax?->toString(),
             materials: $this->materials($lines, $spans),
             single: $single,
+            perColour: $perColour,
+            bindingBottleneckColourId: $binding?->bottleneckColourId,
+            bindingBottleneckMissing: $binding->bottleneckMissing ?? false,
+            bestBottleneckColourId: $best?->bottleneckColourId,
+            bestBottleneckMissing: $best->bottleneckMissing ?? false,
         );
     }
 
@@ -287,7 +337,7 @@ final class VariantCosting
      * Need and units covered per material, lowest and highest, over the variants whose composition uses it, in composition order.
      *
      * @param  list<VariantLine>  $lines
-     * @param  array<int, array{name: string, unit: string, min: BigDecimal, max: BigDecimal, unitsMin: int, unitsMax: int}>  $spans
+     * @param  array<int, Span>  $spans
      * @return array<int, MaterialSpan>
      */
     private function materials(array $lines, array $spans): array
@@ -305,6 +355,7 @@ final class VariantCosting
                     neededMax: $span['max']->toScale(self::SCALE, RoundingMode::HalfUp)->toString(),
                     unitsCoveredMin: $span['unitsMin'],
                     unitsCoveredMax: $span['unitsMax'],
+                    byColour: $span['byColour'],
                 );
             }
         }

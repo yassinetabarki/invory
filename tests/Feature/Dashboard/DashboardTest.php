@@ -100,7 +100,7 @@ it('sends every figure of the dashboard for the last 30 days, from the database'
         ['product' => productRef(7, 'PRD-BLT-007', 'Leather Belt'), 'units_sold' => 31, 'revenue' => '1395.0000', 'percent_of_top' => '27.59'],
     ])->and(data_get($loaded, 'recent_sales.*.id'))->toBe(array_map(demoSaleId(...), [60, 59, 58, 57, 56]))
         ->and(data_get($loaded, 'recent_sales.*.sold_on'))->toBe(['2026-10-07', '2026-10-07', '2026-10-06', '2026-10-05', '2026-10-05'])
-        ->and(array_keys($loaded['needs_restock'][0]))->toEqualCanonicalizing(materialContractKeys())
+        ->and(array_keys($loaded['needs_restock'][0]))->toEqualCanonicalizing([...materialContractKeys(), 'colours_text'])
         ->and(data_get($loaded, 'recent_sales.0'))->toBe([
             'id' => demoSaleId(60),
             'product' => productRef(5, 'PRD-JNS-005', 'Denim Jeans 5-pocket'),
@@ -366,4 +366,16 @@ it('answers within the query budget, in the first request and in both deferred g
         ->and(count($manyPrimary))->toBe(count($fewPrimary), implode(PHP_EOL, $manyPrimary))
         ->and(count($fewDeferred))->toBeLessThanOrEqual(10, implode(PHP_EOL, $fewDeferred))
         ->and(count($manyDeferred))->toBe(count($fewDeferred), implode(PHP_EOL, $manyDeferred));
+});
+
+it('names the colours that need restock on the row of a per-colour material and still counts materials', function () {
+    // One more material on top of the demo's four that need restock: Black is low in Denim 12oz, Indigo is fine.
+    Material::factory()->perColour([['IND', '250.0000'], ['BLK', '40.0000']])->create(['name' => 'Denim 12oz', 'unit' => 'm', 'reorder_level' => '100']);
+
+    $loaded = loadedPageProps(actingAs($this->user)->get(dashboardUrl()));
+    $coloursText = array_column($loaded['needs_restock'], 'colours_text', 'name');
+
+    expect($loaded['stats']['needs_restock_count'])->toBe(5)
+        ->and($coloursText['Denim 12oz'])->toBe('Black 40 m')
+        ->and($coloursText['Woven brand label'])->toBeNull();
 });

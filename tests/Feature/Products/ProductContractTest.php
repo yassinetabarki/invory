@@ -48,7 +48,7 @@ function expectMaterialRef(array $ref): void
 /** @param  array<string, mixed>  $capacity  a `Capacity` */
 function expectCapacity(array $capacity): void
 {
-    expect(keysOf($capacity))->toBe(['max_producible', 'bottleneck', 'best', 'by_variant'])
+    expect(keysOf($capacity))->toBe(['max_producible', 'bottleneck', 'best', 'by_variant', 'bottleneck_colour', 'bottleneck_missing', 'bottleneck_stock', 'bottleneck_colour_status'])
         ->and($capacity['by_variant'])->toBeNull(); // the demo has no By colour and size line
 
     if ($capacity['max_producible'] === null) {
@@ -159,11 +159,11 @@ it('sends Product with its exact keys, order and types', function () {
         foreach ($product['components'] as $index => $line) {
             expect(keysOf($line))->toBe([
                 'id', 'position', 'material', 'quantity_mode', 'quantities', 'quantity', 'waste_percent', 'effective_quantity', 'unit_cost',
-                'line_cost', 'stock_on_hand', 'units_possible', 'is_bottleneck', 'notes',
+                'line_cost', 'stock_on_hand', 'units_possible', 'stock_by_colour', 'is_bottleneck', 'notes',
             ])
                 ->and($line['id'])->toBeInt()
                 ->and($line['position'])->toBe($index + 1)
-                ->and(keysOf($line['material']))->toBe(['id', 'sku', 'name', 'unit', 'photo_url', 'stock_status', 'reorder_level'])
+                ->and(keysOf($line['material']))->toBe(['id', 'sku', 'name', 'unit', 'photo_url', 'stock_status', 'reorder_level', 'stock_mode', 'cost_mode'])
                 ->and($line['material']['stock_status'])->toBeIn(['in_stock', 'low', 'out'])
                 ->and($line['quantity'])->toMatch(SCALE_4)
                 ->and($line['waste_percent'])->toMatch(SCALE_2)
@@ -334,7 +334,7 @@ it('sends the product-shaped props of the dashboard, the sales form and the mate
     expect($usage)->toHaveCount(3);
 
     foreach ($usage as $row) {
-        expect(keysOf($row))->toBe(['product', 'effective_quantity', 'units_covered', 'max_producible', 'bottleneck', 'is_bottleneck', 'product_varies', 'next_limit'])
+        expect(keysOf($row))->toBe(['product', 'effective_quantity', 'units_covered', 'max_producible', 'bottleneck', 'is_bottleneck', 'product_varies', 'next_limit', 'by_colour', 'bottleneck_colour', 'limit_colour'])
             ->and(keysOf($row['product']))->toBe(['id', 'sku', 'name', 'photo_url', 'status', 'status_label'])
             ->and($row['effective_quantity'])->toMatch(SCALE_4)
             ->and(keysOf($row['units_covered']))->toBe(['min', 'max'])
@@ -393,6 +393,10 @@ it('sends the guaranteed and best capacity of the card\'s Denim Jacket and its c
             'binding' => ['colour' => capacityColour($jacket->colours['Black']), 'size' => $xl],
             'best_at' => ['colour' => capacityColour($jacket->colours['Indigo']), 'bottleneck' => capacityMaterial($jacket->materials['button'])],
         ],
+        'bottleneck_colour' => null,
+        'bottleneck_missing' => false,
+        'bottleneck_stock' => '40.0000',
+        'bottleneck_colour_status' => null,
     ])->and($product['capacity_by_colour'])->toBe([
         [
             'colour' => capacityColour($jacket->colours['Indigo']),
@@ -400,6 +404,8 @@ it('sends the guaranteed and best capacity of the card\'s Denim Jacket and its c
             'best' => 112,
             'bottleneck' => capacityMaterial($jacket->materials['indigo_denim']),
             'binding_size' => $xl,
+            'bottleneck_colour' => null,
+            'bottleneck_missing' => false,
         ],
         [
             'colour' => capacityColour($jacket->colours['Black']),
@@ -407,6 +413,8 @@ it('sends the guaranteed and best capacity of the card\'s Denim Jacket and its c
             'best' => 22,
             'bottleneck' => capacityMaterial($jacket->materials['black_denim']),
             'binding_size' => $xl,
+            'bottleneck_colour' => null,
+            'bottleneck_missing' => false,
         ],
     ]);
 });
@@ -430,6 +438,8 @@ it('sends a colour that uses no material with every figure null, and counts it f
             'best' => null,
             'bottleneck' => null,
             'binding_size' => null,
+            'bottleneck_colour' => null,
+            'bottleneck_missing' => false,
         ])
         ->and([$product['capacity']['max_producible'], $product['capacity']['best']])->toBe([16, 142])
         ->and($product['capacity']['by_variant']['best_at']['bottleneck']['name'])->toBe('Denim 12oz Indigo');

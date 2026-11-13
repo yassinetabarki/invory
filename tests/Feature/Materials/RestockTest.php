@@ -178,7 +178,7 @@ it('answers with an error on the quantity, not a server error, when the stock wo
 
     actingAs($this->user)
         ->post(route('materials.restocks.store', $button), validRestockPayload(['quantity' => '9999999999.9999']))
-        ->assertSessionHasErrors('quantity');
+        ->assertSessionHasErrors(['quantity' => 'The stock would exceed 9999999999.9999.']);
 
     expect($button->fresh()->quantity_on_hand)->toBe('900.0000')
         ->and(StockMovement::query()->count())->toBe(0);

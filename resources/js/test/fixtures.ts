@@ -240,6 +240,13 @@ export const denim: Material = {
     reorder_level: '50.0000',
     stock_value: '2125.0000',
     stock_status: 'in_stock',
+    stock_mode: 'single',
+    cost_mode: 'same',
+    colours: [],
+    unit_cost_range: null,
+    stock_callout: null,
+    colours_restock_summary: null,
+    restock_colours: null,
     supplier_name: 'Tessuti Rossi',
     supplier_reference: 'TR-4471',
     color: 'Indigo',
@@ -263,6 +270,9 @@ export const thread: Material = {
     reorder_level: null,
     stock_value: '0.0000',
     stock_status: 'out',
+    stock_mode: 'single',
+    cost_mode: 'same',
+    colours: [],
     supplier_name: null,
     supplier_reference: null,
     color: null,
@@ -288,6 +298,13 @@ export const button: Material = {
     reorder_level: '1000.0000',
     stock_value: '315.0000',
     stock_status: 'low',
+    stock_mode: 'single',
+    cost_mode: 'same',
+    colours: [],
+    unit_cost_range: null,
+    stock_callout: null,
+    colours_restock_summary: null,
+    restock_colours: null,
     supplier_name: 'Northgate Trims',
     supplier_reference: 'NT-17-SHK-AB',
     color: 'Antique brass',
@@ -345,6 +362,9 @@ export const buttonUsage: MaterialUsage[] = [
         is_bottleneck: true,
         product_varies: false,
         next_limit: { material: denimRef, max_producible: 126 },
+        by_colour: null,
+        bottleneck_colour: null,
+        limit_colour: null,
     },
     {
         product: {
@@ -362,6 +382,9 @@ export const buttonUsage: MaterialUsage[] = [
         is_bottleneck: false,
         product_varies: false,
         next_limit: null,
+        by_colour: null,
+        bottleneck_colour: null,
+        limit_colour: null,
     },
     {
         product: {
@@ -379,6 +402,9 @@ export const buttonUsage: MaterialUsage[] = [
         is_bottleneck: false,
         product_varies: false,
         next_limit: null,
+        by_colour: null,
+        bottleneck_colour: null,
+        limit_colour: null,
     },
 ];
 
@@ -402,6 +428,8 @@ function movement(
         order: null,
         product_name: null,
         user_name: 'Admin',
+        colour: null,
+        entry_group: null,
         ...entry,
     };
 }

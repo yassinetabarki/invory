@@ -1,4 +1,5 @@
 import { router, useHttp } from '@inertiajs/react';
+import { TriangleAlert } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { variantName } from '@/components/production/batch-names';
 import {
@@ -41,7 +42,7 @@ export function undoText(
         .filter((row) => row.not_returned === null)
         .map(
             (row) =>
-                `${formatQuantity(row.quantity, { locale, unit: row.material.unit })} ${row.material.name}`,
+                `${formatQuantity(row.quantity, { locale, unit: row.material.unit })} ${row.material.name}${row.colour ? ` · ${row.colour.name}` : ''}`,
         );
 
     if (back.length === 0) {
@@ -114,6 +115,10 @@ export function UndoBatchDialog({ batch, onClose }: UndoBatchDialogProps) {
     }
 
     const loaded = preview !== null && preview.id === id ? preview.data : null;
+    // INV-21: a colour the material no longer has gets nothing back; its row says so.
+    const lost = (loaded?.rows ?? []).filter(
+        (row) => row.not_returned === 'colour_missing' && row.colour !== null,
+    );
 
     return (
         <AlertDialog
@@ -129,6 +134,27 @@ export function UndoBatchDialog({ batch, onClose }: UndoBatchDialogProps) {
                         {batch && undoText(batch, loaded, locale)}
                     </AlertDialogDescription>
                 </AlertDialogHeader>
+                {lost.length > 0 && (
+                    <ul className="flex flex-col gap-1 text-sm">
+                        {lost.map((row) => (
+                            <li
+                                key={`${row.material.id}-${row.colour?.id ?? 0}`}
+                            >
+                                <span className="font-medium">
+                                    {row.material.name}:
+                                </span>{' '}
+                                <span className="inline-flex items-center gap-1.5 text-warning-foreground">
+                                    <TriangleAlert
+                                        className="size-4 shrink-0"
+                                        aria-hidden="true"
+                                    />
+                                    {row.colour?.name} not on this material, not
+                                    returned
+                                </span>
+                            </li>
+                        ))}
+                    </ul>
+                )}
                 {error && (
                     <p role="alert" className="text-sm text-destructive">
                         {error}

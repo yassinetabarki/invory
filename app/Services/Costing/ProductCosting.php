@@ -13,7 +13,8 @@ use App\Domain\Costing\VariantCostingResult;
  * Everything the domain says about one product at one moment: the cost breakdown and the capacity ({@see CostingResult}), the
  * margin (null without a selling price) and the BOM the figures came from (so a "next limit" can be derived without another query).
  *
- * A product with a "By colour and size" line also carries {@see VariantCostingResult} in `$variants`. Then `result`, `margin` and
+ * A product with a "By colour and size" line, or a material kept per colour (INV-21), also carries {@see VariantCostingResult} in
+ * `$variants`. Then `result`, `margin` and
  * `bom` are those of its binding variant (the one that makes the fewest): its guaranteed capacity and that variant's bottleneck, which is
  * what every screen that shows one figure keeps showing until cost and margin become ranges (INV-16-j).
  */
@@ -38,26 +39,62 @@ final readonly class ProductCosting
     }
 
     /**
-     * The lowest and highest material cost over every colour and size (both ends equal when nothing varies).
-     *
-     * @return array{min: string, max: string}
+     * Whether the product is costed per colour and size: some line is by colour and size, or some material is kept per colour (INV-21).
+     * Then each colour has its own capacity (and cost, with cost per colour), and `result` is the binding variant's.
      */
-    public function materialCostRange(): array
+    public function perVariant(): bool
     {
-        return $this->variants === null
-            ? ['min' => $this->result->cost->materialCost, 'max' => $this->result->cost->materialCost]
+        return $this->variants !== null && ($this->variants->varies || $this->variants->perColour);
+    }
+
+    /**
+     * The stock of the bottleneck material that limits the capacity: in the binding variant's colour for a material kept per colour
+     * ("0.0000" when it lacks that colour), the material's stock otherwise. Null without a bottleneck.
+     */
+    public function bottleneckStock(): ?string
+    {
+        $materialId = $this->result->capacity->bottleneckMaterialId;
+
+        foreach ($this->bom as $line) {
+            if ($line->materialId === $materialId) {
+                return $line->stockMissing ? '0.0000' : $line->stockOnHand;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * The lowest and highest material cost over every colour and size (both ends equal when nothing varies). Null when no colour and
+     * size has a unit cost (every colour lacks the cost of a material with cost per colour, INV-21).
+     *
+     * @return array{min: string, max: string}|null
+     */
+    public function materialCostRange(): ?array
+    {
+        if ($this->variants === null) {
+            return ['min' => $this->result->cost->materialCost, 'max' => $this->result->cost->materialCost];
+        }
+
+        return $this->variants->materialCostMin === null || $this->variants->materialCostMax === null
+            ? null
             : ['min' => $this->variants->materialCostMin, 'max' => $this->variants->materialCostMax];
     }
 
     /**
-     * The lowest and highest unit cost over every colour and size (both ends equal when nothing varies).
+     * The lowest and highest unit cost over every colour and size (both ends equal when nothing varies). Null when no colour and size
+     * has a unit cost (every colour lacks the cost of a material with cost per colour, INV-21).
      *
-     * @return array{min: string, max: string}
+     * @return array{min: string, max: string}|null
      */
-    public function unitCostRange(): array
+    public function unitCostRange(): ?array
     {
-        return $this->variants === null
-            ? ['min' => $this->result->cost->unitCost, 'max' => $this->result->cost->unitCost]
+        if ($this->variants === null) {
+            return ['min' => $this->result->cost->unitCost, 'max' => $this->result->cost->unitCost];
+        }
+
+        return $this->variants->unitCostMin === null || $this->variants->unitCostMax === null
+            ? null
             : ['min' => $this->variants->unitCostMin, 'max' => $this->variants->unitCostMax];
     }
 

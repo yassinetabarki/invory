@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\MaterialCostMode;
 use App\Models\Material;
 use App\Services\Inventory\InventorySummary;
 use Illuminate\Support\Facades\DB;
@@ -168,3 +169,25 @@ it('reads the totals in one aggregate query on PostgreSQL, however many material
         ->and($totals['materials_count'])->toBe(501)
         ->and($totals['inventory_value'])->toBe('501.0000');
 })->skip(fn () => DB::getDriverName() !== 'pgsql', 'PostgreSQL only');
+
+it('values a per-colour material colour by colour, or at the one cost, and adds it to the inventory value (INV-21-b)', function () {
+    // Denim 12oz: Indigo 250 m at 8.5000 and Black 40 m at 9.2000 (reorder level 100): 2125.0000 + 368.0000.
+    $perColourCost = Material::factory()->perColour([['IND', '250.0000', '8.5000'], ['BLK', '40.0000', '9.2000']], MaterialCostMode::PerColour)
+        ->create(['reorder_level' => '100.0000']);
+    // The same colours at the one cost 8.5000: 290 x 8.5000.
+    $sameCost = Material::factory()->perColour([['IND', '250.0000'], ['BLK', '40.0000']])
+        ->create(['unit_cost' => '8.5000', 'reorder_level' => '100.0000']);
+
+    $value = fn (Material $material): string => Material::query()->with('colours')->findOrFail($material->id)->stockValue();
+
+    expect($value($perColourCost))->toBe('2493.0000')
+        ->and($value($sameCost))->toBe('2465.0000')
+        // Both are Low (Black is under 100), and both count in the inventory value: 2493 + 2465.
+        ->and(app(InventorySummary::class)->summarize())->toBe([
+            'materials_count' => 2,
+            'inventory_value' => '4958.0000',
+            'needs_restock_count' => 2,
+            'low_stock_count' => 2,
+            'out_of_stock_count' => 0,
+        ]);
+});

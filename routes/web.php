@@ -4,9 +4,12 @@ use App\Http\Controllers\ClientController;
 use App\Http\Controllers\ClientLookupController;
 use App\Http\Controllers\ClientOptionController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\MaterialColourController;
 use App\Http\Controllers\MaterialController;
 use App\Http\Controllers\MaterialOptionController;
 use App\Http\Controllers\MaterialRestockController;
+use App\Http\Controllers\MaterialRestockSheetController;
+use App\Http\Controllers\MaterialStockTotalController;
 use App\Http\Controllers\OrderCancellationController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\OrderDeliveryController;
@@ -40,12 +43,23 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // The BOM picker's typeahead (S-25). Registered before the resource, which would otherwise read `options` as a {material}.
     Route::get('materials/options', [MaterialOptionController::class, 'index'])->name('materials.options');
 
+    // The total of a switch back to one stock (INV-21-g), from the typed quantities. Also before the resource.
+    Route::get('materials/stock-total', MaterialStockTotalController::class)->name('materials.stock-total');
+
     // 1 to 18 digits: anything else is a 404 instead of a type error (int $id overflow) or, on PostgreSQL, a bigint query error.
     Route::resource('materials', MaterialController::class)->where(['material' => '[0-9]{1,18}']);
 
     Route::post('materials/{material}/restocks', [MaterialRestockController::class, 'store'])
         ->where('material', '[0-9]{1,18}')
         ->name('materials.restocks.store');
+
+    // Add a missing colour to a per-colour material, from where it is used (INV-21-p), and the JSON the Restock sheet opens from.
+    Route::post('materials/{material}/colours', [MaterialColourController::class, 'store'])
+        ->where('material', '[0-9]{1,18}')
+        ->name('materials.colours.store');
+    Route::get('materials/{material}/restock-sheet', MaterialRestockSheetController::class)
+        ->where('material', '[0-9]{1,18}')
+        ->name('materials.restock-sheet');
 
     // {product} is route-model bound (an unknown or soft-deleted product is a 404). The digit constraint keeps a malformed id a 404
     // too, instead of a bigint query error on PostgreSQL.

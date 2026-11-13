@@ -5,7 +5,7 @@ import { MaterialFormActions } from '@/components/materials/material-form-action
 import { PageHeader } from '@/components/shared/page-header';
 import { useReference } from '@/hooks/use-reference';
 import { categoryOptions, unitOptions } from '@/lib/reference';
-import type { MaterialFormData } from '@/types/domain';
+import type { Colour, MaterialFormData } from '@/types/domain';
 
 const EMPTY_MATERIAL: MaterialFormData = {
     sku: '',
@@ -14,6 +14,9 @@ const EMPTY_MATERIAL: MaterialFormData = {
     unit: '',
     unit_cost: '',
     quantity_on_hand: '',
+    stock_mode: 'single',
+    cost_mode: 'same',
+    colours: [],
     reorder_level: '',
     supplier_name: '',
     supplier_reference: '',
@@ -26,7 +29,12 @@ const EMPTY_MATERIAL: MaterialFormData = {
 
 const SUBMIT_LABEL = 'Save material';
 
-export default function MaterialsCreate() {
+/** The workshop's colours are a page prop added by INV-21-g (optional here until the page tests send it). */
+type MaterialsCreateProps = { colours?: Colour[] };
+
+export default function MaterialsCreate({
+    colours = [],
+}: MaterialsCreateProps) {
     const reference = useReference();
     const cancelHref = MaterialController.index.url();
 
@@ -58,6 +66,7 @@ export default function MaterialsCreate() {
                                 reference.material_categories,
                             )}
                             units={unitOptions(reference.units)}
+                            colours={colours}
                             errors={errors}
                             processing={processing}
                             submitLabel={SUBMIT_LABEL}

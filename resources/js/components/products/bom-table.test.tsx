@@ -6,7 +6,10 @@ import {
     canvasLowSneaker,
     denimBlackByVariantLine,
     denimJacket,
+    denimJacketLightWash,
+    denimJacketPerColour,
     denimJacketVarying,
+    denimPerColourLine,
     sizeOptionsFixture,
 } from '@/test/fixtures/products';
 import { resetInertiaMock, setPageProps } from '@/test/inertia';
@@ -228,6 +231,99 @@ describe('<BomTable>', () => {
             expect(card.getByText('Waste').parentElement).toHaveTextContent(
                 '10%',
             );
+        });
+    });
+
+    describe('a material kept per colour (INV-21)', () => {
+        it('reads each colour: stock, View by colour, and the colour the material lacks', async () => {
+            const user = userEvent.setup();
+            const onAddColour = vi.fn();
+            const props = {
+                materialsTotal: denimJacketPerColour.cost.material_cost,
+                capacity: denimJacketPerColour.capacity.max_producible,
+                materialHref,
+                colours: denimJacketLightWash.colours,
+                sizes,
+            };
+            const denimCells = () =>
+                within(row(/Denim 12oz/)).getAllByRole('cell');
+
+            const { rerender } = render(
+                <BomTable {...props} lines={denimJacketPerColour.components} />,
+            );
+
+            // Stock on hand names the product's colours, one per line; Units possible varies.
+            const stockLines = () =>
+                within(denimCells()[6])
+                    .getAllByRole('listitem')
+                    .map((item) => item.textContent);
+
+            expect(stockLines()).toEqual(['Indigo 250 m', 'Black 40 m']);
+            expect(denimCells()[7]).toHaveTextContent('Varies');
+
+            await user.click(
+                within(table()).getByRole('button', {
+                    name: 'View by colour for Denim 12oz',
+                }),
+            );
+
+            expect(
+                within(denimCells()[7])
+                    .getAllByRole('listitem')
+                    .map((item) => item.textContent),
+            ).toEqual(['Indigo 103–142 units', 'Black 16–22 units']);
+
+            // A colour whose sizes agree reads one number.
+            rerender(
+                <BomTable
+                    {...props}
+                    lines={[
+                        {
+                            ...denimPerColourLine,
+                            stock_by_colour: [
+                                {
+                                    colour: denimJacketPerColour.colours[0],
+                                    missing: false,
+                                    stock_on_hand: '250.0000',
+                                    units_possible: { min: 126, max: 126 },
+                                },
+                            ],
+                        },
+                    ]}
+                />,
+            );
+
+            // (the panel stays open across the re-render)
+            expect(denimCells()[7]).toHaveTextContent('Indigo 126 units');
+
+            // A colour the material lacks: the warning line, and the link only when the page can add it.
+            rerender(
+                <BomTable {...props} lines={denimJacketLightWash.components} />,
+            );
+
+            expect(stockLines()).toEqual([
+                'Indigo 250 m',
+                'Black 40 m',
+                'Light wash — no stock',
+            ]);
+            expect(
+                screen.queryByRole('button', { name: /^Add Light wash/ }),
+            ).not.toBeInTheDocument();
+
+            rerender(
+                <BomTable
+                    {...props}
+                    lines={denimJacketLightWash.components}
+                    onAddColour={onAddColour}
+                />,
+            );
+            await user.click(
+                within(table()).getByRole('button', {
+                    name: 'Add Light wash to Denim 12oz',
+                }),
+            );
+
+            expect(onAddColour).toHaveBeenCalledWith(14, 11);
         });
     });
 

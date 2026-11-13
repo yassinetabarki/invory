@@ -14,5 +14,6 @@ final readonly class MaterialReturn
         public ?string $notReturned,  // 'deleted' | 'unit_changed' when no part is returnable (deleted wins); else null
         public ?string $inStock,      // scale 4; null when not returnable at all
         public ?string $after,        // inStock + returned, scale 4; null when notReturned
+        public ?int $colourId = null, // the colour of the take this is for (INV-21); null for a one-stock take
     ) {}
 }

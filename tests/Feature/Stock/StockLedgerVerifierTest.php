@@ -1,8 +1,11 @@
 <?php
 
 use App\Enums\StockMovementType;
+use App\Models\Colour;
 use App\Models\Material;
+use App\Models\MaterialColour;
 use App\Models\StockMovement;
+use App\Services\Inventory\StockLedgerVerifier;
 
 /*
 |--------------------------------------------------------------------------
@@ -49,3 +52,24 @@ it('reports drift when the cutting or the return is missing from the ledger', fu
     'the cutting is missing' => ['cutting', '259.9000', '-59.4000'],
     'the return is missing' => ['return', '190.6000', '9.9000'],
 ]);
+
+it('checks a per-colour material colour by colour: a row off by 0.0001 drifts, balanced entries do not (INV-21-b)', function () {
+    // Denim 12oz per colour: Indigo 250 and Black 40, each opened by its own `created` entry naming the colour.
+    $denim = Material::factory()->perColour([['IND', '250.0000'], ['BLK', '40.0000']])->create(['sku' => 'MAT-DEN-012', 'name' => 'Denim 12oz']);
+    $colours = Colour::query()->whereIn('code', ['IND', 'BLK'])->get()->keyBy('code');
+
+    foreach (['IND' => '250.0000', 'BLK' => '40.0000'] as $code => $quantity) {
+        StockMovement::factory()->for($denim)->created($quantity)->create(['colour_id' => $colours[$code]->id]);
+    }
+
+    $verifier = app(StockLedgerVerifier::class);
+
+    expect($verifier->verify())->toBe(['checked' => 1, 'drifts' => []]);
+
+    MaterialColour::query()->where('material_id', $denim->id)->where('colour_id', $colours['IND']->id)->update(['quantity_on_hand' => '250.0001']);
+
+    expect($verifier->verify()['drifts'])->toBe([[
+        'material_id' => $denim->id, 'sku' => 'MAT-DEN-012', 'name' => 'Denim 12oz · Indigo',
+        'stored' => '250.0001', 'ledger' => '250.0000', 'drift' => '0.0001', 'colour_id' => $colours['IND']->id,
+    ]]);
+});

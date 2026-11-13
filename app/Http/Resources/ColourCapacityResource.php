@@ -42,6 +42,9 @@ final class ColourCapacityResource extends JsonResource
             'best' => $this->best,
             'bottleneck' => $this->bottleneck === null ? null : (new MaterialRefResource($this->bottleneck))->resolve($request),
             'binding_size' => $this->bindingSize === null ? null : ['id' => $this->bindingSize->id, 'label' => $this->bindingSize->label],
+            // INV-21: this colour when the bottleneck keeps its stock per colour (the stock that limits it), and whether it lacks the colour.
+            'bottleneck_colour' => $this->bottleneckColourId === null ? null : (new ColourResource($this->colour))->resolve($request),
+            'bottleneck_missing' => $this->bottleneckMissing,
         ];
     }
 }

@@ -16,6 +16,11 @@ use InvalidArgumentException;
  * The line's decimals are validated once, here, and its exact figures are worked out once per distinct quantity (an "option"): the
  * effective quantity `q × (100 + waste) / 100` and the line cost `effective × unit cost`, as CostingCalculator does. VariantCosting
  * sums those, so a cell is never parsed again.
+ *
+ * Colour stock (INV-21, ADR-0029): a line on a material kept per colour also carries that material's stock by colour id (and, with
+ * cost per colour, its cost by colour id). A variant of colour c then reads the stock and the cost of colour c; a colour the material
+ * lacks is a stock of 0, flagged missing, and with cost per colour it has no cost. A one-stock line (`$colourStock` null) reads
+ * `$stockOnHand` and `$unitCost` exactly as before.
  */
 final readonly class VariantLine
 {
@@ -31,12 +36,21 @@ final readonly class VariantLine
     /** @var array<int, array<int, int>> option by colour id, then size id; empty on a `same` line */
     private array $optionOf;
 
+    /** @var array<int, BigDecimal> the colour's stock, by colour id; empty for a one-stock material */
+    private array $stockOf;
+
+    /** @var array<int, list<BigDecimal>> exact line cost by colour id, then option, with cost per colour; empty otherwise */
+    private array $colourCosts;
+
     /**
      * @param  string|null  $quantity  A `same` line: the quantity per unit, > 0. Null on a by-colour-and-size line.
      * @param  array<int, array<int, string>>|null  $cells  A by-colour-and-size line: quantity by colour id, then size id, each > 0.
      *                                                      Null on a `same` line; never empty when set.
+     * @param  array<int, string>|null  $colourStock  The material's stock by colour id (>= 0); null for a one-stock material, which reads `$stockOnHand`.
+     * @param  array<int, string>  $colourUnitCosts  The material's unit cost by colour id (>= 0); the same colours as `$colourStock` with cost per colour, else empty.
+     * @param  bool  $costPerColour  Whether the material has cost per colour; needs `$colourStock`.
      *
-     * @throws InvalidArgumentException If both or neither of quantity and cells are given, the cells are empty, or a quantity is invalid.
+     * @throws InvalidArgumentException If both or neither of quantity and cells are given, the cells are empty, a quantity is invalid, or the colour stock and costs do not match.
      */
     public function __construct(
         public int $materialId,
@@ -47,6 +61,9 @@ final readonly class VariantLine
         public string $wastePercent,
         public string $unitCost,
         public string $stockOnHand,
+        public ?array $colourStock = null,
+        public array $colourUnitCosts = [],
+        public bool $costPerColour = false,
     ) {
         if (($quantity === null) === ($cells === null)) {
             throw new InvalidArgumentException('A line has either a quantity or cells, never both and never neither.');
@@ -54,6 +71,26 @@ final readonly class VariantLine
 
         if ($cells === []) {
             throw new InvalidArgumentException('A by-colour-and-size line needs at least one cell.');
+        }
+
+        $stockOf = [];
+
+        foreach ($colourStock ?? [] as $colourId => $colourQuantity) {
+            $stockOf[$colourId] = Decimals::parseNonNegative($colourQuantity, 'colourStock');
+        }
+
+        $colourCostOf = [];
+
+        if ($costPerColour) {
+            if ($colourStock === null || array_diff_key($colourUnitCosts, $colourStock) !== [] || array_diff_key($colourStock, $colourUnitCosts) !== []) {
+                throw new InvalidArgumentException('Cost per colour needs a unit cost for each colour of the stock, and only those.');
+            }
+
+            foreach ($colourUnitCosts as $colourId => $colourCost) {
+                $colourCostOf[$colourId] = Decimals::parseNonNegative($colourCost, 'colourUnitCosts');
+            }
+        } elseif ($colourUnitCosts !== []) {
+            throw new InvalidArgumentException('Colour unit costs need cost per colour.');
         }
 
         $first = $quantity ?? $this->firstCell($cells ?? []);
@@ -71,7 +108,9 @@ final readonly class VariantLine
         /** @var array<string, int> $byValue option by quantity value ("1.8" and "1.8000" are one) */
         $byValue = [];
 
-        $option = function (string $raw) use ($waste, $unitCostDecimal, &$effectives, &$costs, &$byRaw, &$byValue): int {
+        $colourCosts = [];
+
+        $option = function (string $raw) use ($waste, $unitCostDecimal, $colourCostOf, &$effectives, &$costs, &$colourCosts, &$byRaw, &$byValue): int {
             if (isset($byRaw[$raw])) {
                 return $byRaw[$raw];
             }
@@ -89,6 +128,10 @@ final readonly class VariantLine
                 $byValue[$value] = count($effectives);
                 $effectives[] = $effective;
                 $costs[] = $effective->multipliedBy($unitCostDecimal);
+
+                foreach ($colourCostOf as $colourId => $colourCost) {
+                    $colourCosts[$colourId][] = $effective->multipliedBy($colourCost);
+                }
             }
 
             return $byRaw[$raw] = $byValue[$value];
@@ -110,6 +153,38 @@ final readonly class VariantLine
         $this->effectives = $effectives;
         $this->costs = $costs;
         $this->optionOf = $optionOf;
+        $this->stockOf = $stockOf;
+        $this->colourCosts = $colourCosts;
+    }
+
+    /** True for a material kept per colour: a variant reads the stock (and maybe the cost) of its own colour. */
+    public function perColour(): bool
+    {
+        return $this->colourStock !== null;
+    }
+
+    /** The stock a variant of this colour draws on: the colour's (0 when the material lacks it), or the one stock. */
+    public function stockFor(int $colourId): BigDecimal
+    {
+        return $this->colourStock === null ? $this->stock : ($this->stockOf[$colourId] ?? BigDecimal::zero());
+    }
+
+    /** Whether the material is kept per colour and has no stock of this colour. */
+    public function missingFor(int $colourId): bool
+    {
+        return $this->colourStock !== null && ! isset($this->stockOf[$colourId]);
+    }
+
+    /** Whether a variant of this colour has no unit cost for the material: cost per colour, and the material lacks the colour. */
+    public function noCostFor(int $colourId): bool
+    {
+        return $this->costPerColour && ! isset($this->colourCosts[$colourId]);
+    }
+
+    /** The exact line cost of an option for a variant of this colour, or null when it has no unit cost ({@see self::noCostFor()}). */
+    public function costFor(int $colourId, int $option): ?BigDecimal
+    {
+        return $this->costPerColour ? ($this->colourCosts[$colourId][$option] ?? null) : $this->costs[$option];
     }
 
     /** True for a by-colour-and-size line. */
@@ -131,20 +206,35 @@ final readonly class VariantLine
     }
 
     /**
-     * The costing line for one quantity of this line (BomLine's own checks apply).
+     * The costing line for one quantity of this line (BomLine's own checks apply). With a colour of a material kept per colour, it holds
+     * that colour's stock (0 when missing) and cost (the material's own unit cost when the colour has none, so the line stays costable).
      *
      * @throws InvalidArgumentException
      */
-    public function bomLine(string $quantity): BomLine
+    public function bomLine(string $quantity, ?int $colourId = null): BomLine
     {
+        $stock = $this->stockOnHand;
+        $unitCost = $this->unitCost;
+        $stockColourId = null;
+        $missing = false;
+
+        if ($colourId !== null && $this->colourStock !== null) {
+            $stock = $this->colourStock[$colourId] ?? '0';
+            $unitCost = $this->colourUnitCosts[$colourId] ?? $this->unitCost;
+            $stockColourId = $colourId;
+            $missing = $this->missingFor($colourId);
+        }
+
         return new BomLine(
             $this->materialId,
             $this->materialName,
             $this->unit,
             $quantity,
             $this->wastePercent,
-            $this->unitCost,
-            $this->stockOnHand,
+            $unitCost,
+            $stock,
+            $stockColourId,
+            $missing,
         );
     }
 

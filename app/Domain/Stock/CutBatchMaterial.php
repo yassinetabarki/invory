@@ -17,5 +17,6 @@ final readonly class CutBatchMaterial
         public ?string $perUnitExact, // decimal(20,8) as stored; null on a cut with groups (they remember it)
         public string $taken,         // decimal(14,4) as stored
         public ?string $notReturned,
+        public ?int $colourId = null, // the colour of the stock it took from (INV-21); null = a one-stock take, holds every group
     ) {}
 }

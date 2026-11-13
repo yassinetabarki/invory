@@ -15,6 +15,7 @@ use App\Models\Material;
 use App\Models\Product;
 use App\Models\Sale;
 use App\Services\Inventory\InventorySummary;
+use App\Services\Materials\MaterialStockSentences;
 use App\Services\Products\ProductCatalog;
 use App\Services\Reference\ReferenceData;
 use App\Services\Sales\SalesReport;
@@ -39,6 +40,7 @@ final class DashboardController extends Controller
         SalesReport $report,
         ProductCatalog $catalog,
         ReferenceData $reference,
+        MaterialStockSentences $sentences,
     ): Response {
         $period = $request->period();
 
@@ -68,7 +70,7 @@ final class DashboardController extends Controller
             }, 'primary'),
             // The three secondary panels are deferred in ONE group (the default): the KPI row and the rankings paint at once and these
             // arrive together in a single follow-up request, which builds the ProductCatalog once for its two products-based sections.
-            'needs_restock' => Inertia::defer(fn (): array => MaterialResource::collection($this->needsRestock($reference))->resolve()),
+            'needs_restock' => Inertia::defer(fn (): array => $this->needsRestockRows($this->needsRestock($reference), $sentences)),
             // Before `recent_sales` on purpose: deferred props resolve in this order, and `alerts` builds the catalog that `recent_sales`
             // then takes its product refs from (otherwise it would query the products on its own).
             'alerts' => Inertia::defer(fn (): array => $this->alerts($catalog->alerts(), $request)),
@@ -132,6 +134,23 @@ final class DashboardController extends Controller
     }
 
     /**
+     * The "needs restock" rows: a `Material` each, plus `colours_text` ("Black 40 m, Camel 0 m"; null for one stock).
+     *
+     * @param  list<Material>  $materials
+     * @return list<array<string, mixed>>
+     */
+    private function needsRestockRows(array $materials, MaterialStockSentences $sentences): array
+    {
+        return array_map(
+            static fn (Material $material): array => [
+                ...(new MaterialResource($material))->resolve(),
+                'colours_text' => $sentences->coloursText($material),
+            ],
+            $materials,
+        );
+    }
+
+    /**
      * Materials to reorder: out of stock first, then low, each by name (a real query).
      *
      * @param  ReferenceData  $reference  its units and categories (read once per request, shared with the `reference` prop) are set on
@@ -150,6 +169,8 @@ final class DashboardController extends Controller
             ->limit(self::LIST_SIZE)
             ->get()
             ->all());
+
+        Material::loadColours($materials);
 
         $units = $reference->units();
         $categories = $reference->materialCategories();

@@ -1,4 +1,6 @@
 import { Link } from '@inertiajs/react';
+import { AddColourLink } from '@/components/products/colour-stock-line';
+import type { AddColour } from '@/components/products/colour-stock-line';
 import { ColourTag } from '@/components/shared/colour-tag';
 import { SkeletonCard } from '@/components/shared/skeletons';
 import {
@@ -24,6 +26,8 @@ type CapacityByColourCardProps = {
     best: number | null;
     /** URL builder for a material (Wayfinder in the page). */
     materialHref: (material: MaterialRef) => string;
+    /** Opens the window that adds a missing colour to a material (INV-21-p); the link shows only when given. */
+    onAddColour?: AddColour;
 };
 
 const TOTAL_LABEL = 'All colours (any mix)';
@@ -37,23 +41,41 @@ function NoComposition() {
 function LimitedBy({
     row,
     materialHref,
+    onAddColour,
 }: {
     row: ColourCapacity;
     materialHref: CapacityByColourCardProps['materialHref'];
+    onAddColour?: AddColour;
 }) {
-    if (row.bottleneck === null) {
+    const { bottleneck, bottleneck_colour: colour } = row;
+
+    if (bottleneck === null) {
         return <span className="text-muted-foreground">{EMPTY_VALUE}</span>;
     }
 
+    const missing = colour !== null && row.bottleneck_missing;
+
     return (
-        <span className="[overflow-wrap:anywhere]">
-            <Link
-                href={materialHref(row.bottleneck)}
-                className="font-semibold hover:underline focus-visible:underline"
-            >
-                {row.bottleneck.name}
-            </Link>
-            {row.binding_size && ` (${row.binding_size.label})`}
+        <span className="flex flex-col items-start [overflow-wrap:anywhere]">
+            <span>
+                <Link
+                    href={materialHref(bottleneck)}
+                    className="font-semibold hover:underline focus-visible:underline"
+                >
+                    {bottleneck.name}
+                </Link>
+                {missing
+                    ? ` — no ${colour.name} stock`
+                    : colour && `, ${colour.name} stock`}
+                {!missing && row.binding_size && ` (${row.binding_size.label})`}
+            </span>
+            {missing && onAddColour && (
+                <AddColourLink
+                    materialName={bottleneck.name}
+                    colourName={colour.name}
+                    onClick={() => onAddColour(bottleneck.id, colour.id)}
+                />
+            )}
         </span>
     );
 }
@@ -92,6 +114,7 @@ export function CapacityByColourCard({
     guaranteed,
     best,
     materialHref,
+    onAddColour,
 }: CapacityByColourCardProps) {
     return (
         <section
@@ -149,6 +172,7 @@ export function CapacityByColourCard({
                                             <LimitedBy
                                                 row={row}
                                                 materialHref={materialHref}
+                                                onAddColour={onAddColour}
                                             />
                                         </TableCell>
                                     </>
@@ -226,6 +250,7 @@ export function CapacityByColourCard({
                                             <LimitedBy
                                                 row={row}
                                                 materialHref={materialHref}
+                                                onAddColour={onAddColour}
                                             />
                                         </dd>
                                     </div>

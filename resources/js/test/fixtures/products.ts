@@ -300,6 +300,8 @@ function line(
             photo_url,
             stock_status: option.stock_status,
             reorder_level,
+            stock_mode: 'single',
+            cost_mode: 'same',
         },
         quantity_mode: 'same',
         quantities: [],
@@ -309,6 +311,7 @@ function line(
         unit_cost: option.unit_cost,
         line_cost: values.line_cost,
         stock_on_hand: option.quantity_on_hand,
+        stock_by_colour: null,
         units_possible: values.units_possible,
         is_bottleneck: values.is_bottleneck ?? false,
         notes: values.notes,
@@ -331,6 +334,8 @@ export const denimBlackByVariantLine: ProductComponentLine = {
         photo_url: null,
         stock_status: 'in_stock',
         reorder_level: '10.0000',
+        stock_mode: 'single',
+        cost_mode: 'same',
     },
     quantity_mode: 'by_variant',
     quantities: [
@@ -345,6 +350,7 @@ export const denimBlackByVariantLine: ProductComponentLine = {
     unit_cost: '8.5000',
     line_cost: null,
     stock_on_hand: '40.0000',
+    stock_by_colour: null,
     units_possible: null,
     is_bottleneck: false,
     notes: null,
@@ -482,6 +488,10 @@ export const denimJacket: Product = {
     capacity: {
         max_producible: 112,
         bottleneck: materialRef('button'),
+        bottleneck_colour: null,
+        bottleneck_missing: false,
+        bottleneck_colour_status: null,
+        bottleneck_stock: catalogue.button.option.quantity_on_hand,
         best: 112,
         by_variant: null,
     },
@@ -689,6 +699,10 @@ export const canvasLowSneaker: Product = {
     capacity: {
         max_producible: 0,
         bottleneck: materialRef('cupsole'),
+        bottleneck_colour: null,
+        bottleneck_missing: false,
+        bottleneck_colour_status: null,
+        bottleneck_stock: catalogue.cupsole.option.quantity_on_hand,
         best: 0,
         by_variant: null,
     },
@@ -768,6 +782,10 @@ export const choreJacket: Product = {
     capacity: {
         max_producible: 129,
         bottleneck: materialRef('canvas'),
+        bottleneck_colour: null,
+        bottleneck_missing: false,
+        bottleneck_colour_status: null,
+        bottleneck_stock: catalogue.canvas.option.quantity_on_hand,
         best: 129,
         by_variant: null,
     },
@@ -823,6 +841,10 @@ export const jacketWithoutComposition: Product = {
     capacity: {
         max_producible: null,
         bottleneck: null,
+        bottleneck_colour: null,
+        bottleneck_missing: false,
+        bottleneck_colour_status: null,
+        bottleneck_stock: null,
         best: null,
         by_variant: null,
     },
@@ -868,6 +890,10 @@ export const denimJacketVarying: Product = {
     capacity: {
         max_producible: 16,
         bottleneck: denimBlackRef,
+        bottleneck_colour: null,
+        bottleneck_missing: false,
+        bottleneck_colour_status: null,
+        bottleneck_stock: '40.0000',
         best: 112,
         by_variant: {
             binding: { colour: black, size: sizeXl },
@@ -880,6 +906,8 @@ export const denimJacketVarying: Product = {
             guaranteed: 16,
             best: 22,
             bottleneck: denimBlackRef,
+            bottleneck_colour: null,
+            bottleneck_missing: false,
             binding_size: sizeXl,
         },
         {
@@ -887,6 +915,8 @@ export const denimJacketVarying: Product = {
             guaranteed: 103,
             best: 112,
             bottleneck: materialRef('denim'),
+            bottleneck_colour: null,
+            bottleneck_missing: false,
             binding_size: sizeXl,
         },
     ],
@@ -896,6 +926,146 @@ export const denimJacketVarying: Product = {
             is_bottleneck: false,
         })),
         { ...denimBlackByVariantLine, is_bottleneck: true },
+    ],
+};
+
+const lightWash: Colour = {
+    id: 11,
+    code: 'LWH',
+    name: 'Light wash',
+    swatch: '#9DB3D1',
+};
+
+/** Denim 12oz, one material kept per colour (INV-21): Indigo 250 m, Black 40 m. */
+export const denimPerColourRef: MaterialRef = {
+    id: 14,
+    sku: 'MAT-DEN-014',
+    name: 'Denim 12oz',
+    unit: 'm',
+};
+
+/** The Denim Jacket's denim line by colour and size on that material: Indigo covers 103–142 units, Black 16–22. */
+export const denimPerColourLine: ProductComponentLine = {
+    ...denimBlackByVariantLine,
+    id: 191,
+    material: {
+        ...denimBlackByVariantLine.material,
+        ...denimPerColourRef,
+        stock_status: 'low',
+        reorder_level: '100.0000',
+        stock_mode: 'per_colour',
+        cost_mode: 'per_colour',
+    },
+    stock_on_hand: '290.0000',
+    stock_by_colour: [
+        {
+            colour: indigo,
+            missing: false,
+            stock_on_hand: '250.0000',
+            units_possible: { min: 103, max: 142 },
+        },
+        {
+            colour: black,
+            missing: false,
+            stock_on_hand: '40.0000',
+            units_possible: { min: 16, max: 22 },
+        },
+    ],
+    is_bottleneck: true,
+};
+
+/**
+ * The card's example (INV-21): the Denim Jacket in Indigo and Black on one
+ * per-colour Denim 12oz. Guaranteed 16 (Black, XL, limited by the Black stock),
+ * best 112 (Indigo, limited by the button).
+ */
+export const denimJacketPerColour: Product = {
+    ...denimJacketVarying,
+    colours: [indigo, black],
+    capacity: {
+        max_producible: 16,
+        bottleneck: denimPerColourRef,
+        bottleneck_colour: black,
+        bottleneck_missing: false,
+        bottleneck_colour_status: 'low',
+        bottleneck_stock: '40.0000',
+        best: 112,
+        by_variant: {
+            binding: { colour: black, size: sizeXl },
+            best_at: { colour: indigo, bottleneck: materialRef('button') },
+        },
+    },
+    capacity_by_colour: [
+        {
+            colour: indigo,
+            guaranteed: 103,
+            best: 112,
+            bottleneck: denimPerColourRef,
+            bottleneck_colour: indigo,
+            bottleneck_missing: false,
+            binding_size: sizeXl,
+        },
+        {
+            colour: black,
+            guaranteed: 16,
+            best: 22,
+            bottleneck: denimPerColourRef,
+            bottleneck_colour: black,
+            bottleneck_missing: false,
+            binding_size: sizeXl,
+        },
+    ],
+    components: [
+        ...denimJacket.components
+            .slice(1)
+            .map((component) => ({ ...component, is_bottleneck: false })),
+        denimPerColourLine,
+    ],
+};
+
+/** The same jacket with Light wash added to it and Denim 12oz without Light wash: nothing in Light wash can be made. */
+export const denimJacketLightWash: Product = {
+    ...denimJacketPerColour,
+    colours: [indigo, black, lightWash],
+    capacity: {
+        max_producible: 0,
+        bottleneck: denimPerColourRef,
+        bottleneck_colour: lightWash,
+        bottleneck_missing: true,
+        bottleneck_colour_status: 'out',
+        bottleneck_stock: '0.0000',
+        best: 112,
+        by_variant: {
+            binding: { colour: lightWash, size: sizeXl },
+            best_at: { colour: indigo, bottleneck: materialRef('button') },
+        },
+    },
+    capacity_by_colour: [
+        ...(denimJacketPerColour.capacity_by_colour ?? []),
+        {
+            colour: lightWash,
+            guaranteed: 0,
+            best: 0,
+            bottleneck: denimPerColourRef,
+            bottleneck_colour: lightWash,
+            bottleneck_missing: true,
+            binding_size: sizeXl,
+        },
+    ],
+    components: [
+        ...denimJacketPerColour.components.slice(0, -1),
+        {
+            ...denimPerColourLine,
+            stock_by_colour: [
+                ...(denimPerColourLine.stock_by_colour ?? []),
+                {
+                    colour: lightWash,
+                    missing: true,
+                    stock_on_hand: '0.0000',
+                    units_possible: { min: 0, max: 0 },
+                },
+            ],
+        },
     ],
 };
 
@@ -933,6 +1103,10 @@ export const denimJacketItem: ProductListItem = {
     capacity: {
         max_producible: 112,
         bottleneck: materialRef('button'),
+        bottleneck_colour: null,
+        bottleneck_missing: false,
+        bottleneck_colour_status: null,
+        bottleneck_stock: catalogue.button.option.quantity_on_hand,
         best: 112,
         by_variant: null,
     },
@@ -955,6 +1129,10 @@ export const teeItem: ProductListItem = {
     capacity: {
         max_producible: 50,
         bottleneck: materialRef('jersey'),
+        bottleneck_colour: null,
+        bottleneck_missing: false,
+        bottleneck_colour_status: null,
+        bottleneck_stock: catalogue.jersey.option.quantity_on_hand,
         best: 50,
         by_variant: null,
     },
@@ -977,6 +1155,10 @@ export const sneakerItem: ProductListItem = {
     capacity: {
         max_producible: 0,
         bottleneck: materialRef('cupsole'),
+        bottleneck_colour: null,
+        bottleneck_missing: false,
+        bottleneck_colour_status: null,
+        bottleneck_stock: catalogue.cupsole.option.quantity_on_hand,
         best: 0,
         by_variant: null,
     },
@@ -999,6 +1181,10 @@ export const toteItem: ProductListItem = {
     capacity: {
         max_producible: 53,
         bottleneck: materialRef('nappa'),
+        bottleneck_colour: null,
+        bottleneck_missing: false,
+        bottleneck_colour_status: null,
+        bottleneck_stock: catalogue.nappa.option.quantity_on_hand,
         best: 53,
         by_variant: null,
     },
@@ -1021,6 +1207,10 @@ export const jeansItem: ProductListItem = {
     capacity: {
         max_producible: 105,
         bottleneck: materialRef('thread'),
+        bottleneck_colour: null,
+        bottleneck_missing: false,
+        bottleneck_colour_status: null,
+        bottleneck_stock: catalogue.thread.option.quantity_on_hand,
         best: 105,
         by_variant: null,
     },
@@ -1043,6 +1233,10 @@ export const choreJacketItem: ProductListItem = {
     capacity: {
         max_producible: 129,
         bottleneck: materialRef('canvas'),
+        bottleneck_colour: null,
+        bottleneck_missing: false,
+        bottleneck_colour_status: null,
+        bottleneck_stock: catalogue.canvas.option.quantity_on_hand,
         best: 129,
         by_variant: null,
     },
@@ -1065,6 +1259,10 @@ export const beltItem: ProductListItem = {
     capacity: {
         max_producible: 391,
         bottleneck: materialRef('nappa'),
+        bottleneck_colour: null,
+        bottleneck_missing: false,
+        bottleneck_colour_status: null,
+        bottleneck_stock: catalogue.nappa.option.quantity_on_hand,
         best: 391,
         by_variant: null,
     },
@@ -1082,6 +1280,10 @@ export const unfinishedItem: ProductListItem = {
     capacity: {
         max_producible: null,
         bottleneck: null,
+        bottleneck_colour: null,
+        bottleneck_missing: false,
+        bottleneck_colour_status: null,
+        bottleneck_stock: null,
         best: null,
         by_variant: null,
     },

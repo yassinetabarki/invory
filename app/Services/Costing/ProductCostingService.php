@@ -13,6 +13,9 @@ use App\Domain\Costing\VariantCostingResult;
 use App\Domain\Costing\VariantLine;
 use App\Domain\Stock\VariantUnits;
 use App\Enums\ComponentQuantityMode;
+use App\Enums\MaterialCostMode;
+use App\Enums\MaterialStockMode;
+use App\Models\Material;
 use App\Models\Product;
 use App\Models\ProductComponentQuantity;
 use App\Services\Products\ProductSizes;
@@ -27,7 +30,10 @@ use LogicException;
  * Whether a material may be on a product's BOM is validated when the BOM is written.
  *
  * A product with no "By colour and size" line (INV-16, ADR-0027) is costed once, as before ({@see ProductCosting::$variants} is null).
- * A product with at least one is costed per colour and size by {@see VariantCosting}, over its own colours and sizes.
+ * A product with at least one is costed per colour and size by {@see VariantCosting}, over its own colours and sizes. So is a product
+ * with a material kept per colour (INV-21, ADR-0029), even when every line is `same`: each colour then reads that colour's stock (and
+ * cost) of the material. The colour rows of those materials are loaded here, in one query however many products, so a caller only
+ * loads `components.material`.
  */
 final readonly class ProductCostingService
 {
@@ -41,8 +47,9 @@ final readonly class ProductCostingService
     /**
      * Cost, capacity and margin of one product.
      *
-     * Only a product with a by-colour-and-size line reads more than its composition: its cells are read here as plain rows and its
-     * colours are loaded when they are not yet (two queries), and its sizes come from {@see ProductSizes}.
+     * Only a product with a by-colour-and-size line or a material kept per colour reads more than its composition: its cells are read
+     * here as plain rows, its colours and the colour rows of its per-colour materials are loaded when they are not yet, and its sizes
+     * come from {@see ProductSizes}.
      *
      * @param  Product  $product  with `components.material` loaded (the material's `unit` is always loaded with it)
      *
@@ -50,7 +57,7 @@ final readonly class ProductCostingService
      */
     public function cost(Product $product): ProductCosting
     {
-        if (! $this->varies($product)) {
+        if (! $this->costsPerVariant($product)) {
             return $this->costSame($product);
         }
 
@@ -60,7 +67,8 @@ final readonly class ProductCostingService
     /**
      * Cost, capacity and margin of many products with a constant number of queries: the compositions of every product that
      * does not have them yet are loaded in one go (components, their materials, and the categories and units of those), and for the
-     * products that have a by-colour-and-size line (only those) their cells, colours and sizes, one query each for the whole lot.
+     * products costed per colour and size (only those: a by-colour-and-size line, or a material kept per colour) their cells, colours,
+     * sizes and the colour rows of their per-colour materials, one query each for the whole lot.
      *
      * @param  iterable<Product>  $products
      * @return array<int, ProductCosting> keyed by product id
@@ -78,7 +86,7 @@ final readonly class ProductCostingService
         $varying = [];
 
         foreach ($collection as $product) {
-            if ($this->varies($product)) {
+            if ($this->costsPerVariant($product)) {
                 $varying[] = $product;
             }
         }
@@ -88,7 +96,7 @@ final readonly class ProductCostingService
         $costings = [];
 
         foreach ($collection as $product) {
-            $costings[$product->id] = $this->varies($product) ? $this->costVariants($product, $cells) : $this->costSame($product);
+            $costings[$product->id] = $this->costsPerVariant($product) ? $this->costVariants($product, $cells) : $this->costSame($product);
         }
 
         return $costings;
@@ -98,12 +106,22 @@ final readonly class ProductCostingService
      * What limits the product once `$materialId` is restocked without limit ("next limit"), when that material is the current
      * bottleneck. Null otherwise, and null when the material is the only one of the composition.
      *
-     * A product that varies by colour and size has none: its bottleneck is the binding variant's, and what limits it once restocked
-     * is a per-variant question that no screen asks yet.
+     * A product that varies by colour and size has none here: see {@see bindingNextLimit()}. A product only costed per colour (a
+     * material kept per colour, every line `same`) is read at its binding colour, whose stock its composition carries.
      */
     public function nextLimit(ProductCosting $costing, int $materialId): ?ProductionCapacity
     {
-        if ($costing->varies() || $costing->result->capacity->bottleneckMaterialId !== $materialId) {
+        return $costing->varies() ? null : $this->bindingNextLimit($costing, $materialId);
+    }
+
+    /**
+     * The next limit at the product's binding colour and size (INV-21), for a product that varies too: what limits that variant once
+     * `$materialId` is restocked without limit, when that material is its bottleneck. It reads the binding variant's composition with the
+     * stock of its colour. Null when the material is not that bottleneck, and when it is the variant's only material.
+     */
+    public function bindingNextLimit(ProductCosting $costing, int $materialId): ?ProductionCapacity
+    {
+        if ($costing->result->capacity->bottleneckMaterialId !== $materialId) {
             return null;
         }
 
@@ -115,7 +133,8 @@ final readonly class ProductCostingService
     /**
      * The composition of each colour and size of a Start batch grid, in composition order, as the cutting maths takes it (INV-16-k):
      * every `same` line, and every by-colour-and-size line that has a cell for that colour and size, at that cell's quantity. A product
-     * with no such line gives every variant the whole composition and reads no cell.
+     * costed once (no such line and no per-colour material) gives every variant the whole composition and reads no cell. A product with
+     * a material kept per colour (INV-21) gives each variant that colour's stock of it, its colour and whether the colour is missing.
      *
      * @param  Product  $product  with `components.material` loaded
      * @param  array<int, array<int, int>>  $grid  units by colour id, then size id; only the variants to cut (units above 0), in the order to list them
@@ -125,7 +144,13 @@ final readonly class ProductCostingService
      */
     public function variantCompositions(Product $product, array $grid): array
     {
-        $lines = $this->varies($product) ? $this->variantLines($product, $this->loadCells([$product])) : null;
+        $perVariant = $this->costsPerVariant($product);
+
+        if ($perVariant) {
+            $this->loadColourStock([$product]);
+        }
+
+        $lines = $perVariant ? $this->variantLines($product, $this->loadCells([$product])) : null;
         $whole = $lines === null ? $this->bomLines($product) : [];
         $variants = [];
 
@@ -137,7 +162,7 @@ final readonly class ProductCostingService
                     $quantity = $line->quantityFor($colourId, $sizeId);
 
                     if ($quantity !== null) {
-                        $bom[] = $line->bomLine($quantity);
+                        $bom[] = $line->bomLine($quantity, $colourId);
                     }
                 }
 
@@ -161,6 +186,27 @@ final readonly class ProductCostingService
 
         foreach ($product->components as $component) {
             if ($component->quantity_mode === ComponentQuantityMode::ByVariant) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Whether the product is costed per colour and size: some line is by colour and size, or some material is kept per colour (then each
+     * colour reads its own stock, even when every line has one quantity). Any other product is costed once, on the fast path.
+     *
+     * @throws LogicException If the composition is not loaded.
+     */
+    public function costsPerVariant(Product $product): bool
+    {
+        if ($this->varies($product)) {
+            return true;
+        }
+
+        foreach ($product->components as $component) {
+            if ($component->relationLoaded('material') && $component->material->stock_mode === MaterialStockMode::PerColour) {
                 return true;
             }
         }
@@ -253,12 +299,13 @@ final readonly class ProductCostingService
 
     /**
      * Loads what costing per colour and size reads and is not loaded yet, for these products and no others: the cells of their
-     * by-colour-and-size lines and their colours (one query each), and their sizes through {@see ProductSizes} (one query).
+     * by-colour-and-size lines, their colours and the colour rows of their per-colour materials (one query each), and their sizes
+     * through {@see ProductSizes} (one query).
      *
      * The cells are read as plain rows (a product at the cap has 2,000), not hydrated as models, through the model's own query so that
      * the workshop scope applies.
      *
-     * @param  list<Product>  $products  each with a by-colour-and-size line
+     * @param  list<Product>  $products  each costed per colour and size
      * @return array<int, array<int, array<int, string>>> the quantity by line (component) id, colour id, then size id
      */
     private function loadVariantInputs(array $products): array
@@ -269,12 +316,43 @@ final readonly class ProductCostingService
 
         (new Collection($products))->loadMissing('colours');
 
+        $this->loadColourStock($products);
+
         $cells = $this->loadCells($products);
 
         // Primes the per-request cache: `variantsOf()` then asks for one product and queries nothing.
         $this->sizes->forProducts($products);
 
         return $cells;
+    }
+
+    /**
+     * Loads the colour rows of the per-colour materials on these products' lines that don't have them yet: one query for all of them,
+     * none when no such material is on a line.
+     *
+     * @param  list<Product>  $products  each with its components, and their materials, loaded
+     */
+    private function loadColourStock(array $products): void
+    {
+        $materials = [];
+
+        foreach ($products as $product) {
+            foreach ($product->components as $component) {
+                if (! $component->relationLoaded('material')) {
+                    continue;
+                }
+
+                $material = $component->material;
+
+                if ($material->stock_mode === MaterialStockMode::PerColour && ! $material->relationLoaded('colours')) {
+                    $materials[spl_object_id($material)] = $material;
+                }
+            }
+        }
+
+        if ($materials !== []) {
+            (new Collection(array_values($materials)))->load('colours');
+        }
     }
 
     /**
@@ -293,6 +371,10 @@ final readonly class ProductCostingService
                     $lineIds[] = $component->id;
                 }
             }
+        }
+
+        if ($lineIds === []) {
+            return [];
         }
 
         $cells = [];
@@ -336,6 +418,8 @@ final readonly class ProductCostingService
                 $quantity = null;
             }
 
+            [$colourStock, $colourUnitCosts] = $this->colourStock($product, $material);
+
             $lines[] = new VariantLine(
                 materialId: $material->id,
                 materialName: $material->name,
@@ -345,10 +429,45 @@ final readonly class ProductCostingService
                 wastePercent: $component->waste_percent,
                 unitCost: $material->unit_cost,
                 stockOnHand: $material->quantity_on_hand,
+                colourStock: $colourStock,
+                colourUnitCosts: $colourUnitCosts,
+                costPerColour: $material->cost_mode === MaterialCostMode::PerColour,
             );
         }
 
         return $lines;
+    }
+
+    /**
+     * The stock (and, with cost per colour, the unit cost) of each colour of a material kept per colour, by colour id; `[null, []]` for a
+     * one-stock material.
+     *
+     * @return array{0: array<int, string>|null, 1: array<int, string>}
+     *
+     * @throws LogicException If the material is kept per colour and its colour rows are not loaded.
+     */
+    private function colourStock(Product $product, Material $material): array
+    {
+        if ($material->stock_mode !== MaterialStockMode::PerColour) {
+            return [null, []];
+        }
+
+        if (! $material->relationLoaded('colours')) {
+            throw new LogicException("Product #{$product->id}: load `colours` of material #{$material->id} before costing it.");
+        }
+
+        $stock = [];
+        $costs = [];
+
+        foreach ($material->colours as $row) {
+            $stock[$row->colour_id] = $row->quantity_on_hand;
+
+            if ($material->cost_mode === MaterialCostMode::PerColour) {
+                $costs[$row->colour_id] = $row->unit_cost ?? throw new LogicException("Material #{$material->id}: colour #{$row->colour_id} has no unit cost.");
+            }
+        }
+
+        return [$stock, $costs];
     }
 
     /**
@@ -396,7 +515,7 @@ final readonly class ProductCostingService
             $quantity = $line->quantityFor($colourId, $sizeId);
 
             if ($quantity !== null) {
-                $bom[] = $line->bomLine($quantity);
+                $bom[] = $line->bomLine($quantity, $colourId);
             }
         }
 

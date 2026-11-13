@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { BottleneckCallout } from '@/components/products/bottleneck-callout';
 import {
@@ -6,6 +7,8 @@ import {
     choreJacket,
     denimBlackByVariantLine,
     denimJacket,
+    denimJacketLightWash,
+    denimJacketPerColour,
     denimJacketVarying,
     jacketWithoutComposition,
     materialRef,
@@ -45,6 +48,10 @@ const buttonShort: Product = {
     capacity: {
         max_producible: 0,
         bottleneck: materialRef('button'),
+        bottleneck_colour: null,
+        bottleneck_missing: false,
+        bottleneck_colour_status: null,
+        bottleneck_stock: '7.0000',
         best: 0,
         by_variant: null,
     },
@@ -296,12 +303,92 @@ describe('<BottleneckCallout>', () => {
         });
     });
 
+    it('names the colour of a material kept per colour, and the colour it lacks (INV-21)', async () => {
+        const user = userEvent.setup();
+        const onAddColour = vi.fn();
+        const callout = (product: Product, handler?: typeof onAddColour) => (
+            <BottleneckCallout
+                productName={product.name}
+                capacity={product.capacity}
+                components={product.components}
+                singleColour={false}
+                materialHref={(material: MaterialRef) =>
+                    `/materials/${material.id}`
+                }
+                editHref={`/products/${product.id}/edit`}
+                onAddColour={handler}
+            />
+        );
+        const bestCase =
+            'Best case: 112 units, in Indigo — limited there by Metal shank button 17mm.';
+
+        const { rerender } = render(callout(denimJacketPerColour));
+
+        expect(screen.getByRole('note')).toHaveTextContent(
+            'Bottleneck: Denim 12oz, Black stock (size XL).',
+        );
+        expect(screen.getByRole('note')).toHaveTextContent(
+            '40 m of Black in stock covers 16 units of Black, size XL — the smallest across every colour and size.',
+        );
+        expect(screen.getByRole('note')).toHaveTextContent(bestCase);
+        // Black (40 m) is itself under the reorder level of 100 m: the sentence follows.
+        expect(screen.getByRole('note')).toHaveTextContent(
+            "It's also below its reorder level of 100 m.",
+        );
+
+        // Indigo (250 m) limits and is fine, although the material has a colour that is low: no sentence.
+        rerender(
+            callout({
+                ...denimJacketPerColour,
+                capacity: {
+                    ...denimJacketPerColour.capacity,
+                    bottleneck_colour: denimJacketPerColour.colours[0],
+                    bottleneck_stock: '250.0000',
+                    bottleneck_colour_status: 'in_stock',
+                },
+            }),
+        );
+
+        expect(screen.getByRole('note')).toHaveTextContent(
+            'Bottleneck: Denim 12oz, Indigo stock (size XL).',
+        );
+        expect(screen.getByRole('note')).not.toHaveTextContent('reorder level');
+
+        // No Light wash on the material: guaranteed 0, the best case stays.
+        rerender(callout(denimJacketLightWash));
+
+        expect(screen.getByRole('note')).toHaveTextContent(
+            'Bottleneck: Denim 12oz — no Light wash stock.',
+        );
+        expect(screen.getByRole('note')).toHaveTextContent(
+            "Denim 12oz has no Light wash yet, so Denim Jacket can't be made in Light wash.",
+        );
+        expect(screen.getByRole('note')).not.toHaveTextContent('in stock');
+        expect(screen.getByRole('note')).toHaveTextContent(bestCase);
+        expect(
+            screen.queryByRole('button', { name: /^Add Light wash/ }),
+        ).not.toBeInTheDocument();
+
+        rerender(callout(denimJacketLightWash, onAddColour));
+        await user.click(
+            screen.getByRole('button', {
+                name: 'Add Light wash to Denim 12oz',
+            }),
+        );
+
+        expect(onAddColour).toHaveBeenCalledWith(14, 11);
+    });
+
     it('renders nothing when there is a capacity but no bottleneck to show', () => {
         const { container } = renderCallout({
             ...denimJacket,
             capacity: {
                 max_producible: 5,
                 bottleneck: null,
+                bottleneck_colour: null,
+                bottleneck_missing: false,
+                bottleneck_colour_status: null,
+                bottleneck_stock: null,
                 best: 5,
                 by_variant: null,
             },

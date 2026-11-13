@@ -37,6 +37,14 @@ final class MaterialUsageResource extends JsonResource
                 'material' => (new MaterialRefResource($this->nextLimit['material']))->resolve($request),
                 'max_producible' => $this->nextLimit['max_producible'],
             ],
+            'by_colour' => $this->byColour === null ? null : array_map(fn (array $reading): array => [
+                'colour' => (new ColourResource($reading['colour']))->resolve($request),
+                'missing' => $reading['missing'],
+                'stock_on_hand' => $reading['stock_on_hand'],
+                'units_possible' => $reading['units_possible'],
+            ], $this->byColour),
+            'bottleneck_colour' => $this->bottleneckColour === null ? null : (new ColourResource($this->bottleneckColour))->resolve($request),
+            'limit_colour' => $this->limitColour === null ? null : (new ColourResource($this->limitColour))->resolve($request),
         ];
     }
 }

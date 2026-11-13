@@ -11,15 +11,18 @@ use App\Exceptions\MaterialInUseException;
 use App\Http\Requests\Materials\IndexMaterialRequest;
 use App\Http\Requests\Materials\StoreMaterialRequest;
 use App\Http\Requests\Materials\UpdateMaterialRequest;
+use App\Http\Resources\ColourResource;
 use App\Http\Resources\MaterialResource;
 use App\Http\Resources\MaterialUsageResource;
 use App\Http\Resources\StockMovementResource;
+use App\Models\Colour;
 use App\Models\Material;
 use App\Models\User;
 use App\Services\Costing\MaterialUsageService;
 use App\Services\Inventory\InventorySummary;
 use App\Services\Inventory\StockHistory;
 use App\Services\Reference\ReferenceData;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -58,6 +61,7 @@ final class MaterialController extends Controller
                     ->withQueryString();
 
                 $pageIds = array_values(array_map(static fn (Material $material): int => $material->id, $page->items()));
+                Material::loadColours($page->items());
             }
 
             return $page;
@@ -79,7 +83,7 @@ final class MaterialController extends Controller
             'recent_history' => Inertia::defer(function () use ($history, $materials, &$pageIds): AnonymousResourceCollection {
                 $materials();
 
-                return StockMovementResource::collection($history->recentFor($pageIds));
+                return StockMovementResource::collection(Collection::make($history->recentFor($pageIds))->load('colour'));
             }),
         ]);
     }
@@ -89,7 +93,9 @@ final class MaterialController extends Controller
         Gate::authorize('create', Material::class);
 
         // Category and unit options come from the shared `reference` prop (ADR-0008).
-        return Inertia::render('materials/create');
+        return Inertia::render('materials/create', [
+            'colours' => fn (): array => $this->colourRows(),
+        ]);
     }
 
     public function store(StoreMaterialRequest $request, CreateMaterial $createMaterial): RedirectResponse
@@ -104,6 +110,7 @@ final class MaterialController extends Controller
     public function show(Material $material, StockHistory $history, ReferenceData $reference, MaterialUsageService $usage): Response
     {
         Gate::authorize('view', $material);
+        Material::loadColours([$material]);
 
         return Inertia::render('materials/show', [
             'material' => MaterialResource::make($material),
@@ -113,16 +120,18 @@ final class MaterialController extends Controller
 
                 return MaterialUsageResource::collection($rows);
             },
-            'history' => fn (): AnonymousResourceCollection => StockMovementResource::collection($history->forMaterial($material)),
+            'history' => fn (): AnonymousResourceCollection => StockMovementResource::collection($history->forMaterial($material)->load('colour')),
         ]);
     }
 
     public function edit(Material $material): Response
     {
         Gate::authorize('update', $material);
+        Material::loadColours([$material]);
 
         return Inertia::render('materials/edit', [
             'material' => MaterialResource::make($material),
+            'colours' => fn (): array => $this->colourRows(),
         ]);
     }
 
@@ -151,6 +160,16 @@ final class MaterialController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Material deleted.')]);
 
         return to_route('materials.index');
+    }
+
+    /**
+     * `colours`: the workshop's whole list in Settings › Colours order, for the Colours table's picker (INV-21), as Add product has it.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function colourRows(): array
+    {
+        return array_values(ColourResource::collection(Colour::query()->ordered()->get())->resolve());
     }
 
     /** The signed-in user, for the audit columns. The `auth` middleware and the request authorization guarantee one. */

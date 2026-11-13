@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Services\Costing;
 
+use App\Domain\Costing\MaterialSpan;
+use App\Enums\MaterialStockMode;
+use App\Models\Colour;
 use App\Models\Material;
 use App\Models\Product;
 use App\Models\Unit;
@@ -50,10 +53,11 @@ final readonly class MaterialUsageService
             $materials = $product->components->mapWithKeys(static fn ($component): array => [$component->material_id => $component->material]);
             $bottleneck = $capacity->bottleneckMaterialId === null ? null : $materials->get($capacity->bottleneckMaterialId);
 
-            if ($costing->varies()) {
-                // A product with a By colour and size line: the guaranteed figure, the binding variant's bottleneck, and the lowest and
-                // highest need and units covered over the variants that use the material (INV-16, ADR-0027). No next limit. The need is
-                // one figure ("8.0000") when every variant that uses the material needs the same, and null ("Varies") when it differs.
+            if ($costing->perVariant()) {
+                // A product costed per colour and size (a By colour and size line, or a material kept per colour): the guaranteed figure,
+                // the binding variant's bottleneck and the next limit on its colour and size, and the lowest and highest need and units
+                // covered over the variants that use the material (INV-16, INV-21). The need is one figure ("8.0000") when every such
+                // variant needs the same, and null ("Varies") when it differs.
                 $variants = $costing->variants;
                 $span = $variants?->materials[$material->id] ?? null;
 
@@ -61,16 +65,28 @@ final readonly class MaterialUsageService
                     continue;
                 }
 
+                // A material kept per colour: one reading per product colour (list order); the covered range leaves out the colours the
+                // material lacks (the list says "no stock" for them, not 0).
+                $byColour = $this->readings($span, $materials->get($material->id), $product);
+                $present = array_filter($byColour ?? [], static fn (array $reading): bool => ! $reading['missing']);
+                $isBottleneck = $variants->bindingMaterialId === $material->id;
+                $bottleneckColour = $variants->bindingBottleneckColourId === null ? null : $product->colours->firstWhere('id', $variants->bindingBottleneckColourId);
+                $next = $isBottleneck ? $this->costing->bindingNextLimit($costing, $material->id) : null;
+                $limiting = $next?->bottleneckMaterialId === null ? null : $materials->get($next->bottleneckMaterialId);
+
                 $usages[] = new MaterialUsage(
                     product: $product,
                     effectiveQuantity: $span->varies() ? null : $span->neededMin,
-                    unitsCoveredMin: $span->unitsCoveredMin,
-                    unitsCoveredMax: $span->unitsCoveredMax,
+                    unitsCoveredMin: $present === [] ? $span->unitsCoveredMin : min(array_column(array_column($present, 'units_possible'), 'min')),
+                    unitsCoveredMax: $present === [] ? $span->unitsCoveredMax : max(array_column(array_column($present, 'units_possible'), 'max')),
                     maxProducible: $variants->guaranteed,
                     bottleneck: $bottleneck,
-                    isBottleneck: $variants->bindingMaterialId === $material->id,
-                    nextLimit: null,
-                    productVaries: true,
+                    isBottleneck: $isBottleneck,
+                    nextLimit: $next?->maxProducible === null || $limiting === null ? null : ['material' => $limiting, 'max_producible' => $next->maxProducible],
+                    productVaries: $costing->varies(),
+                    byColour: $byColour,
+                    bottleneckColour: $bottleneckColour,
+                    limitColour: $isBottleneck ? $bottleneckColour : null,
                 );
 
                 continue;
@@ -111,5 +127,35 @@ final readonly class MaterialUsageService
         usort($usages, static fn (MaterialUsage $a, MaterialUsage $b): int => $b->isBottleneck <=> $a->isBottleneck);
 
         return $usages;
+    }
+
+    /**
+     * What a material kept per colour holds for each of the product's colours that uses it, in list order (null for a one-stock material).
+     *
+     * @return list<array{colour: Colour, missing: bool, stock_on_hand: string, units_possible: array{min: int, max: int}}>|null
+     */
+    private function readings(MaterialSpan $span, ?Material $material, Product $product): ?array
+    {
+        if ($material === null || $material->stock_mode !== MaterialStockMode::PerColour) {
+            return null;
+        }
+
+        $rows = $material->colours->keyBy('colour_id');
+        $readings = [];
+
+        foreach ($product->colours as $colour) {
+            $units = $span->byColour[$colour->id] ?? null;
+
+            if ($units !== null) {
+                $readings[] = [
+                    'colour' => $colour,
+                    'missing' => $units['missing'],
+                    'stock_on_hand' => $rows->get($colour->id)->quantity_on_hand ?? '0.0000',
+                    'units_possible' => ['min' => $units['min'], 'max' => $units['max']],
+                ];
+            }
+        }
+
+        return $readings;
     }
 }

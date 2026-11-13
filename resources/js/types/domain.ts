@@ -32,6 +32,19 @@ export type MaterialCategory = string;
 export type UnitOfMeasure = string; // a `units.code`, for example 'm'
 export type StockStatus = 'in_stock' | 'low' | 'out';
 
+// Stock per colour of a material (INV-21, ADR-0029): one stock for all colours, or a quantity (and optionally a cost) per colour.
+export type MaterialStockMode = 'single' | 'per_colour';
+export type MaterialCostMode = 'same' | 'per_colour';
+export type MaterialColourStock = {
+    colour: Colour;
+    quantity_on_hand: Decimal;
+    unit_cost: Decimal | null; // cost per colour only
+    stock_value: Decimal | null; // quantity × unit_cost, scale 4; cost per colour only
+    stock_status: StockStatus;
+    removable: boolean;
+    remove_reason: string | null; // "Indigo has 250 m in stock, so it can't be removed." / "Black has history, so it can't be removed."
+};
+
 export type Material = {
     id: number;
     sku: string;
@@ -45,6 +58,13 @@ export type Material = {
     reorder_level: Decimal | null;
     stock_value: Decimal; // quantity_on_hand × unit_cost, scale 4
     stock_status: StockStatus; // computed server-side, see rule below
+    stock_mode: MaterialStockMode; // 'single' for every material before INV-21
+    cost_mode: MaterialCostMode; // 'same' with 'single'
+    colours: MaterialColourStock[]; // Settings › Colours order; [] for one stock. quantity_on_hand is their total
+    unit_cost_range: DecimalRange | null; // cost per colour only: lowest–highest colour cost ("8.5000"–"9.2000"); null otherwise
+    stock_callout: { title: string; detail: string } | null; // per-colour material that needs restock (the sentences of the UI card); null when fine, for one stock, and for a material that is out with no reorder level (keep the one-stock callout)
+    colours_restock_summary: string | null; // "3 of 20 colours need restock"; more than 8 colours only
+    restock_colours: string | null; // list Status line: "Black"; "Camel, Black, Light wash and 2 more"; null when none or one stock
     supplier_name: string | null;
     supplier_reference: string | null;
     color: string | null;
@@ -83,6 +103,14 @@ export type MaterialFormData = {
     unit: UnitOfMeasure; // '' until chosen
     unit_cost: string;
     quantity_on_hand: string;
+    stock_mode: MaterialStockMode;
+    cost_mode: MaterialCostMode;
+    // With stock_mode 'per_colour' the rows replace quantity_on_hand, and with cost_mode 'per_colour' they replace unit_cost too
+    colours: {
+        colour_id: number | '';
+        quantity_on_hand: string;
+        unit_cost: string;
+    }[];
     reorder_level: string;
     supplier_name: string;
     supplier_reference: string;
@@ -128,7 +156,9 @@ export type StockMovementType =
     | 'correction'
     | 'price_change'
     | 'cutting'
-    | 'cutting_return';
+    | 'cutting_return'
+    | 'colour_split' // "Split by colour": a material switched to Stock per colour (INV-21)
+    | 'colour_join'; // "Joined into one stock": switched back to one stock (INV-21)
 
 export type MaterialRef = {
     id: number;
@@ -153,6 +183,8 @@ export type ColourCapacity = {
     best: number | null; // the largest
     bottleneck: MaterialRef | null; // what limits `guaranteed`, at `binding_size`
     binding_size: Size | null; // the size that gives `guaranteed` ("(XL)"); null for a "One size" product too
+    bottleneck_colour: Colour | null; // INV-21: this colour when the bottleneck keeps its stock per colour ("Black stock"); else null
+    bottleneck_missing: boolean; // the bottleneck material lacks this colour
 };
 
 /** Where the guaranteed and the best figures are reached on a product with a By colour and size line (INV-16). */
@@ -165,7 +197,19 @@ export type Capacity = {
     max_producible: number | null; // null = no composition. The guaranteed figure: any mix of colours and sizes can be made
     bottleneck: MaterialRef | null; // null when max_producible is null. What limits the guaranteed figure
     best: number | null; // the most one colour and size can make on its own; = max_producible without a By colour and size line; null without a composition
-    by_variant: CapacityByVariant | null; // null without a By colour and size line, and when no colour and size has a composition
+    by_variant: CapacityByVariant | null; // null without a By colour and size line or a per-colour material, and when no colour and size has a composition
+    bottleneck_colour: Colour | null; // INV-21: the colour of the stock that limits `max_producible` (the binding colour), when the bottleneck keeps its stock per colour
+    bottleneck_missing: boolean; // the bottleneck material lacks that colour ("Light wash: no stock")
+    bottleneck_stock: Decimal | null; // the bottleneck's stock in the binding colour (the material's stock for one stock; "0.0000" when missing); null without a bottleneck
+    bottleneck_colour_status: StockStatus | null; // INV-21: the status of the bottleneck's stock in that colour ('out' when the material lacks it); null for a one-stock bottleneck
+};
+
+/** What a material kept per colour holds for one colour of a product (INV-21). */
+export type ColourStockReading = {
+    colour: Colour;
+    missing: boolean; // the material doesn't have this colour
+    stock_on_hand: Decimal; // "0.0000" when missing
+    units_possible: CountRange; // lowest and highest over the colour's sizes; 0–0 when missing
 };
 
 /** A figure from its lowest to its highest over every colour and size (INV-16); min = max when nothing varies. */
@@ -177,10 +221,10 @@ export type Margin = {
 };
 
 export type CostBreakdown = {
-    material_cost: DecimalRange;
+    material_cost: DecimalRange | null; // null when no colour and size has a unit cost (every colour lacks the cost of a material with cost per colour, INV-21)
     labor_cost: Decimal;
     overhead_cost: Decimal;
-    unit_cost: DecimalRange;
+    unit_cost: DecimalRange | null; // null in the same case
 };
 
 /** How a composition line gets its quantity (INV-16): one quantity for every colour and size, or one per colour and size. */
@@ -200,6 +244,8 @@ export type ProductComponentLine = {
         photo_url: string | null;
         stock_status: StockStatus;
         reorder_level: Decimal | null;
+        stock_mode: 'single' | 'per_colour'; // INV-21: One stock for all colours, or a stock per colour
+        cost_mode: MaterialCostMode; // INV-21: 'same' with one stock
     };
     quantity_mode: ComponentQuantityMode;
     quantities: QuantityCell[]; // [] on a `same` line; colour list order, then size order
@@ -208,8 +254,9 @@ export type ProductComponentLine = {
     effective_quantity: Decimal | null; // null on a `by_variant` line
     unit_cost: Decimal; // the material's unit cost
     line_cost: Decimal | null; // null on a `by_variant` line
-    stock_on_hand: Decimal;
+    stock_on_hand: Decimal; // the material's total when its stock is per colour
     units_possible: number | null; // null on a `by_variant` line
+    stock_by_colour: ColourStockReading[] | null; // INV-21: null for a one-stock material; else the product's colours that use the line, list order
     is_bottleneck: boolean;
     notes: string | null; // placement, e.g. "Front placket"
 };
@@ -224,7 +271,7 @@ export type ProductListItem = {
     status_label: string;
     photo_url: string | null;
     components_count: number;
-    unit_cost: DecimalRange;
+    unit_cost: DecimalRange | null; // null when no colour and size has a unit cost (INV-21)
     selling_price: Decimal | null;
     margin: Margin | null; // null when selling_price is null
     capacity: Capacity;
@@ -727,11 +774,13 @@ export type NewRestockFormData = {
 /** One row of the move window's materials table (S-53), worked out by the server: the screen never computes. */
 export type MaterialMoveRow = {
     material: MaterialRef;
+    colour: Colour | null; // INV-21: the colour of a per-colour stock ("Denim 12oz · Indigo"); one row per material and colour, null for a one-stock material. An undo row: the colour it goes back into, or the one the material lost
+    missing: boolean; // INV-21, start: the material has no stock of this colour ("No stock", in_stock "0.0000", short by the whole need)
     quantity: Decimal; // start_cutting: needed · back_to_start: what those units took
     in_stock: Decimal; // the material's stock now ("In stock")
     after: Decimal | null; // "Left after" / "After return"; null when short or not returned
     short_by: Decimal | null; // start_cutting, only when the stock is short: "Short by …" (every short row)
-    not_returned: 'deleted' | 'unit_changed' | null; // back_to_start: "Deleted, not returned" / "Unit changed, not returned"
+    not_returned: 'deleted' | 'unit_changed' | 'colour_missing' | null; // back_to_start: "Deleted, not returned" / "Unit changed, not returned" / "Light wash not on this material, not returned" (from `colour`)
 };
 
 export type StockMovement = {
@@ -762,6 +811,8 @@ export type StockMovement = {
     order: { id: number; client: string } | null; // cutting / cutting_return (soft-deleted orders included)
     product_name: string | null; // cutting / cutting_return (soft-deleted products included)
     user_name: string | null; // who did it
+    colour: Colour | null; // INV-21: the colour a per-colour material's entry is about; null for a one-stock entry and every entry before
+    entry_group: string | null; // INV-21: uuid shared by the entries of one receipt or switch; null before INV-21
 };
 
 /** Fields the restock quick form submits. */
@@ -782,12 +833,15 @@ export type CountRange = { min: number; max: number };
 export type MaterialUsage = {
     product: ProductRef & { status: ProductStatus; status_label: string };
     effective_quantity: Decimal | null; // needed per unit, waste included, in this material's unit; null ("Varies") only when the need differs across the variants that use this material
-    units_covered: CountRange; // units this material's stock covers on its own; the lowest and highest over the colours and sizes that use it
+    units_covered: CountRange; // units this material's stock covers on its own; the lowest and highest over the colours and sizes that use it (a colour the material lacks is left out)
     max_producible: number; // units of the product that can be made now (whole composition; the guaranteed figure when the product varies)
     bottleneck: MaterialRef; // the material that limits the product (the binding colour and size's when it varies)
     is_bottleneck: boolean; // true when that material is this one
-    product_varies: boolean; // the product has a By colour and size line: no next limit or suggestion
-    next_limit: NextLimit | null; // only when is_bottleneck; null if it is the product's only material, and always null when the product varies
+    product_varies: boolean; // the product has a By colour and size line
+    next_limit: NextLimit | null; // only when is_bottleneck; null if it is the product's only material; for a product that varies, that of its binding colour and size
+    by_colour: ColourStockReading[] | null; // INV-21: a material kept per colour: one reading per product colour that uses it, list order; null for a one-stock material
+    bottleneck_colour: Colour | null; // INV-21: the colour of the bottleneck material's stock that limits the product; null for a one-stock bottleneck
+    limit_colour: Colour | null; // INV-21: that colour when this material is the bottleneck (is_bottleneck), else null
 };
 
 export type TopProduct = {
@@ -850,12 +904,14 @@ export type SalesIndexProps = {
     products: SaleProductOption[]; // by name
     record: { product_id: number | null } | null; // non-null → open "Record a sale" on load
 };
+// A dashboard "Needs restock" row: a material and, for a per-colour one, the colours that need restock ("Black 40 m, Camel 0 m").
+export type NeedsRestockMaterial = Material & { colours_text: string | null };
 export type DashboardProps = {
     period: SalesPeriod;
     periods: Option<SalesPeriod>[];
     stats?: DashboardStats; // deferred prop (group 'primary'): KPI figures
     top_products?: { by_units: TopProduct[]; by_revenue: TopProduct[] }; // deferred prop (group 'primary'): max 5 each, for the period
-    needs_restock?: Material[]; // deferred prop: max 5, out first, then low; by name
+    needs_restock?: NeedsRestockMaterial[]; // deferred prop: max 5, out first, then low; by name
     recent_sales?: Sale[]; // deferred prop: newest 5, any period
     alerts?: UnproducibleAlert[]; // deferred prop: every product that can't be produced, by name
 };

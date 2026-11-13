@@ -1,7 +1,15 @@
 import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { MaterialUsageCard } from '@/components/materials/material-usage';
-import { button, buttonUsage } from '@/test/fixtures';
+import {
+    black,
+    button,
+    buttonUsage,
+    denim,
+    indigo,
+    lightWash,
+} from '@/test/fixtures';
 import { resetInertiaMock, setPageProps } from '@/test/inertia';
 import type { MaterialUsage } from '@/types/domain';
 
@@ -407,7 +415,7 @@ describe('<MaterialUsageCard>', () => {
             is_bottleneck: false,
         });
 
-        it('reads Varies and a range on the Black denim, with the guaranteed figure and the bottleneck badge, and no suggestion', () => {
+        it('reads Varies and a range on the Black denim, with the guaranteed figure and the bottleneck badge', () => {
             renderUsage([blackDenim]);
 
             for (const view of [
@@ -421,20 +429,27 @@ describe('<MaterialUsageCard>', () => {
                     view.getByText('This material (bottleneck)'),
                 ).toBeInTheDocument();
             }
-            expect(screen.queryByText('Suggestion:')).not.toBeInTheDocument();
         });
 
-        it('gives no suggestion to a varying product the button limits, even with equal ends and a single need', () => {
+        it('suggests the next limit of a varying product this material limits, keyed on the bottleneck, not on product_varies', () => {
             renderUsage([
                 varying({
                     effective_quantity: '8.0000',
                     max_producible: 112,
                     units_covered: { min: 112, max: 112 },
+                    is_bottleneck: true,
+                    next_limit: {
+                        material: jeans.bottleneck,
+                        max_producible: 126,
+                    },
                 }),
             ]);
 
-            expect(screen.queryByText('Suggestion:')).not.toBeInTheDocument();
-            expect(screen.queryByText(/only material/)).not.toBeInTheDocument();
+            expect(
+                screen.getByText(
+                    /this material limits Denim Jacket to 112 units\. If you restock it, the next limit is Polyester thread at 126 units\./,
+                ),
+            ).toBeInTheDocument();
         });
 
         it('reads the range on the Indigo denim, which is not the bottleneck', () => {
@@ -456,6 +471,105 @@ describe('<MaterialUsageCard>', () => {
             expect(row.queryByText('Varies')).not.toBeInTheDocument();
             expect(row.getAllByText('112 units')).toHaveLength(2);
             expect(screen.getByText('Suggestion:')).toBeInTheDocument();
+        });
+    });
+
+    describe('a material kept per colour', () => {
+        const denimByColour = {
+            ...denim,
+            name: 'Denim 12oz',
+            stock_mode: 'per_colour' as const,
+        };
+        const reading = (
+            colour: typeof indigo,
+            stock: string,
+            min: number,
+            max: number,
+            missing = false,
+        ) => ({
+            colour,
+            missing,
+            stock_on_hand: stock,
+            units_possible: { min, max },
+        });
+        const denimRow: MaterialUsage = {
+            ...jacket,
+            effective_quantity: '1.9800',
+            units_covered: { min: 20, max: 126 },
+            max_producible: 20,
+            bottleneck: {
+                id: denim.id,
+                sku: denim.sku,
+                name: 'Denim 12oz',
+                unit: 'm',
+            },
+            next_limit: { material: jacket.bottleneck, max_producible: 112 },
+            by_colour: [
+                reading(indigo, '250.0000', 126, 126),
+                reading(black, '40.0000', 20, 20),
+                reading(lightWash, '0.0000', 0, 0, true),
+            ],
+            bottleneck_colour: black,
+            limit_colour: black,
+        };
+
+        it('reads the range, opens By colour with the Add link, and names the colour in the limit and the suggestion', async () => {
+            const user = userEvent.setup();
+
+            render(
+                <MaterialUsageCard
+                    material={denimByColour}
+                    usage={[denimRow]}
+                />,
+            );
+
+            expect(
+                screen.getByText(
+                    "1 product uses this material. Here's how far your stock goes, colour by colour, and how many units you can make right now with all its materials.",
+                ),
+            ).toBeInTheDocument();
+            expect(
+                screen.getByText(
+                    /this material limits Denim Jacket to 20 units, in Black\. If you restock Black, the next limit is Metal shank button 17mm at 112 units\./,
+                ),
+            ).toBeInTheDocument();
+
+            const row = within(
+                screen.getByRole('table', {
+                    name: 'Products that use Denim 12oz',
+                }),
+            ).getAllByRole('row')[1];
+
+            expect(within(row).getByText('20–126 units')).toBeInTheDocument();
+            expect(
+                within(row).getByText(
+                    'This material (bottleneck), Black stock',
+                ),
+            ).toBeInTheDocument();
+
+            await user.click(
+                within(row).getByRole('button', { name: 'By colour' }),
+            );
+
+            expect(
+                screen
+                    .getAllByRole('row')[2]
+                    .textContent?.startsWith(
+                        'Indigo 126 units · Black 20 units · Light wash no stock',
+                    ),
+            ).toBe(true);
+
+            await user.click(
+                screen.getAllByRole('button', {
+                    name: 'Add Light wash to Denim 12oz',
+                })[0],
+            );
+
+            expect(
+                await screen.findByRole('alertdialog', {
+                    name: 'Add Light wash to Denim 12oz?',
+                }),
+            ).toBeInTheDocument();
         });
     });
 });

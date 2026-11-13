@@ -262,3 +262,33 @@ it('refuses to sort by a column outside the allowlist, whatever the caller valid
     'empty' => '',
     'bare dash' => '-',
 ])->throws(InvalidArgumentException::class);
+
+it('reads the colours of a per-colour material on the list: filter, total sort, status line, constant queries', function () {
+    // Denim 12oz is low in Black only (290 m in all); Poplin is fine in both colours (400 m); Thread is one stock (350 m); Wool is 567 m.
+    Material::factory()->perColour([['IND', '250.0000'], ['BLK', '40.0000']])->create(['name' => 'Denim 12oz', 'unit' => 'm', 'reorder_level' => '100']);
+    Material::factory()->perColour([['IND', '250.0000'], ['BLK', '150.0000']])->create(['name' => 'Poplin', 'unit' => 'm', 'reorder_level' => '100']);
+    Material::factory()->create(['name' => 'Thread', 'unit' => 'm', 'quantity_on_hand' => '350', 'reorder_level' => '100']);
+    // Five colours need restock: the status line names the first three in list order and counts the rest.
+    Material::factory()->perColour([['IND', '500.0000'], ['CAM', '0.0000'], ['BLK', '40.0000'], ['LWH', '10.0000'], ['PNK', '5.0000'], ['RST', '12.0000']])
+        ->create(['name' => 'Wool', 'unit' => 'm', 'reorder_level' => '100']);
+
+    $byName = fn (array $query = []) => actingAs($this->user)->get(route('materials.index', $query))->assertOk();
+
+    expect(indexedNames($byName(['low_stock' => '1'])))->toBe(['Denim 12oz', 'Wool'])
+        ->and(indexedNames($byName(['sort' => 'quantity_on_hand'])))->toBe(['Denim 12oz', 'Thread', 'Poplin', 'Wool'])
+        ->and(array_combine(indexedNames($byName()), indexedNames($byName(), 'restock_colours')))->toBe([
+            'Denim 12oz' => 'Black',
+            'Poplin' => null,
+            'Thread' => null,
+            'Wool' => 'Camel, Black, Light wash and 2 more',
+        ]);
+
+    $list = fn (): int => countQueries(fn () => $byName());
+    $few = $list();
+
+    foreach (range(1, 4) as $n) {
+        Material::factory()->perColour([['IND', '250.0000'], ['BLK', '40.0000']])->create(['name' => "Extra {$n}", 'unit' => 'm', 'reorder_level' => '100']);
+    }
+
+    expect($list())->toBe($few);
+});

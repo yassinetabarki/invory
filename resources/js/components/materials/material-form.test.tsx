@@ -10,6 +10,7 @@ import {
 } from 'vite-plus/test';
 import { MaterialForm } from '@/components/materials/material-form';
 import { resetInertiaMock, setPageProps } from '@/test/inertia';
+import { defaultColours } from '@/test/fixtures/colours';
 import type {
     MaterialCategory,
     MaterialFormData,
@@ -42,6 +43,9 @@ const emptyForm: MaterialFormData = {
     unit: '',
     unit_cost: '',
     quantity_on_hand: '',
+    stock_mode: 'single',
+    cost_mode: 'same',
+    colours: [],
     reorder_level: '',
     supplier_name: '',
     supplier_reference: '',
@@ -59,6 +63,9 @@ const denimForm: MaterialFormData = {
     unit: 'm',
     unit_cost: '8.5000',
     quantity_on_hand: '250.0000',
+    stock_mode: 'single',
+    cost_mode: 'same',
+    colours: [],
     reorder_level: '50.0000',
     supplier_name: 'Textiles SA',
     supplier_reference: 'TX-12',
@@ -94,6 +101,7 @@ function renderForm(props: FormProps = {}, onSubmit = vi.fn()) {
                     initial={emptyForm}
                     categories={categories}
                     units={units}
+                    colours={defaultColours}
                     errors={{}}
                     processing={false}
                     submitLabel="Save material"
@@ -398,6 +406,7 @@ describe('<MaterialForm>', () => {
                         initial={emptyForm}
                         categories={categories}
                         units={units}
+                        colours={defaultColours}
                         errors={{
                             quantity_on_hand: 'Required.',
                             name: 'Required.',
@@ -560,7 +569,10 @@ describe('<MaterialForm>', () => {
             expect(fields).toEqual(
                 Object.fromEntries(
                     Object.entries(denimForm).filter(
-                        ([key]) => key !== 'photo' && key !== 'remove_photo',
+                        ([key]) =>
+                            key !== 'photo' &&
+                            key !== 'remove_photo' &&
+                            key !== 'colours',
                     ),
                 ),
             );
@@ -631,6 +643,204 @@ describe('<MaterialForm>', () => {
             expect(data.get('reorder_level')).toBe('');
             expect(data.get('notes')).toBe('');
             expect(data.get('sku')).toBe('');
+        });
+    });
+
+    describe('stock and cost per colour', () => {
+        it('swaps the fields with the two settings, keeps the Colour text, and submits the colours', async () => {
+            const user = userEvent.setup();
+            const { onSubmit } = renderForm({ initial: denimForm });
+
+            // One stock: today's fields and no cost question.
+            expect(
+                screen.getByRole('radio', {
+                    name: 'One stock for all colours',
+                }),
+            ).toBeChecked();
+            expect(
+                screen.queryByRole('group', { name: 'How is cost set?' }),
+            ).not.toBeInTheDocument();
+            await user.clear(screen.getByLabelText(/^Colour/));
+            await user.type(screen.getByLabelText(/^Colour/), 'Antique brass');
+
+            // Stock per colour, same cost: the Colours table; Unit cost stays; Colour goes.
+            await user.click(
+                screen.getByRole('radio', { name: 'Stock per colour' }),
+            );
+            expect(
+                screen.getByRole('radio', {
+                    name: 'Same cost for every colour',
+                }),
+            ).toBeChecked();
+
+            const table = screen.getByRole('group', { name: 'Colours' });
+
+            expect(
+                within(table).getByText(
+                    'No colours yet. Add the colours you buy this material in.',
+                ),
+            ).toBeInTheDocument();
+            expect(
+                screen.queryByRole('textbox', { name: /^Colour \(optional\)/ }),
+            ).not.toBeInTheDocument();
+            expect(
+                screen.queryByRole('textbox', { name: /^Quantity in stock$/ }),
+            ).not.toBeInTheDocument();
+            expect(
+                screen.getByRole('textbox', { name: /^Unit cost/ }),
+            ).toBeInTheDocument();
+            expect(
+                screen.getByLabelText(/^Reorder at/),
+            ).toHaveAccessibleDescription(
+                expect.stringContaining(
+                    'Applies to each colour. The material shows Low stock when any colour is at or under this level.',
+                ),
+            );
+
+            // Add colour offers the list; once chosen a colour is no longer offered.
+            await user.click(
+                within(table).getByRole('button', { name: 'Add colour' }),
+            );
+
+            const list = within(
+                screen.getByRole('dialog', { name: 'Choose colours' }),
+            );
+
+            await user.click(list.getByRole('option', { name: 'Indigo, IND' }));
+            await user.click(list.getByRole('option', { name: 'Black, BLK' }));
+            await user.click(list.getByRole('button', { name: 'Done' }));
+            await user.click(
+                screen.getByRole('button', { name: 'Add colour' }),
+            );
+            expect(
+                screen.queryByRole('option', { name: 'Indigo, IND' }),
+            ).not.toBeInTheDocument();
+            expect(
+                screen.getByRole('option', { name: 'Navy, NAV' }),
+            ).toBeInTheDocument();
+            await user.keyboard('{Escape}');
+
+            for (const [name, quantity] of [
+                ['Black', '40'],
+                ['Indigo', '250'],
+            ]) {
+                const field = screen.getByRole('textbox', {
+                    name: `Quantity in stock ${name}`,
+                });
+
+                await user.clear(field);
+                await user.type(field, quantity);
+            }
+
+            // Cost per colour: a cost for each colour and no single Unit cost.
+            await user.click(
+                screen.getByRole('radio', { name: 'Cost per colour' }),
+            );
+            expect(
+                screen.queryByRole('textbox', { name: 'Unit cost' }),
+            ).not.toBeInTheDocument();
+            await user.type(
+                screen.getByRole('textbox', { name: 'Unit cost Black' }),
+                '9.2',
+            );
+            await user.type(
+                screen.getByRole('textbox', { name: 'Unit cost Indigo' }),
+                '8.5',
+            );
+            await user.click(
+                screen.getByRole('button', { name: 'Save material' }),
+            );
+
+            const data: FormData = onSubmit.mock.calls[0][0];
+
+            expect(Object.fromEntries(data.entries())).toMatchObject({
+                stock_mode: 'per_colour',
+                cost_mode: 'per_colour',
+                color: 'Antique brass',
+                'colours[0][colour_id]': '8',
+                'colours[0][quantity_on_hand]': '40',
+                'colours[0][unit_cost]': '9.2',
+                'colours[1][colour_id]': '10',
+                'colours[1][quantity_on_hand]': '250',
+                'colours[1][unit_cost]': '8.5',
+            });
+            expect(data.has('unit_cost')).toBe(false);
+            expect(data.has('quantity_on_hand')).toBe(false);
+
+            // Back to one stock: the typed Colour text is still there.
+            await user.click(
+                screen.getByRole('radio', {
+                    name: 'One stock for all colours',
+                }),
+            );
+            expect(screen.getByLabelText(/^Colour/)).toHaveValue(
+                'Antique brass',
+            );
+            expect(
+                screen.queryByRole('group', { name: 'Colours' }),
+            ).not.toBeInTheDocument();
+        });
+
+        it('puts each colour message under its field, the colour-less one under the table, and focuses the first', () => {
+            const perColour: MaterialFormData = {
+                ...denimForm,
+                stock_mode: 'per_colour',
+                cost_mode: 'per_colour',
+                colours: [
+                    { colour_id: 8, quantity_on_hand: '40', unit_cost: '' },
+                    {
+                        colour_id: 10,
+                        quantity_on_hand: 'abc',
+                        unit_cost: '8.5',
+                    },
+                ],
+            };
+            const { unmount } = renderForm({
+                initial: perColour,
+                errors: {
+                    'colours.0.unit_cost': 'Black: Enter a unit cost.',
+                    'colours.1.quantity_on_hand':
+                        'Indigo: Enter a number from 0, with up to 4 decimals.',
+                },
+            });
+
+            const cost = screen.getByRole('textbox', {
+                name: 'Unit cost Black',
+            });
+            const quantity = screen.getByRole('textbox', {
+                name: 'Quantity in stock Indigo',
+            });
+
+            expect(cost).toHaveAttribute('aria-invalid', 'true');
+            expect(cost).toHaveAccessibleDescription(
+                expect.stringContaining('Black: Enter a unit cost.'),
+            );
+            expect(quantity).toHaveAttribute('aria-invalid', 'true');
+            expect(quantity).toHaveAccessibleDescription(
+                expect.stringContaining(
+                    'Indigo: Enter a number from 0, with up to 4 decimals.',
+                ),
+            );
+            // The first error in the form takes the focus; typed values stay.
+            expect(cost).toHaveFocus();
+            expect(quantity).toHaveValue('abc');
+            unmount();
+
+            renderForm({
+                initial: { ...perColour, colours: [] },
+                errors: {
+                    colours:
+                        'Add at least one colour, or choose One stock for all colours.',
+                },
+            });
+
+            const add = screen.getByRole('button', { name: 'Add colour' });
+
+            expect(add).toHaveAttribute('aria-invalid', 'true');
+            expect(add).toHaveAccessibleDescription(
+                'Add at least one colour, or choose One stock for all colours.',
+            );
+            expect(add).toHaveFocus();
         });
     });
 });

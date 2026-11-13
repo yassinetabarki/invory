@@ -64,13 +64,17 @@ final class CuttingCalculator
     }
 
     /**
-     * The plan of a Start batch over a grid of colours and sizes (ADR-0027 decision 6): per material
-     * `total_exact = Σ n_v × required_exact(m, v)`, `needed = round4(total_exact)` once, short when `total_exact` (never the rounded
-     * figure) is above the stock. With one variant, or a product that doesn't vary, it is `take()` for the total.
+     * The plan of a Start batch over a grid of colours and sizes (ADR-0027 decision 6, ADR-0029): per *stock* (a one-stock material, or
+     * one colour of a per-colour material) `total_exact = Σ n_v × required_exact(m, v)` over the variants drawing on it,
+     * `needed = round4(total_exact)` once, short when `total_exact` (never the rounded figure) is above that stock's quantity; a colour
+     * the material lacks is a stock of 0 (`missing`). With one variant, or a product that doesn't vary, it is `take()` for the total.
+     *
+     * Takes are listed in composition order, a material's colours in the order the variants come (the caller lists them in colour order).
      *
      * @param  list<VariantUnits>  $variants  the grid's colours and sizes with at least one unit, each with its composition
      * @param  list<int>  $materialOrder  material ids in the product's composition order: the takes are listed in it
-     * @param  bool  $varies  the product has a line by colour and size
+     * @param  bool  $varies  the product's variants differ: it has a line by colour and size **or** a per-colour material (pass true for
+     *                        either, and for a per-colour material also with a single variant); several variants then make a mixed plan
      *
      * @throws InvalidArgumentException If there is no variant.
      */
@@ -82,24 +86,37 @@ final class CuttingCalculator
 
         $units = 0;
         $capacity = null;
-        /** @var array<int, array{name: string, unit: string, stock: BigDecimal, total: BigDecimal}> $materials */
-        $materials = [];
+        /** @var array<string, array{materialId: int, colourId: ?int, missing: bool, name: string, unit: string, stock: BigDecimal, total: BigDecimal}> $stocks */
+        $stocks = [];
+        /** @var array<int, list<string>> $stocksOf stock keys by material id, in the order the variants first draw on them */
+        $stocksOf = [];
         $groups = [];
 
         foreach ($variants as $variant) {
             $result = $this->costing->calculate($variant->lines);
             $capacity ??= $result->capacity;
             $units += $variant->units;
+            $drawsOn = self::stockOfLines($variant->lines);
             $perUnit = [];
 
             foreach ($result->requirements as $requirement) {
-                $materials[$requirement->materialId] ??= [
-                    'name' => $requirement->materialName,
-                    'unit' => $requirement->unit,
-                    'stock' => BigDecimal::of($requirement->stockOnHand),
-                    'total' => BigDecimal::zero(),
-                ];
-                $materials[$requirement->materialId]['total'] = $materials[$requirement->materialId]['total']
+                [$colourId, $missing] = $drawsOn[$requirement->materialId];
+                $key = self::stockKey($requirement->materialId, $colourId);
+
+                if (! isset($stocks[$key])) {
+                    $stocks[$key] = [
+                        'materialId' => $requirement->materialId,
+                        'colourId' => $colourId,
+                        'missing' => $missing,
+                        'name' => $requirement->materialName,
+                        'unit' => $requirement->unit,
+                        'stock' => BigDecimal::of($requirement->stockOnHand),
+                        'total' => BigDecimal::zero(),
+                    ];
+                    $stocksOf[$requirement->materialId][] = $key;
+                }
+
+                $stocks[$key]['total'] = $stocks[$key]['total']
                     ->plus(BigDecimal::of($requirement->perUnitExact)->multipliedBy($variant->units));
                 $perUnit[$requirement->materialId] = $requirement->perUnitExact;
             }
@@ -110,26 +127,26 @@ final class CuttingCalculator
         $takes = [];
         $allowed = true;
 
-        foreach (array_values(array_unique([...$materialOrder, ...array_keys($materials)])) as $materialId) {
-            if (! isset($materials[$materialId])) {
-                continue;
+        foreach (array_values(array_unique([...$materialOrder, ...array_keys($stocksOf)])) as $materialId) {
+            foreach ($stocksOf[$materialId] ?? [] as $key) {
+                ['colourId' => $colourId, 'missing' => $missing, 'name' => $name, 'unit' => $unit, 'stock' => $stock, 'total' => $exactNeed] = $stocks[$key];
+                $needed = self::round($exactNeed);
+                $short = $exactNeed->isGreaterThan($stock);
+                $allowed = $allowed && ! $short;
+
+                $takes[] = new MaterialTake(
+                    materialId: $materialId,
+                    materialName: $name,
+                    unit: $unit,
+                    perUnitExact: self::sharedPerUnit($groups, $materialId, $colourId),
+                    needed: (string) $needed,
+                    inStock: (string) self::round($stock),
+                    after: $short ? null : (string) $stock->minus($needed)->toScale(self::SCALE),
+                    shortBy: $short ? (string) self::round($exactNeed->minus($stock)) : null,
+                    colourId: $colourId,
+                    missing: $missing,
+                );
             }
-
-            ['name' => $name, 'unit' => $unit, 'stock' => $stock, 'total' => $exactNeed] = $materials[$materialId];
-            $needed = self::round($exactNeed);
-            $short = $exactNeed->isGreaterThan($stock);
-            $allowed = $allowed && ! $short;
-
-            $takes[] = new MaterialTake(
-                materialId: $materialId,
-                materialName: $name,
-                unit: $unit,
-                perUnitExact: self::sharedPerUnit($groups, $materialId),
-                needed: (string) $needed,
-                inStock: (string) self::round($stock),
-                after: $short ? null : (string) $stock->minus($needed)->toScale(self::SCALE),
-                shortBy: $short ? (string) self::round($exactNeed->minus($stock)) : null,
-            );
         }
 
         $mixed = $varies && count($variants) > 1;
@@ -147,8 +164,17 @@ final class CuttingCalculator
     }
 
     /**
+     * The key of a stock in the `$stockOnHand` figures of a return and in the totals: the material id for a one-stock take
+     * (what it always was), "materialId:colourId" for one colour of a per-colour material.
+     */
+    public static function stockKey(int $materialId, ?int $colourId = null): string
+    {
+        return $colourId === null ? (string) $materialId : $materialId.':'.$colourId;
+    }
+
+    /**
      * @param  list<CutBatch>  $newestFirst  the line's cuts, latest first
-     * @param  array<int, string>  $stockOnHand  stock per material id, for every returnable material of the batches
+     * @param  array<int|string, string>  $stockOnHand  stock by stockKey(), for every returnable material of the batches
      *
      * @throws InvalidArgumentException If $units is below 1, or a returnable material has no stock figure.
      */
@@ -158,7 +184,7 @@ final class CuttingCalculator
 
         $remaining = $units;
         $batches = [];
-        /** @var array<int, array{taken: BigDecimal, returned: BigDecimal, returnable: bool, deleted: bool}> $totals */
+        /** @var array<string, array{materialId: int, colourId: ?int, taken: BigDecimal, returned: BigDecimal, returnable: bool, deleted: bool}> $totals */
         $totals = [];
 
         foreach ($newestFirst as $batch) {
@@ -198,7 +224,9 @@ final class CuttingCalculator
      * `returned = held(r) − held(r with the group's r − k)`, `held(r) = round4(Σ_u r_u × per_unit(u, m))` over every group of the cut.
      * Lists only the materials that group uses. A cut without groups is one group: it gives what giveBack() gives.
      *
-     * @param  array<int, string>  $stockOnHand  stock per material id, for every returnable material the group uses
+     * A take with a colour holds only the cut's groups of that colour (INV-21); one without holds every group, as a cut made before INV-21.
+     *
+     * @param  array<int|string, string>  $stockOnHand  stock by stockKey(): the material id, or "materialId:colourId" for a take with a colour
      *
      * @throws InvalidArgumentException If $units is below 1 or above the group's outstanding units, the cut has groups but none
      *                                  in that colour and size, or a returnable material has no stock figure.
@@ -234,12 +262,16 @@ final class CuttingCalculator
         $totals = [];
 
         foreach ($cut->materials as $material) {
-            if (! isset($target->perUnit[$material->materialId])) {
+            // A take of one colour holds only that colour's groups; a take without a colour holds every group.
+            if (! isset($target->perUnit[$material->materialId]) || ($material->colourId !== null && $material->colourId !== $target->colourId)) {
                 continue;
             }
 
-            $amount = self::heldBy($cut->groups, $material->materialId, null, 0)
-                ->minus(self::heldBy($cut->groups, $material->materialId, $target, $units));
+            $held = $material->colourId === null
+                ? $cut->groups
+                : array_values(array_filter($cut->groups, static fn (CutGroup $group): bool => $group->colourId === $material->colourId));
+            $amount = self::heldBy($held, $material->materialId, null, 0)
+                ->minus(self::heldBy($held, $material->materialId, $target, $units));
 
             self::addToTotals($totals, $material, $amount);
         }
@@ -283,16 +315,27 @@ final class CuttingCalculator
     }
 
     /**
-     * The per-unit figure of a material when every variant of the plan uses it at the same amount; null when it differs.
+     * The per-unit figure of a stock when every variant drawing on it uses it at the same amount; null when it differs.
+     * A one-stock material is drawn on by every group, one colour of a per-colour material by the groups of that colour.
      *
      * @param  list<CutGroup>  $groups
      */
-    private static function sharedPerUnit(array $groups, int $materialId): ?string
+    private static function sharedPerUnit(array $groups, int $materialId, ?int $colourId): ?string
     {
-        $first = $groups[0]->perUnit[$materialId] ?? null;
+        $first = null;
 
         foreach ($groups as $group) {
-            if ($first === null || ! isset($group->perUnit[$materialId]) || ! BigDecimal::of($group->perUnit[$materialId])->isEqualTo($first)) {
+            if ($colourId !== null && $group->colourId !== $colourId) {
+                continue;
+            }
+
+            if (! isset($group->perUnit[$materialId])) {
+                return null;
+            }
+
+            $first ??= $group->perUnit[$materialId];
+
+            if (! BigDecimal::of($group->perUnit[$materialId])->isEqualTo($first)) {
                 return null;
             }
         }
@@ -300,10 +343,29 @@ final class CuttingCalculator
         return $first;
     }
 
-    /** @param array<int, array{taken: BigDecimal, returned: BigDecimal, returnable: bool, deleted: bool}> $totals */
+    /**
+     * The stock each material of a variant's lines draws on, by material id: the colour of the stock (null for one stock) and whether
+     * the per-colour material lacks it. Like the costing, a material takes it from its first line.
+     *
+     * @param  list<BomLine>  $lines
+     * @return array<int, array{0: ?int, 1: bool}>
+     */
+    private static function stockOfLines(array $lines): array
+    {
+        $drawsOn = [];
+
+        foreach ($lines as $line) {
+            $drawsOn[$line->materialId] ??= [$line->stockColourId, $line->stockMissing];
+        }
+
+        return $drawsOn;
+    }
+
+    /** @param array<string, array{materialId: int, colourId: ?int, taken: BigDecimal, returned: BigDecimal, returnable: bool, deleted: bool}> $totals */
     private static function addToTotals(array &$totals, CutBatchMaterial $material, BigDecimal $amount): void
     {
-        $total = $totals[$material->materialId] ?? ['taken' => BigDecimal::zero(), 'returned' => BigDecimal::zero(), 'returnable' => false, 'deleted' => false];
+        $key = self::stockKey($material->materialId, $material->colourId);
+        $total = $totals[$key] ?? ['materialId' => $material->materialId, 'colourId' => $material->colourId, 'taken' => BigDecimal::zero(), 'returned' => BigDecimal::zero(), 'returnable' => false, 'deleted' => false];
         $total['taken'] = $total['taken']->plus($amount);
 
         if ($material->notReturned === null) {
@@ -313,12 +375,12 @@ final class CuttingCalculator
             $total['deleted'] = $total['deleted'] || $material->notReturned === CutBatchMaterial::DELETED;
         }
 
-        $totals[$material->materialId] = $total;
+        $totals[$key] = $total;
     }
 
     /**
-     * @param  array<int, array{taken: BigDecimal, returned: BigDecimal, returnable: bool, deleted: bool}>  $totals
-     * @param  array<int, string>  $stockOnHand
+     * @param  array<string, array{materialId: int, colourId: ?int, taken: BigDecimal, returned: BigDecimal, returnable: bool, deleted: bool}>  $totals
+     * @param  array<int|string, string>  $stockOnHand  by stockKey()
      * @return list<MaterialReturn>
      *
      * @throws InvalidArgumentException If a returnable material has no stock figure.
@@ -327,24 +389,25 @@ final class CuttingCalculator
     {
         $returns = [];
 
-        foreach ($totals as $materialId => $total) {
+        foreach ($totals as $key => $total) {
             $inStock = null;
 
             if ($total['returnable']) {
-                if (! isset($stockOnHand[$materialId])) {
-                    throw new InvalidArgumentException(sprintf('Stock on hand is missing for returnable material %d.', $materialId));
+                if (! isset($stockOnHand[$key])) {
+                    throw new InvalidArgumentException(sprintf('Stock on hand is missing for returnable material %s.', $key));
                 }
 
-                $inStock = self::round(Decimals::parseNonNegative($stockOnHand[$materialId], 'stockOnHand'));
+                $inStock = self::round(Decimals::parseNonNegative($stockOnHand[$key], 'stockOnHand'));
             }
 
             $returns[] = new MaterialReturn(
-                materialId: $materialId,
+                materialId: $total['materialId'],
                 taken: (string) $total['taken']->toScale(self::SCALE),
                 returned: (string) $total['returned']->toScale(self::SCALE),
                 notReturned: $total['returnable'] ? null : ($total['deleted'] ? CutBatchMaterial::DELETED : CutBatchMaterial::UNIT_CHANGED),
                 inStock: $inStock === null ? null : (string) $inStock,
                 after: $inStock === null ? null : (string) $inStock->plus($total['returned'])->toScale(self::SCALE),
+                colourId: $total['colourId'],
             );
         }
 

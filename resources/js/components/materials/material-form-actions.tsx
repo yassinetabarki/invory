@@ -20,11 +20,11 @@ export function MaterialFormActions({
     return (
         <>
             {cancelHref && (
-                <Button asChild variant="outline">
+                <Button asChild variant="outline" className="h-11 md:h-9">
                     <Link href={cancelHref}>Cancel</Link>
                 </Button>
             )}
-            <Button type="submit" disabled={processing}>
+            <Button type="submit" disabled={processing} className="h-11 md:h-9">
                 {processing && <Spinner />}
                 {submitLabel}
             </Button>

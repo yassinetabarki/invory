@@ -31,6 +31,9 @@ final class MaterialOptionController extends Controller
             $matches = $matches->concat($options()->whereIn('id', $missing)->get());
         }
 
+        // A per-colour material's status reads its colour rows.
+        Material::loadColours($matches);
+
         return MaterialOptionResource::collection($matches);
     }
 }

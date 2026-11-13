@@ -1,4 +1,6 @@
 import { Link } from '@inertiajs/react';
+import { AddColourLink } from '@/components/products/colour-stock-line';
+import type { AddColour } from '@/components/products/colour-stock-line';
 import { Callout } from '@/components/shared/callout';
 import { Quantity } from '@/components/shared/quantity';
 import { useAppSettings } from '@/hooks/use-app-settings';
@@ -20,6 +22,8 @@ type BottleneckCalloutProps = {
     materialHref: (material: MaterialRef) => string;
     /** Where "Edit composition" goes when there is no composition. */
     editHref: string;
+    /** Opens the window that adds the missing colour to the material (INV-21-p); the link shows only when given. */
+    onAddColour?: AddColour;
 };
 
 /**
@@ -68,6 +72,7 @@ export function BottleneckCallout({
     singleColour,
     materialHref,
     editHref,
+    onAddColour,
 }: BottleneckCalloutProps) {
     const { locale } = useAppSettings();
 
@@ -84,7 +89,7 @@ export function BottleneckCallout({
         );
     }
 
-    const { bottleneck } = capacity;
+    const { bottleneck, bottleneck_colour: colour } = capacity;
 
     if (bottleneck === null) {
         return null;
@@ -96,9 +101,44 @@ export function BottleneckCallout({
     const openMaterial = (
         <Link href={materialHref(bottleneck)}>Open material</Link>
     );
+    // A material kept per colour: the stock that limits is the binding colour's, not the material's total (INV-21).
+    const stock = colour
+        ? capacity.bottleneck_stock
+        : (line?.stock_on_hand ?? null);
+    // "It's also below its reorder level": the bottleneck's own stock decides (a per-colour material: the colour that limits, not any colour of it).
+    const colourStatus = capacity.bottleneck_colour_status;
+    const belowReorder =
+        line !== undefined &&
+        (colour
+            ? (colourStatus === 'low' || colourStatus === 'out') &&
+              line.material.reorder_level !== null
+            : line.material.stock_status === 'low');
+    const missingColour =
+        colour !== null && capacity.bottleneck_missing ? colour : null;
+    const missingBody = missingColour && (
+        <>
+            {bottleneck.name} has no {missingColour.name} yet, so {productName}{' '}
+            can't be made in {missingColour.name}.
+            {onAddColour && (
+                <>
+                    {' '}
+                    <AddColourLink
+                        materialName={bottleneck.name}
+                        colourName={missingColour.name}
+                        onClick={() =>
+                            onAddColour(bottleneck.id, missingColour.id)
+                        }
+                        className="font-semibold text-current underline underline-offset-2"
+                    />
+                </>
+            )}
+        </>
+    );
 
     if (capacity.best === 0) {
-        const isOut = line?.material.stock_status === 'out';
+        const isOut = colour
+            ? stock !== null && isZeroDecimal(stock)
+            : line?.material.stock_status === 'out';
 
         return (
             <Callout
@@ -106,16 +146,15 @@ export function BottleneckCallout({
                 title={`${productName} can't be produced:`}
                 action={openMaterial}
             >
-                {isOut || !line ? (
+                {missingBody ? (
+                    missingBody
+                ) : isOut || !line ? (
                     <>{bottleneck.name} is out of stock.</>
                 ) : (
                     <>
                         {bottleneck.name} doesn't cover one unit.{' '}
-                        <Quantity
-                            value={line.stock_on_hand}
-                            unit={bottleneck.unit}
-                        />{' '}
-                        in stock
+                        <Quantity value={stock} unit={bottleneck.unit} />
+                        {colour && ` of ${colour.name}`} in stock
                         {line.effective_quantity !== null && (
                             <>
                                 , and each unit needs{' '}
@@ -140,16 +179,21 @@ export function BottleneckCallout({
         const guaranteed = capacity.max_producible;
         // The bottleneck's variant can't be made at all, but another one can (best > 0).
         const cannotBeMade = guaranteed === 0 && name !== null;
+        const size = byVariant.binding.size
+            ? `size ${byVariant.binding.size.label}`
+            : null;
+        const title = missingColour
+            ? `Bottleneck: ${bottleneck.name} — no ${missingColour.name} stock.`
+            : colour
+              ? `Bottleneck: ${bottleneck.name}, ${colour.name} stock${size ? ` (${size})` : ''}.`
+              : `Bottleneck: ${bottleneck.name}${name ? ` (${name})` : ''}.`;
 
         return (
-            <Callout
-                tone="warning"
-                title={`Bottleneck: ${bottleneck.name}${name ? ` (${name})` : ''}.`}
-                action={openMaterial}
-            >
-                {line && cannotBeMade && (
+            <Callout tone="warning" title={title} action={openMaterial}>
+                {missingBody}
+                {!missingBody && stock !== null && cannotBeMade && (
                     <>
-                        {isZeroDecimal(line.stock_on_hand) ? (
+                        {isZeroDecimal(stock) ? (
                             <>
                                 {bottleneck.name} is out of stock, so {name}{' '}
                                 can't be made.
@@ -159,7 +203,7 @@ export function BottleneckCallout({
                                 {bottleneck.name} doesn't cover one unit of{' '}
                                 {name}.{' '}
                                 <Quantity
-                                    value={line.stock_on_hand}
+                                    value={stock}
                                     unit={bottleneck.unit}
                                 />{' '}
                                 in stock.
@@ -167,20 +211,18 @@ export function BottleneckCallout({
                         )}
                     </>
                 )}
-                {line && !cannotBeMade && (
+                {!missingBody && stock !== null && !cannotBeMade && (
                     <>
-                        <Quantity
-                            value={line.stock_on_hand}
-                            unit={bottleneck.unit}
-                        />{' '}
-                        in stock covers {formatCount(guaranteed, locale)}{' '}
+                        <Quantity value={stock} unit={bottleneck.unit} />{' '}
+                        {colour && `of ${colour.name} `}in stock covers{' '}
+                        {formatCount(guaranteed, locale)}{' '}
                         {guaranteed === 1 ? 'unit' : 'units'}
                         {name &&
                             ` of ${name} — the smallest across every ${spanName(byVariant.binding, singleColour)}`}
                         .
                     </>
                 )}
-                {line?.material.stock_status === 'low' && (
+                {!missingBody && line && belowReorder && (
                     <>
                         {' '}
                         It's also below its reorder level of{' '}
@@ -227,7 +269,7 @@ export function BottleneckCallout({
                         unit={bottleneck.unit}
                     />{' '}
                     each.
-                    {line.material.stock_status === 'low' && (
+                    {belowReorder && (
                         <>
                             {' '}
                             It's also below its reorder level of{' '}

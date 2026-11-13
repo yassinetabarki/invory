@@ -121,6 +121,10 @@ describe('index', function () {
                     'best' => $maxProducible,
                     'by_variant' => null,
                     'bottleneck' => ['id' => $bottleneck->id, 'sku' => $bottleneckSku, 'name' => $bottleneck->name, 'unit' => $bottleneck->unit->code],
+                    'bottleneck_colour' => null,
+                    'bottleneck_missing' => false,
+                    'bottleneck_stock' => $bottleneck->quantity_on_hand,
+                    'bottleneck_colour_status' => null,
                 ])
                 ->where('units_sold_last_30_days', $sold)
                 ->etc()));
@@ -286,7 +290,7 @@ describe('show', function () {
                     ]))
                     ->has('product.cost', fn (Assert $cost) => $cost->hasAll(['material_cost', 'labor_cost', 'overhead_cost', 'unit_cost']))
                     ->has('product.margin', fn (Assert $margin) => $margin->hasAll(['amount', 'percent']))
-                    ->has('product.capacity', fn (Assert $capacity) => $capacity->hasAll(['max_producible', 'best', 'by_variant', 'bottleneck']))
+                    ->has('product.capacity', fn (Assert $capacity) => $capacity->hasAll(['max_producible', 'best', 'by_variant', 'bottleneck', 'bottleneck_colour', 'bottleneck_missing', 'bottleneck_stock', 'bottleneck_colour_status']))
                     ->where('product.capacity_by_colour', null)
                     ->has('sales_last_30_days', fn (Assert $sales) => $sales->hasAll(['units_sold', 'revenue']))
                     ->has('recent_sales', 5)));
@@ -375,6 +379,8 @@ describe('show', function () {
                     'photo_url' => Storage::disk('public')->url('materials/denim.jpg'),
                     'stock_status' => 'in_stock',
                     'reorder_level' => '100.0000',
+                    'stock_mode' => 'single',
+                    'cost_mode' => 'same',
                 ])
                 ->where('quantity_mode', 'same')
                 ->where('quantities', [])
@@ -385,6 +391,7 @@ describe('show', function () {
                 ->where('line_cost', '16.8300')
                 ->where('stock_on_hand', '250.0000')
                 ->where('units_possible', 126)
+                ->where('stock_by_colour', null)
                 ->where('is_bottleneck', false)
                 ->where('notes', 'Body, sleeves, collar'))
             ->where('product.components.1.material.stock_status', 'low')
@@ -448,7 +455,7 @@ describe('show', function () {
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page->loadDeferredProps('default', fn (Assert $reloaded) => $reloaded
                 ->where('product.components', [])
-                ->where('product.capacity', ['max_producible' => null, 'best' => null, 'by_variant' => null, 'bottleneck' => null])
+                ->where('product.capacity', ['max_producible' => null, 'best' => null, 'by_variant' => null, 'bottleneck' => null, 'bottleneck_colour' => null, 'bottleneck_missing' => false, 'bottleneck_stock' => null, 'bottleneck_colour_status' => null])
                 ->where('product.cost', [
                     'material_cost' => sameEnds('0.0000'),
                     'labor_cost' => '12.0000',

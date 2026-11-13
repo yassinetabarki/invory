@@ -8,7 +8,7 @@ import { productRefs, recentSales, salesPeriods } from '@/test/fixtures/sales';
 import type {
     DashboardProps,
     DashboardStats,
-    Material,
+    NeedsRestockMaterial,
     TopProduct,
     UnproducibleAlert,
 } from '@/types/domain';
@@ -95,9 +95,12 @@ export const topByRevenue: TopProduct[] = [
     },
 ];
 
-function material(overrides: Partial<Material>): Material {
+function material(
+    overrides: Partial<NeedsRestockMaterial>,
+): NeedsRestockMaterial {
     return {
         ...denim,
+        colours_text: null,
         photo_url: null,
         supplier_name: null,
         supplier_reference: null,
@@ -109,7 +112,7 @@ function material(overrides: Partial<Material>): Material {
 }
 
 /** Out first, then low; by name. */
-export const needsRestock: Material[] = [
+export const needsRestock: NeedsRestockMaterial[] = [
     material({
         id: 9,
         sku: 'MAT-SOL-042',

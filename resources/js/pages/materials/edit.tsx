@@ -6,6 +6,7 @@ import { PageHeader } from '@/components/shared/page-header';
 import { useReference } from '@/hooks/use-reference';
 import { categoryOptions, unitOptions } from '@/lib/reference';
 import type {
+    Colour,
     Material,
     MaterialEditProps,
     MaterialFormData,
@@ -20,6 +21,13 @@ function toFormData(material: Material): MaterialFormData {
         unit: material.unit,
         unit_cost: material.unit_cost,
         quantity_on_hand: material.quantity_on_hand,
+        stock_mode: material.stock_mode,
+        cost_mode: material.cost_mode,
+        colours: material.colours.map((row) => ({
+            colour_id: row.colour.id,
+            quantity_on_hand: row.quantity_on_hand,
+            unit_cost: row.unit_cost ?? '',
+        })),
         reorder_level: material.reorder_level ?? '',
         supplier_name: material.supplier_name ?? '',
         supplier_reference: material.supplier_reference ?? '',
@@ -33,7 +41,13 @@ function toFormData(material: Material): MaterialFormData {
 
 const SUBMIT_LABEL = 'Save material';
 
-export default function MaterialsEdit({ material }: MaterialEditProps) {
+/** The workshop's colours are a page prop added by INV-21-g (optional here until the page tests send it). */
+type MaterialsEditProps = MaterialEditProps & { colours?: Colour[] };
+
+export default function MaterialsEdit({
+    material,
+    colours = [],
+}: MaterialsEditProps) {
     const reference = useReference();
     const cancelHref = MaterialController.show.url(material);
 
@@ -69,6 +83,8 @@ export default function MaterialsEdit({ material }: MaterialEditProps) {
                                 material.category,
                             )}
                             units={unitOptions(reference.units, material.unit)}
+                            colours={colours}
+                            storedColours={material.colours}
                             errors={errors}
                             processing={processing}
                             submitLabel={SUBMIT_LABEL}
@@ -82,7 +98,7 @@ export default function MaterialsEdit({ material }: MaterialEditProps) {
     );
 }
 
-MaterialsEdit.layout = (props: MaterialEditProps) => ({
+MaterialsEdit.layout = (props: MaterialsEditProps) => ({
     breadcrumbs: [
         {
             title: 'Materials',

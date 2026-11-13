@@ -17,7 +17,9 @@ final readonly class BomLine
      * @param  string  $quantity  Net quantity per unit of product, > 0.
      * @param  string  $wastePercent  Expected loss on top of the quantity, 0 <= x < 100.
      * @param  string  $unitCost  Cost of one unit of the material, >= 0.
-     * @param  string  $stockOnHand  Quantity in stock, >= 0.
+     * @param  string  $stockOnHand  Quantity in stock, >= 0 (of the colour's stock for a per-colour material).
+     * @param  ?int  $stockColourId  The colour of the stock this line draws on (INV-21); null for a one-stock material.
+     * @param  bool  $stockMissing  The per-colour material lacks that colour: its stock is "0" (INV-21).
      *
      * @throws InvalidArgumentException If a decimal is malformed or out of range.
      */
@@ -29,6 +31,8 @@ final readonly class BomLine
         public string $wastePercent,
         public string $unitCost,
         public string $stockOnHand,
+        public ?int $stockColourId = null,
+        public bool $stockMissing = false,
     ) {
         if (! Decimals::parse($quantity, 'quantity')->isPositive()) {
             throw new InvalidArgumentException(sprintf('quantity must be greater than 0, got "%s".', $quantity));

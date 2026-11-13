@@ -205,7 +205,7 @@ it('leaves every line "same" with its quantity and the Denim Jacket at 35.7540 a
         ->and($foreignKeys('product_components'))->toBe(['materials', 'products', 'workshops'])
         ->and(Schema::hasIndex('production_cut_materials', ['production_cut_id', 'material_id'], 'unique'))->toBeTrue()
         ->and(Schema::hasIndex('production_cut_materials', ['material_id']))->toBeTrue()
-        ->and($foreignKeys('production_cut_materials'))->toBe(['materials', 'production_cuts', 'units', 'workshops']);
+        ->and($foreignKeys('production_cut_materials'))->toBe(['colours', 'materials', 'production_cuts', 'units', 'workshops']); // `colours`: INV-21-a's colour_id, brought back by the same object
 
     $costing = app(ProductCostingService::class)->cost($jacket->load('components.material'));
 

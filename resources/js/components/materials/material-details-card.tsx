@@ -48,7 +48,10 @@ export function MaterialDetailsCard({ material }: { material: Material }) {
                 <Fact label="Supplier ref." className="font-mono text-[13px]">
                     {orDash(material.supplier_reference)}
                 </Fact>
-                <Fact label="Colour">{orDash(material.color)}</Fact>
+                {/* A per-colour material keeps the text but doesn't show it (INV-21). */}
+                {material.stock_mode === 'single' && (
+                    <Fact label="Colour">{orDash(material.color)}</Fact>
+                )}
                 <Fact label="Composition">{orDash(material.composition)}</Fact>
                 <Fact label="Notes">
                     <span className="whitespace-pre-line">

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Resources;
 
+use App\Enums\MaterialStockMode;
+use App\Enums\StockStatus;
 use App\Models\Material;
 use App\Models\Product;
 use App\Services\Costing\ProductCosting;
@@ -24,20 +26,42 @@ use Illuminate\Http\Resources\Json\JsonResource;
  */
 final class CapacityResource extends JsonResource
 {
-    /** @return array{max_producible: int|null, bottleneck: array<string, mixed>|null, best: int|null, by_variant: array<string, mixed>|null} */
+    /** @return array{max_producible: int|null, bottleneck: array<string, mixed>|null, best: int|null, by_variant: array<string, mixed>|null, bottleneck_colour: array<string, mixed>|null, bottleneck_missing: bool, bottleneck_stock: string|null, bottleneck_colour_status: string|null} */
     public function toArray(Request $request): array
     {
         $costing = $this->costing;
         $capacity = $costing->result->capacity;
         $materials = $this->components->mapWithKeys(static fn ($component): array => [$component->material_id => $component->material]);
         $bottleneck = $capacity->bottleneckMaterialId === null ? null : $materials->get($capacity->bottleneckMaterialId);
+        $colourId = $costing->variants?->bindingBottleneckColourId;
+        $colour = $colourId === null ? null : $this->colours->firstWhere('id', $colourId);
 
         return [
             'max_producible' => $capacity->maxProducible,
             'bottleneck' => $bottleneck === null ? null : (new MaterialRefResource($bottleneck))->resolve($request),
             'best' => $costing->best(),
             'by_variant' => $this->byVariant($request, $costing, $materials->all()),
+            // INV-21: the colour of the stock that limits the guaranteed figure (a material kept per colour), whether the material lacks
+            // that colour, and the stock it limits on ("Denim 12oz, Black stock: 40 m"). Null/false for a one-stock bottleneck.
+            'bottleneck_colour' => $colour === null ? null : (new ColourResource($colour))->resolve($request),
+            'bottleneck_missing' => $costing->variants->bindingBottleneckMissing ?? false,
+            'bottleneck_stock' => $costing->bottleneckStock(),
+            // The status of the bottleneck's stock in that colour (low or out; out when the material lacks the colour): the callout adds "below
+            // its reorder level" only when this colour is low. Null for a one-stock bottleneck.
+            'bottleneck_colour_status' => $this->bottleneckColourStatus($bottleneck, $colourId),
         ];
+    }
+
+    /** The status of the bottleneck material's stock in colour `$colourId`; null unless the bottleneck keeps its stock per colour. */
+    private function bottleneckColourStatus(?Material $bottleneck, ?int $colourId): ?string
+    {
+        if ($bottleneck === null || $colourId === null || $bottleneck->stock_mode !== MaterialStockMode::PerColour) {
+            return null;
+        }
+
+        $row = $bottleneck->colours->firstWhere('colour_id', $colourId);
+
+        return ($row === null ? StockStatus::Out : $bottleneck->colourStatus($row))->value;
     }
 
     /**
@@ -48,7 +72,7 @@ final class CapacityResource extends JsonResource
     {
         $variants = $costing->variants;
 
-        if ($variants === null || ! $variants->varies || $variants->bindingColourId === null || $variants->bestColourId === null) {
+        if (! $costing->perVariant() || $variants === null || $variants->bindingColourId === null || $variants->bestColourId === null) {
             return null;
         }
 

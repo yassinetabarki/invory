@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Services\Production;
 
 use App\Domain\Stock\CutPlan;
+use App\Domain\Stock\MaterialTake;
+use App\Models\Colour;
 use App\Models\ProductionBatch;
 use App\Services\Orders\OrderMessages;
 use Illuminate\Support\Arr;
@@ -118,35 +120,73 @@ final readonly class ProductionMessages
     /**
      * Why a start is refused for short stock (INV-16-k, AC-6): a grid of several colours and sizes of a product that varies by colour and
      * size says which materials are short, in composition order, without a number to try; anything else keeps ADR-0014's sentence.
+     *
+     * @param  array<int, string>|null  $colourNames  the names of the plan's colours by id, when the caller already read them; read here when null
      */
-    public static function notEnoughStock(CutPlan $plan): string
+    public static function notEnoughStock(CutPlan $plan, ?array $colourNames = null): string
     {
+        // A stock of a per-colour material is named with its colour (INV-21, ADR-0029 section 6).
+        $ids = array_values(array_unique(array_filter(array_map(static fn (MaterialTake $take): ?int => $take->colourId, $plan->takes))));
+        $colours = $colourNames ?? ($ids === [] ? [] : Colour::query()->whereIn('id', $ids)->pluck('name', 'id')->all());
+
         if (! $plan->mixed) {
+            foreach ($plan->takes as $take) {
+                if ($take->colourId !== null && $take->materialId === $plan->bottleneckMaterialId) {
+                    $plan = new CutPlan(
+                        $plan->units, $plan->takes, $plan->maxCuttable, $plan->bottleneckMaterialId,
+                        self::inColours($take->materialName, [$colours[$take->colourId] ?? '']), $plan->allowed, $plan->mixed, $plan->variants,
+                    );
+                }
+            }
+
             return OrderMessages::notEnoughStock($plan);
         }
 
         $short = [];
+        $stocks = 0;
 
         foreach ($plan->takes as $take) {
-            if ($take->shortBy !== null) {
-                $short[] = $take->materialName;
+            if ($take->shortBy === null) {
+                continue;
+            }
+
+            $stocks++;
+            $short[$take->materialId]['name'] = $take->materialName;
+
+            if ($take->colourId !== null) {
+                $short[$take->materialId]['colours'][] = $colours[$take->colourId] ?? '';
             }
         }
 
-        return self::shortOn($short);
+        return self::shortOn(array_map(
+            static fn (array $material): string => isset($material['colours']) ? self::inColours($material['name'], $material['colours']) : $material['name'],
+            array_values($short),
+        ), $stocks);
+    }
+
+    /**
+     * "Denim 12oz in Black" · "Denim 12oz in Black and Light wash" (colours in list order).
+     *
+     * @param  list<string>  $colours
+     */
+    private static function inColours(string $material, array $colours): string
+    {
+        return __(':material in :colours', ['material' => $material, 'colours' => Arr::join($colours, ', ', ' and ')]);
     }
 
     /**
      * "Short on Denim 12oz Black. Restock it first, or lower the units." · "Short on Denim 12oz Black and Metal shank button 17mm.
-     * Restock them first, or lower the units." (three or more: "A, B and C").
+     * Restock them first, or lower the units." (three or more: "A, B and C"). A per-colour material is named with its colours: "Short
+     * on Denim 12oz in Black and Light wash. Restock them first, or lower the units." (`$stocks` counts the colours, so it reads "them").
      *
      * @param  list<string>  $materialNames  at least one, in composition order
+     * @param  int|null  $stocks  how many stocks are short (a material in two colours is two); the names' count when null
      */
-    public static function shortOn(array $materialNames): string
+    public static function shortOn(array $materialNames, ?int $stocks = null): string
     {
         return trans_choice(
             '{1} Short on :materials. Restock it first, or lower the units.|[2,*] Short on :materials. Restock them first, or lower the units.',
-            count($materialNames),
+            $stocks ?? count($materialNames),
             ['materials' => Arr::join($materialNames, ', ', ' and ')],
         );
     }
