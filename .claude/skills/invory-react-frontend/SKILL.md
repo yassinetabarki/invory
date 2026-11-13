@@ -6,8 +6,13 @@ description: Invory frontend conventions for React 19 + TypeScript + Inertia 3 +
 # Invory — React frontend conventions
 
 Read `docs/ARCHITECTURE.md` (sections 6–8) and the `invory-costing-domain` skill first.
-When Laravel Boost is installed, its `inertia-react-development`, `wayfinder-development` and `tailwindcss-development` skills
-and the `search-docs` / `browser-logs` MCP tools are available. **Check Inertia 3 APIs there before using anything you're unsure of.**
+Laravel Boost is installed (`.mcp.json` → `laravel-boost`, skills synced by `php artisan boost:install --skills --mcp`).
+- **Docs first:** call the `search-docs` MCP tool to **check Inertia 3 and Wayfinder APIs before using anything you're unsure of**. Never guess.
+- **Browser errors:** the `browser-logs` MCP tool reads console errors and warnings from the running app. Use it when a page misbehaves.
+- **Boost skills that complement this one:** `inertia-react-development` (pages, `<Form>`, `useForm`, `router`, deferred props),
+  `wayfinder-development` (typed route and action functions, never hard-coded URLs), `tailwindcss-development` (Tailwind 4 utilities and dark mode).
+- **Precedence:** the rules in this skill and `invory-costing-domain` win over any Boost skill (for example the no-arithmetic and
+  generated-code rules below). Where they disagree, follow Invory and list the gap under "Open questions".
 
 ## Golden rules
 

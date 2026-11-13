@@ -6,8 +6,16 @@ description: Invory backend conventions for Laravel 13 + Inertia 3 + Pest 4 — 
 # Invory — Laravel backend conventions
 
 Read `docs/ARCHITECTURE.md` (sections 3–5 and 8–9) and the `invory-costing-domain` skill first.
-When Laravel Boost is installed, **use its `search-docs` MCP tool before using any API you are not 100% sure exists in Laravel 13 / Inertia 3 / Pest 4**,
-and use `database-schema` / `last-error` / `read-log-entries` while debugging. Boost's `pest-testing` and `wayfinder-development` skills complement this one.
+Laravel Boost is installed (`.mcp.json` → `laravel-boost`, skills synced by `php artisan boost:install --skills --mcp`).
+- **Docs first:** call the `search-docs` MCP tool before using any API you are not 100% sure exists in Laravel 13 / Inertia 3 / Pest 4. Never guess a signature.
+- **Debugging:** `last-error`, `read-log-entries`, `database-schema` (read the real columns before writing a migration, model or factory) and
+  `database-query` (read-only SQL). `application-info` gives package versions. `get-absolute-url` builds a correct local URL.
+- **Boost skills that complement this one:** `laravel-best-practices` (Eloquent, queries, caching, validation), `testing-best-practices`
+  (test design and data), `wayfinder-development` (route and action naming that the frontend imports), `fortify-development` (auth only).
+- **Precedence:** the rules in this skill and `invory-costing-domain` win over any Boost skill. Where they disagree, follow Invory and list the
+  gap under "Open questions".
+- **`tinker` is off-limits for writes.** It runs code against the dev database `laravel`. Use it to read only; never create, update or delete
+  rows with it (see the dev-database rule in `CLAUDE.md`).
 
 ## Golden rules
 

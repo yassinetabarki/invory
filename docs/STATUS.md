@@ -47,7 +47,9 @@ composition line is Same for every variant or By colour and size; the product pa
 with Capacity by colour; cost and margin read as ranges; Start batch and Undo batch work per colour and size; a size with saved
 quantities can't be taken off. Quality per the tech-lead's delivery report of 2026-11-08 (before its fix round): composer test 3,079
 passed, Vitest 1,573, PostgreSQL parity 3,167, `types:check` at its known 21-error baseline (INV-20), load test within budget; no
-browser check was done. **Next:** INV-21 "Material stock per colour" (UI card `Approved` and development card `Ready`, both 2026-11-08, D-30), then INV-17 "Per-unit QR codes" (UI card `Approved` and development card `Ready`, both 2026-11-06, D-28),
+browser check was done. **INV-21 "Material stock per colour" is `Done`** (accepted 2026-11-13, one code commit `3393a0b`, docs `f8155da`; see §2):
+a material keeps one stock or a stock per colour, with an optional cost per colour, and Can produce now, Start batch and Undo batch,
+Restock, the history, the Inventory value and the dashboard follow each colour. **Next (D-33):** INV-27 "Live production screen" (UI card `Approved` 2026-11-12, development card `Draft`), then INV-17 "Per-unit QR codes" (UI card `Approved` and development card `Ready`, both 2026-11-06, D-28),
 then INV-9 "Print barcode labels" (card `Ready`), then INV-7.
 **Phase 5: Customer orders** (started 2026-10-15, D-12; on hold since 2026-10-24). **Done:** S-48 (accepted 2026-10-15), and **F-41, S-49
 and S-53** (accepted 2026-10-21 after your one click-through; built in one build and landed on `main` together, `e99615e` … `8ab9df8`,
@@ -70,6 +72,16 @@ Phases 6, 7 and 8 are on hold too (D-20).
 ---
 
 ## 2. Decisions needed from you
+
+**Done on 2026-11-13: INV-21 "Material stock per colour" accepted.** You accepted it after the designer's review and the re-check;
+it landed as one code commit, `3393a0b` (feat(materials): stock and cost per colour of a material), and one docs commit, `f8155da`,
+not one commit per criterion, as you chose. All 19 criteria are ticked on the card. Quality per the tech-lead's last report: composer
+test 3,158 passed (97 PostgreSQL-only tests skipped), Vitest 1,609, `npm run check` and `npm run build` green, `types:check` at its
+known 21-error baseline, browser tests 6 of 7 (the orders golden-path test has been stale since INV-13), load test within budget.
+**Still open (owed once Docker is up):** (1) `composer test:pgsql`, the PostgreSQL parity run, has not been run on this code (Docker was
+down); (2) `php artisan migrate` has not been run on the dev database `laravel` (never seeded or reset). Phone width (375 px), dark
+mode and keyboard of the new screens had no automated check; they are item (1) of `INV-28`. Small leftovers wait as `INV-26` and
+`INV-28`; the tech-lead's tech-debt items are `INV-29` and `INV-30`. Next: `INV-27`, then `INV-17`, `INV-9`, `INV-7`.
 
 **Decided on 2026-11-13 (D-35): the re-check of INV-21 after the review fixes, all the recommended options.** (1) When only some
 colours of a product lack a cost on a cost-per-colour material, the unit-cost and margin ranges stay for the colours that have one
@@ -480,7 +492,7 @@ All phase branches (`phase/1-materials`, `phase/2-ui-first-preview`, `phase/3-pe
 3. Done: orders per colour and size was settled and built within INV-5/INV-13.
 4. Done 2026-10-31: INV-2's development card (stock per colour and size) was built and accepted, with the rule "a colour with stock
    can't be taken off a product". INV-8 was built and accepted on 2026-11-01. **INV-3 is `Done`** (2026-11-06); `INV-18` (sizes
-   per product, D-29) is `Done` (2026-11-07, `e069997`); INV-16 is `Done` (2026-11-09, `e01b2ea`, accepted without a click-through); next is INV-21 (material stock per colour; UI card `Approved` and development card `Ready`, both 2026-11-08, D-30), then INV-17 (UI card `Approved` and development card `Ready`, both 2026-11-06, D-28; Technical work when its turn comes),
+   per product, D-29) is `Done` (2026-11-07, `e069997`); INV-16 is `Done` (2026-11-09, `e01b2ea`, accepted without a click-through); INV-21 (material stock per colour) is `Done` (2026-11-13, `3393a0b`); next is INV-27 (live production screen; UI card `Approved` 2026-11-12), then INV-17 (UI card `Approved` and development card `Ready`, both 2026-11-06, D-28; Technical work when its turn comes),
    then INV-9 (card `Ready`), then INV-7.
 5. Product-owner, at the next grooming: INV-7 (bigger tap targets on the Settings pages, a Could) gets its card when you ask.
 6. Done 2026-10-24: the process documents describe the new way of working (UI card, then development card, INV IDs; `e2be378`).

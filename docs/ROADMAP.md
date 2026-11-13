@@ -24,7 +24,7 @@ Work goes one item at a time, in the order below. A UI card comes first, then th
 | INV-3  | Restock of finished products                       | `Done`        | Add finished units to the shelf at once    |
 | INV-18 | Sizes chosen per product, managed in Settings      | `Done`        | Each product has the sizes it really has   |
 | INV-16 | Material use per colour and size                   | `Done`        | Each size and colour uses its own material |
-| INV-21 | Material stock per colour                          | `Ready`       | A material has its own stock per colour    |
+| INV-21 | Material stock per colour                          | `Done`        | A material has its own stock per colour    |
 | INV-17 | Per-unit QR codes, moved one by one                | `Ready`       | Follow each unit, not only its batch       |
 | INV-9  | Print barcode labels                               | `Ready`       | Print a label for a variant, or a sheet    |
 | INV-15 | Work tickets and the Scan page                     | `Done`        | Move a batch on by scanning its ticket     |
@@ -40,6 +40,8 @@ the order.
 - D-20 (2026-10-24): the card flow is paused for this rework. Every older open story is on hold.
 - D-21 (2026-10-24): the order is INV-1, INV-2, INV-3, INV-4, INV-5.
 - D-29 (2026-11-06): INV-18 (sizes chosen per product, managed in Settings) came first and is done (2026-11-07); INV-16 was on hold until then. Decided with it: one workshop-wide size list, the category pre-selects sizes on Add product, existing products keep their sizes, a size is never deleted and a used size can't be taken off a product, at least one size per product, order by position in Settings.
+- INV-21 is done (accepted 2026-11-13; code `3393a0b`, docs `f8155da`). Still owed once Docker is up: the PostgreSQL parity run and `php artisan migrate` on the dev database.
+- D-35 (2026-11-13): after the review fixes, a product with only some colours lacking a cost keeps its cost and margin ranges for the costed colours plus one "No unit cost yet. Add … to …." line per missing colour; the Products list is unchanged; more leftovers join INV-28.
 - D-34 (2026-11-13): the acceptance review of the delivered INV-21 decided, all recommended options: cards corrected (colour order, "Material created.", "In stock", product named in the Add-colour texts, "No unit cost yet. Add Light wash to Denim 12oz.", focus, button name, small wording); a fifth touch joins INV-26; the designer's other findings wait as INV-28.
 - D-32 (2026-11-09): the tech-lead's eight questions on INV-21 answered (ranges per colour, no reorder level means never Low, no cost for a missing colour, mixed-grid wording for Start batch, switch labels in the history, nothing returned to a colour that is gone); six criteria edited and awaiting re-approval; INV-21 is size XL; four small UI touches wait as INV-26.
 - D-31 (2026-11-09): INV-16 accepted without a click-through; decided with its UX review: a blank switch opens the first colour, the Composition footer badge follows the list badge, a One size grid field is "Indigo, One size", "Choose a material first." on a line with no material, a quiet line when a colour with quantities is taken off, a straight switch back restores the typed quantity, the Capacity by colour skeleton stays; polish goes to INV-25. Order: INV-21, INV-17, INV-9, INV-7.
