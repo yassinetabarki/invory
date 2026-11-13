@@ -38,7 +38,8 @@ tags:
 
 ## Acceptance criteria
 
-**Denim 12oz** (fabric, metres, reorder at 100 m): **Indigo 250 m** and **Black 40 m**, **Stock per colour**. With **Cost per colour**:
+**Denim 12oz** (fabric, metres, reorder at 100 m): **Indigo 250 m** and **Black 40 m**, **Stock per colour**. Every screen lists colours
+in the order of Settings › Colours, and with the default list, Black comes before Indigo. With **Cost per colour**:
 Indigo TND 8.500 per m, Black TND 9.200 per m, so the stock value is Indigo TND 2,125.000 + Black TND 368.000 = **TND 2,493.000**.
 The **Denim Jacket** (colours Indigo and Black, sizes S · M · L · XL; labor TND 12.000, overhead TND 3.500, selling price TND 89.000)
 has one denim line on Denim 12oz, **By colour and size**, with cells under both colours: S 1.6000 · M 1.8000 · L 2.0000 · XL 2.2000 m,
@@ -69,7 +70,8 @@ waste 10 %. Metal shank button 17mm 8 pc (stock 900), Polyester thread 120 m at 
     per-colour material with no colour reads "Add at least one colour, or choose One stock for all colours." under the table.
   - A quantity that isn't a number from 0, with up to 4 decimals, reads "Black: Enter a number from 0, with up to 4 decimals."
     under its field; focus goes to the first error and the typed values stay.
-  - Saving shows "Material added." or "Material updated.", as today.
+  - A quantity that would put the stock over the maximum reads "The stock would exceed 9,999,999,999.9999." under the table.
+  - Saving shows "Material created." or "Material updated.", as today.
 - [ ] **AC-3 · Switching to Stock per colour with stock.** On Edit Denim 12oz with 250 m in one stock, choosing **Stock per colour**
   replaces **Quantity in stock** with the Colours table holding one row, a picker "Choose a colour", and the note "You have 250 m in
   stock now. Choose the colour that holds it. Colours you add start at 0." Choosing Indigo and adding Black at 40 saves Indigo 250 m
@@ -78,18 +80,19 @@ waste 10 %. Metal shank button 17mm 8 pc (stock 900), Polyester thread 120 m at 
 - [ ] **AC-4 · Stock by colour on the material page.** Denim 12oz's page shows **In stock, all colours** 290 m ("2 colours"), **Reorder
   at** 100 m ("each colour"), and the card **Stock by colour** ("Each colour has its own stock. A product takes its material from its
   own colour.") with Indigo 250 m "In stock" and Black 40 m "Low stock", then "All colours 290 m", colours in the order of Settings ›
-  Colours. With cost per colour the card adds **Unit cost** (TND 8.500 / m, TND 9.200 / m) and **Stock value** (TND 2,125.000, TND
+  Colours (with the default list, Black comes before Indigo). With cost per colour the card adds **Unit cost** (TND 8.500 / m, TND 9.200 / m) and **Stock value** (TND 2,125.000, TND
   368.000, total TND 2,493.000), and the figures show **Unit cost** "TND 8.500–9.200 / m" ("per colour") and **Stock value** TND
-  2,493.000. Details leaves out the free-text Colour. With more than 8 colours "3 of 20 colours need restock" and the switch **Only
-  colours that need restock** appear; the switch filters and never reorders.
+  2,493.000. Details leaves out the free-text Colour. With more than 8 colours "3 of 20 colours need restock" ("1 of 12 colours needs
+  restock" for one, "0 of 12 colours need restock" for none) and the switch **Only colours that need restock** appear; the switch
+  filters and never reorders, and when it leaves nothing the card reads "No colour needs restock."
 - [ ] **AC-5 · Status of a per-colour material.** The material is **Low stock** when any colour is at or under the reorder level (0
   counts), **Out of stock** only when every colour is at 0, otherwise **In stock**. With no reorder level the material is never
   **Low stock**; it is **Out of stock** only when every colour is at 0. The callout names the colours: "Black is below
   reorder level." with "40 m on hand, reorder at 100 m."; "3 colours are at or below reorder level." with "Black 40 m, Camel 0 m
   and Rust 12 m. Reorder at 100 m."; "Camel is out of stock." with "0 m on hand, reorder at 100 m." A colour that is fine shows no
   badge on the list tiles.
-- [ ] **AC-6 · Materials list.** Denim 12oz's row shows **290 m** in bold with the button **2 colours** ("1 colour" for one), named
-  "Show stock by colour for Denim 12oz"; pressing it opens the panel "Stock by colour · Denim 12oz" (a tile per colour: swatch and
+- [ ] **AC-6 · Materials list.** Denim 12oz's row shows **290 m** in bold with the button **2 colours** ("1 colour" for one), whose accessible name
+  is "2 colours, show stock by colour for Denim 12oz"; pressing it opens the panel "Stock by colour · Denim 12oz" (a tile per colour: swatch and
   name, quantity, a badge only when Low or Out; footer "Reorder at 100 m for each colour."; **Close**). **Reorder at** reads "100 m"
   with "each colour"; **Status** shows the badge and, under it, "Black"; with four or more, the first three and a count ("Camel,
   Black, Light wash and 2 more"). The filter **Needs restock** includes a material where any colour is low or out; **Stock
@@ -105,8 +108,10 @@ waste 10 %. Metal shank button 17mm 8 pc (stock 900), Polyester thread 120 m at 
   - The checkbox stays checked by default: **Use this price as the new unit cost**, or with cost per colour **Use these prices as
     the new unit costs**, which changes only colours that received a quantity: Indigo at TND 8.800 and Black at TND 9.200 make
     Indigo TND 8.800 and leave Black at TND 9.200.
-  - Errors: "Enter a quantity for at least one colour." · "Indigo: Enter a number above 0, with up to 4 decimals." · "Black: Enter
-    the price paid." · "The colours of Denim 12oz have changed. Enter the quantities again."; nothing is saved and typed values stay.
+  - Errors: "Enter a quantity for at least one colour." · "Indigo: Enter a number above 0, with up to 4 decimals." · "Indigo: The
+    stock would exceed 9,999,999,999.9999." · "Black: Enter the price paid." · "The colours of Denim 12oz have changed. Enter the
+    quantities again."; nothing is saved and typed values stay.
+  - If the data for the sheet can't be loaded, no sheet opens and a toast reads "Couldn't open Restock for Denim 12oz. Try again."
   - A one-stock material keeps today's Restock, unchanged.
 - [ ] **AC-8 · Removing and correcting a colour.** **Remove Black** works only for a colour at 0 with no history. Any other colour's
   Remove is greyed but stays reachable by keyboard and says why: "Indigo has 250 m in stock, so it can't be removed." or "Black has
@@ -124,25 +129,31 @@ waste 10 %. Metal shank button 17mm 8 pc (stock 900), Polyester thread 120 m at 
   colour it adds "Choose the cost to keep for every colour:" with the list above and "The stock value changes with the cost you
   keep."; **Switch to one stock** works only once a cost is chosen. **Keep stock per colour** (or Esc) closes it and puts the choice
   back. While the total is worked out a line shows a placeholder; if that fails it reads "Couldn't work out the total." with **Try
-  again** and both buttons stay off. After confirming, the form shows one **Quantity in stock** (290 m) and **Unit cost**; nothing
+  again**. **Keep stock per colour** stays usable while the total loads and when it failed; **Switch to one stock** stays off until
+  the total is known (and a cost is chosen, when one is asked). After confirming, the form shows one **Quantity in stock** (290 m) and **Unit cost**; nothing
   is saved until **Save material**, and then Denim 12oz is one stock of 290 m.
 - [ ] **AC-11 · Can produce takes the stock of each colour.** The Denim Jacket's composition table shows, for the denim line,
-  **Stock on hand** "Indigo 250 m · Black 40 m" and **Units possible** "Varies" with **View by colour** ("Indigo 103–142 units · Black
+  **In stock** "Indigo 250 m · Black 40 m" and **Units possible** "Varies" with **View by colour** ("Indigo 103–142 units · Black
   16–22 units", one number when a colour's sizes agree); Indigo M is limited by Indigo stock and Black M by Black stock. A line
   "Same for every variant" of 1.8 m (1.98 m with waste) on Denim 12oz gives 126 and 20, each variant taking from its own colour's stock. Raising Black to 250 m changes
   Black S from 22 to 112 (then limited by the button, Black stock covering 142). A one-stock material is read as today.
 - [ ] **AC-12 · A colour the material doesn't have.** With Light wash added to the Denim Jacket and Denim 12oz without Light wash,
   the composition shows "Light wash — no stock" with the link **Add Light wash to Denim 12oz**, the bottleneck reads **"Bottleneck:
-  Denim 12oz — no Light wash stock."** with "Denim 12oz has no Light wash yet, so no Light wash jacket can be made.", "Can produce
+  Denim 12oz — no Light wash stock."** with "Denim 12oz has no Light wash yet, so Denim Jacket can't be made in Light wash.", "Can produce
   now" reads 0, and the "Best case" line is unchanged. In Capacity by colour the Light wash row reads Guaranteed 0, Best 0, Limited by
   "Denim 12oz — no Light wash stock". A normal limit reads **"Bottleneck: Denim 12oz, Black stock (size XL)."** with "40 m of Black in
-  stock covers 16 units of Black, size XL — the smallest across every colour and size." On a cost-per-colour material, the colour it
-  lacks has no unit cost or margin: those variants are left out of the product's cost and margin ranges.
+  stock covers 16 units of Black, size XL — the smallest across every colour and size." The sentence "It's also below its reorder level
+  of 100 m." follows it only when the colour that limits (here Black, 40 m) is itself at or under the reorder level; for Indigo
+  (250 m) it isn't added. On a cost-per-colour material, a colour it lacks has no unit cost or margin: those variants are left out of
+  the product's cost and margin ranges. The ranges stay for the colours that have a cost (Indigo and Black: TND 33.884–41.188), and
+  one line "No unit cost yet. Add Light wash to Denim 12oz." is added under the range for each colour the material lacks. When every
+  colour of the product is lacking, there is no range and no margin, only those lines.
 - [ ] **AC-13 · Add a colour from the product.** **Add Light wash to Denim 12oz** opens a window (the page stays behind): "Add Light
-  wash to Denim 12oz?" and "Light wash starts at 0 m, so no Light wash jacket can be made until you restock it." With cost per
+  wash to Denim 12oz?" and "Light wash starts at 0 m, so Denim Jacket can't be made in Light wash until you restock it." With cost per
   colour it adds the required field **Unit cost of Light wash**. **Add Light wash** shows **"Light wash added to Denim 12oz."** with
   the button **Restock Light wash**, which opens the Restock sheet on that colour; **Cancel** adds nothing. The same window opens
-  from Start batch and from "Used in", and focus returns to the link.
+  from Start batch and from "Used in". After a colour is added, focus returns to the link; if the link is gone, focus stays in the
+  window.
 - [ ] **AC-14 · Start batch and Undo batch per colour.** A batch of Indigo M 6, Indigo L 10 and Black S 5 takes **33.88 m** from
   Indigo and **8.8 m** from Black, so Denim 12oz is Indigo 216.12 m, Black 31.2 m; the materials table shows one row per material and
   colour ("Denim 12oz · Indigo" needs 33.88 m, in stock 250 m; "Denim 12oz · Black" needs 8.8 m, in stock 40 m), one row for each
@@ -171,7 +182,7 @@ waste 10 %. Metal shank button 17mm 8 pc (stock 900), Polyester thread 120 m at 
   Start batch figure as before. A line "only for Indigo" (cells under Indigo only) keeps working for them.
 - [ ] **AC-19 · Phone.** At 375 px the material page's Stock by colour (a block per colour with a 44 px **Restock** button), the list
   row (the **2 colours** button, 44 px, and the panel inside the card with a colour per line), the Restock sheet (full height, a
-  block per colour, the footer with **Add to stock** fixed at the bottom), the form (settings as full-width cards, a block per
+  block per colour, the footer fixed at the bottom with a 44 px **Cancel** button beside **Add to stock**), the form (settings as full-width cards, a block per
   colour, a full-width **Add colour**, **Save material** in the bottom bar) and the windows read in one column with no sideways
   scroll; every field and button is 44 px high. Colour is never shown by its swatch alone, and the screens work in dark mode and
   by keyboard.
@@ -180,7 +191,7 @@ waste 10 %. Metal shank button 17mm 8 pc (stock 900), Polyester thread 120 m at 
 
 ## Technical work
 > [!warning] Complex · CRITICAL · backend + frontend · 19 commits
-> Tech-lead · 2026-11-09 · proposed (revised 2026-11-09 on the human's answers, D-32)
+> Tech-lead · 2026-11-09 · approved 2026-11-09 (revised 2026-11-09 on the human's answers, D-32) · delivered 2026-11-13
 > Why complex: a new table and three column changes, new costing, cutting and ledger rules (stock and cost per colour, ADR-0029), and
 > new data on seven screens. Size: **XL** (about 5,750 lines of production code, more than INV-16's 13 commits).
 
@@ -282,7 +293,8 @@ developer updates every screen and test fixture that reads them. The commits mer
   that colour's stock and cost, and a missing colour reads 0, flagged missing; with cost per colour a missing colour has no cost.
 - `VariantCosting` keys a composition by its options and, when a line is per colour, the colour; a variant's result, a colour's
   summary and the binding / best figures carry the bottleneck's stock colour and the missing flag; a variant with no cost is left out
-  of the cost and margin ranges (ADR-0029 appendix B; AC-12). Material spans gain, per product colour, the lowest and highest units
+  of the cost and margin ranges, which stay for the costed colours; when every colour lacks a cost the ranges are null (ADR-0029
+  appendix B; AC-12, D-35). Material spans gain, per product colour, the lowest and highest units
   possible over that colour's sizes (the "View by colour" range), or missing.
 - `BomLine` gains `stockColourId` (null for one stock); `CostingCalculator` is unchanged, and the INV-16 equivalence test still pins
   `VariantCosting` to it.
@@ -328,7 +340,8 @@ developer updates every screen and test fixture that reads them. The commits mer
 **Tests**
 - 1 feature test on the product page props: the Denim Jacket on Denim 12oz gives Indigo 250 · Black 40 on the denim line, Black M
   37.1400, range 33.8840–41.1880, the line's colour ranges 103–142 and 16–22, bottleneck Denim 12oz in Black at XL; with Light wash
-  added, missing and Can produce 0, and on a cost-per-colour material Light wash out of the cost and margin ranges.
+  added, missing and Can produce 0, and on a cost-per-colour material Light wash out of the cost and margin ranges (which stay for
+  Indigo and Black); with every colour missing, null cost and margin ranges.
 - 1 regression: two one-stock materials "Denim 12oz Indigo" and "Denim 12oz Black" with lines only for their colour give INV-16's
   figures exactly (AC-18).
 - 1 query-count test: the products list with per-colour materials keeps a constant number of queries.
@@ -504,8 +517,11 @@ developer updates every screen and test fixture that reads them. The commits mer
 #### INV-21-o · The product page per colour
 **Commit:** `feat(products): composition and bottleneck read each colour's stock (INV-21-o)`
 
-- Composition table: **Stock on hand** "Indigo 250 m · Black 40 m" (three colours, then "5 colours" with a list), **Varies** with
-  **View by colour** (the server's lowest–highest units per colour, over its sizes), "Light wash — no stock" in the warning tone with **Add Light wash to Denim 12oz** (wired in INV-21-p).
+- Composition table: **In stock** with one colour per line ("Indigo 250 m", "Black 40 m"; three colours, then "5 colours" with a list), **Varies** with
+  **View by colour** (the server's lowest–highest units per colour, over its sizes, one colour per line), "Light wash — no stock" in the warning tone with **Add Light wash to Denim 12oz** (wired in INV-21-p).
+- On a cost-per-colour material (D-35): with only some colours missing, the unit-cost and margin ranges stay for the costed colours,
+  and one "No unit cost yet. Add <colour> to <material>." line per missing colour sits under the range, in the hero and the Cost
+  breakdown; with every colour missing, no range and no margin, only those lines.
 - Bottleneck callout: "Bottleneck: Denim 12oz, Black stock (size XL)." with its line, and the missing-colour sentences; **Capacity by
   colour**'s Limited by. Wraps full width on a phone.
 
@@ -676,3 +692,15 @@ after each approved step so the commits can be made one per step, in the table's
 - A material switched while a batch is in cutting → ADR-0029 §6's return rule, tested in INV-21-q.
 - Two people editing one material's colours at once → the second save is checked under the material's lock; a colour added meanwhile
   at 0 is kept only if the form sent it (accepted: the last save wins, as for quantities today).
+
+### Progress
+- 2026-11-09: build started. Docker is down, so the PostgreSQL parity runs are pending. Docs of INV-21-a done (ADR-0029 Accepted, skill appendix, ARCHITECTURE). Next: INV-21-a (backend).
+- 2026-11-12: INV-21-a approved (round 2). INV-21-b, -c, -d approved (b round 2: restock index widened). All backend gates green on SQLite; PostgreSQL parity pending (Docker down). Two rate-limit cut-offs so far. Next: INV-21-e and INV-21-f (backend, contract).
+- 2026-11-12: INV-21-e and INV-21-f approved with the frontend type-compat (all gates green; parity pending). Next: INV-21-g (backend) with INV-21-h (frontend), then INV-21-i.
+- 2026-11-12: INV-21-g and INV-21-h approved (gates green; parity pending). Next: INV-21-i (frontend) with the backend of INV-21-j and INV-21-k.
+- 2026-11-12: INV-21-i, -j, -k approved (gates green; parity pending). INV-21-l, -n (backend) and -o handed off; o needs one fix (drop the out-of-scope "Stock per colour" line, moved to INV-26). Next: m, n (frontend), p, q.
+- 2026-11-13: INV-21-l, -m, -n, -o (fixed), -p approved on handoff review; INV-21-q backend (with a fix: no query in MaterialMoveRowResource) and INV-21-r backend done. A rate limit cut off the next three dispatches before they wrote anything. Next: two contract-key tests for -r, the frontend of -q and -r, then -s and the final gates.
+- 2026-11-13: INV-21-q and -r complete (frontend and contract-key tests). All gates green except parity (Docker down). Next: INV-21-s (browser golden path), then final gates.
+- 2026-11-13: INV-21-s added (browser golden path, desktop and 375 px). Delivered: every gate green on SQLite; PostgreSQL parity not run (Docker down).
+- 2026-11-13: review fix round (D-34, the final card wording): switch window focus and Keep enabled; one colour per line in the composition table; list card, 44 px switch and Category; product noun dropped; "No unit cost yet" with nullable ranges; bottleneck colour status; thousands separators in server sentences; restock-sheet failure toast; Start batch focus. All gates re-run.
+- 2026-11-13: D-35: with only some colours missing on a cost-per-colour material the cost and margin ranges stay, plus one "No unit cost yet" line per missing colour; the switch-back sentence is announced politely (aria-live). Tech-debt follow-ups confirmed as INV-29 and INV-30.

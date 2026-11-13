@@ -1,8 +1,8 @@
 # ADR-0029 — Material stock per colour: a stock (and a cost) per colour of the workshop's list
 
-- **Status:** Proposed · 2026-11-09 (by the tech-lead, from the human's decisions D-30 on INV-21; revised the same day on the
-  human's answers D-32). It is accepted with INV-21's Technical work; its appendix is then applied to the costing skill in the
-  commit of step INV-21-a.
+- **Status:** Accepted · 2026-11-09 (proposed by the tech-lead the same day, from the human's decisions D-30 on INV-21; revised on
+  the human's answers D-32; accepted with INV-21's Technical work). Its appendix is applied to the costing skill in the commit of
+  step INV-21-a.
 - **Amends:** ADR-0027 §2 ("Materials don't change": a material can now keep its stock per colour) and §4 (the fast path: a product
   is costed once only when it has no "By colour and size" line **and** no material kept per colour), §6 (a start is checked per
   stock, not per material), §7 (a cut remembers what it took per material **and colour**); ADR-0018 decision 7 and the skill's

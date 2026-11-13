@@ -42,7 +42,8 @@ Board: `Inv21Stock` (desktop)
   **Low stock** or **Out of stock**, with the same icons and words as today's stock badge. A colour that is fine shows no badge
   (twenty green badges would hide the two that matter); the table on the material page shows the plain muted word "In stock".
 - A colour is never shown by its swatch alone: its name is always beside it, and every status has its word.
-- Colours are always listed in the order of Settings › Colours, on every screen. They never reorder by urgency.
+- Colours are always listed in the order of Settings › Colours, on every screen. They never reorder by urgency. With the default
+  list, Black comes before Indigo.
 
 ### Material page — Stock by colour
 Board: `Inv21Stock` (desktop, top)
@@ -70,16 +71,17 @@ Board: `Inv21Stock` (desktop, top)
    - Each row's **Restock** button is named for the colour ("Restock Black") and opens the Restock sheet with that colour's
      quantity field ready to type in.
    - The last row is the total.
-5. With **more than 8 colours** a line sits above the table: "3 of 20 colours need restock", with a switch **Only colours that need
-   restock**. The switch filters; it never reorders. With 8 colours or fewer neither shows.
+5. With **more than 8 colours** a line sits above the table: "3 of 20 colours need restock" ("1 of 12 colours needs restock" for
+   one, "0 of 12 colours need restock" for none), with a switch **Only colours that need restock**. The switch filters; it never
+   reorders, and when it leaves nothing the card reads "No colour needs restock." With 8 colours or fewer neither shows.
 6. The **Details** card leaves out the free-text **Colour** row for a per-colour material (the text is kept, not shown).
 7. **Used in** is described under "Product pages and Start batch" below.
 
 ### Materials list
 Board: `Inv21Stock` (desktop, bottom)
 - A one-stock material looks exactly as today. A per-colour material differs in three cells:
-  - **In stock:** the total in bold (290 m) and under it a small button **2 colours** with a chevron ("1 colour" for one), named
-    "Show stock by colour for Denim 12oz". It opens the row's inline panel, a third panel beside Restock and History.
+  - **In stock:** the total in bold (290 m) and under it a small button **2 colours** with a chevron ("1 colour" for one), whose
+    accessible name is "2 colours, show stock by colour for Denim 12oz". It opens the row's inline panel, a third panel beside Restock and History.
   - **Reorder at:** "100 m" with the muted words "each colour" under it. **Unit cost:** one cost, or the range with "per colour".
   - **Status:** the badge, and under it, in muted text, the colours that need restock: "Black", "Black and Camel", "Camel, Black and
     Light wash"; from four on the first three and a count ("Camel, Black, Light wash and 2 more").
@@ -154,9 +156,10 @@ The sections stay (Identity, Stock and cost, Supplier and notes, Photo). The cha
 11. **Switching back to One stock for all colours** opens a window: **"Switch to one stock for all colours?"** "**Indigo 250 m +
     Black 40 m become one stock of 290 m.** The history of each colour stays." With cost per colour the same window adds "Choose
     the cost to keep for every colour:" with the list above and "The stock value changes with the cost you keep." Buttons: **Keep
-    stock per colour** (closes it and puts the radio back; Esc does the same) · **Switch to one stock** (not usable until a cost is
-    chosen, when one is asked). While the total is worked out the window shows a placeholder line; if that fails it reads "Couldn't
-    work out the total." with **Try again**, and both buttons stay off. After confirming, the form shows one **Quantity in stock**
+    stock per colour** (closes it and puts the radio back; Esc does the same; always usable) · **Switch to one stock** (not usable
+    until the total is known and, when one is asked, a cost is chosen). While the total is worked out the window shows a placeholder
+    line; if that fails it reads "Couldn't work out the total." with **Try again**. **Keep stock per colour** stays usable in both
+    cases; **Switch to one stock** stays off. After confirming, the form shows one **Quantity in stock**
     (290 m) and **Unit cost**; nothing is saved until **Save material**.
 12. **Colour (free text)** in Identity is hidden while Stock per colour is chosen; its text is kept for when the owner switches
     back. A one-stock material shows it as today, with no new hint.
@@ -164,26 +167,31 @@ The sections stay (Identity, Stock and cost, Supplier and notes, Photo). The cha
     colours you buy this material in." with **Add colour**. A per-colour material needs at least one colour to be saved.
 14. **Reorder at** is one field. For a per-colour material its hint reads "Applies to each colour. The material shows Low stock when
     any colour is at or under this level." (a one-stock material keeps "Shown as Low stock at or below this level.").
-15. **Save material** and the toasts are today's: "Material updated." and "Material added."
+15. **Save material** and the toasts are today's: "Material updated." and "Material created."
 
 ### Product pages and Start batch
 Board: `Inv21Readers`
-1. **Composition table (product page).** For a per-colour material, **Stock on hand** shows the product's own colours with their
+1. **Composition table (product page).** For a per-colour material, **In stock** shows the product's own colours with their
    stock ("Indigo 250 m · Black 40 m"; up to 3 colours, then "5 colours" with a list on press). **Units possible** reads **Varies**
    with a small **View by colour** link opening "Indigo 126 units · Black 20 units". A line "Same for every variant" on a per-colour
    material varies by colour in the same way. A product colour the material doesn't have reads "Light wash — no stock" in the
    warning tone with the link **Add Light wash to Denim 12oz**.
 2. **Bottleneck.** A colour the material lacks: **"Bottleneck: Denim 12oz — no Light wash stock."** with "Denim 12oz has no Light
-   wash yet, so no Light wash jacket can be made." and the link **Add Light wash to Denim 12oz**. "Can produce now" reads 0 (the
+   wash yet, so Denim Jacket can't be made in Light wash." and the link **Add Light wash to Denim 12oz**. "Can produce now" reads 0 (the
    guaranteed figure); the "Best case: 112 units, in Indigo — limited there by Metal shank button 17mm." line is unchanged. In
    **Capacity by colour** the Light wash row reads Guaranteed 0, Best 0, Limited by "Denim 12oz — no Light wash stock", with the
    same link. A normal limit reads **"Bottleneck: Denim 12oz, Black stock (size XL)."** with "40 m of Black in stock covers 16 units
-   of Black, size XL — the smallest across every colour and size."
+   of Black, size XL — the smallest across every colour and size." When the colour that limits is itself at or under the reorder
+   level, the sentence "It's also below its reorder level of 100 m." follows (Black, 40 m); for Indigo (250 m) it doesn't. On a
+   cost-per-colour material, the unit-cost and margin ranges stay for the colours that have a cost, and each colour the material
+   lacks adds one line under them: "No unit cost yet. Add Light wash to Denim 12oz." When every colour is lacking there is no range
+   and no margin, only those lines.
 3. **Add Light wash to Denim 12oz** opens a small window (the page stays behind it): **"Add Light wash to Denim 12oz?"** "Light wash
-   starts at 0 m, so no Light wash jacket can be made until you restock it." With cost per colour it adds a required field **Unit
+   starts at 0 m, so Denim Jacket can't be made in Light wash until you restock it." With cost per colour it adds a required field **Unit
    cost of Light wash** (per m). **Cancel** · **Add Light wash**. The toast reads **"Light wash added to Denim 12oz."** with the
    button **Restock Light wash**, which opens the Restock sheet on that colour. The same window opens from every place the link
-   appears, over Start batch when used there; focus returns to the link and what was typed stays.
+   appears, over Start batch when used there; what was typed stays. After a colour is added, focus returns to the link; if the link
+   is gone, focus stays in the window.
 4. **Start batch.** The materials table has one row per material and colour the batch uses: "Denim 12oz · Indigo" needs 33.88 m,
    in stock 250 m; "Denim 12oz · Black" needs 8.8 m, in stock 40 m. A one-stock material keeps one row. A colour the material
    lacks: needs 8.8 m, in stock "No stock", short by 8.8 m, with **Add Light wash to Denim 12oz**. The shortfall sentence names
@@ -221,14 +229,17 @@ Board: `Inv21Readers`
 | **Error, no colour**           | "Add at least one colour, or choose One stock for all colours." under the table                                                          |
 | **Error, colour for stock**    | "Choose the colour that holds the 250 m you have now." under the picker                                                                  |
 | **Error, restock line**        | "Indigo: Enter a number above 0, with up to 4 decimals." · "Black: Enter the price paid." Focus goes to the first error; typed values stay |
-| **Error, restock empty**       | "Enter a quantity for at least one colour." above the lines                                                                              |
-| **Error, data changed**        | "The colours of Denim 12oz have changed. Enter the quantities again." and the lines are drawn again                                      |
+| **Error, restock empty**       | "Enter a quantity for at least one colour." above the lines                                                                              || **Error, data changed**        | "The colours of Denim 12oz have changed. Enter the quantities again." and the lines are drawn again                                      |
 | **Disabled, Remove**           | Greyed, reachable by keyboard, with its reason in words                                                                                  |
 | **Disabled, dialog buttons**   | Not usable until a cost is chosen, with "Choose the cost to keep." on screen                                                             |
 | **Confirm**                    | The two switch-back windows and "Add Light wash to Denim 12oz?"; buttons are verbs                                                       |
 | **Long content**               | A 32-character colour name wraps inside its cell; 7-digit quantities stay on one line                                                    |
 
 Add to stock is never greyed without a reason: it stays pressable and the messages explain.
+
+- **Too much stock:** "Indigo: The stock would exceed 9,999,999,999.9999." under the Restock line; on the material form the same
+  sentence without the colour, under the table.
+- **Restock sheet won't open:** a toast, "Couldn't open Restock for Denim 12oz. Try again.", and no sheet.
 
 ## Wording
 - Settings: "How is stock kept?" · "One stock for all colours" · "For buttons, thread, labels. One quantity, whatever the colour." ·
@@ -247,17 +258,17 @@ Add to stock is never greyed without a reason: it stays pressable and the messag
 - Stock by colour: "Stock by colour" · "Each colour has its own stock. A product takes its material from its own colour." · "In stock,
   all colours" · "2 colours" · "each colour" · "per colour" · "All colours" · "Black is below reorder level." · "3 colours are at or
   below reorder level." · "Camel is out of stock." · "3 of 20 colours need restock" · "Only colours that need restock" · "Reorder at
-  100 m for each colour." · "Show stock by colour for Denim 12oz" · "Restock Black".
+  100 m for each colour." · "2 colours, show stock by colour for Denim 12oz" · "Restock Black".
 - Reorder hint: "Applies to each colour. The material shows Low stock when any colour is at or under this level."
 - Restock: "Restock Denim 12oz" · "In stock now: 290 m in 2 colours · cost per colour" · "Type a quantity for each colour you received.
   Leave the others empty." · "Quantity received" · "Unit price paid" · "Now 40 m" · "Find colour" · "Use these prices as the new unit
   costs" · "2 colours in this receipt" · "Add to stock" · "Restocked Denim 12oz: Indigo +100 m, Black +20 m."
-- Missing colour: "Bottleneck: Denim 12oz — no Light wash stock." · "Denim 12oz has no Light wash yet, so no Light wash jacket can be made." ·
-  "Add Light wash to Denim 12oz" · "Add Light wash to Denim 12oz?" · "Light wash starts at 0 m, so no Light wash jacket can be made until
-  you restock it." · "Unit cost of Light wash" · "Add Light wash" · "Light wash added to Denim 12oz." · "Restock Light wash" · "Light wash — no
-  stock".
+- Missing colour: "Bottleneck: Denim 12oz — no Light wash stock." · "Denim 12oz has no Light wash yet, so Denim Jacket can't be made in Light wash." ·
+  "Add Light wash to Denim 12oz" · "Add Light wash to Denim 12oz?" · "Light wash starts at 0 m, so Denim Jacket can't be made in Light
+  wash until you restock it." · "Unit cost of Light wash" · "Add Light wash" · "Light wash added to Denim 12oz." · "Restock Light wash" ·
+  "Light wash — no stock" · "No unit cost yet. Add Light wash to Denim 12oz.".
 - Product page: "Bottleneck: Denim 12oz, Black stock (size XL)." · "40 m of Black in stock covers 16 units of Black, size XL — the
-  smallest across every colour and size." · "Varies" · "View by colour" · "By colour".
+  smallest across every colour and size." · "It's also below its reorder level of 100 m." · "Varies" · "View by colour" · "By colour".
 - Start batch: "Short on Denim 12oz in Black. Restock it first, or lower the units." · "Short on Denim 12oz in Black and Metal shank button
   17mm. Restock them first, or lower the units." · "Short on Denim 12oz in Black and Light wash." · "You can cut at most N now: Denim 12oz in
   Black runs short." · "No stock".
@@ -270,7 +281,7 @@ Board: `Inv21Phone`
   inside the card with the colours one per line (swatch, name, quantity, badge).
 - **Restock sheet:** full height. Each colour is one block (name and "Now 40 m" on the first row; below it **Quantity received** and,
   with cost per colour, **Unit price paid** side by side, 44 px high, labels above the fields). Date and Reference stack. The footer
-  with the count and **Add to stock** is fixed at the bottom; Cancel is the ✕ at the top and a link above the button.
+  with the count, a 44 px **Cancel** button and **Add to stock** beside it is fixed at the bottom.
 - **Material form:** one column; the two settings stack as full-width cards (at least 44 px high); each colour is a block (name,
   Remove, quantity, cost), with the reason a colour can't be removed written under its name; **Add colour** is full width and 44 px;
   **Save material** stays in the bar at the bottom; the windows are full width.

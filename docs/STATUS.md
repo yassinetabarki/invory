@@ -71,6 +71,32 @@ Phases 6, 7 and 8 are on hold too (D-20).
 
 ## 2. Decisions needed from you
 
+**Decided on 2026-11-13 (D-35): the re-check of INV-21 after the review fixes, all the recommended options.** (1) When only some
+colours of a product lack a cost on a cost-per-colour material, the unit-cost and margin ranges stay for the colours that have one
+(Denim Jacket in Indigo and Black: TND 33.884–41.188) and one line "No unit cost yet. Add Light wash to Denim 12oz." is added per
+missing colour; when every colour is missing there is no range and no margin, only the lines (AC-12 and the UI card reworded; this
+replaces D-34 point 6); (2) the Products list is unchanged: it shows "No unit cost yet." only when every colour is missing, with no
+link; (3) the one-stock Restock overflow message keeps its spelling for now and joins `INV-28`; (4) `INV-28` also takes the designer's
+follow-ups (a colour at 0, the phone list label, the focus ring, a "Try again" toast action, the sentence's size and full stop, the
+Add colour focus jump, the list markup). The switch window announcing the loaded total is built inside INV-21; AC-10 stays as is.
+The tech-lead's two small tech-debt items are `INV-29` and `INV-30`. Next free ID: INV-31; next decision: D-36.
+
+**Decided on 2026-11-13 (D-34): the acceptance review of the delivered INV-21, all the recommended options, plus the designer's.**
+(D-33, the INV-27 decisions, is recorded in [BACKLOG.md](BACKLOG.md).) The cards were corrected to what the app does, or the
+other way round; nothing is ticked yet. You decided: (1) colours stay in the order of Settings › Colours, and the card says that with
+the default list Black comes before Indigo; (2) the toast stays "Material created."; (3) the column stays "In stock"; (4) the Add-colour
+texts name the product, not a "jacket": "…so Denim Jacket can't be made in Light wash." and "Light wash starts at 0 m, so Denim Jacket
+can't be made in Light wash until you restock it."; (5) in the switch-back window **Keep stock per colour** stays usable while the total
+loads and when it failed, and **Switch to one stock** stays off; (6) a colour the material lacks, on a cost-per-colour material, shows
+"No unit cost yet. Add Light wash to Denim 12oz." in place of the unit-cost range, with no margin; (7) after a colour is added from Start
+batch, focus returns to the link, or stays in the window if the link is gone; (8) the button reads "2 colours" and is named "2 colours,
+show stock by colour for Denim 12oz"; (9) the Undo window's missing explanation of "Deleted, not returned" and "Unit changed, not
+returned" is a fifth touch of INV-26; (10) small wording: "The stock would exceed 9,999,999,999.9999.", "1 of 12 colours needs restock"
+and "0 of 12 colours need restock", "No colour needs restock." and the toast "Couldn't open Restock for Denim 12oz. Try again."; on a phone
+the Restock sheet keeps a 44 px Cancel button beside Add to stock; the bottleneck callout says "It's also below its reorder level"
+only when the limiting colour is itself low. The designer's other findings wait as INV-28 (`Idea`); the tech-lead's two small tech-debt items from the delivery are INV-29 and INV-30. Next free ID: INV-31; next
+decision: D-35 (taken, see above).
+
 **Decided on 2026-11-09 (D-32): the tech-lead's eight questions on INV-21, all the recommended options.** The tech-lead rated INV-21
 complex, size XL (19 commits; the card said L). You decided: (1) "View by colour" on a By colour and size line shows a range per colour
 ("Indigo 103–142 units · Black 16–22 units"); (2) the Used-in suggestion reads "20 units, in Black"; (3) a per-colour material with no

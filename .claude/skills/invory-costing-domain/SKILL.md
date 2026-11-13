@@ -26,6 +26,10 @@ If a rule here is wrong or incomplete, stop and ask the tech-lead to update it (
 | Capacity / can produce | Max whole units we can make **now** from stock on hand | `max_producible` |
 | Bottleneck | The material that limits capacity | `bottleneck` |
 | Stock status | `out` if `quantity_on_hand = 0`; else `low` if `reorder_level` is set and `quantity_on_hand <= reorder_level`; else `in_stock`. Computed server-side. "Needs restock" = `low` or `out` | `stock_status` / `StockStatus` enum |
+| Stock mode | A material keeps **One stock for all colours** (every material before INV-21) or **Stock per colour** (a quantity per colour of Settings › Colours) | `stock_mode`, `MaterialStockMode` (`single`, `per_colour`) |
+| Cost mode | Of a per-colour material: **Same cost for every colour** or **Cost per colour** | `cost_mode`, `MaterialCostMode` (`same`, `per_colour`) |
+| Colour stock | The quantity on hand (and, with cost per colour, the unit cost) of one colour of a per-colour material | `MaterialColour` / `material_colours` |
+| Stock (of a take) | A one-stock material, or one colour of a per-colour material | `stockColourId` |
 | Selling price | Optional price of one unit of a product; pre-fills "Record a sale" | `selling_price` |
 | Margin | Selling price minus unit cost, as an amount and a % of the selling price | `margin` (`amount`, `percent`) |
 | Sale | A recorded sale: product, whole-unit quantity, unit price, date, optional note. **Does not change material stock** | `Sale` / `sales` |
@@ -128,6 +132,50 @@ inventory_value       = Σ stock_value(m) over the workshop's non-deleted materi
 ```
 - Per-colour and per-product figures are each **on their own**: the colours share `same` materials (buttons, thread), so
   `best(Indigo) + best(Black)` may not be makeable together. Like `units_covered`, they ignore what other variants would use.
+
+### Stock and cost per colour of a material (added 2026-11-09, INV-21, ADR-0029)
+
+```
+For a material m and a colour c:
+stock(m, c)           = m.quantity_on_hand                       when m is one stock
+                      = the quantity of m's row of colour c      when m is per colour and has that row
+                      = 0, "missing"                             otherwise
+unit_cost(m, c)       = m.unit_cost                              when m is one stock, or per colour with the same cost
+                      = the cost of m's row of colour c          when m has cost per colour and that row
+                      = none                                     otherwise (missing colour, cost per colour)
+
+For a variant v = (c, z) of P:  line_cost(L, v) = effective_qty(L, v) × unit_cost(m, c);
+                                units_possible(m, v) = ⌊ stock(m, c) / required(m, v) ⌋
+A variant with a line whose unit_cost(m, c) is none has no unit cost and no margin, and is left out of unit_cost_range(P) and the
+margin range; its capacity is 0 (that material is its bottleneck, missing).
+
+total(m)              = Σ_c q(m, c)  for a per-colour material (stored as m.quantity_on_hand)
+m.unit_cost           = the same cost, or the lowest colour cost with cost per colour (stored; one writer, MaterialStockWriter)
+stock_value(m)        = Σ_c round4( q(m, c) × unit_cost(m, c) )  with cost per colour
+                      = round4( total(m) × m.unit_cost )         otherwise
+inventory_value       = Σ stock_value(m) over the workshop's non-deleted materials
+status(m)             = out       when every q(m, c) = 0
+                      = low       when the reorder level is set and some q(m, c) ≤ it      (no reorder level: never low)
+                      = in_stock  otherwise                                          (one-stock materials: unchanged)
+
+Per colour c of P, for a per-colour material m on P's composition (composition table "View by colour", "Used in" "By colour"):
+units_possible(m, P, c) = min and max over the sizes z of P of units_possible(m, (c, z))   ("Indigo 103–142 units"; one number
+                          when min = max, "Indigo 126 units"); "no stock" when m lacks c
+```
+- A variant of colour c is matched to the material's row **by colour id**. Within one variant all lines of a material draw on one
+  colour, so `required(m, v)` is still summed per material and the bottleneck tie-break is unchanged.
+- When P uses no per-colour material, every figure is as before INV-21. A product that uses a per-colour material is costed per variant
+  even when every line is `same`.
+- The next limit of a varying product (its "Used in" suggestion) is that of its binding colour and size: with a `same` line of 1.8 m
+  on Denim 12oz, "this material limits Denim Jacket to 20 units, in Black".
+- Ledger: every entry of a per-colour material names its colour (`stock_movements.colour_id`); the entries of one receipt or switch
+  share an `entry_group`. Entries without a colour add up to the one stock (0 while per colour), the entries of colour c to that
+  colour's row (0 once it is gone), all entries to `materials.quantity_on_hand`. A switch to per colour is one `colour_split` group
+  ("Split by colour · Indigo 250 m"), a switch back one `colour_join` group ("Joined into one stock · 290 m"); the colour rows go,
+  their entries stay. A colour can be removed only at 0 and with no entry naming it.
+- Restock of a per-colour material: one date and reference, a quantity per colour (empty = not received), a price per colour with cost
+  per colour or one price with the same cost; "use as the new unit cost" changes only the colours that received a quantity; one
+  `restock` entry per colour received (and a `price_change` where the cost changed), all in one group.
 
 ### Material usage and next limit (added 2026-10-08, decision 3)
 
@@ -269,6 +317,21 @@ Cuts made before INV-16 hold the same per-unit amount for every variant, so thei
 - A mixed grid (more than one colour and size, and a `by_variant` line) refused for short stock says "Short on <A>. Restock it
   first, or lower the units." / "Short on <A> and <B>. Restock them first, or lower the units." (composition order, no "at most"
   number); one colour and size, or a product with no `by_variant` line, keeps "You can cut at most N now: …".
+- Per colour of a material (INV-21, ADR-0029):
+  ```
+  stock s = (m) for a one-stock material, (m, c) for colour c of a per-colour material
+  total_exact(s)        = Σ n_v × required_exact(m, v) over the variants v that draw on s
+  requires: total_exact(s) ≤ stock(s) for every stock s;  needed(s) = round4(total_exact(s)), once per stock per start
+  remembered: per stock its colour (null for one stock) and taken(c, s) = needed(s)
+  held(c, s, r)         = round4( Σ_u r_u × per_unit(c, u, m) ) over the cut's variants u of s's colour (every variant when s has none)
+  a return goes to: the one stock if m is one stock now (whatever the take came from); colour c if m is per colour now and has c
+                    (c = the take's colour, or the batch's colour for a take made from one stock); otherwise nothing back
+  ```
+  *Mixed* (no "at most N") also when the product uses a per-colour material (even with only `same` lines): "Short on Denim 12oz in
+  Black. Restock it first, or lower the units." · "Short on Denim 12oz in Black and Metal shank button 17mm. Restock them first, or
+  lower the units." · "Short on Denim 12oz in Black and Light wash. Restock them first, or lower the units." (one material in several
+  colours names its colours in list order after "in"). One colour and size: "You can cut at most N now: Denim 12oz in Black runs
+  short." Nothing back for a colour the material no longer has: "Light wash not on this material, not returned".
 
 Worked example (Denim Jacket, 900 buttons): Indigo M 6 and Indigo L 10 = 16 units take 31.68 m Denim 12oz Indigo, 128 pc Metal shank
 button 17mm, 2,016 m Polyester thread and 16 pc Woven brand label as one production cut; B-0153 (6) and B-0154 (10) start In cutting;
@@ -450,7 +513,8 @@ used_by(c)            = number of non-deleted products with colour c, any status
   "Finished stock per colour").
 - **Colours change no figure** unless a line of the product is By colour and size (INV-16, ADR-0027): unit cost, "Can produce now",
   the bottleneck, next limit, margin, finished stock, orders, sales and the dashboard are as before. A colour taken off a product
-  loses its cells in the same save; a colour added has none.
+  loses its cells in the same save; a colour added has none. Nor unless a material of the product is kept per colour (INV-21,
+  ADR-0029): then each colour reads that colour's stock and cost.
 - The materials' "Colour" field stays free text ("Antique brass"); it is not a colour of this list.
 
 ### Barcodes (added 2026-10-31, INV-8, ADR-0020)
@@ -546,6 +610,15 @@ sentence above; a Trucker Jacket with Light wash S only → renames fine and the
 | A size with a cell taken off the product | refused: "has material quantities" (INV-18's size lock, fifth reason) |
 | Undo a batch of an old (before INV-16) start | same figures as before |
 | Start a mixed grid where rounding would hide a shortfall | refused: the check is on the unrounded total |
+| Every material one stock | Every figure as before INV-21 |
+| A product colour the material doesn't have | that colour's variants make 0, bottleneck the material, missing; no cost with cost per colour |
+| A `same` line on a per-colour material | each variant takes from its own colour's stock |
+| Start batch in two colours of one material | checked and rounded per colour; one remembered take per colour |
+| Undo a batch started before INV-21 | the same figures as before |
+| Material switched between a start and its undo | into one stock, or into the batch's colour if the material has it; else nothing back |
+| Switch to per colour with stock | the stock goes to the chosen colour; logged "Split by colour · Indigo 250 m", the ledger records both sides |
+| Switch back to one stock | the colours' total becomes the one stock, logged "Joined into one stock · 290 m"; the colour rows go, their entries stay |
+| Per-colour material, no reorder level, a colour at 0 | In stock (Low needs a reorder level); Out only when every colour is at 0 |
 
 ## Validation rules (inputs)
 
@@ -574,6 +647,12 @@ sentence above; a Trucker Jacket with Light wash S only → renames fine and the
   each empty or 0 (no cell) or > 0 up to 1,000,000 with max 4 decimals; only colours and sizes the save leaves on the
   product; at least one cell; at most 2,000 cells per product over all its lines. When the product's colours or sizes no
   longer match the submitted grid, nothing is saved ("The sizes or colours of <product> have changed. Enter its quantities again.").
+- Material (INV-21): `stock_mode` `single` or `per_colour`; `cost_mode` `same` or `per_colour`, and `same` with one stock. Per colour:
+  `colours` at least one, each a colour of the workshop, distinct; each `quantity_on_hand` ≥ 0 with up to 4 decimals; with cost per
+  colour each `unit_cost` required, ≥ 0, up to 4 decimals. A colour leaves only at 0 and with no history entry.
+- Restock per colour (INV-21): `lines` keyed by every colour of the material (else "The colours of <material> have changed. Enter the
+  quantities again."); each quantity empty or > 0 with up to 4 decimals; at least one; a price per received colour with cost per
+  colour, one price otherwise.
 
 ## Worked example — use as a golden test (backend unit test + frontend display test)
 
@@ -623,6 +702,16 @@ waste 10 %) by colour and size, Indigo only: S 1.6000 · M 1.8000 · L 2.0000 ·
   5 × 1.76 = **8.8000 m**, button 168 pc, thread 2,646 m, label 21 pc. Undoing the Indigo L batch gives back 22.0000 m of Indigo denim,
   80 pc, 1,260 m and 10 pc, and nothing of the Black denim.
 
+## Worked example per colour of a material (INV-21, ADR-0029) — golden test
+
+Denim 12oz, per colour, Indigo 250 m at 8.5000, Black 40 m at 9.2000 (reorder 100): total 290, status `low` (Black), stock value
+2125.0000 + 368.0000 = **2493.0000**. The Denim Jacket's denim line by colour and size (S 1.6 · M 1.8 · L 2.0 · XL 2.2, waste 10 %)
+on it gives INV-16's capacities (Indigo 112 · 112 · 112 · 103, Black 22 · 20 · 18 · 16); Black M costs **37.1400** (margin 51.8600,
+58.27 %), Indigo M 35.7540; unit cost range **33.8840–41.1880**; by colour the denim covers Indigo **103–142** and Black **16–22**
+units. A `same` line of 1.8 m on it: Indigo 126, Black 20 units covered, and the jacket is limited to 20, in Black.
+Start Indigo M 6 · Indigo L 10 · Black S 5: Indigo takes 33.8800 m (216.1200 left), Black 8.8000 m (31.2000 left); undoing Indigo L
+gives back 22.0000 m to Indigo, nothing to Black. Keeping Indigo's cost for every colour: stock value **2465.0000**.
+
 ## Where it lives in code
 
 - Pure maths: `app/Domain/Costing/` (`BomLine`, `LineCost`, `CostBreakdown`, `ProductionCapacity`, `CostingCalculator`). It must not import `Illuminate\*`.
@@ -664,3 +753,7 @@ waste 10 %) by colour and size, Indigo only: S 1.6000 · M 1.8000 · L 2.0000 ·
   MaterialSpan}` (per-variant cost and capacity, guaranteed and best, ranges), `CuttingCalculator::takeVariants()` /
   `giveBackFromGroup()` with `VariantUnits` and `CutGroup`, `ProductCosting::$variants` / `best()`, the fifth reason of
   `ProductSizeLock`.
+- Added 2026-11-09 (INV-21, ADR-0029): `App\Enums\{MaterialStockMode,MaterialCostMode}`, `App\Models\MaterialColour`
+  (`material_colours`), `stock_movements.colour_id` / `entry_group`, `production_cut_materials.colour_id`,
+  `App\Actions\Materials\MaterialStockWriter` (the only writer of a material's quantities and costs), `StockLedgerVerifier` per colour,
+  `VariantLine`'s colour stock and `BomLine::$stockColourId`.

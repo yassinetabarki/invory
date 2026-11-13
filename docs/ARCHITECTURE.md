@@ -98,6 +98,9 @@ code testable and ready to scale.
                            │ (one Start cutting)│          │ (per unit + taken)   │
                            └────────────────────┘          └──────────────────────┘
 ```
+Status (2026-11-09): INV-21 lets a material keep its stock, and optionally its cost, **per colour** of Settings › Colours
+(`material_colours`, ADR-0029); a product's colour reads its material's stock and cost of that colour, and Start batch takes and gives
+back per colour.
 Status (2026-11-07): INV-16 lets a composition line be **By colour and size** (`product_components.quantity_mode`, cells in
 `product_component_quantities`, ADR-0027): every figure is worked out per colour × size and summed up as guaranteed / best and
 ranges; Start batch remembers its per-unit amounts per colour and size (`production_cut_variants`).
@@ -254,6 +257,26 @@ where it is reached, unit / material cost and margin ranges, and per material it
 `VariantCosting` works out each line's exact figures once per (line, quantity) and combines them per variant with the calculator's
 rules (rounded once, floored, same tie-break); `CostingCalculator::calculate()` runs unchanged for products that don't vary and for
 the binding variant. `ProductCosting::cantProduce()` reads best = 0 (dashboard, products list filter).
+
+### `material_colours` (INV-21, [ADR-0029](adr/0029-material-stock-per-colour.md))
+
+| Column           | Type           | Rules                                                                          |
+| ---------------- | -------------- | ------------------------------------------------------------------------------ |
+| workshop_id      | FK → workshops | the material's workshop (composite keys to `materials` and `colours` on PG)    |
+| material_id      | FK → materials | `cascadeOnDelete`                                                              |
+| colour_id        | FK → colours   | `restrictOnDelete` (colours are never removed)                                 |
+| quantity_on_hand | decimal(14,4)  | ≥ 0 (PostgreSQL CHECK)                                                         |
+| unit_cost        | decimal(12,4)  | nullable, ≥ 0 (PostgreSQL CHECK); set exactly when the cost is per colour      |
+| timestamps       |                |                                                                                |
+
+Keys: unique (`material_id`, `colour_id`). `materials` gains `stock_mode` (`single` · `per_colour`) and `cost_mode` (`same` ·
+`per_colour`; PostgreSQL CHECK: `same` with `single`). A per-colour material keeps its **total** in `materials.quantity_on_hand` and the
+same or lowest colour cost in `materials.unit_cost`, written only by `App\Actions\Materials\MaterialStockWriter` under the material's
+row lock, so the list, sort, dashboard and options keep reading one column. `stock_movements` gains `colour_id` (nullable, restrict)
+and `entry_group` (uuid, one receipt or switch); `production_cut_materials` gains `colour_id` (unique cut + material + colour, plus a
+partial unique on cut + material where the colour is null). `StockLedgerVerifier` checks the no-colour entries, each colour's entries
+and all entries against the stored figures. Costing reads a variant's material stock and cost **of its own colour**; a product that
+uses a per-colour material is costed per variant even with only `same` lines.
 
 ### `sales` (S-14-BE)
 | Column | Type | Rules |
